@@ -61,14 +61,21 @@ spec:
                     required:
                     - type
                     type: object
-                  slowStartWindow:
-                    description: SlowStartWindow defines the duration of the warm
-                      up period for newly added host. If set, during slow start window,
-                      traffic sent to the newly added hosts will gradually increase
-                      in a linear manner. Currently this is only supported for RoundRobin
-                      and LeastRequest load balancers. For additional details, see
-                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
-                    type: string
+                  slowStart:
+                    description: SlowStart defines the configuration related to the
+                      slow start load balancer policy. If set, during slow start window,
+                      traffic sent to the newly added hosts will gradually. Currently
+                      this is only supported for RoundRobin and LeastRequest load
+                      balancers
+                    properties:
+                      window:
+                        description: Window defines the duration of the warm up period
+                          for newly added host. During slow start window, traffic
+                          sent to the newly added hosts will gradually. Currently
+                          only supports linear growth of traffic. For additional details,
+                          see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                        type: string
+                    type: object
                   type:
                     description: Type decides the type of Load Balancer policy. Valid
                       LoadBalancerType values are "ConsistentHash", "LeastRequest",
@@ -87,9 +94,9 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
-                - message: Currently SlowStartWindow is only supported for RoundRobin
-                    and LeastRequest load balancers.
-                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStartWindow)
+                - message: Currently SlowStart is only supported for RoundRobin and
+                    LeastRequest load balancers.
+                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating

@@ -50,7 +50,8 @@ http:
     hostname: "*"
     loadBalancer:
       leastRequest:
-        slowStartWindow: 100000000
+        slowStart:
+          window: 100000000
     destination:
       name: "fifth-route-dest"
       settings:
@@ -61,7 +62,8 @@ http:
     hostname: "*"
     loadBalancer:
       roundRobin:
-        slowStartWindow: 600000000
+        slowStart:
+          window: 600000000
     destination:
       name: "sixth-route-dest"
       settings:

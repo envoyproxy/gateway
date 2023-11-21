@@ -11,7 +11,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStartWindow) : true ",message="Currently SlowStartWindow is only supported for RoundRobin and LeastRequest load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
@@ -28,14 +28,12 @@ type LoadBalancer struct {
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
 
-	// SlowStartWindow defines the duration of the warm up period for newly added host.
-	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase in a linear manner.
-	// Currently this is only supported for RoundRobin and LeastRequest load balancers.
-	// For additional details,
-	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+	// SlowStart defines the configuration related to the slow start load balancer policy.
+	// If set, during slow start window, traffic sent to the newly added hosts will gradually.
+	// Currently this is only supported for RoundRobin and LeastRequest load balancers
 	//
 	// +optional
-	SlowStartWindow *metav1.Duration `json:"slowStartWindow,omitempty"`
+	SlowStart *SlowStart `json:"slowStart,omitempty"`
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
@@ -67,3 +65,13 @@ const (
 	// SourceIPConsistentHashType hashes based on the source IP address.
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
 )
+
+// SlowStart defines the configuration related to the slow start load balancer policy.
+type SlowStart struct {
+	// Window defines the duration of the warm up period for newly added host.
+	// During slow start window, traffic sent to the newly added hosts will gradually.
+	// Currently only supports linear growth of traffic. For additional details,
+	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+	Window *metav1.Duration `json:"window,omitempty"`
+	// TODO: Add support for non-linear traffic increases based on user usage.
+}

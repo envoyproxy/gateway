@@ -211,7 +211,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "leastRequest with SlowStartWindow is set",
+			desc: "leastRequest with SlowStar is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -223,8 +223,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					LoadBalancer: &egv1a1.LoadBalancer{
 						Type: egv1a1.LeastRequestLoadBalancerType,
-						SlowStartWindow: &metav1.Duration{
-							Duration: 10000000,
+						SlowStart: &egv1a1.SlowStart{
+							Window: &metav1.Duration{
+								Duration: 10000000,
+							},
 						},
 					},
 				}
@@ -232,7 +234,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "roundrobin with SlowStartWindow is set",
+			desc: "roundrobin with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -244,8 +246,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					LoadBalancer: &egv1a1.LoadBalancer{
 						Type: egv1a1.RoundRobinLoadBalancerType,
-						SlowStartWindow: &metav1.Duration{
-							Duration: 10000000,
+						SlowStart: &egv1a1.SlowStart{
+							Window: &metav1.Duration{
+								Duration: 10000000,
+							},
 						},
 					},
 				}
@@ -253,7 +257,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: " random with SlowStartWindow is set",
+			desc: " random with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -265,18 +269,20 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					LoadBalancer: &egv1a1.LoadBalancer{
 						Type: egv1a1.RandomLoadBalancerType,
-						SlowStartWindow: &metav1.Duration{
-							Duration: 10000000,
+						SlowStart: &egv1a1.SlowStart{
+							Window: &metav1.Duration{
+								Duration: 10000000,
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStartWindow is only supported for RoundRobin and LeastRequest load balancers.",
+				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
 			},
 		},
 		{
-			desc: " consistenthash with SlowStartWindow is set",
+			desc: " consistenthash with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -288,14 +294,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					LoadBalancer: &egv1a1.LoadBalancer{
 						Type: egv1a1.ConsistentHashLoadBalancerType,
-						SlowStartWindow: &metav1.Duration{
-							Duration: 10000000,
+						SlowStart: &egv1a1.SlowStart{
+							Window: &metav1.Duration{
+								Duration: 10000000,
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStartWindow is only supported for RoundRobin and LeastRequest load balancers.",
+				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
 			},
 		},
 	}

@@ -423,10 +423,14 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
 		lb = &ir.LoadBalancer{
-			LeastRequest: &ir.LeastRequest{},
+			LeastRequest: &ir.LeastRequest{
+				SlowStart: &ir.SlowStart{},
+			},
 		}
-		if policy.Spec.LoadBalancer.SlowStartWindow != nil {
-			lb.LeastRequest.SlowStartWindow = policy.Spec.LoadBalancer.SlowStartWindow.Duration
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.LeastRequest.SlowStart.Window = policy.Spec.LoadBalancer.SlowStart.Window.Duration
+			}
 		}
 	case egv1a1.RandomLoadBalancerType:
 		lb = &ir.LoadBalancer{
@@ -434,10 +438,14 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		}
 	case egv1a1.RoundRobinLoadBalancerType:
 		lb = &ir.LoadBalancer{
-			RoundRobin: &ir.RoundRobin{},
+			RoundRobin: &ir.RoundRobin{
+				SlowStart: &ir.SlowStart{},
+			},
 		}
-		if policy.Spec.LoadBalancer.SlowStartWindow != nil {
-			lb.RoundRobin.SlowStartWindow = policy.Spec.LoadBalancer.SlowStartWindow.Duration
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.RoundRobin.SlowStart.Window = policy.Spec.LoadBalancer.SlowStart.Window.Duration
+			}
 		}
 	}
 

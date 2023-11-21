@@ -1046,17 +1046,17 @@ func (l *LoadBalancer) Validate() error {
 // RoundRobin load balancer settings
 // +k8s:deepcopy-gen=true
 type RoundRobin struct {
-	// SlowStartWindow defines the duration of the warm up period for newly added host.
+	// SlowStart defines the slow start configuration.
 	// If set, slow start mode is enabled for newly added hosts in the cluster.
-	SlowStartWindow time.Duration `json:"slowStartWindow,omitempty" yaml:"slowStartWindow,omitempty"`
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
 }
 
 // LeastRequest load balancer settings
 // +k8s:deepcopy-gen=true
 type LeastRequest struct {
-	// SlowStartWindow defines the duration of the warm up period for newly added host.
+	// SlowStart defines the slow start configuration.
 	// If set, slow start mode is enabled for newly added hosts in the cluster.
-	SlowStartWindow time.Duration `json:"slowStartWindow,omitempty" yaml:"slowStartWindow,omitempty"`
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
 }
 
 // Random load balancer settings
@@ -1068,4 +1068,11 @@ type Random struct{}
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
 	SourceIP *bool `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+}
+
+// SlowStart defines the slow start configuration.
+// +k8s:deepcopy-gen=true
+type SlowStart struct {
+	// Window defines the duration of the warm up period for newly added host.
+	Window time.Duration `json:"window,omitempty" yaml:"window,omitempty"`
 }

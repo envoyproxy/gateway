@@ -30,7 +30,8 @@ backendTrafficPolicies:
     namespace: default
   spec:
     loadBalancer:
-      slowStartWindow: 5m0s
+      slowStart:
+        window: 5m0s
       type: LeastRequest
     targetRef:
       group: gateway.networking.k8s.io
@@ -73,7 +74,8 @@ backendTrafficPolicies:
     namespace: envoy-gateway
   spec:
     loadBalancer:
-      slowStartWindow: 5m0s
+      slowStart:
+        window: 5m0s
       type: RoundRobin
     targetRef:
       group: gateway.networking.k8s.io
@@ -362,7 +364,8 @@ xdsIR:
         hostname: gateway.envoyproxy.io
         loadBalancer:
           leastRequest:
-            slowStartWindow: 300000000000
+            slowStart:
+              window: 300000000000
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
