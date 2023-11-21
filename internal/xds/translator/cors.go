@@ -23,6 +23,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+func init() {
+	registerHTTPFilter(&cors{})
+}
+
 type cors struct {
 }
 

@@ -33,6 +33,10 @@ const (
 	defaultSignoutPath          = "/signout"
 )
 
+func init() {
+	registerHTTPFilter(&oidc{})
+}
+
 type oidc struct {
 }
 
@@ -254,7 +258,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			},
 		}
 
-		if err = addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+		if err = addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         cluster.name,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      tSocket,
@@ -277,8 +281,10 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 			continue
 		}
 
+		// a separate secret is created for each route, even they share the same
+		// oauth2 client ID and secret.
 		clientSecret := buildOAuth2ClientSecret(route)
-		if err := addXdsSecretIfNotExist(tCtx, clientSecret); err != nil {
+		if err := addXdsSecret(tCtx, clientSecret); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 
@@ -286,7 +292,7 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
-		if err := addXdsSecretIfNotExist(tCtx, hmacSecret); err != nil {
+		if err := addXdsSecret(tCtx, hmacSecret); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}

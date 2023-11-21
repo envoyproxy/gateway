@@ -29,6 +29,10 @@ const (
 	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
 )
 
+func init() {
+	registerHTTPFilter(&jwt{})
+}
+
 type jwt struct {
 }
 
@@ -270,7 +274,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 				continue
 			}
 
-			if err = addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+			if err = addXdsCluster(tCtx, &xdsClusterArgs{
 				name:         jwks.name,
 				settings:     []*ir.DestinationSetting{ds},
 				tSocket:      tSocket,

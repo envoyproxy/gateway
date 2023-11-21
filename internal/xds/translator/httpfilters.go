@@ -19,7 +19,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-var httpFilters = [...]httpFilter{&cors{}, &jwt{}, &oidc{}}
+var httpFilters []httpFilter
+
+// registerHTTPFilter registers the provided HTTP filter.
+func registerHTTPFilter(filter httpFilter) {
+	httpFilters = append(httpFilters, filter)
+}
 
 // httpFilter is the interface for all the HTTP filters.
 //

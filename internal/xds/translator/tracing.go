@@ -128,7 +128,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))},
 	}
-	if err := addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      nil,

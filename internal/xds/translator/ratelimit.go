@@ -441,7 +441,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		return err
 	}
 
-	if err := addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,

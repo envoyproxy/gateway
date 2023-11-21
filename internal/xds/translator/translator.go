@@ -242,7 +242,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
-				if err := addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+				if err := addXdsCluster(tCtx, &xdsClusterArgs{
 					name:         httpRoute.Destination.Name,
 					settings:     httpRoute.Destination.Settings,
 					tSocket:      nil,
@@ -255,7 +255,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 			if httpRoute.Mirrors != nil {
 				for _, mirrorDest := range httpRoute.Mirrors {
-					if err := addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+					if err := addXdsCluster(tCtx, &xdsClusterArgs{
 						name:         mirrorDest.Name,
 						settings:     mirrorDest.Settings,
 						tSocket:      nil,
@@ -325,7 +325,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		}
 
 		// 1:1 between IR TCPListener and xDS Cluster
-		if err := addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         tcpListener.Destination.Name,
 			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
@@ -367,7 +367,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		}
 
 		// 1:1 between IR UDPListener and xDS Cluster
-		if err := addXdsClusterIfNotExist(tCtx, &xdsClusterArgs{
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
@@ -478,7 +478,7 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 	return nil
 }
 
-func addXdsSecretIfNotExist(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error {
+func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error {
 	// Return early if cluster with the same name exists
 	if c := findXdsSecret(tCtx, secret.Name); c != nil {
 		return ErrXdsSecretExists
@@ -490,7 +490,7 @@ func addXdsSecretIfNotExist(tCtx *types.ResourceVersionTable, secret *tlsv3.Secr
 	return nil
 }
 
-func addXdsClusterIfNotExist(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error {
+func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error {
 	// Return early if cluster with the same name exists
 	if c := findXdsCluster(tCtx, args.name); c != nil {
 		return ErrXdsClusterExists
