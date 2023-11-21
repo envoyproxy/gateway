@@ -29,6 +29,7 @@ func GetHashedName(nsName string, length int) string {
 	// replace `/` with `-` to create a valid K8s resource name
 	resourceName := strings.ReplaceAll(nsName, "/", "-")
 	if length > 0 && len(resourceName) > length {
+		// resource name needs to be trimmed, as container port name must not contain consecutive hyphens
 		trimmedName := strings.TrimSuffix(resourceName[0:length], "-")
 		return fmt.Sprintf("%s-%s", trimmedName, hashedName[0:8])
 	}
