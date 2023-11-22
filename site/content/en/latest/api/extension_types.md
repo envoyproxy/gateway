@@ -907,7 +907,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. |
+| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. If specified, Envoy will extract the JWT token from the listed cookies and validate each of them. If any cookie is found to be an invalid JWT, a 401 error will be returned. |
 
 
 #### JWTProvider
