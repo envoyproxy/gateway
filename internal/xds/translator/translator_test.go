@@ -49,6 +49,9 @@ func TestTranslateXds(t *testing.T) {
 		requireEnvoyPatchPolicies bool
 	}{
 		{
+			name: "ext-authz",
+		},
+		{
 			name: "empty",
 		},
 		{

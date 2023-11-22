@@ -62,6 +62,11 @@ type SecurityPolicySpec struct {
 	// +optional
 	JWT *JWT `json:"jwt,omitempty"`
 
+	// ExtAuthz defines the configuration for external authorizations.
+	//
+	// +optional
+	ExtAuthz *ExtAuthz `json:"extAuthz,omitempty"`
+
 	// OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
 	//
 	// +optional
