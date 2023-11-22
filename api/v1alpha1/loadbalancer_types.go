@@ -29,7 +29,7 @@ type LoadBalancer struct {
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
 
 	// SlowStart defines the configuration related to the slow start load balancer policy.
-	// If set, during slow start window, traffic sent to the newly added hosts will gradually.
+	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
 	// Currently this is only supported for RoundRobin and LeastRequest load balancers
 	//
 	// +optional
@@ -69,9 +69,10 @@ const (
 // SlowStart defines the configuration related to the slow start load balancer policy.
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
-	// During slow start window, traffic sent to the newly added hosts will gradually.
+	// During slow start window, traffic sent to the newly added hosts will gradually increase.
 	// Currently only supports linear growth of traffic. For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
-	Window *metav1.Duration `json:"window,omitempty"`
+	// +kubebuilder:validation:Required
+	Window *metav1.Duration `json:"window"`
 	// TODO: Add support for non-linear traffic increases based on user usage.
 }
