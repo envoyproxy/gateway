@@ -27,6 +27,21 @@ const (
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 )
 
+type xdsClusterArgs struct {
+	name         string
+	settings     []*ir.DestinationSetting
+	tSocket      *corev3.TransportSocket
+	endpointType EndpointType
+	loadBalancer *ir.LoadBalancer
+}
+
+type EndpointType int
+
+const (
+	EndpointTypeDNS EndpointType = iota
+	EndpointTypeStatic
+)
+
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,

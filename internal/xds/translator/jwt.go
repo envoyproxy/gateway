@@ -29,9 +29,18 @@ const (
 	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
 )
 
-// patchHCMWithJWTAuthnFilter builds and appends the Jwt Filter to the HTTP
-// Connection Manager if applicable, and it does not already exist.
-func patchHCMWithJWTAuthnFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func init() {
+	registerHTTPFilter(&jwt{})
+}
+
+type jwt struct {
+}
+
+var _ httpFilter = &jwt{}
+
+// patchHCM builds and appends the JWT Filter to the HTTP Connection Manager if
+// applicable, and it does not already exist.
+func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -193,9 +202,9 @@ func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
 	}, nil
 }
 
-// patchRouteWithJWT patches the provided route with a JWT PerRouteConfig, if the
-// route doesn't contain it.
-func patchRouteWithJWT(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+// patchRoute patches the provided route with a JWT PerRouteConfig, if the route
+// doesn't contain it.
+func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -227,8 +236,8 @@ func patchRouteWithJWT(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	return nil
 }
 
-// createJWKSClusters creates JWKS clusters from the provided routes, if needed.
-func createJWKSClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+// patchResources creates JWKS clusters from the provided routes, if needed.
+func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -310,4 +319,8 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 	}
 
 	return false
+}
+
+func (*jwt) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
+	return nil
 }
