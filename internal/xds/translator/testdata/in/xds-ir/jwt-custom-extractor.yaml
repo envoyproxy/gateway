@@ -18,13 +18,8 @@ http:
         remoteJWKS:
           uri: https://localhost/jwt/public-key/jwks.json
         extractFrom:
-          headers:
-          - name: Authorization
-            valuePrefix: "Bearer "
           cookies:
           - session_access_token
-          params:
-          - token
     destination:
       name: "first-route-dest"
       settings:

@@ -58,6 +58,8 @@ type JWTProvider struct {
 	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
 	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
 	// or access_token from query parameters.
+	//
+	// +optional
 	ExtractFrom *JWTExtractor `json:"extractFrom,omitempty"`
 }
 
@@ -86,27 +88,8 @@ type ClaimToHeader struct {
 	Claim string `json:"claim"`
 }
 
-// JWTHeaderExtractor defines an HTTP header location to extract JWT token
-type JWTHeaderExtractor struct {
-	// Name is the HTTP header name to retrieve the token
-	//
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
-
-	// ValuePrefix is the prefix that should be stripped before extracting the token.
-	// The format would be used by Envoy like "{ValuePrefix}<TOKEN>".
-	// For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end.
-	ValuePrefix *string `json:"valuePrefix,omitempty"`
-}
-
 // JWTExtractor defines a custom JWT token extraction from HTTP request.
 type JWTExtractor struct {
-	// Headers represents a list of HTTP request headers to extract the JWT token from.
-	Headers []JWTHeaderExtractor `json:"headers,omitempty"`
-
 	// Cookies represents a list of cookie names to extract the JWT token from.
 	Cookies []string `json:"cookies,omitempty"`
-
-	// Params represents a list of query parameters to extract the JWT token from.
-	Params []string `json:"params,omitempty"`
 }

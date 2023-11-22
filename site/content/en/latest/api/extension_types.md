@@ -907,24 +907,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `headers` _[JWTHeaderExtractor](#jwtheaderextractor) array_ | Headers represents a list of HTTP request headers to extract the JWT token from. |
 | `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. |
-| `params` _string array_ | Params represents a list of query parameters to extract the JWT token from. |
-
-
-#### JWTHeaderExtractor
-
-
-
-JWTHeaderExtractor defines an HTTP header location to extract JWT token
-
-_Appears in:_
-- [JWTExtractor](#jwtextractor)
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name is the HTTP header name to retrieve the token |
-| `valuePrefix` _string_ | ValuePrefix is the prefix that should be stripped before extracting the token. The format would be used by Envoy like "{ValuePrefix}<TOKEN>". For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
 
 
 #### JWTProvider
