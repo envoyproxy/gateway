@@ -50,13 +50,8 @@ spec:
                   Proxy Protocol must be present when this field is set, else the
                   connection is closed.
                 type: boolean
-              http3Settings:
-                description: HTTP3Settings provides HTTP/3 configuration on the listener.
-                properties:
-                  enabled:
-                    description: Enabled enables HTTP/3 support on the listener. Disabled
-                      by default.
-                    type: boolean
+              http3:
+                description: HTTP3 provides HTTP/3 configuration on the listener.
                 type: object
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy

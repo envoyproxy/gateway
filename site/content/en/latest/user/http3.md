@@ -69,8 +69,7 @@ kind: ClientTrafficPolicy
 metadata:
   name: enable-http3
 spec:
-  http3Settings: 
-    enabled: true
+  http3: {}
   targetRef:
     group: gateway.networking.k8s.io
     kind: Gateway

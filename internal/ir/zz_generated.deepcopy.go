@@ -342,8 +342,8 @@ func (in *HTTPListener) DeepCopyInto(out *HTTPListener) {
 		*out = new(TCPKeepalive)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.HTTP3Settings != nil {
-		in, out := &in.HTTP3Settings, &out.HTTP3Settings
+	if in.HTTP3 != nil {
+		in, out := &in.HTTP3, &out.HTTP3
 		*out = new(HTTP3Settings)
 		**out = **in
 	}
@@ -848,8 +848,8 @@ func (in *ProxyListener) DeepCopyInto(out *ProxyListener) {
 		*out = make([]ListenerPort, len(*in))
 		copy(*out, *in)
 	}
-	if in.HTTP3Settings != nil {
-		in, out := &in.HTTP3Settings, &out.HTTP3Settings
+	if in.HTTP3 != nil {
+		in, out := &in.HTTP3, &out.HTTP3
 		*out = new(HTTP3Settings)
 		**out = **in
 	}

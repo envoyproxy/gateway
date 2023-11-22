@@ -127,7 +127,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		var quicXDSListener *listenerv3.Listener
-		enabledHTTP3 := httpListener.HTTP3Settings != nil && httpListener.HTTP3Settings.Enabled
+		enabledHTTP3 := httpListener.HTTP3 != nil
 		if xdsListener == nil {
 			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, accessLog)
 			if enabledHTTP3 {

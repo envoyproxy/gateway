@@ -321,8 +321,8 @@ func (in *ClientTrafficPolicySpec) DeepCopyInto(out *ClientTrafficPolicySpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.HTTP3Settings != nil {
-		in, out := &in.HTTP3Settings, &out.HTTP3Settings
+	if in.HTTP3 != nil {
+		in, out := &in.HTTP3, &out.HTTP3
 		*out = new(HTTP3Settings)
 		**out = **in
 	}
