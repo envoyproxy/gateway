@@ -54,7 +54,13 @@ type JWTProvider struct {
 	// The claim must be of type; string, int, double, bool. Array type claims are not supported
 	//
 	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
-	// TODO: Add TBD JWT fields based on defined use cases.
+
+	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
+	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
+	// or access_token from query parameters.
+	//
+	// +optional
+	ExtractFrom *JWTExtractor `json:"extractFrom,omitempty"`
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
@@ -80,4 +86,13 @@ type ClaimToHeader struct {
 	// (eg. "claim.nested.key", "sub"). The nested claim name must use dot "."
 	// to separate the JSON name path.
 	Claim string `json:"claim"`
+}
+
+// JWTExtractor defines a custom JWT token extraction from HTTP request.
+type JWTExtractor struct {
+	// Cookies represents a list of cookie names to extract the JWT token from.
+	// If specified, Envoy will extract the JWT token from the listed cookies and validate each of them.
+	// If any cookie is found to be an invalid JWT, a 401 error will be returned.
+	//
+	Cookies []string `json:"cookies,omitempty"`
 }

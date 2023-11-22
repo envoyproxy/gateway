@@ -144,6 +144,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				ClaimToHeaders:      claimToHeaders,
 			}
 
+			if irProvider.ExtractFrom != nil {
+				jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies
+			}
+
 			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
 			jwtProviders[providerKey] = jwtProvider
 			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
