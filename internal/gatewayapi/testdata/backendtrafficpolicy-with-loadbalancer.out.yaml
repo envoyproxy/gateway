@@ -365,7 +365,7 @@ xdsIR:
         loadBalancer:
           leastRequest:
             slowStart:
-              window: 300000000000
+              window: 5m0s
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

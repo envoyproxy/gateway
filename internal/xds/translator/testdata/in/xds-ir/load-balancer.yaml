@@ -51,7 +51,7 @@ http:
     loadBalancer:
       leastRequest:
         slowStart:
-          window: 100000000
+          window: 60s
     destination:
       name: "fifth-route-dest"
       settings:
@@ -63,7 +63,7 @@ http:
     loadBalancer:
       roundRobin:
         slowStart:
-          window: 600000000
+          window: 300s
     destination:
       name: "sixth-route-dest"
       settings:

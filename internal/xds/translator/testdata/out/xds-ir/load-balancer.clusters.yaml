@@ -65,7 +65,7 @@
   lbPolicy: LEAST_REQUEST
   leastRequestLbConfig:
     slowStartConfig:
-      slowStartWindow: 0.100s
+      slowStartWindow: 60s
   name: fifth-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -84,5 +84,5 @@
   perConnectionBufferLimitBytes: 32768
   roundRobinLbConfig:
     slowStartConfig:
-      slowStartWindow: 0.600s
+      slowStartWindow: 300s
   type: EDS

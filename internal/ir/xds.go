@@ -10,7 +10,6 @@ import (
 	"errors"
 	"net"
 	"reflect"
-	"time"
 
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
@@ -1076,5 +1075,5 @@ type ConsistentHash struct {
 // +k8s:deepcopy-gen=true
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
-	Window time.Duration `json:"window,omitempty" yaml:"window,omitempty"`
+	Window *metav1.Duration `json:"window" yaml:"window"`
 }
