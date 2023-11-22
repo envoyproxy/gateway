@@ -295,6 +295,8 @@ type HTTPRoute struct {
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
+	// ExtAuthz defines the configuration for external authorizations.
+	ExtAuthz *ExtAuthz `json:"extAuthz,omitempty" yaml:"extAuthz,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// Proxy Protocol Settings
@@ -339,6 +341,14 @@ type CORS struct {
 type JWT struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+}
+
+// ExtAuthz defines the configuration for External Authorization.
+//
+// +k8s:deepcopy-gen=true
+type ExtAuthz struct {
+	// GRPCURI defines the gRPC external authz to use in that route.
+	GRPCURI string `json:"grpcURI,omitempty" yaml:"grpcURI"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
