@@ -158,6 +158,14 @@ spec:
                       request can be cached.
                     type: string
                 type: object
+              extAuthz:
+                description: ExtAuthz defines the configuration for external authorizations.
+                properties:
+                  grpcURI:
+                    description: GRPCURI defines the gRPC cluster name to use in that
+                      route.
+                    type: string
+                type: object
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
