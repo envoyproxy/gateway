@@ -42,6 +42,8 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		sum++
 	case spec.JWT != nil:
 		sum++
+	case spec.ExtAuthz != nil:
+		sum++
 	}
 	if sum == 0 {
 		errs = append(errs, errors.New("no security policy is specified"))

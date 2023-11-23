@@ -12,15 +12,14 @@
 package extension
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	v32 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	v33 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
