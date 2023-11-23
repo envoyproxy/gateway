@@ -243,11 +243,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 			if httpRoute.Destination != nil {
 				if err := addXdsCluster(tCtx, &xdsClusterArgs{
-					name:         httpRoute.Destination.Name,
-					settings:     httpRoute.Destination.Settings,
-					tSocket:      nil,
-					endpointType: EndpointTypeStatic,
-					loadBalancer: httpRoute.LoadBalancer,
+					name:          httpRoute.Destination.Name,
+					settings:      httpRoute.Destination.Settings,
+					tSocket:       nil,
+					endpointType:  EndpointTypeStatic,
+					loadBalancer:  httpRoute.LoadBalancer,
+					proxyProtocol: httpRoute.ProxyProtocol,
 				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 					errs = multierror.Append(errs, err)
 				}

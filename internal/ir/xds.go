@@ -293,6 +293,8 @@ type HTTPRoute struct {
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// Proxy Protocol Settings
+	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -1069,6 +1071,22 @@ type Random struct{}
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
 	SourceIP *bool `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+}
+
+type ProxyProtocolVersion string
+
+const (
+	// ProxyProtocolVersionV1 is the PROXY protocol version 1 (human readable format).
+	ProxyProtocolVersionV1 ProxyProtocolVersion = "V1"
+	// ProxyProtocolVersionV2 is the PROXY protocol version 2 (binary format).
+	ProxyProtocolVersionV2 ProxyProtocolVersion = "V2"
+)
+
+// ProxyProtocol upstream settings
+// +k8s:deepcopy-gen=true
+type ProxyProtocol struct {
+	// Version of proxy protocol to use
+	Version ProxyProtocolVersion `json:"version,omitempty" yaml:"version,omitempty"`
 }
 
 // SlowStart defines the slow start configuration.
