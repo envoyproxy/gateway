@@ -21,7 +21,7 @@ This API was added as a new policy attachment resource that can be applied to Ga
 * Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-### Enable ClientTrafficPolicy
+### Enable Proxy Protocol for downstream client
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -39,3 +39,27 @@ spec:
   enableProxyProtocol: true
 EOF
 ```
+
+## Support TCP keepalive for downstream client
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-tcp-keepalive-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  tcpKeepalive:
+    idleTime: 20m
+    interval: 60s
+    probes: 3
+EOF
+```
+
+[ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
