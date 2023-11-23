@@ -63,3 +63,4 @@ EOF
 ```
 
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
+[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
