@@ -88,7 +88,6 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 }
 
 func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
-
 	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
 		Domain: getRateLimitDomain(irListener),
 		RateLimitService: &ratelimitv3.RateLimitServiceConfig{
@@ -138,16 +137,26 @@ func patchRouteWithRateLimit(xdsRouteAction *routev3.RouteAction, irRoute *ir.HT
 }
 
 func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) []*routev3.RateLimit {
-	rateLimits := []*routev3.RateLimit{}
+	var rateLimits []*routev3.RateLimit
+
+	routeDescriptor := &routev3.RateLimit_Action{
+		ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
+			GenericKey: &routev3.RateLimit_Action_GenericKey{
+				DescriptorKey:   getRouteDescriptorKey(descriptorPrefix),
+				DescriptorValue: getRouteDescriptorValue(descriptorPrefix),
+			},
+		},
+	}
+
 	// Rules are ORed
 	for rIdx, rule := range global.Rules {
-		rlActions := []*routev3.RateLimit_Action{}
+		var rlActions []*routev3.RateLimit_Action
 		// Matches are ANDed
 		for mIdx, match := range rule.HeaderMatches {
 			// Case for distinct match
 			if match.Distinct {
 				// Setup RequestHeader actions
-				descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
+				descriptorKey := getRouteRuleDescriptorKey(rIdx, mIdx)
 				action := &routev3.RateLimit_Action{
 					ActionSpecifier: &routev3.RateLimit_Action_RequestHeaders_{
 						RequestHeaders: &routev3.RateLimit_Action_RequestHeaders{
@@ -156,11 +165,11 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 						},
 					},
 				}
-				rlActions = append(rlActions, action)
+				rlActions = append(rlActions, routeDescriptor, action)
 			} else {
 				// Setup HeaderValueMatch actions
-				descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
-				descriptorVal := getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
+				descriptorKey := getRouteRuleDescriptorKey(rIdx, mIdx)
+				descriptorVal := getRouteRuleDescriptorValue(rIdx, mIdx)
 				headerMatcher := &routev3.HeaderMatcher{
 					Name: match.Name,
 					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
@@ -179,7 +188,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 						},
 					},
 				}
-				rlActions = append(rlActions, action)
+				rlActions = append(rlActions, routeDescriptor, action)
 			}
 		}
 
@@ -214,7 +223,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 					MaskedRemoteAddress: mra,
 				},
 			}
-			rlActions = append(rlActions, action)
+			rlActions = append(rlActions, routeDescriptor, action)
 
 			// Setup RemoteAddress action if distinct match is set
 			if rule.CIDRMatch.Distinct {
@@ -235,12 +244,12 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			action := &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
 					GenericKey: &routev3.RateLimit_Action_GenericKey{
-						DescriptorKey:   getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1),
-						DescriptorValue: getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1),
+						DescriptorKey:   getRouteRuleDescriptorKey(rIdx, -1),
+						DescriptorValue: getRouteRuleDescriptorValue(rIdx, -1),
 					},
 				},
 			}
-			rlActions = append(rlActions, action)
+			rlActions = append(rlActions, routeDescriptor, action)
 		}
 
 		rateLimit := &routev3.RateLimit{Actions: rlActions}
@@ -264,12 +273,17 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 // BuildRateLimitServiceConfig builds the rate limit service configuration based on
 // https://github.com/envoyproxy/ratelimit#the-configuration-format
 func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLimitConfig {
-	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, 1)
+	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, len(irListener.Routes))
 
 	for _, route := range irListener.Routes {
 		if route.RateLimit != nil && route.RateLimit.Global != nil {
-			serviceDescriptors := buildRateLimitServiceDescriptors(route.Name, route.RateLimit.Global)
-			pbDescriptors = append(pbDescriptors, serviceDescriptors...)
+			serviceDescriptors := buildRateLimitServiceDescriptors(route.RateLimit.Global)
+			routeDescriptor := &rlsconfv3.RateLimitDescriptor{
+				Key:         getRouteDescriptorKey(route.Name),
+				Value:       getRouteDescriptorValue(route.Name),
+				Descriptors: serviceDescriptors,
+			}
+			pbDescriptors = append(pbDescriptors, routeDescriptor)
 		}
 	}
 
@@ -284,16 +298,16 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 }
 
 // buildRateLimitServiceDescriptors creates the rate limit service pb descriptors based on the global rate limit IR config.
-func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.GlobalRateLimit) []*rlsconfv3.RateLimitDescriptor {
-	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, 1)
+func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.RateLimitDescriptor {
+	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, len(global.Rules))
 
 	for rIdx, rule := range global.Rules {
 		var head, cur *rlsconfv3.RateLimitDescriptor
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			// GenericKey case
-			pbDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
-			pbDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1)
+			pbDesc.Key = getRouteRuleDescriptorKey(rIdx, -1)
+			pbDesc.Value = getRouteRuleDescriptorValue(rIdx, -1)
 			rateLimit := rlsconfv3.RateLimitPolicy{
 				RequestsPerUnit: uint32(rule.Limit.Requests),
 				Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
@@ -308,11 +322,11 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			// Case for distinct match
 			if match.Distinct {
 				// RequestHeader case
-				pbDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
+				pbDesc.Key = getRouteRuleDescriptorKey(rIdx, mIdx)
 			} else {
 				// HeaderValueMatch case
-				pbDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
-				pbDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
+				pbDesc.Key = getRouteRuleDescriptorKey(rIdx, mIdx)
+				pbDesc.Value = getRouteRuleDescriptorValue(rIdx, mIdx)
 			}
 
 			// Add the ratelimit values to the last descriptor
@@ -453,12 +467,20 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	return nil
 }
 
-func getRateLimitDescriptorKey(prefix string, ruleIndex, matchIndex int) string {
-	return prefix + "-key-rule-" + strconv.Itoa(ruleIndex) + "-match-" + strconv.Itoa(matchIndex)
+func getRouteRuleDescriptorKey(ruleIndex, matchIndex int) string {
+	return "key-rule-" + strconv.Itoa(ruleIndex) + "-match-" + strconv.Itoa(matchIndex)
 }
 
-func getRateLimitDescriptorValue(prefix string, ruleIndex, matchIndex int) string {
-	return prefix + "-value-rule-" + strconv.Itoa(ruleIndex) + "-match-" + strconv.Itoa(matchIndex)
+func getRouteRuleDescriptorValue(ruleIndex, matchIndex int) string {
+	return "value-rule-" + strconv.Itoa(ruleIndex) + "-match-" + strconv.Itoa(matchIndex)
+}
+
+func getRouteDescriptorKey(prefix string) string {
+	return "key-" + prefix
+}
+
+func getRouteDescriptorValue(prefix string) string {
+	return "value-" + prefix
 }
 
 func getRateLimitServiceClusterName() string {

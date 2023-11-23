@@ -12,9 +12,12 @@
         cluster: first-route-dest
         rateLimits:
         - actions:
+          - genericKey:
+              descriptorKey: key-first-route
+              descriptorValue: value-first-route
           - headerValueMatch:
-              descriptorKey: first-route-key-rule-0-match-0
-              descriptorValue: first-route-value-rule-0-match-0
+              descriptorKey: key-rule-0-match-0
+              descriptorValue: value-rule-0-match-0
               expectMatch: true
               headers:
               - name: x-user-id
@@ -27,8 +30,11 @@
         cluster: second-route-dest
         rateLimits:
         - actions:
+          - genericKey:
+              descriptorKey: key-second-route
+              descriptorValue: value-second-route
           - requestHeaders:
-              descriptorKey: second-route-key-rule-0-match-0
+              descriptorKey: key-rule-0-match-0
               headerName: x-user-id
     - match:
         path: test
@@ -38,5 +44,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: third-route-key-rule-0-match--1
-              descriptorValue: third-route-value-rule-0-match--1
+              descriptorKey: key-third-route
+              descriptorValue: value-third-route
+          - genericKey:
+              descriptorKey: key-rule-0-match--1
+              descriptorValue: value-rule-0-match--1
