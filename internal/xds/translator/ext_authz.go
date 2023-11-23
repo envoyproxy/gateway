@@ -53,6 +53,7 @@ func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 
 // buildHCMExtAuthzFilter returns an external authorization filter from the provided IR listener.
 func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
+	// TODO: account for multiple authz backends
 	for _, route := range irListener.Routes {
 		grpc, err := url2Cluster(route.ExtAuthz.GRPCURI)
 		if err != nil {

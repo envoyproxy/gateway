@@ -698,6 +698,20 @@ _Appears in:_
 
 
 
+#### ExtAuthz
+
+
+
+ExtAuthz defines the configuration for External Authorization.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `grpcURI` _string_ | GRPCURI defines the gRPC cluster name to use in that route. |
+
+
 #### ExtensionAPISettings
 
 
@@ -1675,6 +1689,7 @@ _Appears in:_
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
+| `extAuthz` _[ExtAuthz](#extauthz)_ | ExtAuthz defines the configuration for external authorizations. |
 | `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 
 
