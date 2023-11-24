@@ -1048,11 +1048,19 @@ func (l *LoadBalancer) Validate() error {
 
 // RoundRobin load balancer settings
 // +k8s:deepcopy-gen=true
-type RoundRobin struct{}
+type RoundRobin struct {
+	// SlowStart defines the slow start configuration.
+	// If set, slow start mode is enabled for newly added hosts in the cluster.
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+}
 
 // LeastRequest load balancer settings
 // +k8s:deepcopy-gen=true
-type LeastRequest struct{}
+type LeastRequest struct {
+	// SlowStart defines the slow start configuration.
+	// If set, slow start mode is enabled for newly added hosts in the cluster.
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+}
 
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
@@ -1079,4 +1087,11 @@ const (
 type ProxyProtocol struct {
 	// Version of proxy protocol to use
 	Version ProxyProtocolVersion `json:"version,omitempty" yaml:"version,omitempty"`
+}
+
+// SlowStart defines the slow start configuration.
+// +k8s:deepcopy-gen=true
+type SlowStart struct {
+	// Window defines the duration of the warm up period for newly added host.
+	Window *metav1.Duration `json:"window" yaml:"window"`
 }

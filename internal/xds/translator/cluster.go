@@ -100,8 +100,30 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 	} else if args.loadBalancer.LeastRequest != nil {
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+		if args.loadBalancer.LeastRequest.SlowStart != nil {
+			if args.loadBalancer.LeastRequest.SlowStart.Window != nil {
+				cluster.LbConfig = &clusterv3.Cluster_LeastRequestLbConfig_{
+					LeastRequestLbConfig: &clusterv3.Cluster_LeastRequestLbConfig{
+						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
+							SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
+						},
+					},
+				}
+			}
+		}
 	} else if args.loadBalancer.RoundRobin != nil {
 		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
+		if args.loadBalancer.RoundRobin.SlowStart != nil {
+			if args.loadBalancer.RoundRobin.SlowStart.Window != nil {
+				cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
+					RoundRobinLbConfig: &clusterv3.Cluster_RoundRobinLbConfig{
+						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
+							SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
+						},
+					},
+				}
+			}
+		}
 	} else if args.loadBalancer.Random != nil {
 		cluster.LbPolicy = clusterv3.Cluster_RANDOM
 	} else if args.loadBalancer.ConsistentHash != nil {
