@@ -6,10 +6,8 @@ backendTrafficPolicies:
     name: policy-for-route
     namespace: default
   spec:
-    loadBalancer:
-      consistentHash:
-        type: SourceIP
-      type: ConsistentHash
+    proxyProtocol:
+      version: V2
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -26,61 +24,15 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-route2
-    namespace: default
-  spec:
-    loadBalancer:
-      slowStart:
-        window: 5m0s
-      type: LeastRequest
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-2
-      namespace: default
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    loadBalancer:
-      type: Random
+    proxyProtocol:
+      version: V1
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway2
-    namespace: envoy-gateway
-  spec:
-    loadBalancer:
-      slowStart:
-        window: 5m0s
-      type: RoundRobin
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-2
       namespace: envoy-gateway
   status:
     conditions:
@@ -147,7 +99,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -243,44 +195,6 @@ httpRoutes:
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-2
-    namespace: default
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - name: gateway-2
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-2
-        port: 8080
-      matches:
-      - path:
-          value: /test2
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-2
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -335,9 +249,9 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
-        loadBalancer:
-          random: {}
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+        proxyProtocol:
+          version: V1
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -354,27 +268,6 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        loadBalancer:
-          leastRequest:
-            slowStart:
-              window: 5m0s
-        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /test2
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - endpoints:
@@ -383,11 +276,10 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
-        loadBalancer:
-          consistentHash:
-            sourceIP: true
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
+        proxyProtocol:
+          version: V2

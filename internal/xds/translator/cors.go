@@ -20,11 +20,23 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-// patchHCMWithCORSFilter builds and appends the CORS Filter to the HTTP
-// Connection Manager if applicable.
-func patchHCMWithCORSFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func init() {
+	registerHTTPFilter(&cors{})
+}
+
+type cors struct {
+}
+
+var _ httpFilter = &cors{}
+
+// patchHCM builds and appends the CORS Filter to the HTTP Connection Manager if
+// applicable.
+func (*cors) patchHCM(
+	mgr *hcmv3.HttpConnectionManager,
+	irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -49,7 +61,7 @@ func patchHCMWithCORSFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 		return err
 	}
 
-	// Ensure the cors filter is the first one in the filter chain.
+	// Ensure the CORS filter is the first one in the filter chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{corsFilter}, mgr.HttpFilters...)
 
 	return nil
@@ -88,9 +100,8 @@ func listenerContainsCORS(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-// patchRouteWithCORS patches the provided route with the CORS config if
-// applicable.
-func patchRouteWithCORS(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+// patchRoute patches the provided route with the CORS config if applicable.
+func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -103,7 +114,7 @@ func patchRouteWithCORS(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 	filterCfg := route.GetTypedPerFilterConfig()
 	if _, ok := filterCfg[wellknown.CORS]; ok {
-		// This should not happen since this is the only place where the cors
+		// This should not happen since this is the only place where the CORS
 		// filter is added in a route.
 		return fmt.Errorf("route already contains cors config: %+v", route)
 	}
@@ -150,5 +161,13 @@ func patchRouteWithCORS(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 	route.TypedPerFilterConfig[wellknown.CORS] = routeCfgAny
 
+	return nil
+}
+
+func (*cors) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
+	return nil
+}
+
+func (c *cors) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
 	return nil
 }

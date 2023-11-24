@@ -199,6 +199,23 @@ spec:
                             - header
                             type: object
                           type: array
+                        extractFrom:
+                          description: ExtractFrom defines different ways to extract
+                            the JWT token from HTTP request. If empty, it defaults
+                            to extract JWT token from the Authorization HTTP request
+                            header using Bearer schema or access_token from query
+                            parameters.
+                          properties:
+                            cookies:
+                              description: Cookies represents a list of cookie names
+                                to extract the JWT token from. If specified, Envoy
+                                will extract the JWT token from the listed cookies
+                                and validate each of them. If any cookie is found
+                                to be an invalid JWT, a 401 error will be returned.
+                              items:
+                                type: string
+                              type: array
+                          type: object
                         issuer:
                           description: Issuer is the principal that issued the JWT
                             and takes the form of a URL or email address. For additional
