@@ -433,9 +433,7 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 			lb.ConsistentHash.SourceIP = ptr.To(true)
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
-		lb = &ir.LoadBalancer{
-			LeastRequest: &ir.LeastRequest{},
-		}
+		lb = &ir.LoadBalancer{}
 		if policy.Spec.LoadBalancer.SlowStart != nil {
 			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
 				lb.LeastRequest = &ir.LeastRequest{
