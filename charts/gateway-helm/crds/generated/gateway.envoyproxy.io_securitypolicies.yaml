@@ -158,10 +158,10 @@ spec:
                   authentication.
                 properties:
                   providers:
-                    description: "Providers defines the JSON Web Token (JWT) authentication
-                      provider type. \n When multiple JWT providers are specified,
-                      the JWT is considered valid if any of the providers successfully
-                      validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html."
+                    description: Providers defines the JSON Web Token (JWT) authentication
+                      provider type. When multiple JWT providers are specified, the
+                      JWT is considered valid if any of the providers successfully
+                      validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html.
                     items:
                       description: JWTProvider defines how a JSON Web Token (JWT)
                         can be verified.
