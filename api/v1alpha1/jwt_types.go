@@ -9,7 +9,6 @@ package v1alpha1
 type JWT struct {
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
-	//
 	// When multiple JWT providers are specified, the JWT is considered valid if
 	// any of the providers successfully validate the JWT. For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html.
