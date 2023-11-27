@@ -242,6 +242,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
 		pp *ir.ProxyProtocol
+		hc *ir.HealthCheck
 	)
 
 	// Build IR
@@ -254,6 +255,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
 	}
+	if policy.Spec.HealthCheck != nil {
+		hc = t.buildHealthCheck(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -264,6 +268,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.RateLimit = rl
 					r.LoadBalancer = lb
 					r.ProxyProtocol = pp
+					r.HealthCheck = hc
 				}
 			}
 		}
@@ -276,6 +281,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
 		pp *ir.ProxyProtocol
+		hc *ir.HealthCheck
 	)
 
 	// Build IR
@@ -287,6 +293,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.HealthCheck != nil {
+		hc = t.buildHealthCheck(policy)
 	}
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -306,6 +315,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.ProxyProtocol == nil {
 				r.ProxyProtocol = pp
+			}
+			if r.HealthCheck == nil {
+				r.HealthCheck = hc
 			}
 		}
 	}
@@ -481,4 +493,106 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 	}
 
 	return pp
+}
+
+func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
+	if policy.Spec.HealthCheck == nil {
+		return nil
+	}
+
+	hc := policy.Spec.HealthCheck
+	irHC := &ir.HealthCheck{
+		Timeout:            hc.Timeout,
+		Interval:           hc.Interval,
+		UnhealthyThreshold: hc.UnhealthyThreshold,
+		HealthyThreshold:   hc.HealthyThreshold,
+	}
+	switch hc.HealthChecker.Type {
+	case egv1a1.HealthCheckerTypeHTTP:
+		irHC.HTTP = t.buildHTTPHealthChecker(hc.HealthChecker.HTTP)
+	case egv1a1.HealthCheckerTypeGRPC:
+		irHC.GRPC = t.buildGRPCHealthChecker(hc.HealthChecker.GRPC)
+	case egv1a1.HealthCheckerTypeTCP:
+		irHC.TCP = t.buildTCPHealthChecker(hc.HealthChecker.TCP)
+	}
+
+	return irHC
+}
+
+func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTTPHealthChecker {
+	if h == nil {
+		return nil
+	}
+
+	irHTTP := &ir.HTTPHealthChecker{
+		Path:   h.Path,
+		Method: h.Method,
+	}
+	if irHTTP.Method != nil {
+		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
+	}
+
+	var irStatuses []ir.Int64Range
+	for _, r := range h.ExpectedStatuses {
+		irStatuses = append(irStatuses, ir.Int64Range{Start: r.Start, End: r.End})
+	}
+	irHTTP.ExpectedStatuses = irStatuses
+
+	var irResponses []*ir.HealthCheckPayload
+	for i := range h.ExpectedResponses {
+		r := &h.ExpectedResponses[i]
+		irResponses = append(irResponses, translateHealthCheckPayload(r))
+	}
+	irHTTP.ExpectedResponses = irResponses
+
+	return irHTTP
+}
+
+func (t *Translator) buildGRPCHealthChecker(h *egv1a1.GRPCHealthChecker) *ir.GRPCHealthChecker {
+	if h == nil {
+		return nil
+	}
+
+	irGRPC := &ir.GRPCHealthChecker{
+		ServiceName: h.ServiceName,
+		Authority:   h.Authority,
+		Metadata:    h.Metadata,
+	}
+
+	return irGRPC
+}
+
+func (t *Translator) buildTCPHealthChecker(h *egv1a1.TCPHealthChecker) *ir.TCPHealthChecker {
+	if h == nil {
+		return nil
+	}
+
+	irTCP := &ir.TCPHealthChecker{
+		Send: translateHealthCheckPayload(h.Send),
+	}
+	var irRecv []*ir.HealthCheckPayload
+	for i := range h.Receive {
+		r := &h.Receive[i]
+		irRecv = append(irRecv, translateHealthCheckPayload(r))
+	}
+	irTCP.Receive = irRecv
+
+	return irTCP
+}
+
+func translateHealthCheckPayload(p *egv1a1.HealthCheckPayload) *ir.HealthCheckPayload {
+	if p == nil {
+		return nil
+	}
+
+	irPayload := &ir.HealthCheckPayload{}
+	switch p.Type {
+	case egv1a1.HealthCheckPayloadTypeText:
+		irPayload.Text = p.Text
+	case egv1a1.HealthCheckPayloadTypeBinary:
+		irPayload.Binary = make([]byte, len(p.Binary))
+		copy(irPayload.Binary, p.Binary)
+	}
+
+	return irPayload
 }

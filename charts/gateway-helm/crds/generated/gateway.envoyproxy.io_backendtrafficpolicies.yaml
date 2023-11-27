@@ -44,6 +44,240 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              healthCheck:
+                description: HealthCheck allows gateway to perform active health checking
+                  on backends.
+                properties:
+                  healthChecker:
+                    description: HealthChecker defines the concrete health checker
+                      to do health checking.
+                    properties:
+                      grpc:
+                        description: GRPC defines the configuration of grpc health
+                          checker. It's required while the health checker type is
+                          GRPC.
+                        properties:
+                          authority:
+                            description: Authority defines the value of :authority
+                              header in the gRPC health check request.
+                            type: string
+                          metadata:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          serviceName:
+                            description: ServiceName defines the value of parameter
+                              service in the gRPC health check request.
+                            type: string
+                        type: object
+                      http:
+                        description: HTTP defines the configuration of http health
+                          checker. It's required while the health checker type is
+                          HTTP.
+                        properties:
+                          expectedResponses:
+                            description: ExpectedResponses defines a list of HTTP
+                              expected responses to match.
+                            items:
+                              description: HealthCheckPayload defines the encoding
+                                of the payload bytes in the payload.
+                              properties:
+                                binary:
+                                  description: Binary payload base64 encoded.
+                                  format: byte
+                                  type: string
+                                text:
+                                  description: Text payload in plain text.
+                                  type: string
+                                type:
+                                  allOf:
+                                  - enum:
+                                    - Text
+                                    - Binary
+                                  - enum:
+                                    - Text
+                                    - Binary
+                                  description: Type defines the type of the payload.
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                              x-kubernetes-validations:
+                              - message: If payload type is Text, text field needs
+                                  to be set.
+                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                              - message: If payload type is Binary, binary field needs
+                                  to be set.
+                                rule: 'self.type == ''Binary'' ? has(self.binary)
+                                  : !has(self.binary)'
+                            type: array
+                          expectedStatuses:
+                            description: ExpectedStatuses defines a list of HTTP response
+                              statuses considered healthy.
+                            items:
+                              description: HTTPStatusRange defines the start and end
+                                of the http status range using half-open interval
+                                semantics [start, end). Only statuses in the range
+                                [100, 600) are allowed.
+                              properties:
+                                end:
+                                  description: End defines end of the range (exclusive)
+                                  format: int64
+                                  maximum: 600
+                                  minimum: 100
+                                  type: integer
+                                start:
+                                  description: Start defines start of the range (inclusive)
+                                  exclusiveMaximum: true
+                                  format: int64
+                                  maximum: 600
+                                  minimum: 100
+                                  type: integer
+                              required:
+                              - end
+                              - start
+                              type: object
+                              x-kubernetes-validations:
+                              - message: start should be not greater than end
+                                rule: self.start <= self.end
+                            type: array
+                          method:
+                            description: Method defines the HTTP method used for health
+                              checking. Defaults to GET
+                            type: string
+                          path:
+                            description: Path defines the HTTP path that will be requested
+                              during health checking.
+                            maxLength: 1024
+                            minLength: 1
+                            type: string
+                        required:
+                        - path
+                        type: object
+                      tcp:
+                        description: TCP defines the configuration of tcp health checker.
+                          It's required while the health checker type is TCP.
+                        properties:
+                          receive:
+                            description: Receive defines the expected response payloads.
+                            items:
+                              description: HealthCheckPayload defines the encoding
+                                of the payload bytes in the payload.
+                              properties:
+                                binary:
+                                  description: Binary payload base64 encoded.
+                                  format: byte
+                                  type: string
+                                text:
+                                  description: Text payload in plain text.
+                                  type: string
+                                type:
+                                  allOf:
+                                  - enum:
+                                    - Text
+                                    - Binary
+                                  - enum:
+                                    - Text
+                                    - Binary
+                                  description: Type defines the type of the payload.
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                              x-kubernetes-validations:
+                              - message: If payload type is Text, text field needs
+                                  to be set.
+                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                              - message: If payload type is Binary, binary field needs
+                                  to be set.
+                                rule: 'self.type == ''Binary'' ? has(self.binary)
+                                  : !has(self.binary)'
+                            type: array
+                          send:
+                            description: Send defines the request payload.
+                            properties:
+                              binary:
+                                description: Binary payload base64 encoded.
+                                format: byte
+                                type: string
+                              text:
+                                description: Text payload in plain text.
+                                type: string
+                              type:
+                                allOf:
+                                - enum:
+                                  - Text
+                                  - Binary
+                                - enum:
+                                  - Text
+                                  - Binary
+                                description: Type defines the type of the payload.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: If payload type is Text, text field needs to
+                                be set.
+                              rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                            - message: If payload type is Binary, binary field needs
+                                to be set.
+                              rule: 'self.type == ''Binary'' ? has(self.binary) :
+                                !has(self.binary)'
+                        type: object
+                      type:
+                        allOf:
+                        - enum:
+                          - HTTP
+                          - GRPC
+                          - TCP
+                        - enum:
+                          - HTTP
+                          - GRPC
+                          - TCP
+                        description: Type defines the type of health checker.
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: If Health Checker type is HTTP, http field needs to
+                        be set.
+                      rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
+                    - message: If Health Checker type is GRPC, grpc field needs to
+                        be set.
+                      rule: 'self.type == ''GRPC'' ? has(self.grpc) : !has(self.grpc)'
+                    - message: If Health Checker type is TCP, tcp field needs to be
+                        set.
+                      rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
+                  healthyThreshold:
+                    default: 1
+                    description: HealthyThreshold defines the number of healthy health
+                      checks required before a backend host is marked healthy.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  interval:
+                    default: 3s
+                    description: Interval defines the time between health checks.
+                    format: duration
+                    type: string
+                  timeout:
+                    default: 1s
+                    description: Timeout defines the time to wait for a health check
+                      response.
+                    format: duration
+                    type: string
+                  unhealthyThreshold:
+                    default: 3
+                    description: UnhealthyThreshold defines the number of unhealthy
+                      health checks required before a backend host is marked unhealthy.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                required:
+                - healthChecker
+                type: object
               loadBalancer:
                 description: LoadBalancer policy to apply when routing traffic from
                   the gateway to the backend endpoints

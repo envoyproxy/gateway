@@ -211,6 +211,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "basic-auth",
 		},
+		{
+			name: "health-check",
+		},
 	}
 
 	for _, tc := range testCases {

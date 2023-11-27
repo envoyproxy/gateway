@@ -1,0 +1,103 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: first-route-dest
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "300"
+        start: "200"
+      - end: "400"
+        start: "300"
+      path: /healthz
+      receive:
+      - text: 6f6b
+      - binary: RXZlcnl0aGluZyBPSw==
+    interval: 3s
+    timeout: 0.500s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: first-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: second-route-dest
+  healthChecks:
+  - grpcHealthCheck:
+      authority: foo
+      initialMetadata:
+      - header:
+          key: x-source
+          value: gateway
+      serviceName: service
+    healthyThreshold: 3
+    interval: 5s
+    timeout: 1s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: second-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: third-route-dest
+  healthChecks:
+  - healthyThreshold: 3
+    interval: 5s
+    tcpHealthCheck:
+      receive:
+      - text: 706f6e67
+      send:
+        text: "70696e67"
+    timeout: 1s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: third-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fourth-route-dest
+  healthChecks:
+  - healthyThreshold: 3
+    interval: 5s
+    tcpHealthCheck:
+      receive:
+      - binary: cG9uZw==
+      send:
+        binary: cGluZw==
+    timeout: 1s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: fourth-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

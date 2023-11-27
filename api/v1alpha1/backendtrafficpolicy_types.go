@@ -65,6 +65,11 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+
+	// HealthCheck allows gateway to perform active health checking on backends.
+	//
+	// +optional
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy

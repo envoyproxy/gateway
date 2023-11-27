@@ -476,6 +476,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		endpointType:  endpointType,
 		loadBalancer:  httpRoute.LoadBalancer,
 		proxyProtocol: httpRoute.ProxyProtocol,
+		healthCheck:   httpRoute.HealthCheck,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

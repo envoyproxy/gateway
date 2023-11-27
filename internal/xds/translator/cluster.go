@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -37,6 +39,7 @@ type xdsClusterArgs struct {
 	endpointType  EndpointType
 	loadBalancer  *ir.LoadBalancer
 	proxyProtocol *ir.ProxyProtocol
+	healthCheck   *ir.HealthCheck
 }
 
 type EndpointType int
@@ -130,7 +133,97 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 	}
 
+	if args.healthCheck != nil {
+		hc := &corev3.HealthCheck{
+			Timeout:  durationpb.New(args.healthCheck.Timeout.Duration),
+			Interval: durationpb.New(args.healthCheck.Interval.Duration),
+		}
+		if args.healthCheck.UnhealthyThreshold != nil {
+			hc.UnhealthyThreshold = wrapperspb.UInt32(*args.healthCheck.UnhealthyThreshold)
+		}
+		if args.healthCheck.HealthyThreshold != nil {
+			hc.HealthyThreshold = wrapperspb.UInt32(*args.healthCheck.HealthyThreshold)
+		}
+		if args.healthCheck.HTTP != nil {
+			httpChecker := &corev3.HealthCheck_HttpHealthCheck{
+				Path: args.healthCheck.HTTP.Path,
+			}
+			if args.healthCheck.HTTP.Method != nil {
+				httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*args.healthCheck.HTTP.Method])
+			}
+			for _, status := range args.healthCheck.HTTP.ExpectedStatuses {
+				httpChecker.ExpectedStatuses = append(httpChecker.ExpectedStatuses, &xdstype.Int64Range{Start: status.Start, End: status.End})
+			}
+			for _, resp := range args.healthCheck.HTTP.ExpectedResponses {
+				if receive := buildHealthCheckPayload(resp); receive != nil {
+					httpChecker.Receive = append(httpChecker.Receive, receive)
+				}
+			}
+			hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
+				HttpHealthCheck: httpChecker,
+			}
+		}
+		if args.healthCheck.GRPC != nil {
+			grpcChecker := &corev3.HealthCheck_GrpcHealthCheck{}
+			if args.healthCheck.GRPC.ServiceName != nil {
+				grpcChecker.ServiceName = *args.healthCheck.GRPC.ServiceName
+			}
+			if args.healthCheck.GRPC.Authority != nil {
+				grpcChecker.Authority = *args.healthCheck.GRPC.Authority
+			}
+			var headerValues []*corev3.HeaderValueOption
+			for key, value := range args.healthCheck.GRPC.Metadata {
+				headerValues = append(headerValues, &corev3.HeaderValueOption{
+					Header: &corev3.HeaderValue{
+						Key:   key,
+						Value: value,
+					},
+					AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
+				})
+			}
+			grpcChecker.InitialMetadata = headerValues
+			hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
+				GrpcHealthCheck: grpcChecker,
+			}
+		}
+		if args.healthCheck.TCP != nil {
+			tcpChecker := &corev3.HealthCheck_TcpHealthCheck{
+				Send: buildHealthCheckPayload(args.healthCheck.TCP.Send),
+			}
+			for _, recv := range args.healthCheck.TCP.Receive {
+				if receive := buildHealthCheckPayload(recv); receive != nil {
+					tcpChecker.Receive = append(tcpChecker.Receive, receive)
+				}
+			}
+			hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
+				TcpHealthCheck: tcpChecker,
+			}
+		}
+		cluster.HealthChecks = []*corev3.HealthCheck{hc}
+	}
+
 	return cluster
+}
+
+func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_Payload {
+	if irLoad == nil {
+		return nil
+	}
+
+	var hcp corev3.HealthCheck_Payload
+	if irLoad.Text != nil && *irLoad.Text != "" {
+		hcp.Payload = &corev3.HealthCheck_Payload_Text{
+			Text: hex.EncodeToString([]byte(*irLoad.Text)),
+		}
+	}
+	if len(irLoad.Binary) > 0 {
+		binPayload := &corev3.HealthCheck_Payload_Binary{
+			Binary: make([]byte, len(irLoad.Binary)),
+		}
+		copy(binPayload.Binary, irLoad.Binary)
+		hcp.Payload = binPayload
+	}
+	return &hcp
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {

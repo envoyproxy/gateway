@@ -1,0 +1,84 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    healthCheck:
+      timeout: "500ms"
+      interval: "3s"
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      http:
+        path: "/healthz"
+        expectedStatuses:
+        - start: 200
+          end: 300
+        - start: 300
+          end: 400
+        expectedResponses:
+        - text: "ok"
+        - binary: "RXZlcnl0aGluZyBPSw=="
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    healthCheck:
+      timeout: "1s"
+      interval: "5s"
+      unhealthyThreshold: 3
+      healthyThreshold: 3
+      grpc:
+        serviceName: "service"
+        authority: "foo"
+        metadata:
+          x-source: "gateway"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "third-route"
+    hostname: "*"
+    healthCheck:
+      timeout: "1s"
+      interval: "5s"
+      unhealthyThreshold: 3
+      healthyThreshold: 3
+      tcp:
+        send:
+          text: "ping"
+        receive:
+        - text: "pong"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fourth-route"
+    hostname: "*"
+    healthCheck:
+      timeout: "1s"
+      interval: "5s"
+      unhealthyThreshold: 3
+      healthyThreshold: 3
+      tcp:
+        send:
+          binary: "cGluZw=="
+        receive:
+        - binary: "cG9uZw=="
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

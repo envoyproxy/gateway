@@ -76,6 +76,7 @@ _Appears in:_
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
+| `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 
 
 
@@ -788,6 +789,22 @@ _Appears in:_
 | `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### GRPCHealthChecker
+
+
+
+GRPCHealthChecker defines the settings of grpc health check.
+
+_Appears in:_
+- [HealthChecker](#healthchecker)
+
+| Field | Description |
+| --- | --- |
+| `serviceName` _string_ | ServiceName defines the value of parameter service in the gRPC health check request. |
+| `authority` _string_ | Authority defines the value of :authority header in the gRPC health check request. |
+| `metadata` _object (keys:string, values:string)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+
+
 #### Gateway
 
 
@@ -833,6 +850,38 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+#### HTTPHealthChecker
+
+
+
+HTTPHealthChecker defines the settings of http health check.
+
+_Appears in:_
+- [HealthChecker](#healthchecker)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path defines the HTTP path that will be requested during health checking. |
+| `method` _string_ | Method defines the HTTP method used for health checking. Defaults to GET |
+| `expectedStatuses` _[HTTPStatusRange](#httpstatusrange) array_ | ExpectedStatuses defines a list of HTTP response statuses considered healthy. |
+| `expectedResponses` _[HealthCheckPayload](#healthcheckpayload) array_ | ExpectedResponses defines a list of HTTP expected responses to match. |
+
+
+#### HTTPStatusRange
+
+
+
+HTTPStatusRange defines the start and end of the http status range using half-open interval semantics [start, end). Only statuses in the range [100, 600) are allowed.
+
+_Appears in:_
+- [HTTPHealthChecker](#httphealthchecker)
+
+| Field | Description |
+| --- | --- |
+| `start` _integer_ | Start defines start of the range (inclusive) |
+| `end` _integer_ | End defines end of the range (exclusive) |
+
+
 #### HeaderMatch
 
 
@@ -841,6 +890,80 @@ HeaderMatch defines the match attributes within the HTTP Headers of the request.
 
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
+
+
+
+#### HealthCheck
+
+
+
+HealthCheck defines the health check configuration.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Timeout defines the time to wait for a health check response. |
+| `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Interval defines the time between health checks. |
+| `unhealthyThreshold` _integer_ | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
+| `healthyThreshold` _integer_ | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
+| `healthChecker` _[HealthChecker](#healthchecker)_ | HealthChecker defines the concrete health checker to do health checking. |
+
+
+#### HealthCheckPayload
+
+
+
+HealthCheckPayload defines the encoding of the payload bytes in the payload.
+
+_Appears in:_
+- [HTTPHealthChecker](#httphealthchecker)
+- [TCPHealthChecker](#tcphealthchecker)
+
+| Field | Description |
+| --- | --- |
+| `type` _[HealthCheckPayloadType](#healthcheckpayloadtype)_ | Type defines the type of the payload. |
+| `text` _string_ | Text payload in plain text. |
+| `binary` _integer array_ | Binary payload base64 encoded. |
+
+
+#### HealthCheckPayloadType
+
+_Underlying type:_ `string`
+
+HealthCheckPayloadType is the type of the payload.
+
+_Appears in:_
+- [HealthCheckPayload](#healthcheckpayload)
+
+
+
+#### HealthChecker
+
+
+
+HealthChecker defines the configuration of concrete health checker. EG supports various types of health checking including HTTP, GRPC, TCP.
+
+_Appears in:_
+- [HealthCheck](#healthcheck)
+
+| Field | Description |
+| --- | --- |
+| `type` _[HealthCheckerType](#healthcheckertype)_ | Type defines the type of health checker. |
+| `http` _[HTTPHealthChecker](#httphealthchecker)_ | HTTP defines the configuration of http health checker. It's required while the health checker type is HTTP. |
+| `grpc` _[GRPCHealthChecker](#grpchealthchecker)_ | GRPC defines the configuration of grpc health checker. It's required while the health checker type is GRPC. |
+| `tcp` _[TCPHealthChecker](#tcphealthchecker)_ | TCP defines the configuration of tcp health checker. It's required while the health checker type is TCP. |
+
+
+#### HealthCheckerType
+
+_Underlying type:_ `string`
+
+HealthCheckerType is the type of health checker.
+
+_Appears in:_
+- [HealthChecker](#healthchecker)
 
 
 
@@ -1739,6 +1862,21 @@ StringMatchType specifies the semantics of how a string value should be compared
 _Appears in:_
 - [StringMatch](#stringmatch)
 
+
+
+#### TCPHealthChecker
+
+
+
+TCPHealthChecker defines the settings of tcp health check.
+
+_Appears in:_
+- [HealthChecker](#healthchecker)
+
+| Field | Description |
+| --- | --- |
+| `send` _[HealthCheckPayload](#healthcheckpayload)_ | Send defines the request payload. |
+| `receive` _[HealthCheckPayload](#healthcheckpayload) array_ | Receive defines the expected response payloads. |
 
 
 #### TCPKeepalive
