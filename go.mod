@@ -15,7 +15,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/go-cmp v0.6.0
 	github.com/grafana/tempo v1.5.0
-	github.com/miekg/dns v1.1.46
+	github.com/miekg/dns v1.1.57
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.45.0
 	github.com/spf13/cobra v1.8.0
