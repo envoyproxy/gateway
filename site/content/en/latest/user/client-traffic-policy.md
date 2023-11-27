@@ -12,7 +12,7 @@ the behavior for how the Envoy Proxy server behaves with downstream clients.
 
 ## Motivation
 
-This API was added as a new policy attachment resource that can be applied to Gateway resources and it is meant to hold settings for configuring behavior of the connection between the downstream client and Envoy Proxy listener. It the counterpart to the [BackendTrafficPolicy][] API resource.
+This API was added as a new policy attachment resource that can be applied to Gateway resources and it is meant to hold settings for configuring behavior of the connection between the downstream client and Envoy Proxy listener. It is the counterpart to the [BackendTrafficPolicy][] API resource.
 
 ## Quickstart
 
@@ -22,6 +22,8 @@ This API was added as a new policy attachment resource that can be applied to Ga
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Enable Proxy Protocol for downstream client
+
+This example configures Proxy Protocol for downstream clients.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -40,7 +42,9 @@ spec:
 EOF
 ```
 
-## Support TCP keepalive for downstream client
+### Support TCP keepalive for downstream client
+
+This example configures TCP keepalive settings for downstream clients.
 
 ```shell
 cat <<EOF | kubectl apply -f -
