@@ -380,10 +380,10 @@ func (*oidc) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *
 			continue
 		}
 
-		perRouteFilterName := oauth2FilterName(route)
+		filterName := oauth2FilterName(route)
 		filterCfg := routeCfg.TypedPerFilterConfig
 
-		if _, ok := filterCfg[perRouteFilterName]; ok {
+		if _, ok := filterCfg[filterName]; ok {
 			// This should not happen since this is the only place where the oauth2
 			// filter is added in a route.
 			errs = multierror.Append(errs, fmt.Errorf(
@@ -403,7 +403,7 @@ func (*oidc) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *
 			routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
 		}
 
-		routeCfg.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
+		routeCfg.TypedPerFilterConfig[filterName] = routeCfgAny
 	}
 	return errs
 }
@@ -421,27 +421,8 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return nil
 	}
 
-	perRouteFilterName := oauth2FilterName(irRoute)
-	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[perRouteFilterName]; ok {
-		// This should not happen since this is the only place where the oauth2
-		// filter is added in a route.
-		return fmt.Errorf("route already contains oauth2 config: %+v", route)
-	}
-
-	// Enable the corresponding oauth2 filter for this route.
-	routeCfgAny, err := anypb.New(&routev3.FilterConfig{
-		Config: &anypb.Any{},
-	})
-	if err != nil {
+	if err := enableFilterOnRoute(oauth2Filter, route, irRoute); err != nil {
 		return err
 	}
-
-	if filterCfg == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	}
-
-	route.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
-
 	return nil
 }

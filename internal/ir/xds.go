@@ -156,6 +156,9 @@ func (x Xds) Printable() *Xds {
 			if route.OIDC != nil {
 				route.OIDC.ClientSecret = []byte{}
 			}
+			if route.BasicAuth != nil {
+				route.BasicAuth.Users = []byte{}
+			}
 		}
 	}
 	return out
@@ -295,6 +298,8 @@ type HTTPRoute struct {
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// BasicAuth defines the schema for the HTTP Basic Authentication.
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -355,6 +360,14 @@ type OIDC struct {
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+}
+
+// BasicAuth defines the schema for the HTTP Basic Authentication.
+//
+// +k8s:deepcopy-gen=true
+type BasicAuth struct {
+	// The username-password pairs in htpasswd format.
+	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
 }
 
 type OIDCProvider struct {

@@ -263,6 +263,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		cors      *ir.CORS
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
+		basicAuth *ir.BasicAuth
 		err, errs error
 	)
 
@@ -282,6 +283,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 	}
 
+	if policy.Spec.BasicAuth != nil {
+		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
 	// Apply IR to all relevant routes
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
@@ -296,6 +303,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					r.CORS = cors
 					r.JWT = jwt
 					r.OIDC = oidc
+					r.BasicAuth = basicAuth
 				}
 			}
 		}
@@ -311,6 +319,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		cors      *ir.CORS
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
+		basicAuth *ir.BasicAuth
 		err, errs error
 	)
 
@@ -326,8 +335,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.OIDC != nil {
-		oidc, err = t.buildOIDC(policy, resources)
-		if err != nil {
+		if oidc, err = t.buildOIDC(policy, resources); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	if policy.Spec.BasicAuth != nil {
+		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -336,9 +350,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// If the feature is already set, then skip it, since it must have be
 	// set by a policy attaching to the route
 	//
-	// It can be difficult to reason about the state of the system if we apply
-	// part of the policy and not the rest. Therefore, we either apply all of it
-	// or none of it (when get errors when translating the policy)
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
 	irKey := t.getIRKey(gateway.Gateway)
@@ -356,6 +367,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			if r.OIDC == nil {
 				r.OIDC = oidc
+			}
+			if r.BasicAuth == nil {
+				r.BasicAuth = basicAuth
 			}
 		}
 	}
@@ -545,4 +559,37 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		}
 	}
 	return nil
+}
+
+func (t *Translator) buildBasicAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *Resources) (*ir.BasicAuth, error) {
+	var (
+		basicAuth   = policy.Spec.BasicAuth
+		usersSecret *v1.Secret
+		err         error
+	)
+
+	from := crossNamespaceFrom{
+		group:     egv1a1.GroupName,
+		kind:      KindSecurityPolicy,
+		namespace: policy.Namespace,
+	}
+	if usersSecret, err = t.validateSecretRef(
+		false, from, basicAuth.Users, resources); err != nil {
+		return nil, err
+	}
+
+	usersSecretBytes, ok := usersSecret.Data[egv1a1.BasicAuthUsersSecretKey]
+	if !ok || len(usersSecretBytes) == 0 {
+		return nil, fmt.Errorf(
+			"users secret not found in secret %s/%s",
+			usersSecret.Namespace, usersSecret.Name)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ir.BasicAuth{Users: usersSecretBytes}, nil
 }
