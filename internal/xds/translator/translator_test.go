@@ -9,6 +9,7 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -195,6 +196,21 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "oidc",
 		},
+		{
+			name: "http-route-partial-invalid",
+		},
+		{
+			name: "listener-proxy-protocol",
+		},
+		{
+			name: "jwt-custom-extractor",
+		},
+		{
+			name: "proxy-protocol-upstream",
+		},
+		{
+			name: "basic-auth",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -212,7 +228,10 @@ func TestTranslateXds(t *testing.T) {
 			}
 
 			tCtx, err := tr.Translate(ir)
-			require.NoError(t, err)
+			if !strings.HasSuffix(tc.name, "partial-invalid") {
+				require.NoError(t, err)
+			}
+
 			listeners := tCtx.XdsResources[resourcev3.ListenerType]
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
@@ -301,9 +320,8 @@ func TestTranslateXdsNegative(t *testing.T) {
 				},
 			}
 
-			tCtx, err := tr.Translate(ir)
+			_, err := tr.Translate(ir)
 			require.Error(t, err)
-			require.Nil(t, tCtx)
 			if tc.name != "jsonpatch-invalid" {
 				require.Contains(t, err.Error(), "validation failed for xds resource")
 			}

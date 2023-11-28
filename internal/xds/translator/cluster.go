@@ -12,8 +12,11 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
+	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -25,6 +28,22 @@ const (
 	extensionOptionsKey = "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes
 	tcpClusterPerConnectionBufferLimitBytes = 32768
+)
+
+type xdsClusterArgs struct {
+	name          string
+	settings      []*ir.DestinationSetting
+	tSocket       *corev3.TransportSocket
+	endpointType  EndpointType
+	loadBalancer  *ir.LoadBalancer
+	proxyProtocol *ir.ProxyProtocol
+}
+
+type EndpointType int
+
+const (
+	EndpointTypeDNS EndpointType = iota
+	EndpointTypeStatic
 )
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
@@ -39,7 +58,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
 	}
 
-	if args.tSocket != nil {
+	// Set Proxy Protocol
+	if args.proxyProtocol != nil {
+		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
+	} else if args.tSocket != nil {
 		cluster.TransportSocket = args.tSocket
 	}
 
@@ -78,8 +100,30 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 	} else if args.loadBalancer.LeastRequest != nil {
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+		if args.loadBalancer.LeastRequest.SlowStart != nil {
+			if args.loadBalancer.LeastRequest.SlowStart.Window != nil {
+				cluster.LbConfig = &clusterv3.Cluster_LeastRequestLbConfig_{
+					LeastRequestLbConfig: &clusterv3.Cluster_LeastRequestLbConfig{
+						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
+							SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
+						},
+					},
+				}
+			}
+		}
 	} else if args.loadBalancer.RoundRobin != nil {
 		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
+		if args.loadBalancer.RoundRobin.SlowStart != nil {
+			if args.loadBalancer.RoundRobin.SlowStart.Window != nil {
+				cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
+					RoundRobinLbConfig: &clusterv3.Cluster_RoundRobinLbConfig{
+						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
+							SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
+						},
+					},
+				}
+			}
+		}
 	} else if args.loadBalancer.Random != nil {
 		cluster.LbPolicy = clusterv3.Cluster_RANDOM
 	} else if args.loadBalancer.ConsistentHash != nil {
@@ -166,4 +210,54 @@ func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
 // It's easy to distinguish when debugging.
 func buildClusterName(prefix string, host string, port uint32) string {
 	return fmt.Sprintf("%s|%s|%d", prefix, host, port)
+}
+
+// buildProxyProtocolSocket builds the ProxyProtocol transport socket.
+func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket) *corev3.TransportSocket {
+	if proxyProtocol == nil {
+		return nil
+	}
+
+	ppCtx := &proxyprotocolv3.ProxyProtocolUpstreamTransport{}
+
+	switch proxyProtocol.Version {
+	case ir.ProxyProtocolVersionV1:
+		ppCtx.Config = &corev3.ProxyProtocolConfig{
+			Version: corev3.ProxyProtocolConfig_V1,
+		}
+	case ir.ProxyProtocolVersionV2:
+		ppCtx.Config = &corev3.ProxyProtocolConfig{
+			Version: corev3.ProxyProtocolConfig_V2,
+		}
+	}
+
+	// If existing transport socket does not exist wrap around raw buffer
+	if tSocket == nil {
+		rawCtx := &rawbufferv3.RawBuffer{}
+		rawCtxAny, err := anypb.New(rawCtx)
+		if err != nil {
+			return nil
+		}
+		rawSocket := &corev3.TransportSocket{
+			Name: wellknown.TransportSocketRawBuffer,
+			ConfigType: &corev3.TransportSocket_TypedConfig{
+				TypedConfig: rawCtxAny,
+			},
+		}
+		ppCtx.TransportSocket = rawSocket
+	} else {
+		ppCtx.TransportSocket = tSocket
+	}
+
+	ppCtxAny, err := anypb.New(ppCtx)
+	if err != nil {
+		return nil
+	}
+
+	return &corev3.TransportSocket{
+		Name: "envoy.transport_sockets.upstream_proxy_protocol",
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: ppCtxAny,
+		},
+	}
 }

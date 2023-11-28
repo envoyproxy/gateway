@@ -16,7 +16,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -34,10 +33,19 @@ const (
 	defaultSignoutPath          = "/signout"
 )
 
-// patchHCMWithOAuth2Filters builds and appends the oauth2 Filters to the HTTP
-// Connection Manager if applicable, and it does not already exist.
+func init() {
+	registerHTTPFilter(&oidc{})
+}
+
+type oidc struct {
+}
+
+var _ httpFilter = &oidc{}
+
+// patchHCM builds and appends the oauth2 Filters to the HTTP Connection Manager
+// if applicable, and it does not already exist.
 // Note: this method creates an oauth2 filter for each route that contains an OIDC config.
-func patchHCMWithOAuth2Filters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 
 	if mgr == nil {
@@ -156,7 +164,8 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 					},
 				},
 			},
-			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH, // every OIDC provider supports basic auth
+			// every OIDC provider supports basic auth
+			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH,
 			AuthScopes: route.OIDC.Scopes,
 		},
 	}
@@ -175,6 +184,17 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 	}
 
 	return false
+}
+
+func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
+	routes []*ir.HTTPRoute) error {
+	if err := createOAuth2TokenEndpointClusters(tCtx, routes); err != nil {
+		return err
+	}
+	if err := createOAuth2Secrets(tCtx, routes); err != nil {
+		return err
+	}
+	return nil
 }
 
 // createOAuth2TokenEndpointClusters creates token endpoint clusters from the
@@ -261,8 +281,10 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 			continue
 		}
 
+		// a separate secret is created for each route, even they share the same
+		// oauth2 client ID and secret.
 		clientSecret := buildOAuth2ClientSecret(route)
-		if err := tCtx.AddXdsResource(resourcev3.SecretType, clientSecret); err != nil {
+		if err := addXdsSecret(tCtx, clientSecret); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 
@@ -270,7 +292,7 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
-		if err := tCtx.AddXdsResource(resourcev3.SecretType, hmacSecret); err != nil {
+		if err := addXdsSecret(tCtx, hmacSecret); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -340,11 +362,11 @@ func generateHMACSecretKey() ([]byte, error) {
 	return key, nil
 }
 
-// patchRouteCfgWithOAuth2Filter patches the provided route configuration with
-// the oauth2 filter if applicable.
+// patchRouteCfg patches the provided route configuration with the oauth2 filter
+// if applicable.
 // Note: this method disables all the oauth2 filters by default. The filter will
 // be enabled per-route in the typePerFilterConfig of the route.
-func patchRouteCfgWithOAuth2Filter(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
+func (*oidc) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
 	if routeCfg == nil {
 		return errors.New("route configuration is nil")
 	}
@@ -358,10 +380,10 @@ func patchRouteCfgWithOAuth2Filter(routeCfg *routev3.RouteConfiguration, irListe
 			continue
 		}
 
-		perRouteFilterName := oauth2FilterName(route)
+		filterName := oauth2FilterName(route)
 		filterCfg := routeCfg.TypedPerFilterConfig
 
-		if _, ok := filterCfg[perRouteFilterName]; ok {
+		if _, ok := filterCfg[filterName]; ok {
 			// This should not happen since this is the only place where the oauth2
 			// filter is added in a route.
 			errs = multierror.Append(errs, fmt.Errorf(
@@ -381,15 +403,14 @@ func patchRouteCfgWithOAuth2Filter(routeCfg *routev3.RouteConfiguration, irListe
 			routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
 		}
 
-		routeCfg.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
+		routeCfg.TypedPerFilterConfig[filterName] = routeCfgAny
 	}
 	return errs
 }
 
-// patchRouteWithOAuth2 patches the provided route with the oauth2 config if
-// applicable.
+// patchRoute patches the provided route with the oauth2 config if applicable.
 // Note: this method enables the corresponding oauth2 filter for the provided route.
-func patchRouteWithOAuth2(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -400,27 +421,8 @@ func patchRouteWithOAuth2(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return nil
 	}
 
-	perRouteFilterName := oauth2FilterName(irRoute)
-	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[perRouteFilterName]; ok {
-		// This should not happen since this is the only place where the oauth2
-		// filter is added in a route.
-		return fmt.Errorf("route already contains oauth2 config: %+v", route)
-	}
-
-	// Enable the corresponding oauth2 filter for this route.
-	routeCfgAny, err := anypb.New(&routev3.FilterConfig{
-		Config: &anypb.Any{},
-	})
-	if err != nil {
+	if err := enableFilterOnRoute(oauth2Filter, route, irRoute); err != nil {
 		return err
 	}
-
-	if filterCfg == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	}
-
-	route.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
-
 	return nil
 }

@@ -53,3 +53,36 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fifth-route-dest
+  lbPolicy: LEAST_REQUEST
+  leastRequestLbConfig:
+    slowStartConfig:
+      slowStartWindow: 60s
+  name: fifth-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: sixth-route-dest
+  name: sixth-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  roundRobinLbConfig:
+    slowStartConfig:
+      slowStartWindow: 300s
+  type: EDS

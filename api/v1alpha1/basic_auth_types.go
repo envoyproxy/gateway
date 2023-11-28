@@ -7,6 +7,8 @@ package v1alpha1
 
 import gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+const BasicAuthUsersSecretKey = ".htpasswd"
+
 // BasicAuth defines the configuration for 	the HTTP Basic Authentication.
 type BasicAuth struct {
 	// The Kubernetes secret which contains the username-password pairs in
