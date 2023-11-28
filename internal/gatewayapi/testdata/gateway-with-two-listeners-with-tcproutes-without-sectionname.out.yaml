@@ -156,12 +156,12 @@ xdsIR:
       destination:
         name: tcproute/default/tcproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8163
           protocol: TCP
           weight: 1
-          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/tcp1/tcproute-1
       port: 10161
       tls: {}
@@ -169,12 +169,12 @@ xdsIR:
       destination:
         name: tcproute/default/tcproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8163
           protocol: TCP
           weight: 1
-          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/tcp2/tcproute-1
       port: 10162
       tls: {}

@@ -156,23 +156,23 @@ xdsIR:
       destination:
         name: udproute/default/udproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8162
           protocol: UDP
           weight: 1
-          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/udp1/udproute-1
       port: 10161
     - address: 0.0.0.0
       destination:
         name: udproute/default/udproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8162
           protocol: UDP
           weight: 1
-          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/udp2/udproute-1
       port: 10162

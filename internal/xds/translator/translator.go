@@ -458,12 +458,12 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute) error {
-	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressTypeState,
-	// since there's no Mixed AddressTypeState among all the DestinationSettings.
-	addrTypeState := httpRoute.Destination.Settings[0].AddressTypeState
+	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
+	// since there's no Mixed AddressType among all the DestinationSettings.
+	addrTypeState := httpRoute.Destination.Settings[0].AddressType
 
 	var endpointType EndpointType
-	if addrTypeState != nil && *addrTypeState == ir.ONLYFQDN {
+	if addrTypeState != nil && *addrTypeState == ir.FQDN {
 		endpointType = EndpointTypeDNS
 	} else {
 		endpointType = EndpointTypeStatic

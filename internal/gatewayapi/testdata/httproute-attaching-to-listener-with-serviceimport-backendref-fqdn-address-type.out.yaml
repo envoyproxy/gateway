@@ -112,12 +112,12 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: FQDN
+            endpoints:
             - host: foo.bar
               port: 8080
             protocol: HTTP
             weight: 1
-            addressTypeState: OnlyFQDN
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:

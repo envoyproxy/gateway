@@ -115,24 +115,24 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
             weight: 1
-            addressTypeState: OnlyIP
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
             weight: 2
-            addressTypeState: OnlyIP
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
             weight: 3
-            addressTypeState: OnlyIP
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:

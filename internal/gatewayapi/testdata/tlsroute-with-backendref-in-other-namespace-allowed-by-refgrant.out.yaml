@@ -98,12 +98,12 @@ xdsIR:
       destination:
         name: tlsroute/default/tlsroute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8080
           protocol: HTTPS
           weight: 1
-          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/tls/tlsroute-1
       port: 10090
       tls:

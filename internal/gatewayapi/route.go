@@ -149,12 +149,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// a unique Xds IR HTTPRoute per match.
 		var ruleRoutes = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
 
-		dsAddrTypeStateMap := make(map[ir.DestinationAddressTypeState]int)
+		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
 			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 {
-				dsAddrTypeStateMap[*ds.AddressTypeState]++
+				dstAddrTypeMap[*ds.AddressType]++
 			}
 
 			for _, route := range ruleRoutes {
@@ -177,7 +177,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		// TODO: support mixed endpointslice address type between backendRefs
-		if !t.EndpointRoutingDisabled && len(dsAddrTypeStateMap) > 1 {
+		if !t.EndpointRoutingDisabled && len(dstAddrTypeMap) > 1 {
 			parentRef.SetCondition(httpRoute,
 				gwapiv1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
@@ -995,8 +995,8 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 	}
 
 	var (
-		endpoints     []*ir.DestinationEndpoint
-		addrTypeState *ir.DestinationAddressTypeState
+		endpoints []*ir.DestinationEndpoint
+		addrType  *ir.DestinationAddressType
 	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
 	switch KindDerefOr(backendRef.Kind, KindService) {
@@ -1012,7 +1012,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-			endpoints, addrTypeState = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 			for _, ip := range backendIps {
@@ -1041,7 +1041,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		// Route to endpoints by default
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-			endpoints, addrTypeState = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			// Fall back to Service ClusterIP routing
 			ep := ir.NewDestEndpoint(
@@ -1052,7 +1052,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.EndpointRoutingDisabled && addrTypeState != nil && *addrTypeState == ir.MIXED {
+	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
 		parentRef.SetCondition(route,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
@@ -1061,10 +1061,10 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 	}
 
 	ds = &ir.DestinationSetting{
-		Weight:           &weight,
-		Protocol:         protocol,
-		Endpoints:        endpoints,
-		AddressTypeState: addrTypeState,
+		Weight:      &weight,
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
 	}
 	return ds, weight
 }
@@ -1165,31 +1165,31 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 	return relevantRoute
 }
 
-func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressTypeState) {
+func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
 	var (
 		dstEndpoints     []*ir.DestinationEndpoint
-		dstAddrTypeState *ir.DestinationAddressTypeState
+		dstAddrTypeState *ir.DestinationAddressType
 	)
 
-	addrTypeStateMap := make(map[ir.DestinationAddressTypeState]int)
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	for _, endpointSlice := range endpointSlices {
 		if endpointSlice.AddressType == discoveryv1.AddressTypeFQDN {
-			addrTypeStateMap[ir.ONLYFQDN]++
+			addrTypeMap[ir.FQDN]++
 		} else {
-			addrTypeStateMap[ir.ONLYIP]++
+			addrTypeMap[ir.IP]++
 		}
 		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol)
 		dstEndpoints = append(dstEndpoints, endpoints...)
 	}
 
-	for addrTypeState, addrTypeCounts := range addrTypeStateMap {
+	for addrTypeState, addrTypeCounts := range addrTypeMap {
 		if addrTypeCounts == len(endpointSlices) {
 			dstAddrTypeState = ptr.To(addrTypeState)
 			break
 		}
 	}
 
-	if len(addrTypeStateMap) > 0 && dstAddrTypeState == nil {
+	if len(addrTypeMap) > 0 && dstAddrTypeState == nil {
 		dstAddrTypeState = ptr.To(ir.MIXED)
 	}
 

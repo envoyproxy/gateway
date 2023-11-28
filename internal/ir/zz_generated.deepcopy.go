@@ -197,9 +197,9 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 			}
 		}
 	}
-	if in.AddressTypeState != nil {
-		in, out := &in.AddressTypeState, &out.AddressTypeState
-		*out = new(DestinationAddressTypeState)
+	if in.AddressType != nil {
+		in, out := &in.AddressType, &out.AddressType
+		*out = new(DestinationAddressType)
 		**out = **in
 	}
 }

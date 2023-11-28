@@ -20,4 +20,4 @@ http:
           port: 50000
         - host: "bar.foo"
           port: 50001
-        addressTypeState: OnlyFQDN
+        addressType: FQDN

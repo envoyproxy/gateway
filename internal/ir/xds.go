@@ -539,7 +539,7 @@ type DestinationSetting struct {
 	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
-	AddressTypeState *DestinationAddressTypeState `json:"addressTypeState,omitempty" yaml:"addressTypeState,omitempty"`
+	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -554,13 +554,13 @@ func (d DestinationSetting) Validate() error {
 	return errs
 }
 
-// DestinationAddressTypeState describes the address type state for a group of DestinationEndpoint
-type DestinationAddressTypeState string
+// DestinationAddressType describes the address type state for a group of DestinationEndpoint
+type DestinationAddressType string
 
 const (
-	ONLYIP   DestinationAddressTypeState = "OnlyIP"
-	ONLYFQDN DestinationAddressTypeState = "OnlyFQDN"
-	MIXED    DestinationAddressTypeState = "Mixed"
+	IP    DestinationAddressType = "IP"
+	FQDN  DestinationAddressType = "FQDN"
+	MIXED DestinationAddressType = "Mixed"
 )
 
 // DestinationEndpoint holds the endpoint details associated with the destination
