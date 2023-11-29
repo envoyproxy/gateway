@@ -45,8 +45,7 @@ func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 		return err
 	}
 
-	// Ensure the external authorization filter is the first one in the filter chain.
-	mgr.HttpFilters = append([]*hcmv3.HttpFilter{extAuthzFilter}, mgr.HttpFilters...)
+	mgr.HttpFilters = append(mgr.HttpFilters, extAuthzFilter)
 
 	return nil
 }
@@ -69,6 +68,7 @@ func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, err
 				},
 			},
 			TransportApiVersion: corev3.ApiVersion_V3,
+			FailureModeAllow:    false,
 		}
 
 		if err := authProto.ValidateAll(); err != nil {
