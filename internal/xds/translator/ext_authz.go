@@ -71,6 +71,10 @@ func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, err
 			TransportApiVersion: corev3.ApiVersion_V3,
 		}
 
+		if err := authProto.ValidateAll(); err != nil {
+			return nil, err
+		}
+
 		authAny, err := anypb.New(authProto)
 		if err != nil {
 			return nil, err
