@@ -101,7 +101,7 @@ infraIR:
             type: Kubernetes
         status: {}
       listeners:
-      - address: ""
+      - address: null
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080

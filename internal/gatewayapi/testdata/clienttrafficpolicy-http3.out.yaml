@@ -105,7 +105,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
         http3: {}
         name: envoy-gateway/gateway-1/tls
         ports:

@@ -115,14 +115,14 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
         name: envoy-gateway/gateway-1/tls-passthrough
         ports:
         - containerPort: 10090
           name: tls-passthrough
           protocol: TLS
           servicePort: 90
-      - address: ""
+      - address: null
         name: envoy-gateway/gateway-1/tls-terminate
         ports:
         - containerPort: 10443
