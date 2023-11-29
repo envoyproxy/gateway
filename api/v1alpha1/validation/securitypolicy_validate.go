@@ -54,11 +54,25 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		return utilerrors.NewAggregate(errs)
 	}
 
-	if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
-		errs = append(errs, err)
+	switch {
+	case spec.JWT != nil:
+		if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
+			errs = append(errs, err)
+		}
+	case spec.ExtAuthz != nil:
+		if err := ValidateExtAuthzURI(spec.ExtAuthz.GRPCURI); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return utilerrors.NewAggregate(errs)
+}
+
+func ValidateExtAuthzURI(uri string) error {
+	if _, err := url.ParseRequestURI(uri); err != nil {
+		return fmt.Errorf("invalid grpcURI URI: %v", err)
+	}
+	return nil
 }
 
 // ValidateJWTProvider validates the provided JWT authentication configuration.
