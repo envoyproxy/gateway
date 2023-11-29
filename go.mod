@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.11.2-0.20231020171731-dd48dc81e5ce
+	github.com/envoyproxy/go-control-plane v0.11.2-0.20231116045842-b54b6db2c2a8
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.7.0
 	github.com/go-logfmt/logfmt v0.6.0
@@ -15,7 +15,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/go-cmp v0.6.0
 	github.com/grafana/tempo v1.5.0
-	github.com/miekg/dns v1.1.46
+	github.com/miekg/dns v1.1.57
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.45.0
 	github.com/spf13/cobra v1.8.0

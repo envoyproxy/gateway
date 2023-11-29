@@ -397,53 +397,97 @@ func (r *gatewayAPIReconciler) processSecurityPolicySecretRefs(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
 	for _, policy := range resourceTree.SecurityPolicies {
 		oidc := policy.Spec.OIDC
+
 		if oidc != nil {
-			secret := new(corev1.Secret)
-			secretNamespace := gatewayapi.NamespaceDerefOr(oidc.ClientSecret.Namespace, policy.Namespace)
-			err := r.client.Get(ctx,
-				types.NamespacedName{Namespace: secretNamespace, Name: string(oidc.ClientSecret.Name)},
-				secret,
-			)
-			if err != nil && !kerrors.IsNotFound(err) {
-				r.log.Error(err, "unable to find the Secret for OIDC client secret")
+			if err := r.processSecretRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				gatewayapi.KindSecurityPolicy,
+				policy.Namespace,
+				policy.Name,
+				oidc.ClientSecret); err != nil {
 				// we don't return an error here, because we want to continue
-				// reconciling the rest of the resources despite that this
-				// SecurityPolicy is invalid.
+				// reconciling the rest of the SecurityPolicies despite that this
+				// secret reference is invalid.
 				// This SecurityPolicy will be marked as invalid in its status
 				// when translating to IR because the referenced secret can't be
 				// found.
+				r.log.Error(err,
+					"failed to process OIDC SecretRef for SecurityPolicy",
+					"policy", policy, "secretRef", oidc.ClientSecret)
 			}
-
-			if secretNamespace != policy.Namespace {
-				from := ObjectKindNamespacedName{
-					kind:      v1alpha1.KindSecurityPolicy,
-					namespace: policy.Namespace,
-					name:      policy.Name,
-				}
-				to := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindSecret,
-					namespace: secretNamespace,
-					name:      secret.Name,
-				}
-				refGrant, err := r.findReferenceGrant(ctx, from, to)
-				switch {
-				case err != nil:
-					r.log.Error(err, "failed to find ReferenceGrant")
-				case refGrant == nil:
-					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-				default:
-					// RefGrant found
-					resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
-					r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-						"name", refGrant.Name)
-				}
+		}
+		basicAuth := policy.Spec.BasicAuth
+		if basicAuth != nil {
+			if err := r.processSecretRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				gatewayapi.KindSecurityPolicy,
+				policy.Namespace,
+				policy.Name,
+				basicAuth.Users); err != nil {
+				r.log.Error(err,
+					"failed to process BasicAuth SecretRef for SecurityPolicy",
+					"policy", policy, "secretRef", basicAuth.Users)
 			}
-			resourceMap.allAssociatedNamespaces[secretNamespace] = struct{}{} // TODO Zhaohuabing do we need this line?
-			resourceTree.Secrets = append(resourceTree.Secrets, secret)
-			r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(oidc.ClientSecret.Name))
 		}
 	}
+}
+
+// processSecretRef adds the referenced Secret to the resourceTree if it's valid.
+// - If it exists in the same namespace as the owner.
+// - If it exists in a different namespace, and there is a ReferenceGrant.
+func (r *gatewayAPIReconciler) processSecretRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *gatewayapi.Resources,
+	ownerKind string,
+	ownerNS string,
+	ownerName string,
+	secretRef gwapiv1b1.SecretObjectReference,
+) error {
+	secret := new(corev1.Secret)
+	secretNS := gatewayapi.NamespaceDerefOr(secretRef.Namespace, ownerNS)
+	err := r.client.Get(ctx,
+		types.NamespacedName{Namespace: secretNS, Name: string(secretRef.Name)},
+		secret,
+	)
+	if err != nil && !kerrors.IsNotFound(err) {
+		return fmt.Errorf("unable to find the Secret: %s/%s", secretNS, string(secretRef.Name))
+	}
+
+	if secretNS != ownerNS {
+		from := ObjectKindNamespacedName{
+			kind:      ownerKind,
+			namespace: ownerNS,
+			name:      ownerName,
+		}
+		to := ObjectKindNamespacedName{
+			kind:      gatewayapi.KindSecret,
+			namespace: secretNS,
+			name:      secret.Name,
+		}
+		refGrant, err := r.findReferenceGrant(ctx, from, to)
+		switch {
+		case err != nil:
+			return fmt.Errorf("failed to find ReferenceGrant: %v", err)
+		case refGrant == nil:
+			return fmt.Errorf(
+				"no matching ReferenceGrants found: from %s/%s to %s/%s",
+				from.kind, from.namespace, to.kind, to.namespace)
+		default:
+			// RefGrant found
+			resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+				"name", refGrant.Name)
+		}
+	}
+	resourceMap.allAssociatedNamespaces[secretNS] = struct{}{} // TODO Zhaohuabing do we need this line?
+	resourceTree.Secrets = append(resourceTree.Secrets, secret)
+	r.log.Info("processing Secret", "namespace", secretNS, "name", string(secretRef.Name))
+	return nil
 }
 
 func (r *gatewayAPIReconciler) gatewayClassUpdater(ctx context.Context, gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) error {
@@ -606,47 +650,19 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 				for _, certRef := range listener.TLS.CertificateRefs {
 					certRef := certRef
 					if refsSecret(&certRef) {
-						secret := new(corev1.Secret)
-						secretNamespace := gatewayapi.NamespaceDerefOr(certRef.Namespace, gtw.Namespace)
-						err := r.client.Get(ctx,
-							types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)},
-							secret,
-						)
-						if err != nil && !kerrors.IsNotFound(err) {
-							r.log.Error(err, "unable to find Secret")
-							return err
+						if err := r.processSecretRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindGateway,
+							gtw.Namespace,
+							gtw.Name,
+							certRef); err != nil {
+
+							r.log.Error(err,
+								"failed to process TLS SecretRef for gateway",
+								"gateway", gtw, "secretRef", certRef)
 						}
-
-						r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(certRef.Name))
-
-						if secretNamespace != gtw.Namespace {
-							from := ObjectKindNamespacedName{
-								kind:      gatewayapi.KindGateway,
-								namespace: gtw.Namespace,
-								name:      gtw.Name,
-							}
-							to := ObjectKindNamespacedName{
-								kind:      gatewayapi.KindSecret,
-								namespace: secretNamespace,
-								name:      string(certRef.Name),
-							}
-							refGrant, err := r.findReferenceGrant(ctx, from, to)
-							switch {
-							case err != nil:
-								r.log.Error(err, "failed to find ReferenceGrant")
-							case refGrant == nil:
-								r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-									"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-							default:
-								// RefGrant found
-								resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
-								r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-									"name", refGrant.Name)
-							}
-						}
-
-						resourceMap.allAssociatedNamespaces[secretNamespace] = struct{}{}
-						resourceTree.Secrets = append(resourceTree.Secrets, secret)
 					}
 				}
 			}

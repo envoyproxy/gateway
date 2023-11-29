@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	jwtAuthnFilter   = "envoy.filters.http.jwt_authn"
+	jwtAuthn         = "envoy.filters.http.jwt_authn"
 	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
 )
 
@@ -55,7 +55,7 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 
 	// Return early if filter already exists.
 	for _, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == jwtAuthnFilter {
+		if httpFilter.Name == jwtAuthn {
 			return nil
 		}
 	}
@@ -88,7 +88,7 @@ func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: jwtAuthnFilter,
+		Name: jwtAuthn,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: jwtAuthnAny,
 		},
@@ -217,7 +217,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	}
 
 	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[jwtAuthnFilter]; !ok {
+	if _, ok := filterCfg[jwtAuthn]; !ok {
 		if !routeContainsJWTAuthn(irRoute) {
 			return nil
 		}
@@ -234,7 +234,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 		}
 
-		route.TypedPerFilterConfig[jwtAuthnFilter] = routeCfgAny
+		route.TypedPerFilterConfig[jwtAuthn] = routeCfgAny
 	}
 
 	return nil

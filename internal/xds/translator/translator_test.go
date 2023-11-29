@@ -205,6 +205,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "proxy-protocol-upstream",
 		},
+		{
+			name: "basic-auth",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -433,8 +433,15 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 			lb.ConsistentHash.SourceIP = ptr.To(true)
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
-		lb = &ir.LoadBalancer{
-			LeastRequest: &ir.LeastRequest{},
+		lb = &ir.LoadBalancer{}
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.LeastRequest = &ir.LeastRequest{
+					SlowStart: &ir.SlowStart{
+						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+					},
+				}
+			}
 		}
 	case egv1a1.RandomLoadBalancerType:
 		lb = &ir.LoadBalancer{
@@ -442,7 +449,18 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		}
 	case egv1a1.RoundRobinLoadBalancerType:
 		lb = &ir.LoadBalancer{
-			RoundRobin: &ir.RoundRobin{},
+			RoundRobin: &ir.RoundRobin{
+				SlowStart: &ir.SlowStart{},
+			},
+		}
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.RoundRobin = &ir.RoundRobin{
+					SlowStart: &ir.SlowStart{
+						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+					},
+				}
+			}
 		}
 	}
 

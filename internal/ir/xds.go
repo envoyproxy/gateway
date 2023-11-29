@@ -156,6 +156,9 @@ func (x Xds) Printable() *Xds {
 			if route.OIDC != nil {
 				route.OIDC.ClientSecret = []byte{}
 			}
+			if route.BasicAuth != nil {
+				route.BasicAuth.Users = []byte{}
+			}
 		}
 	}
 	return out
@@ -295,6 +298,8 @@ type HTTPRoute struct {
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// BasicAuth defines the schema for the HTTP Basic Authentication.
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -355,6 +360,14 @@ type OIDC struct {
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+}
+
+// BasicAuth defines the schema for the HTTP Basic Authentication.
+//
+// +k8s:deepcopy-gen=true
+type BasicAuth struct {
+	// The username-password pairs in htpasswd format.
+	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
 }
 
 type OIDCProvider struct {
@@ -1048,11 +1061,19 @@ func (l *LoadBalancer) Validate() error {
 
 // RoundRobin load balancer settings
 // +k8s:deepcopy-gen=true
-type RoundRobin struct{}
+type RoundRobin struct {
+	// SlowStart defines the slow start configuration.
+	// If set, slow start mode is enabled for newly added hosts in the cluster.
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+}
 
 // LeastRequest load balancer settings
 // +k8s:deepcopy-gen=true
-type LeastRequest struct{}
+type LeastRequest struct {
+	// SlowStart defines the slow start configuration.
+	// If set, slow start mode is enabled for newly added hosts in the cluster.
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+}
 
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
@@ -1079,4 +1100,11 @@ const (
 type ProxyProtocol struct {
 	// Version of proxy protocol to use
 	Version ProxyProtocolVersion `json:"version,omitempty" yaml:"version,omitempty"`
+}
+
+// SlowStart defines the slow start configuration.
+// +k8s:deepcopy-gen=true
+type SlowStart struct {
+	// Window defines the duration of the warm up period for newly added host.
+	Window *metav1.Duration `json:"window" yaml:"window"`
 }
