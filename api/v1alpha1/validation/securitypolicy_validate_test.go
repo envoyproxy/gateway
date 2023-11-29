@@ -463,6 +463,64 @@ func TestValidateSecurityPolicy(t *testing.T) {
 			},
 			expected: true,
 		},
+
+		{
+			name: "ext authz invalid security policy",
+			policy: &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					ExtAuthz: &egv1a1.ExtAuthz{},
+				},
+			},
+			expected: false,
+		},
+
+		{
+			name: "ext authz invalid uri security policy",
+			policy: &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					ExtAuthz: &egv1a1.ExtAuthz{
+						GRPCURI: "invalidurl",
+					},
+				},
+			},
+			expected: false,
+		},
+
+		{
+			name: "ext authz security policy",
+			policy: &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					ExtAuthz: &egv1a1.ExtAuthz{
+						GRPCURI: "http://test.local:10003",
+					},
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for i := range testCases {
