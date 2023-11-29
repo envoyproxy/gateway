@@ -69,7 +69,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Do not support mixed endpointslice address type for the same backendRef
+        message: Mixed endpointslice address type for the same backendRef is not supported
         reason: ResolvedRefs
         status: "False"
         type: ResolvedRefs

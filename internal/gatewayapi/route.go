@@ -153,7 +153,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		for _, backendRef := range rule.BackendRefs {
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
-			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 {
+			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
 
@@ -182,7 +182,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				gwapiv1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
 				gwapiv1a1.RouteReasonResolvedRefs,
-				"Do not support mixed endpointslice address type between backendRefs")
+				"Mixed endpointslice address type between backendRefs is not supported")
 		}
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
@@ -1057,7 +1057,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1a1.RouteReasonResolvedRefs,
-			"Do not support mixed endpointslice address type for the same backendRef")
+			"Mixed endpointslice address type for the same backendRef is not supported")
 	}
 
 	ds = &ir.DestinationSetting{
@@ -1167,8 +1167,8 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 
 func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
 	var (
-		dstEndpoints     []*ir.DestinationEndpoint
-		dstAddrTypeState *ir.DestinationAddressType
+		dstEndpoints []*ir.DestinationEndpoint
+		dstAddrType  *ir.DestinationAddressType
 	)
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
@@ -1184,16 +1184,16 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 
 	for addrTypeState, addrTypeCounts := range addrTypeMap {
 		if addrTypeCounts == len(endpointSlices) {
-			dstAddrTypeState = ptr.To(addrTypeState)
+			dstAddrType = ptr.To(addrTypeState)
 			break
 		}
 	}
 
-	if len(addrTypeMap) > 0 && dstAddrTypeState == nil {
-		dstAddrTypeState = ptr.To(ir.MIXED)
+	if len(addrTypeMap) > 0 && dstAddrType == nil {
+		dstAddrType = ptr.To(ir.MIXED)
 	}
 
-	return dstEndpoints, dstAddrTypeState
+	return dstEndpoints, dstAddrType
 }
 
 func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
