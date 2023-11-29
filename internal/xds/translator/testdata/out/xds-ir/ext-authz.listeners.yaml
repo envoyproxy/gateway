@@ -20,6 +20,7 @@
             grpcService:
               envoyGrpc:
                 clusterName: envoy-ext-jwt-auth_envoy-gateway-system_svc_cluster_local_10003
+            transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
