@@ -41,7 +41,9 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		return nil, err
 	}
 
-	if u.Scheme != "https" {
+	switch u.Scheme {
+	case "http", "https":
+	default:
 		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 

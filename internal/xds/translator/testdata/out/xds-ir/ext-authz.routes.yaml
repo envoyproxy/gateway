@@ -10,6 +10,3 @@
       name: first-route
       route:
         cluster: first-route-dest
-      typedPerFilterConfig:
-        envoy.filters.http.ext_authz:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute

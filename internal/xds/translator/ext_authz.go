@@ -97,25 +97,27 @@ func patchRouteWithExtAuthz(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return errors.New("ir route is nil")
 	}
 
-	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[extAuthzFilter]; !ok {
-		if !routeContainsExtAuthz(irRoute) {
-			return nil
-		}
+	// filterCfg := route.GetTypedPerFilterConfig()
+	// if _, ok := filterCfg[extAuthzFilter]; !ok {
+	// 	if !routeContainsExtAuthz(irRoute) {
+	// 		return nil
+	// 	}
 
-		routeCfgProto := &extauthzv3.ExtAuthzPerRoute{}
+	// 	routeCfgProto := &extauthzv3.ExtAuthzPerRoute{
+	// 		Override: &extauthzv3.ExtAuthzPerRoute_Disabled{Disabled: true},
+	// 	}
 
-		routeCfgAny, err := anypb.New(routeCfgProto)
-		if err != nil {
-			return err
-		}
+	// 	routeCfgAny, err := anypb.New(routeCfgProto)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		if filterCfg == nil {
-			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-		}
+	// 	if filterCfg == nil {
+	// 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	// 	}
 
-		route.TypedPerFilterConfig[extAuthzFilter] = routeCfgAny
-	}
+	// 	route.TypedPerFilterConfig[extAuthzFilter] = routeCfgAny
+	// }
 
 	return nil
 }
