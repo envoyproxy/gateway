@@ -13,8 +13,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: key-first-route
-              descriptorValue: value-first-route
+              descriptorKey: first-route
+              descriptorValue: first-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
     - match:
@@ -25,8 +25,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: key-second-route
-              descriptorValue: value-second-route
+              descriptorKey: second-route
+              descriptorValue: second-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 24
     - match:
@@ -37,11 +37,11 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: key-third-route
-              descriptorValue: value-third-route
+              descriptorKey: third-route
+              descriptorValue: third-route
           - genericKey:
-              descriptorKey: key-rule-0-match--1
-              descriptorValue: value-rule-0-match--1
+              descriptorKey: rule-0-match--1
+              descriptorValue: rule-0-match--1
     - match:
         path: distinct
       name: fourth-route
@@ -50,8 +50,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: key-fourth-route
-              descriptorValue: value-fourth-route
+              descriptorKey: fourth-route
+              descriptorValue: fourth-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
           - remoteAddress: {}

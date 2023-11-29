@@ -1,7 +1,7 @@
 domain: first-listener
 descriptors:
-  - key: key-first-route
-    value: value-first-route
+  - key: first-route
+    value: first-route
     rate_limit: null
     descriptors:
       - key: masked_remote_address

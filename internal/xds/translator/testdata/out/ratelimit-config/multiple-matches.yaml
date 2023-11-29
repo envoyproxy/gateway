@@ -1,15 +1,15 @@
 domain: first-listener
 descriptors:
-  - key: key-first-route
-    value: value-first-route
+  - key: first-route
+    value: first-route
     rate_limit: null
     descriptors:
-      - key: key-rule-0-match-0
-        value: value-rule-0-match-0
+      - key: rule-0-match-0
+        value: rule-0-match-0
         rate_limit: null
         descriptors:
-          - key: key-rule-0-match-1
-            value: value-rule-0-match-1
+          - key: rule-0-match-1
+            value: rule-0-match-1
             rate_limit:
               requests_per_unit: 5
               unit: SECOND
