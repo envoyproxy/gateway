@@ -27,7 +27,7 @@ kubectl get gateway/teg -o yaml
 
 ## Configuration
 
-This guide uses Google as the OIDC provider to demonstrate the configuration of OID. However, EG works with any OIDC
+This guide uses Google as the OIDC provider to demonstrate the configuration of OIDC. However, EG works with any OIDC
 providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA, etc.
 
 ### Register an OIDC application
