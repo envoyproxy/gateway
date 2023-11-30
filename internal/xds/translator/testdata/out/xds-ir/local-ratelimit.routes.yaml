@@ -1,0 +1,149 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route-ratelimit-single-rule
+      route:
+        cluster: first-route-dest
+        rateLimits:
+        - actions:
+          - headerValueMatch:
+              descriptorKey: first-route-ratelimit-single-rule-key-rule-0-match-0
+              descriptorValue: first-route-ratelimit-single-rule-value-rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+          - headerValueMatch:
+              descriptorKey: first-route-ratelimit-single-rule-key-rule-0-match-1
+              descriptorValue: first-route-ratelimit-single-rule-value-rule-0-match-1
+              expectMatch: true
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: foo
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          descriptors:
+          - entries:
+            - key: first-route-ratelimit-single-rule-key-rule-0-match-0
+              value: first-route-ratelimit-single-rule-value-rule-0-match-0
+            - key: first-route-ratelimit-single-rule-key-rule-0-match-1
+              value: first-route-ratelimit-single-rule-value-rule-0-match-1
+            tokenBucket:
+              fillInterval: 3600s
+              maxTokens: 10
+              tokensPerFill: 10
+          statPrefix: http_local_rate_limiter
+    - match:
+        path: example
+      name: second-route-ratelimit-multiple-rules
+      route:
+        cluster: second-route-dest
+        rateLimits:
+        - actions:
+          - headerValueMatch:
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-0-match-0
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+          - headerValueMatch:
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-0-match-1
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-0-match-1
+              expectMatch: true
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: foo
+        - actions:
+          - headerValueMatch:
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-1-match-0
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-1-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: two
+          - headerValueMatch:
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-1-match-1
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-1-match-1
+              expectMatch: true
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: bar
+          - maskedRemoteAddress:
+              v4PrefixMaskLen: 16
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          descriptors:
+          - entries:
+            - key: second-route-ratelimit-multiple-rules-key-rule-0-match-0
+              value: second-route-ratelimit-multiple-rules-value-rule-0-match-0
+            - key: second-route-ratelimit-multiple-rules-key-rule-0-match-1
+              value: second-route-ratelimit-multiple-rules-value-rule-0-match-1
+            tokenBucket:
+              fillInterval: 3600s
+              maxTokens: 10
+              tokensPerFill: 10
+          - entries:
+            - key: second-route-ratelimit-multiple-rules-key-rule-1-match-0
+              value: second-route-ratelimit-multiple-rules-value-rule-1-match-0
+            - key: second-route-ratelimit-multiple-rules-key-rule-1-match-1
+              value: second-route-ratelimit-multiple-rules-value-rule-1-match-1
+            - key: masked_remote_address
+              value: 192.168.0.0/16
+            tokenBucket:
+              fillInterval: 60s
+              maxTokens: 10
+              tokensPerFill: 10
+          statPrefix: http_local_rate_limiter
+    - match:
+        path: test
+      name: third-route-ratelimit-no-match
+      route:
+        cluster: third-route-dest
+        rateLimits:
+        - actions:
+          - headerValueMatch:
+              descriptorKey: third-route-ratelimit-no-match-key-rule-0-match-0
+              descriptorValue: third-route-ratelimit-no-match-value-rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+        - actions:
+          - genericKey:
+              descriptorKey: third-route-ratelimit-no-match-key-rule-1-match--1
+              descriptorValue: third-route-ratelimit-no-match-value-rule-1-match--1
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          descriptors:
+          - entries:
+            - key: third-route-ratelimit-no-match-key-rule-0-match-0
+              value: third-route-ratelimit-no-match-value-rule-0-match-0
+            tokenBucket:
+              fillInterval: 3600s
+              maxTokens: 10
+              tokensPerFill: 10
+          - entries:
+            - key: third-route-ratelimit-no-match-key-rule-1-match--1
+              value: third-route-ratelimit-no-match-value-rule-1-match--1
+            tokenBucket:
+              fillInterval: 0s
+              maxTokens: 5
+              tokensPerFill: 5
+          statPrefix: http_local_rate_limiter

@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -313,8 +314,83 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
+	switch policy.Spec.RateLimit.Type {
+	case egv1a1.GlobalRateLimitType:
+		return t.buildGlobalRateLimit(policy)
+	case egv1a1.LocalRateLimitType:
+		return t.buildLocalRateLimit(policy)
+	}
+
+	status.SetBackendTrafficPolicyCondition(policy,
+		gwv1a2.PolicyConditionAccepted,
+		metav1.ConditionFalse,
+		gwv1a2.PolicyReasonInvalid,
+		"Invalid rateLimit type",
+	)
+	return nil
+}
+
+func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
+	if policy.Spec.RateLimit.Local == nil {
+		message := "Local configuration empty for rateLimit."
+		status.SetBackendTrafficPolicyCondition(policy,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwv1a2.PolicyReasonInvalid,
+			message,
+		)
+		return nil
+	}
+
+	rateLimit := &ir.RateLimit{
+		Local: &ir.LocalRateLimit{
+			Rules: make([]*ir.RateLimitRule, len(policy.Spec.RateLimit.Local.Rules)),
+		},
+	}
+
+	irRules := rateLimit.Local.Rules
+	var err error
+	for i, rule := range policy.Spec.RateLimit.Local.Rules {
+		irRules[i], err = buildRateLimitRule(rule)
+		if err != nil {
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				status.Error2ConditionMsg(err),
+			)
+			return nil
+		}
+		if irRules[i].CIDRMatch != nil && irRules[i].CIDRMatch.Distinct {
+			message := "Local rateLimit does not support distinct CIDRMatch."
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
+			return nil
+		}
+		for _, match := range irRules[i].HeaderMatches {
+			if match.Distinct {
+				message := "Local rateLimit does not support distinct HeaderMatch."
+				status.SetBackendTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					message,
+				)
+				return nil
+			}
+		}
+	}
+
+	return rateLimit
+}
+
+func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
 	if policy.Spec.RateLimit.Global == nil {
-		message := "Global configuration empty for rateLimit"
+		message := "Global configuration empty for rateLimit."
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -323,8 +399,9 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.Rat
 		)
 		return nil
 	}
+
 	if !t.GlobalRateLimitEnabled {
-		message := "Enable Ratelimit in the EnvoyGateway config to configure global rateLimit"
+		message := "Enable Ratelimit in the EnvoyGateway config to configure global rateLimit."
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -333,92 +410,92 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.Rat
 		)
 		return nil
 	}
+
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
 			Rules: make([]*ir.RateLimitRule, len(policy.Spec.RateLimit.Global.Rules)),
 		},
 	}
 
-	rules := rateLimit.Global.Rules
+	irRules := rateLimit.Global.Rules
+	var err error
 	for i, rule := range policy.Spec.RateLimit.Global.Rules {
-		rules[i] = &ir.RateLimitRule{
-			Limit: &ir.RateLimitValue{
-				Requests: rule.Limit.Requests,
-				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
-			},
-			HeaderMatches: make([]*ir.StringMatch, 0),
-		}
-		for _, match := range rule.ClientSelectors {
-			for _, header := range match.Headers {
-				switch {
-				case header.Type == nil && header.Value != nil:
-					fallthrough
-				case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
-					m := &ir.StringMatch{
-						Name:  header.Name,
-						Exact: header.Value,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
-					m := &ir.StringMatch{
-						Name:      header.Name,
-						SafeRegex: header.Value,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
-					m := &ir.StringMatch{
-						Name:     header.Name,
-						Distinct: true,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				default:
-					// set negative status condition.
-					message := "Unable to translate rateLimit. Either the header.Type is not valid or the header is missing a value"
-					status.SetBackendTrafficPolicyCondition(policy,
-						gwv1a2.PolicyConditionAccepted,
-						metav1.ConditionFalse,
-						gwv1a2.PolicyReasonInvalid,
-						message,
-					)
-
-					return nil
-				}
-			}
-
-			if match.SourceCIDR != nil {
-				// distinct means that each IP Address within the specified Source IP CIDR is treated as a
-				// distinct client selector and uses a separate rate limit bucket/counter.
-				distinct := false
-				sourceCIDR := match.SourceCIDR.Value
-				if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
-					distinct = true
-				}
-
-				ip, ipn, err := net.ParseCIDR(sourceCIDR)
-				if err != nil {
-					message := "Unable to translate rateLimit"
-					status.SetBackendTrafficPolicyCondition(policy,
-						gwv1a2.PolicyConditionAccepted,
-						metav1.ConditionFalse,
-						gwv1a2.PolicyReasonInvalid,
-						message,
-					)
-
-					return nil
-				}
-
-				mask, _ := ipn.Mask.Size()
-				rules[i].CIDRMatch = &ir.CIDRMatch{
-					CIDR:     ipn.String(),
-					IPv6:     ip.To4() == nil,
-					MaskLen:  mask,
-					Distinct: distinct,
-				}
-			}
+		irRules[i], err = buildRateLimitRule(rule)
+		if err != nil {
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				status.Error2ConditionMsg(err),
+			)
+			return nil
 		}
 	}
 
 	return rateLimit
+}
+
+func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
+	irRule := &ir.RateLimitRule{
+		Limit: ir.RateLimitValue{
+			Requests: rule.Limit.Requests,
+			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+		},
+		HeaderMatches: make([]*ir.StringMatch, 0),
+	}
+	for _, match := range rule.ClientSelectors {
+		for _, header := range match.Headers {
+			switch {
+			case header.Type == nil && header.Value != nil:
+				fallthrough
+			case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
+				m := &ir.StringMatch{
+					Name:  header.Name,
+					Exact: header.Value,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
+				m := &ir.StringMatch{
+					Name:      header.Name,
+					SafeRegex: header.Value,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
+				m := &ir.StringMatch{
+					Name:     header.Name,
+					Distinct: true,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			default:
+				return nil, errors.New(
+					"unable to translate rateLimit. Either the header.Type is not valid or the header is missing a value")
+			}
+		}
+
+		if match.SourceCIDR != nil {
+			// distinct means that each IP Address within the specified Source IP CIDR is treated as a
+			// distinct client selector and uses a separate rate limit bucket/counter.
+			distinct := false
+			sourceCIDR := match.SourceCIDR.Value
+			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
+				distinct = true
+			}
+
+			ip, ipn, err := net.ParseCIDR(sourceCIDR)
+			if err != nil {
+				return nil, errors.New("unable to translate rateLimit")
+			}
+
+			mask, _ := ipn.Mask.Size()
+			irRule.CIDRMatch = &ir.CIDRMatch{
+				CIDR:     ipn.String(),
+				IPv6:     ip.To4() == nil,
+				MaskLen:  mask,
+				Distinct: distinct,
+			}
+		}
+	}
+	return irRule, nil
 }
 
 func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.LoadBalancer {

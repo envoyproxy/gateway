@@ -245,6 +245,129 @@ spec:
                     required:
                     - rules
                     type: object
+                  local:
+                    description: Local defines local rate limit configuration.
+                    properties:
+                      rules:
+                        description: Rules are a list of RateLimit selectors and limits.
+                          Orders matters here as the rules are processed sequentially.
+                          The first rule that matches the request is applied.
+                        items:
+                          description: RateLimitRule defines the semantics for matching
+                            attributes from the incoming requests, and setting limits
+                            for them.
+                          properties:
+                            clientSelectors:
+                              description: ClientSelectors holds the list of select
+                                conditions to select specific clients using attributes
+                                from the traffic flow. All individual select conditions
+                                must hold True for this rule and its limit to be applied.
+                                If this field is empty, it is equivalent to True,
+                                and the limit is applied.
+                              items:
+                                description: RateLimitSelectCondition specifies the
+                                  attributes within the traffic flow that can be used
+                                  to select a subset of clients to be ratelimited.
+                                  All the individual conditions must hold True for
+                                  the overall condition to hold True.
+                                properties:
+                                  headers:
+                                    description: Headers is a list of request headers
+                                      to match. Multiple header values are ANDed together,
+                                      meaning, a request MUST match all the specified
+                                      headers.
+                                    items:
+                                      description: HeaderMatch defines the match attributes
+                                        within the HTTP Headers of the request.
+                                      properties:
+                                        name:
+                                          description: Name of the HTTP header.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the header.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: Value within the HTTP header.
+                                            Due to the case-insensitivity of header
+                                            names, "foo" and "Foo" are considered
+                                            equivalent. Do not set this field when
+                                            Type="Distinct", implying matching on
+                                            any/all unique values within the header.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - name
+                                    x-kubernetes-list-type: map
+                                  sourceCIDR:
+                                    description: SourceCIDR is the client IP Address
+                                      range to match on.
+                                    properties:
+                                      type:
+                                        default: Exact
+                                        type: string
+                                      value:
+                                        description: Value is the IP CIDR that represents
+                                          the range of Source IP Addresses of the
+                                          client. These could also be the intermediate
+                                          addresses through which the request has
+                                          flown through and is part of the  `X-Forwarded-For`
+                                          header. For example, `192.168.0.1/32`, `192.168.0.0/24`,
+                                          `001:db8::/64`.
+                                        maxLength: 256
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - value
+                                    type: object
+                                type: object
+                              maxItems: 8
+                              type: array
+                            limit:
+                              description: Limit holds the rate limit values. This
+                                limit is applied for traffic flows when the selectors
+                                compute to True, causing the request to be counted
+                                towards the limit. The limit is enforced and the request
+                                is ratelimited, i.e. a response with 429 HTTP status
+                                code is sent back to the client when the selected
+                                requests have reached the limit.
+                              properties:
+                                requests:
+                                  type: integer
+                                unit:
+                                  description: RateLimitUnit specifies the intervals
+                                    for setting rate limits. Valid RateLimitUnit values
+                                    are "Second", "Minute", "Hour", and "Day".
+                                  enum:
+                                  - Second
+                                  - Minute
+                                  - Hour
+                                  - Day
+                                  type: string
+                              required:
+                              - requests
+                              - unit
+                              type: object
+                          required:
+                          - limit
+                          type: object
+                        maxItems: 16
+                        type: array
+                    required:
+                    - rules
+                    type: object
                   type:
                     description: Type decides the scope for the RateLimits. Valid
                       RateLimitType values are "Global".

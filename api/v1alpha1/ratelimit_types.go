@@ -17,6 +17,11 @@ type RateLimitSpec struct {
 	//
 	// +optional
 	Global *GlobalRateLimit `json:"global,omitempty"`
+
+	// Local defines local rate limit configuration.
+	//
+	// +optional
+	Local *LocalRateLimit `json:"local,omitempty"`
 }
 
 // RateLimitType specifies the types of RateLimiting.
@@ -24,8 +29,13 @@ type RateLimitSpec struct {
 type RateLimitType string
 
 const (
-	// GlobalRateLimitType allows the rate limits to be applied across all Envoy proxy instances.
+	// GlobalRateLimitType allows the rate limits to be applied across all Envoy
+	// proxy instances.
 	GlobalRateLimitType RateLimitType = "Global"
+
+	// LocalRateLimitType allows the rate limits to be applied on a per Envoy
+	// proxy instance basis.
+	LocalRateLimitType RateLimitType = "Local"
 )
 
 // GlobalRateLimit defines global rate limit configuration.
@@ -37,6 +47,16 @@ type GlobalRateLimit struct {
 	// limits get applied, so a single traffic request
 	// might increase the rate limit counters for multiple
 	// rules if selected.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	Rules []RateLimitRule `json:"rules"`
+}
+
+// LocalRateLimit defines local rate limit configuration.
+type LocalRateLimit struct {
+	// Rules are a list of RateLimit selectors and limits.
+	// Orders matters here as the rules are processed sequentially.
+	// The first rule that matches the request is applied.
 	//
 	// +kubebuilder:validation:MaxItems=16
 	Rules []RateLimitRule `json:"rules"`
@@ -91,6 +111,7 @@ const (
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
+	// Note: This is only supported for Global Rate Limits.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
@@ -148,6 +169,7 @@ const (
 	// HeaderMatchDistinct matches any and all possible unique values encountered in the
 	// specified HTTP Header. Note that each unique value will receive its own rate limit
 	// bucket.
+	// Note: This is only supported for Global Rate Limits.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
 
@@ -162,3 +184,18 @@ type RateLimitValue struct {
 //
 // +kubebuilder:validation:Enum=Second;Minute;Hour;Day
 type RateLimitUnit string
+
+// RateLimitUnit constants.
+const (
+	// RateLimitUnitSecond specifies the rate limit interval to be 1 second.
+	RateLimitUnitSecond RateLimitUnit = "Second"
+
+	// RateLimitUnitMinute specifies the rate limit interval to be 1 minute.
+	RateLimitUnitMinute RateLimitUnit = "Minute"
+
+	// RateLimitUnitHour specifies the rate limit interval to be 1 hour.
+	RateLimitUnitHour RateLimitUnit = "Hour"
+
+	// RateLimitUnitDay specifies the rate limit interval to be 1 day.
+	RateLimitUnitDay RateLimitUnit = "Day"
+)

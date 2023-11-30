@@ -1099,6 +1099,20 @@ _Appears in:_
 
 
 
+#### LocalRateLimit
+
+
+
+LocalRateLimit defines local rate limit configuration.
+
+_Appears in:_
+- [RateLimitSpec](#ratelimitspec)
+
+| Field | Description |
+| --- | --- |
+| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Orders matters here as the rules are processed sequentially. The first rule that matches the request is applied. |
+
+
 #### LogLevel
 
 _Underlying type:_ `string`
@@ -1497,6 +1511,7 @@ RateLimitRule defines the semantics for matching attributes from the incoming re
 
 _Appears in:_
 - [GlobalRateLimit](#globalratelimit)
+- [LocalRateLimit](#localratelimit)
 
 | Field | Description |
 | --- | --- |
@@ -1532,6 +1547,7 @@ _Appears in:_
 | --- | --- |
 | `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
 | `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
+| `local` _[LocalRateLimit](#localratelimit)_ | Local defines local rate limit configuration. |
 
 
 #### RateLimitType
