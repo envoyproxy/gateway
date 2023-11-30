@@ -95,7 +95,6 @@ sudo kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 443:4
 Put www.exampe.com in the /etc/hosts file in your test machine, so we can use this host name to access the demo from a browser:
 
 ```shell
-##
 ...
 127.0.0.1 www.example.com
 ```
