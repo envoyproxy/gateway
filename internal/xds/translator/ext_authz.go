@@ -10,7 +10,9 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -192,10 +194,13 @@ func createExtAuthzClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPR
 			Protocol:  ir.GRPC,
 		}
 
-		tSocket, err = buildXdsUpstreamTLSSocket()
-		if err != nil {
-			errs = multierror.Append(errs, err)
-			continue
+		if !grpc.tlsDisabled {
+			// grpcURI is using TLS gRPC HT
+			tSocket, err = buildExtAuthzTLSocket()
+			if err != nil {
+				errs = multierror.Append(errs, err)
+				continue
+			}
 		}
 
 		if err = addXdsCluster(tCtx, &xdsClusterArgs{
@@ -209,4 +214,33 @@ func createExtAuthzClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPR
 	}
 
 	return errs
+}
+
+// buildExtAuthzTLSocket builds the TLS socket for the ext authx.
+func buildExtAuthzTLSocket() (*corev3.TransportSocket, error) {
+	tlsCtxProto := &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
+				ValidationContext: &tlsv3.CertificateValidationContext{
+					TrustedCa: &corev3.DataSource{
+						Specifier: &corev3.DataSource_Filename{
+							Filename: envoyTrustBundle,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tlsCtxAny, err := anypb.New(tlsCtxProto)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketTls,
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: tlsCtxAny,
+		},
+	}, nil
 }

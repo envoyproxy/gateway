@@ -10,7 +10,7 @@ http:
     pathMatch:
       exact: "foo/bar"
     extAuthz:
-      grpcURI: https://envoy-ext-jwt-auth.envoy-gateway-system.svc.cluster.local:10003
+      grpcURI: http://envoy-ext-jwt-auth.envoy-gateway-system.svc.cluster.local:10003
     destination:
       name: "first-route-dest"
       settings:
