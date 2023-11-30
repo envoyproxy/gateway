@@ -38,14 +38,14 @@ var BasicAuthTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("valid username password", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth", Namespace: ns})
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-2", Namespace: ns})
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/basic-auth",
+					Path: "/basic-auth-1",
 					Headers: map[string]string{
 						"Authorization": "Basic dXNlcjE6dGVzdDE=", // user1:test1
 					},
@@ -69,13 +69,14 @@ var BasicAuthTest = suite.ConformanceTest{
 
 		t.Run("without Authorization header", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/basic-auth",
+					Path: "/basic-auth-1",
 				},
 				Response: http.Response{
 					StatusCode: 401,
@@ -96,13 +97,14 @@ var BasicAuthTest = suite.ConformanceTest{
 
 		t.Run("invalid username password", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/basic-auth",
+					Path: "/basic-auth-1",
 					Headers: map[string]string{
 						"Authorization": "Basic dXNlcjE6dGVzdDI=", // user1:test2
 					},
@@ -129,7 +131,8 @@ var BasicAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-basic-auth-2", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-2", Namespace: ns})
+			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/basic-auth-2",
