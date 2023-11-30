@@ -10,6 +10,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -68,7 +69,8 @@ func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, err
 				},
 			},
 			TransportApiVersion: corev3.ApiVersion_V3,
-			FailureModeAllow:    false,
+			FailureModeAllow:    false, // do not let the request pass when authz unavailable
+			StatusOnError:       &typev3.HttpStatus{Code: typev3.StatusCode_ServiceUnavailable},
 		}
 
 		if err := authProto.ValidateAll(); err != nil {

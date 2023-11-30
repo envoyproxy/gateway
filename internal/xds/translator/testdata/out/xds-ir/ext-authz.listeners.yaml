@@ -20,6 +20,8 @@
             grpcService:
               envoyGrpc:
                 clusterName: envoy-ext-jwt-auth_envoy-gateway-system_svc_cluster_local_10003
+            statusOnError:
+              code: ServiceUnavailable
             transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
