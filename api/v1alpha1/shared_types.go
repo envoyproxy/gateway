@@ -291,8 +291,7 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
 	//
 	// +optional
-	// +kubebuilder:default=1
-	MaxReplicas int32 `json:"maxReplicas,omitempty"`
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 
 	// metrics contains the specifications for which to use to calculate the
 	// desired replica count (the maximum replica count across all metrics will

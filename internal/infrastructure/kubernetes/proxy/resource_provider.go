@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -260,7 +261,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 				Name:       r.Name(),
 			},
 			MinReplicas: hpaConfig.MinReplicas,
-			MaxReplicas: hpaConfig.MaxReplicas,
+			MaxReplicas: ptr.Deref[int32](hpaConfig.MaxReplicas, 1),
 			Metrics:     hpaConfig.Metrics,
 			Behavior:    hpaConfig.Behavior,
 		},

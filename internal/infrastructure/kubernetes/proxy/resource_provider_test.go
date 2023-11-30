@@ -530,7 +530,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			infra:    newTestInfra(),
 			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 				MinReplicas: ptr.To[int32](5),
-				MaxReplicas: 10,
+				MaxReplicas: ptr.To[int32](10),
 				Metrics: []autoscalingv2.MetricSpec{
 					{
 						Resource: &autoscalingv2.ResourceMetricSource{

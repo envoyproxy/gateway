@@ -108,10 +108,6 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 }
 
 func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
-	if hpa.MaxReplicas == 0 {
-		hpa.MaxReplicas = 1
-	}
-
 	if len(hpa.Metrics) == 0 {
 		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()
 	}

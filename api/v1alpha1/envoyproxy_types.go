@@ -132,7 +132,8 @@ type EnvoyProxyKubernetesProvider struct {
 	// Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="self.maxReplicas > 0"
+	// +kubebuilder:validation:XValidation:message="minReplicas must be greater than 0",rule="!has(self.minReplicas) || self.minReplicas > 0"
+	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="!has(self.maxReplicas) || self.maxReplicas > 0"
 	// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
 }

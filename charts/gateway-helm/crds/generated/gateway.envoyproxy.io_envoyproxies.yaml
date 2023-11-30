@@ -5364,7 +5364,6 @@ spec:
                                 type: object
                             type: object
                           maxReplicas:
-                            default: 1
                             description: maxReplicas is the upper limit for the number
                               of replicas to which the autoscaler can scale up. It
                               cannot be less that minReplicas. It defaults to 1 replica.
@@ -5908,8 +5907,10 @@ spec:
                             type: integer
                         type: object
                         x-kubernetes-validations:
+                        - message: minReplicas must be greater than 0
+                          rule: '!has(self.minReplicas) || self.minReplicas > 0'
                         - message: maxReplicas must be greater than 0
-                          rule: self.maxReplicas > 0
+                          rule: '!has(self.maxReplicas) || self.maxReplicas > 0'
                         - message: maxReplicas cannot be less than minReplicas
                           rule: '!has(self.minReplicas) || self.maxReplicas >= self.minReplicas'
                       envoyService:
