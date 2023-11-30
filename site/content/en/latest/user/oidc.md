@@ -107,7 +107,7 @@ successfully login, you should see the response from the backend service.
 
 Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
-Delete the SecurityPolicy and the secret
+Delete the SecurityPolicy and the secret:
 
 ```shell
 kubectl delete securitypolicy/oidc-example
