@@ -29,6 +29,7 @@ type urlCluster struct {
 	hostname     string
 	port         uint32
 	endpointType EndpointType
+	tlsDisabled  bool
 }
 
 // url2Cluster returns a urlCluster from the provided url.
@@ -68,6 +69,7 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		hostname:     u.Hostname(),
 		port:         uint32(port),
 		endpointType: epType,
+		tlsDisabled:  u.Scheme == "http",
 	}, nil
 }
 
