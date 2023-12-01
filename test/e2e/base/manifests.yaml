@@ -521,3 +521,43 @@ spec:
     allowedRoutes:
       kinds:
       - kind: UDPRoute
+---
+kind: Service
+metadata:
+  name: ext-authz
+  namespace: gateway-conformance-infra
+  labels:
+    app: ext-authz
+spec:
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+  - name: grpc
+    port: 9000
+    targetPort: 9000
+  selector:
+    app: ext-authz
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ext-authz
+  namespace: gateway-conformance-infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ext-authz
+  template:
+    metadata:
+      labels:
+        app: ext-authz
+    spec:
+      containers:
+      - image: gcr.io/istio-testing/ext-authz:latest
+        imagePullPolicy: IfNotPresent
+        name: ext-authz
+        ports:
+        - containerPort: 8000
+        - containerPort: 9000
