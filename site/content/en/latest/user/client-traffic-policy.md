@@ -61,6 +61,7 @@ Curl the example app through Envoy proxy once again:
 ```shell
 curl --verbose  --header "Host: www.example.com" http://$GATEWAY_HOST/get --next --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
+
 You should see the output like this:
 
 ```shell
@@ -165,6 +166,7 @@ You should see the output like this:
 ```
 
 You can see keepalive connection marked by the output in:
+
 ```shell
 * Connection #0 to host 172.18.255.202 left intact
 * Re-using existing connection #0 with host 172.18.255.202
