@@ -1545,7 +1545,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global" or "Local". |
 | `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
 | `local` _[LocalRateLimit](#localratelimit)_ | Local defines local rate limit configuration. |
 

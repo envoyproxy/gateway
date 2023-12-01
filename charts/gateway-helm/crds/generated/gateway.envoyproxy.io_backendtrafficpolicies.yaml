@@ -370,9 +370,10 @@ spec:
                     type: object
                   type:
                     description: Type decides the scope for the RateLimits. Valid
-                      RateLimitType values are "Global".
+                      RateLimitType values are "Global" or "Local".
                     enum:
                     - Global
+                    - Local
                     type: string
                 required:
                 - type

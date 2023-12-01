@@ -9,7 +9,7 @@ package v1alpha1
 // +union
 type RateLimitSpec struct {
 	// Type decides the scope for the RateLimits.
-	// Valid RateLimitType values are "Global".
+	// Valid RateLimitType values are "Global" or "Local".
 	//
 	// +unionDiscriminator
 	Type RateLimitType `json:"type"`
@@ -25,7 +25,7 @@ type RateLimitSpec struct {
 }
 
 // RateLimitType specifies the types of RateLimiting.
-// +kubebuilder:validation:Enum=Global
+// +kubebuilder:validation:Enum=Global;Local
 type RateLimitType string
 
 const (
@@ -54,6 +54,16 @@ type GlobalRateLimit struct {
 
 // LocalRateLimit defines local rate limit configuration.
 type LocalRateLimit struct {
+
+	// Envoy requires a default rate limit to be set for each route.
+	// The other option is to set the default rate limit to unit32 max and set the
+	// fill interval to a short period, like 1 second. This will effectively make
+	// the default rate limit "unlimited".
+	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/local_rate_limit_filter#using-rate-limit-descriptors-for-local-rate-limiting
+
+	// Default is the default rate limit if no rules match.
+	Default RateLimitValue `json:"default"`
+
 	// Rules are a list of RateLimit selectors and limits.
 	// Orders matters here as the rules are processed sequentially.
 	// The first rule that matches the request is applied.
