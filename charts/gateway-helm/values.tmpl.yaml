@@ -54,7 +54,7 @@ certgen:
 
 serviceMonitor:
   # -- Enable this if you're using https://github.com/coreos/prometheus-operator
-  enabled: true
+  enabled: false
   # -- Fallback to the prometheus default unless specified
   interval: 30s
   # -- Add custom labels to the ServiceMonitor resource
