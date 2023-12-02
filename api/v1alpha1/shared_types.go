@@ -278,20 +278,18 @@ const (
 )
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment
+// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
 type KubernetesHorizontalPodAutoscalerSpec struct {
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler
 	// can scale down. It defaults to 1 replica.
-	// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
 	//
 	// +optional
 	MinReplicas *int32 `json:"minReplicas,omitempty"`
 
 	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-	// It cannot be less that minReplicas. It defaults to 1 replica.
-	// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
+	// It cannot be less that minReplicas.
 	//
-	// +optional
-	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
+	MaxReplicas *int32 `json:"maxReplicas"`
 
 	// metrics contains the specifications for which to use to calculate the
 	// desired replica count (the maximum replica count across all metrics will
@@ -299,8 +297,6 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	// If left empty, it defaults to being based on CPU utilization with average on 80% usage.
 	//
 	// +optional
-	//
-	// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior.
 	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
 
 	// behavior configures the scaling behavior of the target

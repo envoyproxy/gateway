@@ -5366,16 +5366,15 @@ spec:
                           maxReplicas:
                             description: maxReplicas is the upper limit for the number
                               of replicas to which the autoscaler can scale up. It
-                              cannot be less that minReplicas. It defaults to 1 replica.
-                              See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
+                              cannot be less that minReplicas.
                             format: int32
                             type: integer
                           metrics:
-                            description: "metrics contains the specifications for
-                              which to use to calculate the desired replica count
-                              (the maximum replica count across all metrics will be
-                              used). If left empty, it defaults to being based on
-                              CPU utilization with average on 80% usage. \n See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior."
+                            description: metrics contains the specifications for which
+                              to use to calculate the desired replica count (the maximum
+                              replica count across all metrics will be used). If left
+                              empty, it defaults to being based on CPU utilization
+                              with average on 80% usage.
                             items:
                               description: MetricSpec specifies how to scale based
                                 on a single metric (only `type` and one other matching
@@ -5902,17 +5901,19 @@ spec:
                           minReplicas:
                             description: minReplicas is the lower limit for the number
                               of replicas to which the autoscaler can scale down.
-                              It defaults to 1 replica. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
+                              It defaults to 1 replica.
                             format: int32
                             type: integer
+                        required:
+                        - maxReplicas
                         type: object
                         x-kubernetes-validations:
                         - message: minReplicas must be greater than 0
                           rule: '!has(self.minReplicas) || self.minReplicas > 0'
                         - message: maxReplicas must be greater than 0
                           rule: '!has(self.maxReplicas) || self.maxReplicas > 0'
-                        - message: maxReplicas cannot be less than minReplicas
-                          rule: '!has(self.minReplicas) || self.maxReplicas >= self.minReplicas'
+                        - message: maxReplicas cannot be less than or equal to minReplicas
+                          rule: '!has(self.minReplicas) || self.maxReplicas > self.minReplicas'
                       envoyService:
                         description: EnvoyService defines the desired state of the
                           Envoy service resource. If unspecified, default settings

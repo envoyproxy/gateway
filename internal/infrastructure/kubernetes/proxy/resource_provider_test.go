@@ -16,7 +16,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
@@ -523,7 +522,9 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 		{
 			caseName: "default",
 			infra:    newTestInfra(),
-			hpa:      &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+			},
 		},
 		{
 			caseName: "custom",
