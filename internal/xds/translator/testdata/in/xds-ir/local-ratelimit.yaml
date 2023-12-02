@@ -9,6 +9,9 @@ http:
     hostname: "*"
     rateLimit:
       local:
+        default:
+          requests: 10
+          unit: Minute
         rules:
         - headerMatches:
           - name: x-user-id
@@ -30,6 +33,9 @@ http:
     hostname: "*"
     rateLimit:
       local:
+        default:
+          requests: 10
+          unit: Minute
         rules:
         - headerMatches:
           - name: x-user-id
@@ -58,20 +64,13 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
-  - name: "third-route-ratelimit-no-match"
+  - name: "third-route-ratelimit-no-rule"
     hostname: "*"
     rateLimit:
       local:
-        rules:
-        - headerMatches:
-          - name: x-user-id
-            exact: one
-          limit:
-            requests: 10
-            unit: Hour
-        - limit:
-            requests: 5
-            unit: second
+        default:
+          requests: 10
+          unit: Minute
     pathMatch:
       exact: "test"
     destination:

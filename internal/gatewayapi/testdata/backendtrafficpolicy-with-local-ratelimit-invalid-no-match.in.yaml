@@ -49,26 +49,9 @@ backendTrafficPolicies:
       type: Local
       local:
         default:
-          requests: 10
-          unit: Minute
+          requests: 100
+          unit: Second
         rules:
-        - clientSelectors:
-          - headers:
-            - name: x-user-id
-              value: one
-            - name: x-org-id
-              value: foo
-          limit:
-            requests: 10
-            unit: Hour
-        - clientSelectors:
-          - headers:
-            - name: x-user-id
-              value: two
-            - name: x-org-id
-              value: bar
-            sourceCIDR:
-              value: 192.168.0.0/16
-          limit:
+        - limit:
             requests: 10
             unit: Minute

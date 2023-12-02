@@ -898,6 +898,8 @@ type RateLimit struct {
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
+	// TODO zhaohuabing: add default values for Global rate limiting.
+
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
@@ -905,6 +907,10 @@ type GlobalRateLimit struct {
 // LocalRateLimit holds the local rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type LocalRateLimit struct {
+	// Default rate limiting values.
+	// If a request does not match any of the rules, the default values are used.
+	Default RateLimitValue `json:"default,omitempty" yaml:"default,omitempty"`
+
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
@@ -932,11 +938,6 @@ type CIDRMatch struct {
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
 	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
-}
-
-// MatchAll returns true if the rule matches all requests on a route.
-func (r *RateLimitRule) MatchAll() bool {
-	return len(r.HeaderMatches) == 0 || r.CIDRMatch == nil
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit

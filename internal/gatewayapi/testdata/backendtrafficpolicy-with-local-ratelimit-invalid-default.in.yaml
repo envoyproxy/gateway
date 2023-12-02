@@ -49,8 +49,8 @@ backendTrafficPolicies:
       type: Local
       local:
         default:
-          requests: 10
-          unit: Minute
+          requests: 1000
+          unit: Hour
         rules:
         - clientSelectors:
           - headers:

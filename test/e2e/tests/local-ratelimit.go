@@ -171,7 +171,7 @@ var LocalRateLimitNoLimitRouteTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("no rate limit on this route", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: \"ratelimit-specific-user\", Namespace: ns})", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-no-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -204,14 +204,14 @@ var LocalRateLimitNoLimitRouteTest = suite.ConformanceTest{
 func backendTrafficPolicyMustBeAccepted(
 	t *testing.T,
 	client client.Client,
-	securityPolicyName types.NamespacedName) {
+	policyName types.NamespacedName) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
 		policy := &egv1a1.BackendTrafficPolicy{}
-		err := client.Get(ctx, securityPolicyName, policy)
+		err := client.Get(ctx, policyName, policy)
 		if err != nil {
-			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
 		}
 
 		for _, condition := range policy.Status.Conditions {

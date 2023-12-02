@@ -1110,7 +1110,10 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Orders matters here as the rules are processed sequentially. The first rule that matches the request is applied. |
+| `default` _[RateLimitValue](#ratelimitvalue)_ | Limit is the default rate limit for a route if no rules match. If a request does not match any of the rules, it is counted towards this limit. 
+ Note: Limit is applied per route. Even if a policy targets a gateway, each route in that gateway still has a separate rate limit bucket. For example, if a gateway has 2 routes, and the limit is 100r/s, then each route has its own 100r/s rate limit bucket. |
+| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. They're used to define fine-grained rate limits that can be applied to specific clients using attributes from the traffic flow. 
+ Orders matters here as the rules are processed sequentially. The first rule that matches the request is applied. |
 
 
 #### LogLevel
@@ -1515,7 +1518,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. If this field is empty, it is equivalent to True, and the limit is applied. |
+| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. |
 | `limit` _[RateLimitValue](#ratelimitvalue)_ | Limit holds the rate limit values. This limit is applied for traffic flows when the selectors compute to True, causing the request to be counted towards the limit. The limit is enforced and the request is ratelimited, i.e. a response with 429 HTTP status code is sent back to the client when the selected requests have reached the limit. |
 
 
@@ -1530,8 +1533,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. |
-| `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
+| `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. At least one of headers or sourceCIDR condition must be specified. |
+| `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. At least one of headers or sourceCIDR condition must be specified. |
 
 
 #### RateLimitSpec
@@ -1579,6 +1582,7 @@ _Appears in:_
 RateLimitValue defines the limits for rate limiting.
 
 _Appears in:_
+- [LocalRateLimit](#localratelimit)
 - [RateLimitRule](#ratelimitrule)
 
 | Field | Description |

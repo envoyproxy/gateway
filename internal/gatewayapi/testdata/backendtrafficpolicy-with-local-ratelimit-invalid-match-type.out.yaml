@@ -9,15 +9,15 @@ backendTrafficPolicies:
     rateLimit:
       local:
         default:
-          requests: 10
-          unit: Minute
+          requests: 100
+          unit: Second
         rules:
         - clientSelectors:
           - headers:
             - name: x-user-id
               value: one
             - name: x-org-id
-              value: foo
+              type: Distinct
           limit:
             requests: 10
             unit: Hour
@@ -41,9 +41,9 @@ backendTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
+      message: Local rateLimit does not support distinct HeaderMatch.
+      reason: Invalid
+      status: "False"
       type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -171,34 +171,3 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        rateLimit:
-          local:
-            default:
-              requests: 10
-              unit: Minute
-            rules:
-            - headerMatches:
-              - distinct: false
-                exact: one
-                name: x-user-id
-              - distinct: false
-                exact: foo
-                name: x-org-id
-              limit:
-                requests: 10
-                unit: Hour
-            - cidrMatch:
-                cidr: 192.168.0.0/16
-                distinct: false
-                ipv6: false
-                maskLen: 16
-              headerMatches:
-              - distinct: false
-                exact: two
-                name: x-user-id
-              - distinct: false
-                exact: bar
-                name: x-org-id
-              limit:
-                requests: 10
-                unit: Minute

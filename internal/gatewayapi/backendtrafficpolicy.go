@@ -342,15 +342,37 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *i
 		return nil
 	}
 
+	local := policy.Spec.RateLimit.Local
+	defaultLimitUnit := ratelimitUnitToDuration(local.Limit.Unit)
+	for _, rule := range local.Rules {
+		ruleLimitUint := ratelimitUnitToDuration(rule.Limit.Unit)
+		if defaultLimitUnit == 0 || ruleLimitUint%defaultLimitUnit != 0 {
+			message := "Local rateLimit rule limit unit must be a multiple of the default limit unit."
+			// This is required by Envoy local rateLimit implementation.
+			// see https://github.com/envoyproxy/envoy/blob/6d9a6e995f472526de2b75233abca69aa00021ed/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc#L49
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
+			return nil
+		}
+	}
+
 	rateLimit := &ir.RateLimit{
 		Local: &ir.LocalRateLimit{
-			Rules: make([]*ir.RateLimitRule, len(policy.Spec.RateLimit.Local.Rules)),
+			Default: ir.RateLimitValue{
+				Requests: local.Limit.Requests,
+				Unit:     ir.RateLimitUnit(local.Limit.Unit),
+			},
+			Rules: make([]*ir.RateLimitRule, len(local.Rules)),
 		},
 	}
 
 	irRules := rateLimit.Local.Rules
 	var err error
-	for i, rule := range policy.Spec.RateLimit.Local.Rules {
+	for i, rule := range local.Rules {
 		irRules[i], err = buildRateLimitRule(rule)
 		if err != nil {
 			status.SetBackendTrafficPolicyCondition(policy,
@@ -411,15 +433,16 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) *
 		return nil
 	}
 
+	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules: make([]*ir.RateLimitRule, len(policy.Spec.RateLimit.Global.Rules)),
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
 	irRules := rateLimit.Global.Rules
 	var err error
-	for i, rule := range policy.Spec.RateLimit.Global.Rules {
+	for i, rule := range global.Rules {
 		irRules[i], err = buildRateLimitRule(rule)
 		if err != nil {
 			status.SetBackendTrafficPolicyCondition(policy,
@@ -443,7 +466,16 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
 	}
+	if len(rule.ClientSelectors) == 0 {
+		return nil, errors.New(
+			"unable to translate rateLimit. At least one clientSelector must be specified")
+	}
 	for _, match := range rule.ClientSelectors {
+		if len(match.Headers) == 0 && match.SourceCIDR == nil {
+			return nil, errors.New(
+				"unable to translate rateLimit. At least one of the" +
+					" header or sourceCIDR must be specified")
+		}
 		for _, header := range match.Headers {
 			switch {
 			case header.Type == nil && header.Value != nil:
@@ -468,7 +500,8 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
 			default:
 				return nil, errors.New(
-					"unable to translate rateLimit. Either the header.Type is not valid or the header is missing a value")
+					"unable to translate rateLimit. Either the header." +
+						"Type is not valid or the header is missing a value")
 			}
 		}
 
@@ -558,4 +591,20 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 	}
 
 	return pp
+}
+
+func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
+	var seconds int64
+
+	switch unit {
+	case egv1a1.RateLimitUnitSecond:
+		seconds = 1
+	case egv1a1.RateLimitUnitMinute:
+		seconds = 60
+	case egv1a1.RateLimitUnitHour:
+		seconds = 60 * 60
+	case egv1a1.RateLimitUnitDay:
+		seconds = 60 * 60 * 24
+	}
+	return seconds
 }

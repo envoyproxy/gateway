@@ -40,6 +40,8 @@ const (
 
 // GlobalRateLimit defines global rate limit configuration.
 type GlobalRateLimit struct {
+	// TODO zhaohuabing add default rate limit here.
+
 	// Rules are a list of RateLimit selectors and limits.
 	// Each rule and its associated limit is applied
 	// in a mutually exclusive way i.e. if multiple
@@ -56,18 +58,28 @@ type GlobalRateLimit struct {
 type LocalRateLimit struct {
 
 	// Envoy requires a default rate limit to be set for each route.
-	// The other option is to set the default rate limit to unit32 max and set the
+	// The other possible option is to set the default rate limit to unit32 max and set the
 	// fill interval to a short period, like 1 second. This will effectively make
 	// the default rate limit "unlimited".
 	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/local_rate_limit_filter#using-rate-limit-descriptors-for-local-rate-limiting
 
-	// Default is the default rate limit if no rules match.
-	Default RateLimitValue `json:"default"`
+	// Limit is the default rate limit for a route if no rules match.
+	// If a request does not match any of the rules, it is counted towards this limit.
+	//
+	// Note: Limit is applied per route. Even if a policy targets a gateway,
+	// each route in that gateway still has a separate rate limit bucket.
+	// For example, if a gateway has 2 routes, and the limit is 100r/s, then
+	// each route has its own 100r/s rate limit bucket.
+	Limit RateLimitValue `json:"default"`
 
-	// Rules are a list of RateLimit selectors and limits.
+	// Rules are a list of RateLimit selectors and limits. They're used to define
+	// fine-grained rate limits that can be applied to specific clients using
+	// attributes from the traffic flow.
+	//
 	// Orders matters here as the rules are processed sequentially.
 	// The first rule that matches the request is applied.
 	//
+	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Rules []RateLimitRule `json:"rules"`
 }
@@ -79,10 +91,8 @@ type RateLimitRule struct {
 	// specific clients using attributes from the traffic flow.
 	// All individual select conditions must hold True for this rule
 	// and its limit to be applied.
-	// If this field is empty, it is equivalent to True, and
-	// the limit is applied.
 	//
-	// +optional
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
 	ClientSelectors []RateLimitSelectCondition `json:"clientSelectors,omitempty"`
 	// Limit holds the rate limit values.
@@ -100,6 +110,7 @@ type RateLimitRule struct {
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
+	// At least one of headers or sourceCIDR condition must be specified.
 	//
 	// +listType=map
 	// +listMapKey=name
@@ -108,6 +119,7 @@ type RateLimitSelectCondition struct {
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
 	// SourceCIDR is the client IP Address range to match on.
+	// At least one of headers or sourceCIDR condition must be specified.
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`

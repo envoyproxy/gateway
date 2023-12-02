@@ -12,6 +12,9 @@ spec:
   rateLimit:
     type: Local
     local:
+      default:
+        requests: 10
+        unit: Hour
       rules:
       - clientSelectors:
         - headers:
@@ -35,10 +38,9 @@ spec:
   rateLimit:
     type: Local
     local:
-      rules:
-      - limit:
-          requests: 3
-          unit: Hour
+      default:
+        requests: 3
+        unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

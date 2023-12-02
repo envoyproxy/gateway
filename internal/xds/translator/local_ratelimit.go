@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	configv3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	rlv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/ratelimit/v3"
 	localrlv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
@@ -128,7 +129,9 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 			route.Name)
 	}
 
-	rateLimits, descriptors, err := buildRouteLocalRateLimits(irRoute.Name, irRoute.RateLimit.Local)
+	local := irRoute.RateLimit.Local
+
+	rateLimits, descriptors, err := buildRouteLocalRateLimits(irRoute.Name, local)
 	if err != nil {
 		return err
 	}
@@ -144,7 +147,26 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 	}
 
 	localRl := &localrlv3.LocalRateLimit{
-		StatPrefix:  localRateLimitFilterStatPrefix,
+		StatPrefix: localRateLimitFilterStatPrefix,
+		TokenBucket: &typev3.TokenBucket{
+			MaxTokens: uint32(local.Default.Requests),
+			TokensPerFill: &wrapperspb.UInt32Value{
+				Value: uint32(local.Default.Requests),
+			},
+			FillInterval: ratelimitUnitToDuration(local.Default.Unit),
+		},
+		FilterEnabled: &configv3.RuntimeFractionalPercent{
+			DefaultValue: &typev3.FractionalPercent{
+				Numerator:   100,
+				Denominator: typev3.FractionalPercent_HUNDRED,
+			},
+		},
+		FilterEnforced: &configv3.RuntimeFractionalPercent{
+			DefaultValue: &typev3.FractionalPercent{
+				Numerator:   100,
+				Denominator: typev3.FractionalPercent_HUNDRED,
+			},
+		},
 		Descriptors: descriptors,
 	}
 
@@ -234,27 +256,6 @@ func buildRouteLocalRateLimits(descriptorPrefix string, local *ir.LocalRateLimit
 			entry := &rlv3.RateLimitDescriptor_Entry{
 				Key:   descriptorMaskedRemoteAddress,
 				Value: rule.CIDRMatch.CIDR,
-			}
-			descriptorEntries = append(descriptorEntries, entry)
-			rlActions = append(rlActions, action)
-		}
-
-		// Match all traffic if no HeaderMatches or CIDRMatch
-		if len(rule.HeaderMatches) == 0 && rule.CIDRMatch == nil {
-			// Setup GenericKey action
-			key := getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
-			value := getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1)
-			action := &routev3.RateLimit_Action{
-				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
-					GenericKey: &routev3.RateLimit_Action_GenericKey{
-						DescriptorKey:   key,
-						DescriptorValue: value,
-					},
-				},
-			}
-			entry := &rlv3.RateLimitDescriptor_Entry{
-				Key:   key,
-				Value: value,
 			}
 			descriptorEntries = append(descriptorEntries, entry)
 			rlActions = append(rlActions, action)

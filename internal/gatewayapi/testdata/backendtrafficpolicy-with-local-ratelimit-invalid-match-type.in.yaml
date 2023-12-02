@@ -49,15 +49,15 @@ backendTrafficPolicies:
       type: Local
       local:
         default:
-          requests: 10
-          unit: Minute
+          requests: 100
+          unit: Second
         rules:
         - clientSelectors:
           - headers:
             - name: x-user-id
               value: one
             - name: x-org-id
-              value: foo
+              type: Distinct
           limit:
             requests: 10
             unit: Hour
