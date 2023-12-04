@@ -231,6 +231,8 @@ Curl the example app through Envoy proxy once again, now sending HAProxy PROXY p
 curl --verbose --haproxy-protocol --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
+You should now expect 200 response status and also see that source IP was preserved in the X-Forwarded-For header.
+
 ```shell
 *   Trying 172.18.255.202:80...
 * Connected to 172.18.255.202 (172.18.255.202) port 80 (#0)
