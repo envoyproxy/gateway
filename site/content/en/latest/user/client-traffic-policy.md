@@ -46,7 +46,7 @@ EOF
 Verify that ClientTrafficPolicy is Accepted:
 
 ```shell
- k get clienttrafficpolicies.gateway.envoyproxy.io
+kubectl get clienttrafficpolicies.gateway.envoyproxy.io -n default
 ```
 
 You should see the policy marked as accepted like this:
@@ -191,6 +191,96 @@ spec:
     namespace: default
   enableProxyProtocol: true
 EOF
+```
+
+Verify that ClientTrafficPolicy is Accepted:
+
+```shell
+kubectl get clienttrafficpolicies.gateway.envoyproxy.io -n default
+```
+
+You should see the policy marked as accepted like this:
+
+```shell
+NAME                          STATUS     AGE
+enable-proxy-protocol-policy   Accepted   5s
+```
+
+Try the endpoint without using PROXY protocol with curl:
+
+```shell
+curl -v --header "Host: www.example.com" http://$GATEWAY_HOST/get
+```
+
+```shell
+*   Trying 172.18.255.202:80...
+* Connected to 172.18.255.202 (172.18.255.202) port 80 (#0)
+> GET /get HTTP/1.1
+> Host: www.example.com
+> User-Agent: curl/8.1.2
+> Accept: */*
+>
+* Recv failure: Connection reset by peer
+* Closing connection 0
+curl: (56) Recv failure: Connection reset by peer
+```
+
+Curl the example app through Envoy proxy once again, now sending HAProxy PROXY protocol header at the beginning of the connection with --haproxy-protocol flag:
+
+```shell
+curl --verbose --haproxy-protocol --header "Host: www.example.com" http://$GATEWAY_HOST/get
+```
+
+```shell
+*   Trying 172.18.255.202:80...
+* Connected to 172.18.255.202 (172.18.255.202) port 80 (#0)
+> GET /get HTTP/1.1
+> Host: www.example.com
+> User-Agent: curl/8.1.2
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< content-type: application/json
+< x-content-type-options: nosniff
+< date: Mon, 04 Dec 2023 21:11:43 GMT
+< content-length: 510
+< x-envoy-upstream-service-time: 0
+< server: envoy
+<
+{
+ "path": "/get",
+ "host": "www.example.com",
+ "method": "GET",
+ "proto": "HTTP/1.1",
+ "headers": {
+  "Accept": [
+   "*/*"
+  ],
+  "User-Agent": [
+   "curl/8.1.2"
+  ],
+  "X-Envoy-Expected-Rq-Timeout-Ms": [
+   "15000"
+  ],
+  "X-Envoy-Internal": [
+   "true"
+  ],
+  "X-Forwarded-For": [
+   "192.168.255.6"
+  ],
+  "X-Forwarded-Proto": [
+   "http"
+  ],
+  "X-Request-Id": [
+   "290e4b61-44b7-4e5c-a39c-0ec76784e897"
+  ]
+ },
+ "namespace": "default",
+ "ingress": "",
+ "service": "",
+ "pod": "backend-58d58f745-2zwvn"
+* Connection #0 to host 172.18.255.202 left intact
+}
 ```
 
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
