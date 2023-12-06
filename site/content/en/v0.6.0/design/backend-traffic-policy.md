@@ -131,6 +131,7 @@ Here is a list of some features that can be included in this API. Note that this
 - Keep alive probes
 - Health checking
 - Load balancing
+- Rate limit
 
 ## Design Decisions
 

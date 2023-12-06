@@ -17,9 +17,10 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 var (
@@ -33,7 +34,7 @@ var (
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty          = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP address")
+	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid       = errors.New("field Port specified is invalid")
 	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
 	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
@@ -496,7 +497,7 @@ func (h HTTPRoute) Validate() error {
 func (j *JWT) validate() error {
 	var errs error
 
-	if err := validation.ValidateJWTProvider(j.Providers); err != nil {
+	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
@@ -537,6 +538,8 @@ type DestinationSetting struct {
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	// AddressTypeState specifies the state of DestinationEndpoint address type.
+	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -551,6 +554,15 @@ func (d DestinationSetting) Validate() error {
 	return errs
 }
 
+// DestinationAddressType describes the address type state for a group of DestinationEndpoint
+type DestinationAddressType string
+
+const (
+	IP    DestinationAddressType = "IP"
+	FQDN  DestinationAddressType = "FQDN"
+	MIXED DestinationAddressType = "Mixed"
+)
+
 // DestinationEndpoint holds the endpoint details associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationEndpoint struct {
@@ -563,10 +575,14 @@ type DestinationEndpoint struct {
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
-	// Only support IP hosts for now
-	if ip := net.ParseIP(d.Host); ip == nil {
+
+	err := validation.IsDNS1123Subdomain(d.Host)
+	ip := net.ParseIP(d.Host)
+
+	if err != nil && ip == nil {
 		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
 	}
+
 	if d.Port == 0 {
 		errs = multierror.Append(errs, ErrDestEndpointPortInvalid)
 	}
@@ -590,7 +606,7 @@ type AddHeader struct {
 	Append bool   `json:"append" yaml:"append"`
 }
 
-// / Validate the fields within the AddHeader structure
+// Validate the fields within the AddHeader structure
 func (h AddHeader) Validate() error {
 	var errs error
 	if h.Name == "" {

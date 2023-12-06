@@ -88,6 +88,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-weighted-invalid-backend",
 		},
 		{
+			name: "http-route-dns-cluster",
+		},
+		{
 			name:           "simple-tls",
 			requireSecrets: true,
 		},

@@ -108,7 +108,8 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
