@@ -981,7 +981,7 @@ _Appears in:_
 
 
 
-KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
+KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 
 _Appears in:_
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
