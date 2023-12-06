@@ -319,7 +319,9 @@ You can also validate this configuration using [egctl translate][].
 
 ## Customize EnvoyProxy Horizontal Pod Autoscaler
 
-You can enable [Horizontal Pod Autoscaler](https://github.com/envoyproxy/gateway/issues/703) for EnvoyProxy Deployment via EnvoyProxy Config below:
+You can enable [Horizontal Pod Autoscaler](https://github.com/envoyproxy/gateway/issues/703) for EnvoyProxy Deployment. However, before enabling the HPA for EnvoyProxy, please ensure that the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) component is installed in the cluster.
+
+Once confirmed, you can apply it via EnvoyProxy Config as shown below:
 
 ```shell
 cat <<EOF | kubectl apply -f -
