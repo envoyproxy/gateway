@@ -599,18 +599,22 @@ Here is an example of a rate limit implemented by the application developer to l
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: AuthenticationFilter
+kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  type: JWT
-  jwtProviders:
-  - name: example
-    remoteJWKS:
-      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
-    claimToHeaders:
-    - claim: name
-      header: x-claim-name
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+      claimToHeaders:
+      - claim: name
+        header: x-claim-name
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
@@ -621,7 +625,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example 
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -650,12 +653,6 @@ spec:
       name: backend
       port: 3000
       weight: 1
-    filters:
-    - extensionRef:
-        group: gateway.envoyproxy.io
-        kind: AuthenticationFilter
-        name: jwt-example
-      type: ExtensionRef
     matches:
     - path:
         type: PathPrefix
@@ -666,11 +663,11 @@ EOF
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
 ```
 
 ```shell
-TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
+TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
 ```
 
 ### Rate limit by carrying `TOKEN`
