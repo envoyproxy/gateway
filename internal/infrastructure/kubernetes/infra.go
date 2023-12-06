@@ -70,8 +70,8 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 		return errors.Wrapf(err, "failed to create or update service %s/%s", i.Namespace, r.Name())
 	}
 
-	if err := i.configureHPA(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to configure hpa %s/%s", i.Namespace, r.Name())
+	if err := i.createOrUpdateHPA(ctx, r); err != nil {
+		return errors.Wrapf(err, "failed to create or update hpa %s/%s", i.Namespace, r.Name())
 	}
 
 	return nil
