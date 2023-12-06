@@ -216,6 +216,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			if err != nil {
 				r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
+				return reconcile.Result{}, err
 			} else {
 				resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
 				resourceTree.Services = append(resourceTree.Services, service)
@@ -230,6 +231,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			if err != nil {
 				r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
+				return reconcile.Result{}, err
 			} else {
 				resourceMap.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
 				resourceTree.ServiceImports = append(resourceTree.ServiceImports, serviceImport)
