@@ -123,7 +123,8 @@ xdsIR:
       destination:
         name: tcproute/default/tcproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8163
           protocol: TCP

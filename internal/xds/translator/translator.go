@@ -242,14 +242,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
-				if err := addXdsCluster(tCtx, &xdsClusterArgs{
-					name:          httpRoute.Destination.Name,
-					settings:      httpRoute.Destination.Settings,
-					tSocket:       nil,
-					endpointType:  EndpointTypeStatic,
-					loadBalancer:  httpRoute.LoadBalancer,
-					proxyProtocol: httpRoute.ProxyProtocol,
-				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+				if err = processXdsCluster(tCtx, httpRoute); err != nil {
 					errs = multierror.Append(errs, err)
 				}
 			}
@@ -415,7 +408,7 @@ func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.
 	return nil
 }
 
-// findXdsRouteConfig finds an xds route with the name and returns nil if there is no match.
+// findXdsRouteConfig finds a xds route with the name and returns nil if there is no match.
 func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.RouteConfiguration {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
 		return nil
@@ -458,6 +451,33 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 		if endpoint.ClusterName == name {
 			return endpoint
 		}
+	}
+
+	return nil
+}
+
+// processXdsCluster processes a xds cluster by its endpoint address type.
+func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute) error {
+	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
+	// since there's no Mixed AddressType among all the DestinationSettings.
+	addrTypeState := httpRoute.Destination.Settings[0].AddressType
+
+	var endpointType EndpointType
+	if addrTypeState != nil && *addrTypeState == ir.FQDN {
+		endpointType = EndpointTypeDNS
+	} else {
+		endpointType = EndpointTypeStatic
+	}
+
+	if err := addXdsCluster(tCtx, &xdsClusterArgs{
+		name:          httpRoute.Destination.Name,
+		settings:      httpRoute.Destination.Settings,
+		tSocket:       nil,
+		endpointType:  endpointType,
+		loadBalancer:  httpRoute.LoadBalancer,
+		proxyProtocol: httpRoute.ProxyProtocol,
+	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
 	}
 
 	return nil

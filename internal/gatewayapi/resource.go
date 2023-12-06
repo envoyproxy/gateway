@@ -108,7 +108,7 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 }
 
 func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, backendKind string) []*discoveryv1.EndpointSlice {
-	endpointSlices := []*discoveryv1.EndpointSlice{}
+	var endpointSlices []*discoveryv1.EndpointSlice
 	for _, endpointSlice := range r.EndpointSlices {
 		var backendSelectorLabel string
 		switch backendKind {
