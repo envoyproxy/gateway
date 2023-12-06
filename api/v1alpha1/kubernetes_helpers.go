@@ -106,3 +106,9 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 		deployment.Container.Image = DefaultKubernetesContainerImage(image)
 	}
 }
+
+func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
+	if len(hpa.Metrics) == 0 {
+		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()
+	}
+}

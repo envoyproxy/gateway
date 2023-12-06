@@ -419,6 +419,86 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "ProxyHpa-maxReplicas-is-required",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.provider.kubernetes.envoyHpa.maxReplicas: Required value"},
+		},
+		{
+			desc: "ProxyHpa-minReplicas-less-than-0",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](-1),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"minReplicas must be greater than 0"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-less-than-0",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MaxReplicas: ptr.To[int32](-1),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"maxReplicas must be greater than 0"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-less-than-minReplicas",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"maxReplicas cannot be less than or equal to minReplicas"},
+		},
+		{
+			desc: "ProxyHpa-valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](10),
+							},
+						},
+					},
+				}
+			},
+		},
 	}
 
 	for _, tc := range cases {

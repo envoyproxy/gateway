@@ -7,6 +7,7 @@ package ratelimit
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -201,4 +202,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	return deployment, nil
+}
+
+func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	return nil, nil
 }
