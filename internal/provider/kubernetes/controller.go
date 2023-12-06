@@ -252,6 +252,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 			r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
 				backendRefKind, string(backendRef.Name))
+			return reconcile.Result{}, err
 		} else {
 			for _, endpointSlice := range endpointSliceList.Items {
 				endpointSlice := endpointSlice
