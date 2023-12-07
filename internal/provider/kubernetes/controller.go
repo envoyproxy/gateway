@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -216,7 +217,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			if err != nil {
 				r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
-				return reconcile.Result{}, err
+				return reconcile.Result{RequeueAfter: time.Minute}, nil
 			} else {
 				resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
 				resourceTree.Services = append(resourceTree.Services, service)
@@ -231,7 +232,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			if err != nil {
 				r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
-				return reconcile.Result{}, err
+				return reconcile.Result{RequeueAfter: time.Minute}, nil
 			} else {
 				resourceMap.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
 				resourceTree.ServiceImports = append(resourceTree.ServiceImports, serviceImport)
@@ -252,7 +253,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 			r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
 				backendRefKind, string(backendRef.Name))
-			return reconcile.Result{}, err
+			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		} else {
 			for _, endpointSlice := range endpointSliceList.Items {
 				endpointSlice := endpointSlice
