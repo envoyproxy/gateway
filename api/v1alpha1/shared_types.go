@@ -277,8 +277,8 @@ const (
 	StringMatchRegularExpression StringMatchType = "RegularExpression"
 )
 
-// KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment
-// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec
+// KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
+// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 type KubernetesHorizontalPodAutoscalerSpec struct {
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler
 	// can scale down. It defaults to 1 replica.
