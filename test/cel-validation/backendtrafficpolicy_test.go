@@ -306,6 +306,40 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
 			},
 		},
+		{
+			desc: " consistenthash with SlowStart is set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				val := uint32(1)
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					CircuitBreakers: &egv1a1.CircuitBreakers{
+						Thresholds: []egv1a1.Thresholds{
+							{
+								MaxConnections: &val,
+								MaxPendingRequests: &val,
+								MaxRequests: &val,
+								MaxRetries: &val,
+							},
+							{
+								MaxConnections: &val,
+								MaxPendingRequests: &val,
+								MaxRequests: &val,
+								MaxRetries: &val,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.circuitBreakers.thresholds: Too many: 2: must have at most 1 items",
+			},
+		},
 	}
 
 	for _, tc := range cases {

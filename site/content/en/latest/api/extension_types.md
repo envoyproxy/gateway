@@ -76,6 +76,7 @@ _Appears in:_
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
+| `circuitBreakers` _[CircuitBreakers](#circuitbreakers)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the highest supported thresholds |
 
 
 
@@ -123,6 +124,20 @@ _Appears in:_
 | `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
 | `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
 | `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
+
+
+#### CircuitBreakers
+
+
+
+CircuitBreakers defines the Circuit Breakers configuration.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `thresholds` _[Thresholds](#thresholds) array_ | List of Circuit Breaker Thresholds At most one Thresholds resource is supported. |
 
 
 #### ClaimToHeader
@@ -1756,6 +1771,23 @@ _Appears in:_
 | `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
 | `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
+
+
+#### Thresholds
+
+
+
+
+
+_Appears in:_
+- [CircuitBreakers](#circuitbreakers)
+
+| Field | Description |
+| --- | --- |
+| `maxConnections` _integer_ | The maximum number of connections that Envoy will make to the referenced backend (per xRoute). Default: 1024 |
+| `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will allow to the referenced backend (per xRoute). Default: 1024 |
+| `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend (per xRoute). Default: 1024 |
+| `maxRetries` _integer_ | The maximum number of parallel retries that Envoy will allow to the referenced backend (per xRoute). Default: 3 |
 
 
 #### TracingProvider

@@ -44,6 +44,44 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              circuitBreakers:
+                description: Circuit Breaker settings for the upstream connections
+                  and requests. If not set, circuit breakers will be enabled with
+                  the highest supported thresholds
+                properties:
+                  thresholds:
+                    description: List of Circuit Breaker Thresholds At most one Thresholds
+                      resource is supported.
+                    items:
+                      properties:
+                        maxConnections:
+                          description: 'The maximum number of connections that Envoy
+                            will make to the referenced backend (per xRoute). Default:
+                            1024'
+                          format: int32
+                          type: integer
+                        maxParallelRequests:
+                          description: 'The maximum number of parallel requests that
+                            Envoy will make to the referenced backend (per xRoute).
+                            Default: 1024'
+                          format: int32
+                          type: integer
+                        maxPendingRequests:
+                          description: 'The maximum number of pending requests that
+                            Envoy will allow to the referenced backend (per xRoute).
+                            Default: 1024'
+                          format: int32
+                          type: integer
+                        maxRetries:
+                          description: 'The maximum number of parallel retries that
+                            Envoy will allow to the referenced backend (per xRoute).
+                            Default: 3'
+                          format: int32
+                          type: integer
+                      type: object
+                    maxItems: 1
+                    type: array
+                type: object
               loadBalancer:
                 description: LoadBalancer policy to apply when routing traffic from
                   the gateway to the backend endpoints
