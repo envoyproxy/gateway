@@ -26,7 +26,7 @@ jobs:
             - Your PR needs to receive at least two approvals.
             - At least one approval must come from a member of the gateway-maintainers team.
 
-            **NOTE**: Once your PR is under review, ***please do not rebase and force push it***. Otherwise, it will force your reviewers to review the PR from scratch rather than simply look at your latest changes. 
+            **NOTE**: Once your PR is under review, ***please do not rebase and force push it***. Otherwise, it will force your reviewers to review the PR from scratch rather than simply look at your latest changes.
 
             <details>
             <summary> What's more, you can help expedite the processing of your PR by </summary>
