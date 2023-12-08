@@ -295,7 +295,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-2/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -316,7 +317,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-3/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 8.8.8.8
               port: 8080
             protocol: HTTP
@@ -333,7 +335,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-4/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -354,7 +357,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-5/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 8.8.8.8
               port: 8080
             protocol: HTTP
@@ -371,7 +375,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -388,7 +393,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -405,7 +411,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP

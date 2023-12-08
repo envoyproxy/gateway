@@ -9,6 +9,11 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	v1 "k8s.io/api/core/v1"
+
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
@@ -37,6 +42,21 @@ func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	}
 }
 
+func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
+	return []autoscalingv2.MetricSpec{
+		{
+			Resource: &autoscalingv2.ResourceMetricSource{
+				Name: v1.ResourceCPU,
+				Target: autoscalingv2.MetricTarget{
+					Type:               autoscalingv2.UtilizationMetricType,
+					AverageUtilization: ptr.To[int32](80),
+				},
+			},
+			Type: autoscalingv2.ResourceMetricSourceType,
+		},
+	}
+}
+
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
 // a default EnvoyProxyKubernetesProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Kubernetes", a nil EnvoyProxyKubernetesProvider is returned.
@@ -62,6 +82,10 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 
 	if r.Kubernetes.EnvoyService.Type == nil {
 		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
+	}
+
+	if r.Kubernetes.EnvoyHpa != nil {
+		r.Kubernetes.EnvoyHpa.setDefault()
 	}
 
 	return r.Kubernetes

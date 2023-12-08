@@ -149,8 +149,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// a unique Xds IR HTTPRoute per match.
 		var ruleRoutes = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
 
+		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
+
 		for _, backendRef := range rule.BackendRefs {
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
+			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
+				dstAddrTypeMap[*ds.AddressType]++
+			}
+
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
@@ -163,12 +169,20 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						}
 						route.Destination.Settings = append(route.Destination.Settings, ds)
 						route.BackendWeights.Valid += backendWeight
-
 					} else {
 						route.BackendWeights.Invalid += backendWeight
 					}
 				}
 			}
+		}
+
+		// TODO: support mixed endpointslice address type between backendRefs
+		if !t.EndpointRoutingDisabled && len(dstAddrTypeMap) > 1 {
+			parentRef.SetCondition(httpRoute,
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapiv1a1.RouteReasonResolvedRefs,
+				"Mixed endpointslice address type between backendRefs is not supported")
 		}
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
@@ -980,7 +994,10 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		return nil, weight
 	}
 
-	var endpoints []*ir.DestinationEndpoint
+	var (
+		endpoints []*ir.DestinationEndpoint
+		addrType  *ir.DestinationAddressType
+	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindServiceImport:
@@ -992,9 +1009,10 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 				break
 			}
 		}
+
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
+			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 			for _, ip := range backendIps {
@@ -1023,7 +1041,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		// Route to endpoints by default
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
+			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			// Fall back to Service ClusterIP routing
 			ep := ir.NewDestEndpoint(
@@ -1033,10 +1051,20 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		}
 	}
 
+	// TODO: support mixed endpointslice address type for the same backendRef
+	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
+		parentRef.SetCondition(route,
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			gwapiv1a1.RouteReasonResolvedRefs,
+			"Mixed endpointslice address type for the same backendRef is not supported")
+	}
+
 	ds = &ir.DestinationSetting{
-		Weight:    &weight,
-		Protocol:  protocol,
-		Endpoints: endpoints,
+		Weight:      &weight,
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
 	}
 	return ds, weight
 }
@@ -1137,22 +1165,51 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 	return relevantRoute
 }
 
-func getIREndpointsFromEndpointSlice(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
-	endpoints := []*ir.DestinationEndpoint{}
+func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
+	var (
+		dstEndpoints []*ir.DestinationEndpoint
+		dstAddrType  *ir.DestinationAddressType
+	)
+
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	for _, endpointSlice := range endpointSlices {
-		for _, endpoint := range endpointSlice.Endpoints {
-			for _, endpointPort := range endpointSlice.Ports {
-				// Check if the endpoint port matches the service port
-				// and if endpoint is Ready
-				if *endpointPort.Name == portName &&
-					*endpointPort.Protocol == portProtocol &&
-					*endpoint.Conditions.Ready {
-					for _, address := range endpoint.Addresses {
-						ep := ir.NewDestEndpoint(
-							address,
-							uint32(*endpointPort.Port))
-						endpoints = append(endpoints, ep)
-					}
+		if endpointSlice.AddressType == discoveryv1.AddressTypeFQDN {
+			addrTypeMap[ir.FQDN]++
+		} else {
+			addrTypeMap[ir.IP]++
+		}
+		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol)
+		dstEndpoints = append(dstEndpoints, endpoints...)
+	}
+
+	for addrTypeState, addrTypeCounts := range addrTypeMap {
+		if addrTypeCounts == len(endpointSlices) {
+			dstAddrType = ptr.To(addrTypeState)
+			break
+		}
+	}
+
+	if len(addrTypeMap) > 0 && dstAddrType == nil {
+		dstAddrType = ptr.To(ir.MIXED)
+	}
+
+	return dstEndpoints, dstAddrType
+}
+
+func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+	var endpoints []*ir.DestinationEndpoint
+	for _, endpoint := range endpointSlice.Endpoints {
+		for _, endpointPort := range endpointSlice.Ports {
+			// Check if the endpoint port matches the service port
+			// and if endpoint is Ready
+			if *endpointPort.Name == portName &&
+				*endpointPort.Protocol == portProtocol &&
+				*endpoint.Conditions.Ready {
+				for _, address := range endpoint.Addresses {
+					ep := ir.NewDestEndpoint(
+						address,
+						uint32(*endpointPort.Port))
+					endpoints = append(endpoints, ep)
 				}
 			}
 		}

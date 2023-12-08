@@ -9,7 +9,10 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,8 +77,44 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		Name:      deployment.Name,
 	}
 
+	hpa, err := r.HorizontalPodAutoscaler()
+	if err != nil {
+		return err
+	}
+
+	var opts cmp.Options
+	if hpa != nil {
+		opts = append(opts, cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "Replicas"))
+	}
+
 	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
-		return !reflect.DeepEqual(deployment.Spec, current.Spec)
+		return !cmp.Equal(current.Spec, deployment.Spec, opts...)
+	})
+}
+
+// createOrUpdateHPA creates HorizontalPodAutoscaler object in the kube api server based on
+// the provided ResourceRender, if it doesn't exist and updates it if it does,
+// and delete hpa if not set.
+func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) error {
+	hpa, err := r.HorizontalPodAutoscaler()
+	if err != nil {
+		return err
+	}
+
+	// when HorizontalPodAutoscaler is not set,
+	// then delete the object in the kube api server if any.
+	if hpa == nil {
+		return i.deleteHPA(ctx, r)
+	}
+
+	current := &autoscalingv2.HorizontalPodAutoscaler{}
+	key := types.NamespacedName{
+		Namespace: hpa.Namespace,
+		Name:      hpa.Name,
+	}
+
+	return i.Client.CreateOrUpdate(ctx, key, current, hpa, func() bool {
+		return !cmp.Equal(hpa.Spec, current.Spec)
 	})
 }
 
@@ -144,4 +183,16 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) error {
 	}
 
 	return i.Client.Delete(ctx, svc)
+}
+
+// deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
+func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) error {
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      r.Name(),
+		},
+	}
+
+	return i.Client.Delete(ctx, hpa)
 }
