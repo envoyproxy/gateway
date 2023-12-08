@@ -15,26 +15,26 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            🚀 Thank you for contributing to the [Envoy Gateway](https://gateway.envoyproxy.io) project! 🚀
+            🚀 Thank you for contributing to the [Envoy Gateway](https://gateway.envoyproxy.io/) project! 🚀
 
-            Your PR has been successfully submitted, and we greatly appreciate your effort and contribution. Before merging, please ensure to follow the process below:
+            Before merging, please ensure to follow the process below:
 
-            1. **Requesting Reviews**:
-              - cc @envoyproxy/gateway-reviewers team for an initial review.
-              - After the initial review, reviewers should request the @envoyproxy/gateway-maintainers team for further review.
+            1. Requesting Reviews:
+            - cc @envoyproxy/gateway-reviewers team for an initial review.
+            - After the initial review, reviewers should request the @envoyproxy/gateway-maintainers team for further review.
+            2. Review Approval:
+            - Your PR needs to receive at least two approvals.
+            - At least one approval must come from a member of the gateway-maintainers team.
 
-            2. **Review Approval**:
-              - Your PR needs to receive at least **two** approvals.
-              - At least **one** approval must come from a member of the gateway-maintainers team.
+            **NOTE**: Once your PR is under review, ***please do not rebase and force push it***. Otherwise, it will force your reviewers to review the PR from scratch rather than simply look at your latest changes. 
 
-            Our [Build and Test Workflow](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml) will run a series of checks on your code to ensure it meets our quality standards and coding conventions. In the meantime, you can help expedite the processing of your PR by:
+            <details>
+            <summary> What's more, you can help expedite the processing of your PR by </summary>
+            <br>
+
             - Ensuring you have self-reviewed your work according to the project's [Contribution Guidelines](https://gateway.envoyproxy.io/latest/contributions/develop).
             - If your PR addresses a specific issue, make sure to mention it in the PR description.
             - Respond promptly if there are any test failures or suggestions for improvements that we comment on.
 
-            Envoy Gateway team will review your PR as soon as possible. If all goes well, your code will soon be merged into the main branch. Should further modifications be required or if there are any questions, we will communicate with you in the PR comments.
-
-            Thank you once again for your contribution, we look forward to your excellent code bringing more possibilities to the Envoy Gateway!
-
-            Happy coding!
+            </details>
           reactions: 'heart'
