@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: jpmcb/prow-github-actions@v1.1.3
         with:
-          prow-commands: '/assign 
+          prow-commands: '/assign
             /unassign
             /milestone'
           github-token: "${{ secrets.GITHUB_TOKEN }}"
