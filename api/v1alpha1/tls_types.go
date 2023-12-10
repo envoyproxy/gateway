@@ -6,7 +6,7 @@
 package v1alpha1
 
 type TLSSettings struct {
-	// Version details the minimum/maximum TLS protocol verison that
+	// Version details the minimum/maximum TLS protocol version that
 	// should be supported by this listener.
 	// +optional
 	Version *TLSVersions `json:"version,omitempty"`
@@ -49,11 +49,11 @@ const (
 )
 
 type TLSVersions struct {
-	// Min specifies the minimal TLS verison to use
+	// Min specifies the minimal TLS version to use
 	// +optional
-	Min TLSVersion `json:"min,omitempty"`
+	Min *TLSVersion `json:"min,omitempty"`
 
-	// Max specifies the maximal TLS verison to use
+	// Max specifies the maximal TLS version to use
 	// +optional
-	Max TLSVersion `json:"max,omitempty"`
+	Max *TLSVersion `json:"max,omitempty"`
 }

@@ -1867,7 +1867,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `version` _[TLSVersions](#tlsversions)_ | Version details the minimum/maximum TLS protocol verison that should be supported by this listener. |
+| `version` _[TLSVersions](#tlsversions)_ | Version details the minimum/maximum TLS protocol version that should be supported by this listener. |
 | `ciphers` _string array_ | CipherSuites specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. |
 | `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
@@ -1896,8 +1896,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `min` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS verison to use |
-| `max` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS verison to use |
+| `min` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS version to use |
+| `max` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS version to use |
 
 
 #### TracingProvider
