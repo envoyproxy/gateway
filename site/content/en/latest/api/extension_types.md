@@ -207,6 +207,7 @@ _Appears in:_
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
+| `tls` _[TLSSettings](#tlssettings)_ | TLS settings controlling how connections are established with the downstream host. |
 
 
 
@@ -1853,6 +1854,50 @@ _Appears in:_
 | `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
 | `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
+
+
+#### TLSSettings
+
+
+
+
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `version` _[TLSVersions](#tlsversions)_ | Version details the minimum/maximum TLS protocol verison that should be supported by this listener. |
+| `ciphers` _string array_ | CipherSuites specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. |
+| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. |
+| `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
+| `alpnProtocols` _string array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. If left empty, ALPN will not be exposed. |
+
+
+#### TLSVersion
+
+_Underlying type:_ `string`
+
+TLSVersion specifies the TLS version
+
+_Appears in:_
+- [TLSVersions](#tlsversions)
+
+
+
+#### TLSVersions
+
+
+
+
+
+_Appears in:_
+- [TLSSettings](#tlssettings)
+
+| Field | Description |
+| --- | --- |
+| `min` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS verison to use |
+| `max` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS verison to use |
 
 
 #### TracingProvider
