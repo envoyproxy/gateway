@@ -333,6 +333,10 @@ func (in *ClientTrafficPolicySpec) DeepCopyInto(out *ClientTrafficPolicySpec) {
 		in, out := &in.HTTP3, &out.HTTP3
 		*out = new(HTTP3Settings)
 		**out = **in
+	if in.TLS != nil {
+		in, out := &in.TLS, &out.TLS
+		*out = new(TLSSettings)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.TLS != nil {
 		in, out := &in.TLS, &out.TLS

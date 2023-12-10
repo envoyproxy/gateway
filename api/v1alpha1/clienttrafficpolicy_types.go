@@ -70,7 +70,7 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
-	// TLS settings configure TLS termination settings with the downstream client.
+	// TLS settings controlling how connections are established with the downstream host.
 	//
 	// +optional
 	TLS *TLSSettings `json:"tls,omitempty"`
