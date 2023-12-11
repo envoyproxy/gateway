@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -21,6 +22,7 @@ const (
 // Infra defines managed infrastructure.
 // +k8s:deepcopy-gen=true
 type Infra struct {
+	Gateway *gwapiv1.Gateway
 	// Proxy defines managed proxy infrastructure.
 	Proxy *ProxyInfra `json:"proxy" yaml:"proxy"`
 }
@@ -44,6 +46,9 @@ type ProxyInfra struct {
 // InfraMetadata defines metadata for the managed proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type InfraMetadata struct {
+	// Annotations define a map of string keys and values that can be used to
+	// organize and categorize proxy infrastructure objects.
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// Labels define a map of string keys and values that can be used to organize
 	// and categorize proxy infrastructure objects.
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
