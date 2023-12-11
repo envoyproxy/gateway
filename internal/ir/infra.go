@@ -9,8 +9,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 const (
