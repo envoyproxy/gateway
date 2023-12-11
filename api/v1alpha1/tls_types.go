@@ -32,7 +32,7 @@ type TLSSettings struct {
 }
 
 // TLSVersion specifies the TLS version
-// +kubebuilder:validation:Enum=TLS_Auto;TLSv1_0;TLSv1_2;TLSv1_3
+// +kubebuilder:validation:Enum=TLS_Auto;TLSv1_0;TLSv1_1;TLSv1_2;TLSv1_3
 type TLSVersion string
 
 const (
