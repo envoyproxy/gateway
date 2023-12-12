@@ -16,6 +16,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/golang/protobuf/ptypes/duration"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -168,6 +169,13 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 			},
 		},
 		Descriptors: descriptors,
+		// By setting AlwaysConsumeDefaultTokenBucket to false, the descriptors
+		// won't consume the default token bucket. This means that a request only
+		// counts towards the default token bucket if it does not match any of the
+		// descriptors.
+		AlwaysConsumeDefaultTokenBucket: &wrappers.BoolValue{
+			Value: false,
+		},
 	}
 
 	localRlAny, err := anypb.New(localRl)
