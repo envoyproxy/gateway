@@ -11,11 +11,11 @@ package celvalidation
 import (
 	"context"
 	"fmt"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"k8s.io/utils/pointer"
 	"strings"
 	"testing"
 	"time"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -307,9 +307,33 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: " consistenthash with SlowStart is set",
+			desc: " more than one circuit breakers threshold is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				val := uint32(1)
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					CircuitBreakers: &egv1a1.CircuitBreakers{
+						Thresholds: []egv1a1.Thresholds{
+							{},
+							{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.circuitBreakers.thresholds: Too many: 2: must have at most 1 items",
+			},
+		},
+		{
+			desc: " valid config: min, max, nil",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				valMax := pointer.Uint32(4294967295)
+				valMin := pointer.Uint32(0)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
@@ -321,24 +345,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					CircuitBreakers: &egv1a1.CircuitBreakers{
 						Thresholds: []egv1a1.Thresholds{
 							{
-								MaxConnections: &val,
-								MaxPendingRequests: &val,
-								MaxRequests: &val,
-								MaxRetries: &val,
-							},
-							{
-								MaxConnections: &val,
-								MaxPendingRequests: &val,
-								MaxRequests: &val,
-								MaxRetries: &val,
+								MaxConnections:     valMax,
+								MaxPendingRequests: valMin,
+								MaxRequests:        nil,
+								MaxRetries:         nil,
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.circuitBreakers.thresholds: Too many: 2: must have at most 1 items",
-			},
+			wantErrors: []string{},
 		},
 	}
 

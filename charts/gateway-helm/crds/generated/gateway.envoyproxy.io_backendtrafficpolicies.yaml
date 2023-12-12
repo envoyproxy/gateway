@@ -55,28 +55,36 @@ spec:
                     items:
                       properties:
                         maxConnections:
-                          description: 'The maximum number of connections that Envoy
-                            will make to the referenced backend (per xRoute). Default:
-                            1024'
+                          default: 1024
+                          description: The maximum number of connections that Envoy
+                            will establish to the referenced backend (per xRoute).
                           format: int32
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         maxParallelRequests:
-                          description: 'The maximum number of parallel requests that
+                          default: 1024
+                          description: The maximum number of parallel requests that
                             Envoy will make to the referenced backend (per xRoute).
-                            Default: 1024'
                           format: int32
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         maxPendingRequests:
-                          description: 'The maximum number of pending requests that
-                            Envoy will allow to the referenced backend (per xRoute).
-                            Default: 1024'
+                          default: 1024
+                          description: The maximum number of pending requests that
+                            Envoy will queue to the referenced backend (per xRoute).
                           format: int32
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         maxRetries:
-                          description: 'The maximum number of parallel retries that
+                          default: 3
+                          description: The maximum number of parallel retries that
                             Envoy will allow to the referenced backend (per xRoute).
-                            Default: 3'
                           format: int32
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       type: object
                     maxItems: 1

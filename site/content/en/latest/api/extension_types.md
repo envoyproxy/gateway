@@ -1784,10 +1784,10 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `maxConnections` _integer_ | The maximum number of connections that Envoy will make to the referenced backend (per xRoute). Default: 1024 |
-| `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will allow to the referenced backend (per xRoute). Default: 1024 |
-| `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend (per xRoute). Default: 1024 |
-| `maxRetries` _integer_ | The maximum number of parallel retries that Envoy will allow to the referenced backend (per xRoute). Default: 3 |
+| `maxConnections` _integer_ | The maximum number of connections that Envoy will establish to the referenced backend (per xRoute). |
+| `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will queue to the referenced backend (per xRoute). |
+| `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend (per xRoute). |
+| `maxRetries` _integer_ | The maximum number of parallel retries that Envoy will allow to the referenced backend (per xRoute). |
 
 
 #### TracingProvider

@@ -16,28 +16,35 @@ type CircuitBreakers struct {
 }
 
 type Thresholds struct {
-	// The maximum number of connections that Envoy will make to the referenced backend (per xRoute).
-	// Default: 1024
+	// The maximum number of connections that Envoy will establish to the referenced backend (per xRoute).
 	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
 	// +optional
 	MaxConnections *uint32 `json:"maxConnections,omitempty"`
 
-	// The maximum number of pending requests that Envoy will allow to the referenced backend (per xRoute).
-	// Default: 1024
+	// The maximum number of pending requests that Envoy will queue to the referenced backend (per xRoute).
 	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
 	// +optional
 	MaxPendingRequests *uint32 `json:"maxPendingRequests,omitempty"`
 
 	// The maximum number of parallel requests that Envoy will make to the referenced backend (per xRoute).
-	// Default: 1024
 	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
 	// +optional
 	MaxRequests *uint32 `json:"maxParallelRequests,omitempty"`
 
 	// The maximum number of parallel retries that Envoy will allow to the referenced backend (per xRoute).
-	// Default: 3
 	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=3
 	// +optional
 	MaxRetries *uint32 `json:"maxRetries,omitempty"`
 }
-
