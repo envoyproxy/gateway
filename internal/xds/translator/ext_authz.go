@@ -56,6 +56,7 @@ func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 // buildHCMExtAuthzFilter returns an external authorization filter from the provided IR listener.
 func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 	// TODO: account for multiple authz backends
+	// it seems Envoy Proxy does not really supports it
 	for _, route := range irListener.Routes {
 		grpc, err := url2Cluster(route.ExtAuthz.GRPCURI)
 		if err != nil {
@@ -105,27 +106,28 @@ func patchRouteWithExtAuthz(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return errors.New("ir route is nil")
 	}
 
-	// filterCfg := route.GetTypedPerFilterConfig()
-	// if _, ok := filterCfg[extAuthzFilter]; !ok {
-	// 	if !routeContainsExtAuthz(irRoute) {
-	// 		return nil
-	// 	}
+	filterCfg := route.GetTypedPerFilterConfig()
+	if _, ok := filterCfg[extAuthzFilter]; !ok {
+		// when the filter is active, it applies to every routes
+		// disable the filter for routes not explictely setting ext_authz
+		if !routeContainsExtAuthz(irRoute) {
+			routeCfgProto := &extauthzv3.ExtAuthzPerRoute{
+				Override: &extauthzv3.ExtAuthzPerRoute_Disabled{Disabled: true},
+			}
 
-	// 	routeCfgProto := &extauthzv3.ExtAuthzPerRoute{
-	// 		Override: &extauthzv3.ExtAuthzPerRoute_Disabled{Disabled: true},
-	// 	}
+			routeCfgAny, err := anypb.New(routeCfgProto)
+			if err != nil {
+				return err
+			}
 
-	// 	routeCfgAny, err := anypb.New(routeCfgProto)
-	// 	if err != nil {
-	// 		return err
-	// 	}
+			if filterCfg == nil {
+				route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+			}
 
-	// 	if filterCfg == nil {
-	// 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	// 	}
+			route.TypedPerFilterConfig[extAuthzFilter] = routeCfgAny
+		}
 
-	// 	route.TypedPerFilterConfig[extAuthzFilter] = routeCfgAny
-	// }
+	}
 
 	return nil
 }
