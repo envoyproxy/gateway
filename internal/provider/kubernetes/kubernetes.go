@@ -68,7 +68,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 
 	// Create and register the controllers with the manager.
 	if err := newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources); err != nil {
-		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
+		return nil, fmt.Errorf("failed to create gatewayapi controller: %w", err)
 	}
 
 	// Add health check health probes.
