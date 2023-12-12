@@ -31,6 +31,7 @@
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
             - key: first-route-ratelimit-single-rule-key-rule-0-match-0
@@ -97,6 +98,7 @@
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
             - key: second-route-ratelimit-multiple-rules-key-rule-0-match-0
@@ -137,6 +139,7 @@
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
           filterEnabled:
             defaultValue:
               numerator: 100
