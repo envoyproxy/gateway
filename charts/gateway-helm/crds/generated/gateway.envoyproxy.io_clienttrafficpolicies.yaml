@@ -169,6 +169,7 @@ spec:
                         enum:
                         - TLS_Auto
                         - TLSv1_0
+                        - TLSv1_1
                         - TLSv1_2
                         - TLSv1_3
                         type: string
@@ -177,6 +178,7 @@ spec:
                         enum:
                         - TLS_Auto
                         - TLSv1_0
+                        - TLSv1_1
                         - TLSv1_2
                         - TLSv1_3
                         type: string
