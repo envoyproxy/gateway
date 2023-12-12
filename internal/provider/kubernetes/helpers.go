@@ -80,25 +80,10 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 type controlledClasses struct {
 	// matchedClasses holds all GatewayClass objects with matching controllerName.
 	matchedClasses []*gwapiv1.GatewayClass
-
-	// oldestClass stores the first GatewayClass encountered with matching
-	// controllerName. This is maintained so that the oldestClass does not change
-	// during reboots.
-	oldestClass *gwapiv1.GatewayClass
 }
 
 func (cc *controlledClasses) addMatch(gc *gwapiv1.GatewayClass) {
 	cc.matchedClasses = append(cc.matchedClasses, gc)
-
-	switch {
-	case cc.oldestClass == nil:
-		cc.oldestClass = gc
-	case gc.CreationTimestamp.Time.Before(cc.oldestClass.CreationTimestamp.Time):
-		cc.oldestClass = gc
-	case gc.CreationTimestamp.Time.Equal(cc.oldestClass.CreationTimestamp.Time) && gc.Name < cc.oldestClass.Name:
-		// tie-breaker: first one in alphabetical order is considered oldest/accepted
-		cc.oldestClass = gc
-	}
 }
 
 func (cc *controlledClasses) removeMatch(gc *gwapiv1.GatewayClass) {
@@ -110,42 +95,6 @@ func (cc *controlledClasses) removeMatch(gc *gwapiv1.GatewayClass) {
 			break
 		}
 	}
-
-	// If the oldestClass is removed, find the new oldestClass candidate
-	// from matchedClasses.
-	if cc.oldestClass != nil && cc.oldestClass.Name == gc.Name {
-		if len(cc.matchedClasses) == 0 {
-			cc.oldestClass = nil
-			return
-		}
-
-		cc.oldestClass = cc.matchedClasses[0]
-		for i := 1; i < len(cc.matchedClasses); i++ {
-			current := cc.matchedClasses[i]
-			if current.CreationTimestamp.Time.Before(cc.oldestClass.CreationTimestamp.Time) ||
-				(current.CreationTimestamp.Time.Equal(cc.oldestClass.CreationTimestamp.Time) &&
-					current.Name < cc.oldestClass.Name) {
-				cc.oldestClass = current
-				return
-			}
-		}
-	}
-}
-
-func (cc *controlledClasses) acceptedClass() *gwapiv1.GatewayClass {
-	return cc.oldestClass
-}
-
-func (cc *controlledClasses) notAcceptedClasses() []*gwapiv1.GatewayClass {
-	var res []*gwapiv1.GatewayClass
-	for _, gc := range cc.matchedClasses {
-		// skip the oldest one since it will be accepted.
-		if gc.Name != cc.oldestClass.Name {
-			res = append(res, gc)
-		}
-	}
-
-	return res
 }
 
 // isAccepted returns true if the provided gatewayclass contains the Accepted=true

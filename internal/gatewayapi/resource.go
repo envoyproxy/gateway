@@ -20,6 +20,7 @@ import (
 
 type XdsIRMap map[string]*ir.Xds
 type InfraIRMap map[string]*ir.Infra
+type ResourcesMap map[string]*Resources
 
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.

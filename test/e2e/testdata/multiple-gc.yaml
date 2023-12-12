@@ -1,0 +1,191 @@
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: internet
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    name: internet-config
+    namespace: envoy-gateway-system
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: internet-config
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: private
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: internet
+  labels:
+    gateway-conformance: internet
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: private
+  labels:
+    gateway-conformance: private
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: private-gateway
+  namespace: private
+spec:
+  gatewayClassName: private
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: internet-gateway
+  namespace: internet
+spec:
+  gatewayClassName: internet
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: private-backend
+  namespace: private
+spec:
+  selector:
+    app: private-backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: private-backend
+  namespace: private
+  labels:
+    app: private-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: private-backend
+  template:
+    metadata:
+      labels:
+        app: private-backend
+    spec:
+      containers:
+      - name: private-backend
+        # From https://github.com/kubernetes-sigs/ingress-controller-conformance/tree/master/images/echoserver
+        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 10m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: internet-backend
+  namespace: internet
+spec:
+  selector:
+    app: internet-backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: internet-backend
+  namespace: internet
+  labels:
+    app: internet-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: internet-backend
+  template:
+    metadata:
+      labels:
+        app: internet-backend
+    spec:
+      containers:
+      - name: internet-backend
+        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 10m
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: internet-route
+  namespace: internet
+spec:
+  parentRefs:
+  - name: internet-gateway
+    sectionName: http
+  rules:
+  - backendRefs:
+    - name: internet-backend
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: private-route
+  namespace: private
+spec:
+  parentRefs:
+  - name: private-gateway
+    sectionName: http
+  rules:
+  - backendRefs:
+    - name: private-backend
+      port: 8080
