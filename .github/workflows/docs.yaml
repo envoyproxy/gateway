@@ -82,7 +82,7 @@ jobs:
     - name: Install Site Dependencies and Build Site
       run: make docs
     - name: Deploy to Netlify
-      uses: nwtgck/actions-netlify@v2.0
+      uses: nwtgck/actions-netlify@v2.1
       with:
         publish-dir: 'site/public'
         production-deploy: false
@@ -119,4 +119,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v2.0.5
+      uses: actions/deploy-pages@v3.0.1
