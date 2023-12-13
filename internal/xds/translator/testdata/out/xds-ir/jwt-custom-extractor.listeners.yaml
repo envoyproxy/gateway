@@ -21,6 +21,7 @@
               first-route/example:
                 audiences:
                 - foo.com
+                forward: true
                 fromCookies:
                 - session_access_token
                 issuer: https://www.example.com

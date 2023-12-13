@@ -21,6 +21,7 @@
               first-route/example:
                 audiences:
                 - foo.com
+                forward: true
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
