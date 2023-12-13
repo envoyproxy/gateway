@@ -376,7 +376,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSListenerConfig) (*corev
 func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
-			TlsParams:                      buildTlsParams(tlsConfig),
+			TlsParams:                      buildTLSParams(tlsConfig),
 			AlpnProtocols:                  tlsConfig.ALPNProtocols,
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
@@ -404,16 +404,16 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.Trans
 	}, nil
 }
 
-func buildTlsParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
+func buildTLSParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
 	p := &tlsv3.TlsParameters{}
 	isEmpty := true
 	if tlsConfig.Version != nil {
 		if tlsConfig.Version.Min != nil {
-			p.TlsMinimumProtocolVersion = buildTlsVersion(tlsConfig.Version.Min)
+			p.TlsMinimumProtocolVersion = buildTLSVersion(tlsConfig.Version.Min)
 			isEmpty = false
 		}
 		if tlsConfig.Version.Max != nil {
-			p.TlsMaximumProtocolVersion = buildTlsVersion(tlsConfig.Version.Max)
+			p.TlsMaximumProtocolVersion = buildTLSVersion(tlsConfig.Version.Max)
 			isEmpty = false
 		}
 	}
@@ -435,7 +435,7 @@ func buildTlsParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
 	return p
 }
 
-func buildTlsVersion(version *gwv1a1.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
+func buildTLSVersion(version *gwv1a1.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 	switch *version {
 	case gwv1a1.TLSv10:
 		return tlsv3.TlsParameters_TLSv1_0

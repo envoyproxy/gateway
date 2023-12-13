@@ -13,12 +13,13 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       version:
-        min: TLSv1_3
         max: TLSv1_0
+        min: TLSv1_3
   status:
     conditions:
     - lastTransitionTime: null
-      message: Minimum TLS protocol version can't be bigger than maximum protocol version.
+      message: Minimum TLS protocol version can't be bigger than maximum protocol
+        version.
       reason: Invalid
       status: "False"
       type: Accepted
@@ -38,11 +39,13 @@ gateways:
       name: http-1
       port: 443
       protocol: HTTPS
-      TLS: 
-          mode: Terminate
-          certificateRefs: 
-          - name: tls-secret-1
-            namespace: envoy-gateway
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: envoy-gateway
+        mode: Terminate
     - allowedRoutes:
         namespaces:
           from: Same
