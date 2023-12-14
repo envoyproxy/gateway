@@ -7,6 +7,9 @@ metadata:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install
+  {{- if .Values.certgen.job.annotations }}
+    {{- toYaml .Values.certgen.job.annotations | nindent 4 -}}
+  {{- end }}
 spec:
   backoffLimit: 1
   completions: 1
@@ -37,4 +40,6 @@ spec:
         runAsNonRoot: true
         runAsUser: 65534
       serviceAccountName: {{ include "eg.fullname" . }}-certgen
-  ttlSecondsAfterFinished: 0
+  {{- if not ( kindIs "invalid" .Values.certgen.job.ttlSecondsAfterFinished) }}
+  ttlSecondsAfterFinished: {{ .Values.certgen.job.ttlSecondsAfterFinished }}
+  {{- end }}

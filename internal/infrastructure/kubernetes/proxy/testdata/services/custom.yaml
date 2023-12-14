@@ -13,11 +13,11 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   ports:
-    - name: EnvoyHTTPPort
+    - name: envoy-EnvoyHTTPPort-d76a15e2
       port: 0
       protocol: TCP
       targetPort: 8080
-    - name: EnvoyHTTPSPort
+    - name: envoy-EnvoyHTTPSPort-6658f727
       port: 0
       protocol: TCP
       targetPort: 8443

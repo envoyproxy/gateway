@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
@@ -23,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 const (
@@ -65,7 +67,7 @@ func TestDeployment(t *testing.T) {
 		caseName     string
 		infra        *ir.Infra
 		deploy       *egv1a1.KubernetesDeploymentSpec
-		proxyLogging map[egv1a1.LogComponent]egv1a1.LogLevel
+		proxyLogging map[egv1a1.ProxyLogComponent]egv1a1.LogLevel
 		bootstrap    string
 		telemetry    *egv1a1.ProxyTelemetry
 		concurrency  *int32
@@ -249,7 +251,7 @@ func TestDeployment(t *testing.T) {
 			caseName: "component-level",
 			infra:    newTestInfra(),
 			deploy:   nil,
-			proxyLogging: map[egv1a1.LogComponent]egv1a1.LogLevel{
+			proxyLogging: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 				egv1a1.LogComponentDefault: egv1a1.LogLevelError,
 				egv1a1.LogComponentFilter:  egv1a1.LogLevelInfo,
 			},
@@ -260,7 +262,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			telemetry: &egv1a1.ProxyTelemetry{
 				Metrics: &egv1a1.ProxyMetrics{
-					Prometheus: &egv1a1.PrometheusProvider{},
+					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
 			},
 		},
@@ -271,6 +273,69 @@ func TestDeployment(t *testing.T) {
 			concurrency: pointer.Int32(4),
 			bootstrap:   `test bootstrap config`,
 		},
+		{
+			caseName: "custom_with_initcontainers",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(3),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Labels: map[string]string{
+						"foo.bar": "custom-label",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "custom-libs",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+				},
+				Container: &egv1a1.KubernetesContainerSpec{
+					Image: pointer.String("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "custom-libs",
+							MountPath: "/lib/filter_foo.so",
+						},
+					},
+				},
+				InitContainers: []corev1.Container{
+					{
+						Name:    "install-filter-foo",
+						Image:   "alpine:3.11.3",
+						Command: []string{"/bin/sh", "-c"},
+						Args:    []string{"echo \"Installing filter-foo\"; wget -q https://example.com/download/filter_foo_v1.0.0.tgz -O - | tar -xz --directory=/lib filter_foo.so; echo \"Done\";"},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "custom-libs",
+								MountPath: "/lib",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -278,6 +343,7 @@ func TestDeployment(t *testing.T) {
 			if tc.deploy != nil {
 				kube.EnvoyDeployment = tc.deploy
 			}
+
 			replace := egv1a1.BootstrapTypeReplace
 			if tc.bootstrap != "" {
 				tc.infra.Proxy.Config.Spec.Bootstrap = &egv1a1.ProxyBootstrap{
@@ -287,7 +353,15 @@ func TestDeployment(t *testing.T) {
 			}
 
 			if tc.telemetry != nil {
-				tc.infra.Proxy.Config.Spec.Telemetry = *tc.telemetry
+				tc.infra.Proxy.Config.Spec.Telemetry = tc.telemetry
+			} else {
+				tc.infra.Proxy.Config.Spec.Telemetry = &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{
+						Prometheus: &egv1a1.ProxyPrometheusProvider{
+							Disable: true,
+						},
+					},
+				}
 			}
 
 			if len(tc.proxyLogging) > 0 {
@@ -435,4 +509,86 @@ func loadServiceAccount() (*corev1.ServiceAccount, error) {
 	sa := &corev1.ServiceAccount{}
 	_ = yaml.Unmarshal(saYAML, sa)
 	return sa, nil
+}
+
+func TestHorizontalPodAutoscaler(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	cases := []struct {
+		caseName string
+		infra    *ir.Infra
+		hpa      *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+	}{
+		{
+			caseName: "default",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+			},
+		},
+		{
+			caseName: "custom",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: ptr.To[int32](5),
+				MaxReplicas: ptr.To[int32](10),
+				Metrics: []autoscalingv2.MetricSpec{
+					{
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: corev1.ResourceCPU,
+							Target: autoscalingv2.MetricTarget{
+								Type:               autoscalingv2.UtilizationMetricType,
+								AverageUtilization: ptr.To[int32](60),
+							},
+						},
+						Type: autoscalingv2.ResourceMetricSourceType,
+					},
+					{
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: corev1.ResourceMemory,
+							Target: autoscalingv2.MetricTarget{
+								Type:               autoscalingv2.UtilizationMetricType,
+								AverageUtilization: ptr.To[int32](70),
+							},
+						},
+						Type: autoscalingv2.ResourceMetricSourceType,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+			provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+
+			if tc.hpa != nil {
+				provider.Kubernetes.EnvoyHpa = tc.hpa
+			}
+
+			provider.GetEnvoyProxyKubeProvider()
+
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
+			hpa, err := r.HorizontalPodAutoscaler()
+			require.NoError(t, err)
+
+			want, err := loadHPA(tc.caseName)
+			require.NoError(t, err)
+
+			assert.Equal(t, want, hpa)
+		})
+	}
+}
+
+func loadHPA(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	hpaYAML, err := os.ReadFile(fmt.Sprintf("testdata/hpa/%s.yaml", caseName))
+	if err != nil {
+		return nil, err
+	}
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	_ = yaml.Unmarshal(hpaYAML, hpa)
+	return hpa, nil
 }

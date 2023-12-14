@@ -106,13 +106,12 @@ spec:
                     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
                       "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
                       explicit_http_config:
-                        http2_protocol_options: {}
+                        http2_protocol_options:
+                          connection_keepalive:
+                            interval: 30s
+                            timeout: 5s
                   name: xds_cluster
                   type: STRICT_DNS
-                  http2_protocol_options:
-                    connection_keepalive:
-                      interval: 30s
-                      timeout: 5s
                   transport_socket:
                     name: envoy.transport_sockets.tls
                     typed_config:
@@ -132,14 +131,6 @@ spec:
                             path_config_source:
                               path: "/sds/xds-trusted-ca.json"
                             resource_api_version: V3
-              layered_runtime:
-                layers:
-                - name: runtime-0
-                  rtds_layer:
-                    rtds_config:
-                      ads: {}
-                      resource_api_version: V3
-                    name: runtime-0
             - --log-level warn
             - --cpuset-threads
           command:
@@ -164,10 +155,10 @@ spec:
           name: envoy
           ports:
             - containerPort: 8080
-              name: EnvoyHTTPPort
+              name: EnvoyH-d76a15e2
               protocol: TCP
             - containerPort: 8443
-              name: EnvoyHTTPSPort
+              name: EnvoyH-6658f727
               protocol: TCP
           resources:
             limits:

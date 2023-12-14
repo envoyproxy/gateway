@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
@@ -22,21 +23,29 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		proxyMetrics *egv1a1.ProxyMetrics
 	}{
 		{
-			name: "default",
+			name: "disable-prometheus",
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+			},
 		},
 		{
 			name: "enable-prometheus",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Prometheus: &egv1a1.PrometheusProvider{},
+				Prometheus: &egv1a1.ProxyPrometheusProvider{},
 			},
 		},
 		{
 			name: "otel-metrics",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Sinks: []egv1a1.MetricSink{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+				Sinks: []egv1a1.ProxyMetricSink{
 					{
 						Type: egv1a1.MetricSinkTypeOpenTelemetry,
-						OpenTelemetry: &egv1a1.OpenTelemetrySink{
+						OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
 							Host: "otel-collector.monitoring.svc",
 							Port: 4317,
 						},
@@ -47,25 +56,28 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "custom-stats-matcher",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Matches: []egv1a1.Match{
+				Matches: []egv1a1.StringMatch{
 					{
-						Type:  egv1a1.Prefix,
+						Type:  ptr.To(egv1a1.StringMatchExact),
+						Value: "http.foo.bar.cluster.upstream_rq",
+					},
+					{
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
 						Value: "http",
 					},
 					{
-						Type:  egv1a1.Suffix,
+						Type:  ptr.To(egv1a1.StringMatchSuffix),
 						Value: "upstream_rq",
 					},
 					{
-						Type:  egv1a1.RegularExpression,
+						Type:  ptr.To(egv1a1.StringMatchRegularExpression),
 						Value: "virtual.*",
 					},
 					{
-						Type:  egv1a1.Prefix,
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
 						Value: "cluster",
 					},
 				},
-				Prometheus: &egv1a1.PrometheusProvider{},
 			},
 		},
 	}

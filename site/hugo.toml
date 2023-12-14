@@ -1,4 +1,4 @@
-baseURL = "https://gateway.envoyproxy.io/"
+baseURL = "/"
 title = "Envoy Gateway"
 
 # Language settings
@@ -122,13 +122,13 @@ github_subdir = "/site/"
 github_branch= "main"
 
 # Google Custom Search Engine ID. Remove or comment out to disable search.
-gcs_engine_id = "d72aa9b2712488cc3"
+# gcs_engine_id = "d72aa9b2712488cc3"
 
 # Enable Algolia DocSearch
 algolia_docsearch = false
 
 # Enable Lunr.js offline search
-offlineSearch = false
+offlineSearch = true
 
 # Enable syntax highlighting and copy buttons on code blocks with Prism
 prism_syntax_highlighting = false
@@ -208,7 +208,7 @@ enable = true
 [menu]
   [[menu.main]]
     name = "Blog"
-    weight = -100
+    weight = -99
     pre = "<i class='fas fa-rss pr-2'></i>"
     url = "/blog"
   [[menu.main]]
@@ -217,15 +217,15 @@ enable = true
     pre = "<i class='fa fa-star pr-2'></i>"
     url = "/about"
   [[menu.main]]
-    name = "GitHub"
-    weight = -99
-    pre = "<i class='fab fa-github pr-2'></i>"
-    url = "https://github.com/envoyproxy/gateway"
+    name = "Announcements"
+    weight = -101
+    pre = "<i class='fas fa-comments pr-2'></i>"
+    url = "/announcements"
   [[menu.main]]
     name = "Documentation"
-    weight = -101
+    weight = -102
     pre = "<i class='fas fa-book pr-2'></i>"
-    url = "/v0.5.0"
+    url = "/v0.6.0"
 
 [[params.versions]]
   version = "latest"
@@ -246,3 +246,6 @@ enable = true
 [[params.versions]]
   version = "v0.5.0"
   url = "/v0.5.0"
+[[params.versions]]
+  version = "v0.6.0"
+  url = "/v0.6.0"

@@ -9,6 +9,7 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,11 +88,10 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-weighted-invalid-backend",
 		},
 		{
-			name:           "simple-tls",
-			requireSecrets: true,
+			name: "http-route-dns-cluster",
 		},
 		{
-			name:           "mixed-tls-jwt-authn",
+			name:           "simple-tls",
 			requireSecrets: true,
 		},
 		{
@@ -152,18 +152,6 @@ func TestTranslateXds(t *testing.T) {
 			name: "ratelimit-sourceip",
 		},
 		{
-			name: "authn-single-route-single-match",
-		},
-		{
-			name: "authn-multi-route-single-provider",
-		},
-		{
-			name: "authn-multi-route-multi-provider",
-		},
-		{
-			name: "authn-ratelimit",
-		},
-		{
 			name: "accesslog",
 		},
 		{
@@ -184,6 +172,45 @@ func TestTranslateXds(t *testing.T) {
 			name:                      "jsonpatch-invalid-patch",
 			requireEnvoyPatchPolicies: true,
 		},
+		{
+			name: "listener-tcp-keepalive",
+		},
+		{
+			name: "load-balancer",
+		},
+		{
+			name: "cors",
+		},
+		{
+			name: "jwt-multi-route-multi-provider",
+		},
+		{
+			name: "jwt-multi-route-single-provider",
+		},
+		{
+			name: "jwt-ratelimit",
+		},
+		{
+			name: "jwt-single-route-single-match",
+		},
+		{
+			name: "oidc",
+		},
+		{
+			name: "http-route-partial-invalid",
+		},
+		{
+			name: "listener-proxy-protocol",
+		},
+		{
+			name: "jwt-custom-extractor",
+		},
+		{
+			name: "proxy-protocol-upstream",
+		},
+		{
+			name: "basic-auth",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -201,7 +228,10 @@ func TestTranslateXds(t *testing.T) {
 			}
 
 			tCtx, err := tr.Translate(ir)
-			require.NoError(t, err)
+			if !strings.HasSuffix(tc.name, "partial-invalid") {
+				require.NoError(t, err)
+			}
+
 			listeners := tCtx.XdsResources[resourcev3.ListenerType]
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
@@ -290,9 +320,8 @@ func TestTranslateXdsNegative(t *testing.T) {
 				},
 			}
 
-			tCtx, err := tr.Translate(ir)
+			_, err := tr.Translate(ir)
 			require.Error(t, err)
-			require.Nil(t, tCtx)
 			if tc.name != "jsonpatch-invalid" {
 				require.Contains(t, err.Error(), "validation failed for xds resource")
 			}

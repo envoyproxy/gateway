@@ -12,8 +12,11 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
+	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -27,11 +30,26 @@ const (
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 )
 
-func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
+type xdsClusterArgs struct {
+	name          string
+	settings      []*ir.DestinationSetting
+	tSocket       *corev3.TransportSocket
+	endpointType  EndpointType
+	loadBalancer  *ir.LoadBalancer
+	proxyProtocol *ir.ProxyProtocol
+}
+
+type EndpointType int
+
+const (
+	EndpointTypeDNS EndpointType = iota
+	EndpointTypeStatic
+)
+
+func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
-		Name:            clusterName,
+		Name:            args.name,
 		ConnectTimeout:  durationpb.New(10 * time.Second),
-		LbPolicy:        clusterv3.Cluster_LEAST_REQUEST,
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
@@ -40,14 +58,17 @@ func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protoc
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
 	}
 
-	if tSocket != nil {
-		cluster.TransportSocket = tSocket
+	// Set Proxy Protocol
+	if args.proxyProtocol != nil {
+		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
+	} else if args.tSocket != nil {
+		cluster.TransportSocket = args.tSocket
 	}
 
-	if endpointType == Static {
+	if args.endpointType == EndpointTypeStatic {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
-			ServiceName: clusterName,
+			ServiceName: args.name,
 			EdsConfig: &corev3.ConfigSource{
 				ResourceApiVersion: resource.DefaultAPIVersion,
 				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
@@ -61,8 +82,52 @@ func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protoc
 		cluster.RespectDnsTtl = true
 	}
 
-	if protocol == HTTP2 {
+	isHTTP2 := false
+	for _, ds := range args.settings {
+		if ds.Protocol == ir.GRPC ||
+			ds.Protocol == ir.HTTP2 {
+			isHTTP2 = true
+			break
+		}
+	}
+	if isHTTP2 {
 		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
+	}
+
+	// Set Load Balancer policy
+	//nolint:gocritic
+	if args.loadBalancer == nil {
+		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+	} else if args.loadBalancer.LeastRequest != nil {
+		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+		if args.loadBalancer.LeastRequest.SlowStart != nil {
+			if args.loadBalancer.LeastRequest.SlowStart.Window != nil {
+				cluster.LbConfig = &clusterv3.Cluster_LeastRequestLbConfig_{
+					LeastRequestLbConfig: &clusterv3.Cluster_LeastRequestLbConfig{
+						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
+							SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
+						},
+					},
+				}
+			}
+		}
+	} else if args.loadBalancer.RoundRobin != nil {
+		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
+		if args.loadBalancer.RoundRobin.SlowStart != nil {
+			if args.loadBalancer.RoundRobin.SlowStart.Window != nil {
+				cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
+					RoundRobinLbConfig: &clusterv3.Cluster_RoundRobinLbConfig{
+						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
+							SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
+						},
+					},
+				}
+			}
+		}
+	} else if args.loadBalancer.Random != nil {
+		cluster.LbPolicy = clusterv3.Cluster_RANDOM
+	} else if args.loadBalancer.ConsistentHash != nil {
+		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 	}
 
 	return cluster
@@ -70,7 +135,7 @@ func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protoc
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
-	for _, ds := range destSettings {
+	for i, ds := range destSettings {
 
 		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
 
@@ -97,8 +162,13 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			endpoints = append(endpoints, lbEndpoint)
 		}
 
+		// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
+		// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
+		// We use the name of the backendRef as a pseudo region name.
 		locality := &endpointv3.LocalityLbEndpoints{
-			Locality:    &corev3.Locality{},
+			Locality: &corev3.Locality{
+				Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
+			},
 			LbEndpoints: endpoints,
 			Priority:    0,
 		}
@@ -140,4 +210,54 @@ func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
 // It's easy to distinguish when debugging.
 func buildClusterName(prefix string, host string, port uint32) string {
 	return fmt.Sprintf("%s|%s|%d", prefix, host, port)
+}
+
+// buildProxyProtocolSocket builds the ProxyProtocol transport socket.
+func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket) *corev3.TransportSocket {
+	if proxyProtocol == nil {
+		return nil
+	}
+
+	ppCtx := &proxyprotocolv3.ProxyProtocolUpstreamTransport{}
+
+	switch proxyProtocol.Version {
+	case ir.ProxyProtocolVersionV1:
+		ppCtx.Config = &corev3.ProxyProtocolConfig{
+			Version: corev3.ProxyProtocolConfig_V1,
+		}
+	case ir.ProxyProtocolVersionV2:
+		ppCtx.Config = &corev3.ProxyProtocolConfig{
+			Version: corev3.ProxyProtocolConfig_V2,
+		}
+	}
+
+	// If existing transport socket does not exist wrap around raw buffer
+	if tSocket == nil {
+		rawCtx := &rawbufferv3.RawBuffer{}
+		rawCtxAny, err := anypb.New(rawCtx)
+		if err != nil {
+			return nil
+		}
+		rawSocket := &corev3.TransportSocket{
+			Name: wellknown.TransportSocketRawBuffer,
+			ConfigType: &corev3.TransportSocket_TypedConfig{
+				TypedConfig: rawCtxAny,
+			},
+		}
+		ppCtx.TransportSocket = rawSocket
+	} else {
+		ppCtx.TransportSocket = tSocket
+	}
+
+	ppCtxAny, err := anypb.New(ppCtx)
+	if err != nil {
+		return nil
+	}
+
+	return &corev3.TransportSocket{
+		Name: "envoy.transport_sockets.upstream_proxy_protocol",
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: ppCtxAny,
+		},
+	}
 }

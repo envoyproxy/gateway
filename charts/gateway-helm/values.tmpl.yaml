@@ -11,18 +11,6 @@ deployment:
       requests:
         cpu: 100m
         memory: 256Mi
-  kubeRbacProxy:
-    image:
-      repository: gcr.io/kubebuilder/kube-rbac-proxy
-      tag: v0.14.1
-    imagePullPolicy: IfNotPresent
-    resources:
-      limits:
-        cpu: 500m
-        memory: 128Mi
-      requests:
-        cpu: 5m
-        memory: 64Mi
   ports:
     - name: grpc
       port: 18000
@@ -47,11 +35,19 @@ config:
 
 envoyGatewayMetricsService:
   ports:
-    - name: https
-      port: 8443
+    - name: http
+      port: 19001
       protocol: TCP
-      targetPort: https
+      targetPort: 19001
 
 createNamespace: false
 
 kubernetesClusterDomain: cluster.local
+
+certgen:
+  job:
+    annotations: {}
+    ttlSecondsAfterFinished: 0
+  rbac:
+    annotations: {}
+    labels: {}

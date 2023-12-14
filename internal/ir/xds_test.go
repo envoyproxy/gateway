@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -42,13 +43,6 @@ var (
 		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
-	}
-	invalidRouteMatchHTTPListener = HTTPListener{
-		Name:      "invalid-route-match",
-		Address:   "0.0.0.0",
-		Port:      80,
-		Hostnames: []string{"example.com"},
-		Routes:    []*HTTPRoute{&emptyMatchHTTPRoute},
 	}
 	invalidBackendHTTPListener = HTTPListener{
 		Name:      "invalid-backend-match",
@@ -144,11 +138,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("example"),
 		},
-		Destination: &happyRouteDestination,
-	}
-	emptyMatchHTTPRoute = HTTPRoute{
-		Name:        "empty-match",
-		Hostname:    "*",
 		Destination: &happyRouteDestination,
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
@@ -437,14 +426,12 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("jwtauthen"),
 		},
-		RequestAuthentication: &RequestAuthentication{
-			JWT: &JwtRequestAuthentication{
-				Providers: []egv1a1.JwtAuthenticationFilterProvider{
-					{
-						Name: "test1",
-						RemoteJWKS: egv1a1.RemoteJWKS{
-							URI: "https://test1.local",
-						},
+		JWT: &JWT{
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name: "test1",
+					RemoteJWKS: egv1a1.RemoteJWKS{
+						URI: "https://test1.local",
 					},
 				},
 			},
@@ -510,9 +497,9 @@ func TestValidateXds(t *testing.T) {
 		{
 			name: "invalid listener",
 			input: Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener, &invalidRouteMatchHTTPListener},
+				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener},
 			},
-			want: []error{ErrListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
+			want: []error{ErrListenerAddressInvalid},
 		},
 		{
 			name: "invalid backend",
@@ -578,11 +565,6 @@ func TestValidateHTTPListener(t *testing.T) {
 				Routes:  []*HTTPRoute{&happyHTTPRoute},
 			},
 			want: []error{ErrListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
-		},
-		{
-			name:  "invalid route match",
-			input: invalidRouteMatchHTTPListener,
-			want:  []error{ErrHTTPRouteMatchEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -838,11 +820,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 			want: []error{ErrHTTPRouteHostnameEmpty},
 		},
 		{
-			name:  "empty match",
-			input: emptyMatchHTTPRoute,
-			want:  []error{ErrHTTPRouteMatchEmpty},
-		},
-		{
 			name:  "invalid backend",
 			input: invalidBackendHTTPRoute,
 			want:  nil,
@@ -973,14 +950,48 @@ func TestValidateRouteDestination(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name: "invalid ip",
+			name: "valid hostname",
 			input: RouteDestination{
-				Name: "invalid ip",
+				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
 						Endpoints: []*DestinationEndpoint{
 							{
 								Host: "example.com",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "valid ip",
+			input: RouteDestination{
+				Name: "valid ip",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "1.2.3.4",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "invalid address",
+			input: RouteDestination{
+				Name: "invalid address",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com::foo.bar",
 								Port: 8080,
 							},
 						},
@@ -1090,23 +1101,23 @@ func TestValidateStringMatch(t *testing.T) {
 	}
 }
 
-func TestValidateJwtRequestAuthentication(t *testing.T) {
+func TestValidateJWT(t *testing.T) {
 	tests := []struct {
 		name  string
-		input JwtRequestAuthentication
+		input JWT
 		want  error
 	}{
 		{
 			name: "nil rules",
-			input: JwtRequestAuthentication{
+			input: JWT{
 				Providers: nil,
 			},
 			want: nil,
 		},
 		{
 			name: "provider with remote jwks uri",
-			input: JwtRequestAuthentication{
-				Providers: []egv1a1.JwtAuthenticationFilterProvider{
+			input: JWT{
+				Providers: []egv1a1.JWTProvider{
 					{
 						Name:      "test",
 						Issuer:    "https://test.local",
@@ -1118,6 +1129,50 @@ func TestValidateJwtRequestAuthentication(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.validate())
+			} else {
+				require.EqualError(t, test.input.validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateLoadBalancer(t *testing.T) {
+	tests := []struct {
+		name  string
+		input LoadBalancer
+		want  error
+	}{
+		{
+			name: "random",
+			input: LoadBalancer{
+				Random: &Random{},
+			},
+			want: nil,
+		},
+		{
+			name: "consistent hash",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					SourceIP: ptr.To(true),
+				},
+			},
+			want: nil,
+		},
+
+		{
+			name: "least request and random set",
+			input: LoadBalancer{
+				Random:       &Random{},
+				LeastRequest: &LeastRequest{},
+			},
+			want: ErrLoadBalancerInvalid,
 		},
 	}
 	for i := range tests {

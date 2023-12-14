@@ -14,57 +14,86 @@ API group.
 
 
 ### Resource Types
-- [AuthenticationFilter](#authenticationfilter)
+- [BackendTrafficPolicy](#backendtrafficpolicy)
+- [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
 - [ClientTrafficPolicyList](#clienttrafficpolicylist)
 - [EnvoyGateway](#envoygateway)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
-- [RateLimitFilter](#ratelimitfilter)
+- [SecurityPolicy](#securitypolicy)
+- [SecurityPolicyList](#securitypolicylist)
 
 
 
-#### AuthenticationFilter
+#### BackendTrafficPolicy
 
 
 
+BackendTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
 
+_Appears in:_
+- [BackendTrafficPolicyList](#backendtrafficpolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `BackendTrafficPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ | spec defines the desired state of BackendTrafficPolicy. |
+
+
+#### BackendTrafficPolicyList
+
+
+
+BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 
 
 
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
-| `kind` _string_ | `AuthenticationFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[AuthenticationFilterSpec](#authenticationfilterspec)_ | Spec defines the desired state of the AuthenticationFilter type. |
+| `kind` _string_ | `BackendTrafficPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[BackendTrafficPolicy](#backendtrafficpolicy) array_ |  |
 
 
-#### AuthenticationFilterSpec
+#### BackendTrafficPolicySpec
 
 
 
-AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
+spec defines the desired state of BackendTrafficPolicy.
 
 _Appears in:_
-- [AuthenticationFilter](#authenticationfilter)
+- [BackendTrafficPolicy](#backendtrafficpolicy)
 
 | Field | Description |
 | --- | --- |
-| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT". |
-| `jwtProviders` _[JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider) array_ | JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
+| `rateLimit` _[RateLimitSpec](#ratelimitspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
+| `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
+| `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
+| `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
 
 
-#### AuthenticationFilterType
 
-_Underlying type:_ `string`
 
-AuthenticationFilterType is a type of authentication provider.
+#### BasicAuth
+
+
+
+BasicAuth defines the configuration for 	the HTTP Basic Authentication.
 
 _Appears in:_
-- [AuthenticationFilterSpec](#authenticationfilterspec)
+- [SecurityPolicySpec](#securitypolicyspec)
 
+| Field | Description |
+| --- | --- |
+| `users` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the username-password pairs in htpasswd format, used to verify user credentials in the "Authorization" header. 
+ This is an Opaque secret. The username-password pairs should be stored in the key ".htpasswd". As the key name indicates, the value needs to be the htpasswd format, for example: "user1:{SHA}hashed_user1_password". Right now, only SHA hash algorithm is supported. Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html for more details. 
+ Note: The secret must be in the same namespace as the SecurityPolicy. |
 
 
 #### BootstrapType
@@ -78,6 +107,24 @@ _Appears in:_
 
 
 
+#### CORS
+
+
+
+CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `allowOrigins` _[StringMatch](#stringmatch) array_ | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowMethods` _string array_ | AllowMethods defines the methods that are allowed to make requests. |
+| `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
+| `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
+| `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
+
+
 #### ClaimToHeader
 
 
@@ -85,7 +132,7 @@ _Appears in:_
 ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
 
 _Appears in:_
-- [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
+- [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
@@ -139,7 +186,33 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
+| `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
 
+
+
+
+#### ConsistentHash
+
+
+
+ConsistentHash defines the configuration related to the consistent hash load balancer policy
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ConsistentHashType](#consistenthashtype)_ |  |
+
+
+#### ConsistentHashType
+
+_Underlying type:_ `string`
+
+ConsistentHashType defines the type of input to hash on.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
 
 
 
@@ -202,6 +275,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
+| `telemetry` _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ | Telemetry defines the desired control plane telemetry related abilities. If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
@@ -220,7 +294,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `address` _[EnvoyGatewayAdminAddress](#envoygatewayadminaddress)_ | Address defines the address of Envoy Gateway Admin Server. |
-| `debug` _boolean_ | Debug defines if enable the /debug endpoint of Envoy Gateway. |
+| `enableDumpConfig` _boolean_ | EnableDumpConfig defines if enable dump config in Envoy Gateway logs. |
+| `enablePprof` _boolean_ | EnablePprof defines if enable pprof in Envoy Gateway Admin Server. |
 
 
 #### EnvoyGatewayAdminAddress
@@ -307,7 +382,7 @@ _Appears in:_
 | `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the managed Envoy ratelimit deployment resource are applied. |
 | `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
-| `overwrite_control_plane_certs` _boolean_ | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
+| `overwriteControlPlaneCerts` _boolean_ | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
 
 
 #### EnvoyGatewayLogComponent
@@ -334,6 +409,66 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `level` _object (keys:[EnvoyGatewayLogComponent](#envoygatewaylogcomponent), values:[LogLevel](#loglevel))_ | Level is the logging level. If unspecified, defaults to "info". EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit. LogLevel options: debug/info/error/warn. |
+
+
+#### EnvoyGatewayMetricSink
+
+
+
+EnvoyGatewayMetricSink defines control plane metric sinks where metrics are sent to.
+
+_Appears in:_
+- [EnvoyGatewayMetrics](#envoygatewaymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG control plane currently supports OpenTelemetry. |
+| `openTelemetry` _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
+
+
+#### EnvoyGatewayMetrics
+
+
+
+EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
+
+_Appears in:_
+- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `sinks` _[EnvoyGatewayMetricSink](#envoygatewaymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `prometheus` _[EnvoyGatewayPrometheusProvider](#envoygatewayprometheusprovider)_ | Prometheus defines the configuration for prometheus endpoint. |
+
+
+#### EnvoyGatewayOpenTelemetrySink
+
+
+
+
+
+_Appears in:_
+- [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the sink service hostname. |
+| `protocol` _string_ | Protocol define the sink service protocol. |
+| `port` _integer_ | Port defines the port the sink service is exposed on. |
+
+
+#### EnvoyGatewayPrometheusProvider
+
+
+
+EnvoyGatewayPrometheusProvider will expose prometheus endpoint in pull mode.
+
+_Appears in:_
+- [EnvoyGatewayMetrics](#envoygatewaymetrics)
+
+| Field | Description |
+| --- | --- |
+| `disable` _boolean_ | Disable defines if disables the prometheus metrics in pull mode. |
 
 
 #### EnvoyGatewayProvider
@@ -383,9 +518,25 @@ _Appears in:_
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
+| `telemetry` _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ | Telemetry defines the desired control plane telemetry related abilities. If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
+
+
+#### EnvoyGatewayTelemetry
+
+
+
+EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane. Control plane will focus on metrics observability telemetry and tracing telemetry later.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `metrics` _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ | Metrics defines metrics configuration for envoy gateway. |
 
 
 #### EnvoyJSONPatchConfig
@@ -496,6 +647,7 @@ _Appears in:_
 | --- | --- |
 | `envoyDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the managed Envoy deployment resource are applied. |
 | `envoyService` _[KubernetesServiceSpec](#kubernetesservicespec)_ | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the managed Envoy service resource are applied. |
+| `envoyHpa` _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment. Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
 
 
 #### EnvoyProxyProvider
@@ -618,7 +770,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
@@ -648,7 +800,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `controllerName` _string_ | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass |
+| `controllerName` _string_ | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1.GatewayClass |
 
 
 #### GlobalRateLimit
@@ -658,7 +810,7 @@ _Appears in:_
 GlobalRateLimit defines global rate limit configuration.
 
 _Appears in:_
-- [RateLimitFilterSpec](#ratelimitfilterspec)
+- [RateLimitSpec](#ratelimitspec)
 
 | Field | Description |
 | --- | --- |
@@ -689,22 +841,6 @@ HeaderMatch defines the match attributes within the HTTP Headers of the request.
 
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
-
-| Field | Description |
-| --- | --- |
-| `type` _[HeaderMatchType](#headermatchtype)_ | Type specifies how to match against the value of the header. |
-| `name` _string_ | Name of the HTTP header. |
-| `value` _string_ | Value within the HTTP header. Due to the case-insensitivity of header names, "foo" and "Foo" are considered equivalent. Do not set this field when Type="Distinct", implying matching on any/all unique values within the header. |
-
-
-#### HeaderMatchType
-
-_Underlying type:_ `string`
-
-HeaderMatchType specifies the semantics of how HTTP header values should be compared. Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
-
-_Appears in:_
-- [HeaderMatch](#headermatch)
 
 
 
@@ -746,14 +882,42 @@ _Appears in:_
 
 
 
-#### JwtAuthenticationFilterProvider
+#### JWT
 
 
 
-JwtAuthenticationFilterProvider defines the JSON Web Token (JWT) authentication provider type and how JWTs should be verified:
+JWT defines the configuration for JSON Web Token (JWT) authentication.
 
 _Appears in:_
-- [AuthenticationFilterSpec](#authenticationfilterspec)
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `providers` _[JWTProvider](#jwtprovider) array_ | Providers defines the JSON Web Token (JWT) authentication provider type. When multiple JWT providers are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
+
+
+#### JWTExtractor
+
+
+
+JWTExtractor defines a custom JWT token extraction from HTTP request.
+
+_Appears in:_
+- [JWTProvider](#jwtprovider)
+
+| Field | Description |
+| --- | --- |
+| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. If specified, Envoy will extract the JWT token from the listed cookies and validate each of them. If any cookie is found to be an invalid JWT, a 401 error will be returned. |
+
+
+#### JWTProvider
+
+
+
+JWTProvider defines how a JSON Web Token (JWT) can be verified.
+
+_Appears in:_
+- [JWT](#jwt)
 
 | Field | Description |
 | --- | --- |
@@ -762,6 +926,7 @@ _Appears in:_
 | `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
 | `claimToHeaders` _[ClaimToHeader](#claimtoheader) array_ | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `extractFrom` _[JWTExtractor](#jwtextractor)_ | ExtractFrom defines different ways to extract the JWT token from HTTP request. If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema or access_token from query parameters. |
 
 
 #### KubernetesContainerSpec
@@ -807,8 +972,26 @@ _Appears in:_
 | --- | --- |
 | `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
 | `strategy` _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ | The deployment strategy to use to replace existing pods with new ones. |
-| `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired annotations and securityContext of container. |
-| `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the resources and securityContext of container. |
+| `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired specification of pod. |
+| `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the desired specification of main container. |
+| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#container-v1-core) array_ | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
+
+
+#### KubernetesHorizontalPodAutoscalerSpec
+
+
+
+KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
+
+_Appears in:_
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
+
+| Field | Description |
+| --- | --- |
+| `minReplicas` _integer_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down. It defaults to 1 replica. |
+| `maxReplicas` _integer_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
+| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
+| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
 
 
 #### KubernetesPodSpec
@@ -846,6 +1029,7 @@ _Appears in:_
 | `type` _[ServiceType](#servicetype)_ | Type determines how the Service is exposed. Defaults to LoadBalancer. Valid options are ClusterIP, LoadBalancer and NodePort. "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it). "ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP. "NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
 | `loadBalancerClass` _string_ | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` _boolean_ | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
+| `loadBalancerIP` _string_ | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
 
 
 #### KubernetesWatchMode
@@ -889,14 +1073,30 @@ _Appears in:_
 | `value` _string_ | Value defines the hard-coded value to add to each span. |
 
 
-#### LogComponent
+#### LoadBalancer
+
+
+
+LoadBalancer defines the load balancer policy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid LoadBalancerType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
+| `consistentHash` _[ConsistentHash](#consistenthash)_ | ConsistentHash defines the configuration when the load balancer type is set to ConsistentHash |
+| `slowStart` _[SlowStart](#slowstart)_ | SlowStart defines the configuration related to the slow start load balancer policy. If set, during slow start window, traffic sent to the newly added hosts will gradually increase. Currently this is only supported for RoundRobin and LeastRequest load balancers |
+
+
+#### LoadBalancerType
 
 _Underlying type:_ `string`
 
-LogComponent defines a component that supports a configured logging level.
+LoadBalancerType specifies the types of LoadBalancer.
 
 _Appears in:_
-- [ProxyLogging](#proxylogging)
+- [LoadBalancer](#loadbalancer)
 
 
 
@@ -904,53 +1104,12 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs. This type is not implemented for EnvoyProxy until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
 
-
-
-#### Match
-
-
-
-Match defines the stats match configuration.
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `type` _[MatcherType](#matchertype)_ | MatcherType defines the stats matcher type |
-| `value` _string_ |  |
-
-
-#### MatcherType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [Match](#match)
-
-
-
-#### MetricSink
-
-
-
-
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG currently only supports OpenTelemetry. |
-| `openTelemetry` _[OpenTelemetrySink](#opentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
 
 
 #### MetricSinkType
@@ -960,8 +1119,47 @@ _Underlying type:_ `string`
 
 
 _Appears in:_
-- [MetricSink](#metricsink)
+- [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+- [ProxyMetricSink](#proxymetricsink)
 
+
+
+#### OIDC
+
+
+
+OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `provider` _[OIDCProvider](#oidcprovider)_ | The OIDC Provider configuration. |
+| `clientID` _string_ | The client ID to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
+| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
+ This is an Opaque secret. The client secret should be stored in the key "client-secret". |
+| `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
+
+
+#### OIDCProvider
+
+
+
+OIDCProvider defines the OIDC Provider configuration. To make the EG OIDC config easy to use, some of the low-level ouath2 filter configuration knobs are hidden from the user, and default values will be provided when translating to XDS. For example: 
+ * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" 
+ * signout_path: uses a default signout path "/signout" 
+ * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback" 
+ If we get requests to expose these knobs, we can always do so later.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Description |
+| --- | --- |
+| `issuer` _string_ | The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery). Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST be https, a host component, and optionally, port and path components and no query or fragment components. |
+| `authorizationEndpoint` _string_ | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
+| `tokenEndpoint` _string_ | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 
 
 #### OpenTelemetryEnvoyProxyAccessLog
@@ -978,32 +1176,6 @@ _Appears in:_
 | `host` _string_ | Host define the extension service hostname. |
 | `port` _integer_ | Port defines the port the extension service is exposed on. |
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
-
-
-#### OpenTelemetrySink
-
-
-
-
-
-_Appears in:_
-- [MetricSink](#metricsink)
-
-| Field | Description |
-| --- | --- |
-| `host` _string_ | Host define the service hostname. |
-| `port` _integer_ | Port defines the port the service is exposed on. |
-
-
-#### PrometheusProvider
-
-
-
-
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
 
 
 #### ProviderType
@@ -1079,7 +1251,7 @@ _Appears in:_
 
 
 
-
+ProxyAccessLogSink defines the sink of accesslog.
 
 _Appears in:_
 - [ProxyAccessLogSetting](#proxyaccesslogsetting)
@@ -1117,6 +1289,17 @@ _Appears in:_
 | `value` _string_ | Value is a YAML string of the bootstrap. |
 
 
+#### ProxyLogComponent
+
+_Underlying type:_ `string`
+
+ProxyLogComponent defines a component that supports a configured logging level.
+
+_Appears in:_
+- [ProxyLogging](#proxylogging)
+
+
+
 #### ProxyLogging
 
 
@@ -1128,7 +1311,22 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
+| `level` _object (keys:[ProxyLogComponent](#proxylogcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
+
+
+#### ProxyMetricSink
+
+
+
+ProxyMetricSink defines the sink of metrics. Default metrics sink is OpenTelemetry.
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG currently only supports OpenTelemetry. |
+| `openTelemetry` _[ProxyOpenTelemetrySink](#proxyopentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
 
 
 #### ProxyMetrics
@@ -1142,10 +1340,64 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
-| `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
+| `prometheus` _[ProxyPrometheusProvider](#proxyprometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
+| `sinks` _[ProxyMetricSink](#proxymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `matches` _[StringMatch](#stringmatch) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
+
+
+#### ProxyOpenTelemetrySink
+
+
+
+
+
+_Appears in:_
+- [ProxyMetricSink](#proxymetricsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the service hostname. |
+| `port` _integer_ | Port defines the port the service is exposed on. |
+
+
+#### ProxyPrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `disable` _boolean_ | Disable the Prometheus endpoint. |
+
+
+#### ProxyProtocol
+
+
+
+ProxyProtocol defines the configuration related to the proxy protocol when communicating with the backend.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `version` _[ProxyProtocolVersion](#proxyprotocolversion)_ | Version of ProxyProtol Valid ProxyProtocolVersion values are "V1" "V2" |
+
+
+#### ProxyProtocolVersion
+
+_Underlying type:_ `string`
+
+ProxyProtocolVersion defines the version of the Proxy Protocol to use.
+
+_Appears in:_
+- [ProxyProtocol](#proxyprotocol)
+
 
 
 #### ProxyTelemetry
@@ -1223,37 +1475,6 @@ _Appears in:_
 
 
 
-#### RateLimitFilter
-
-
-
-RateLimitFilter allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
-| `kind` _string_ | `RateLimitFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | Spec defines the desired state of RateLimitFilter. |
-
-
-#### RateLimitFilterSpec
-
-
-
-RateLimitFilterSpec defines the desired state of RateLimitFilter.
-
-_Appears in:_
-- [RateLimitFilter](#ratelimitfilter)
-
-| Field | Description |
-| --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
-| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
-
-
 #### RateLimitRedisSettings
 
 
@@ -1299,6 +1520,21 @@ _Appears in:_
 | `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
 
 
+#### RateLimitSpec
+
+
+
+RateLimitSpec defines the desired state of RateLimitSpec.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
+
+
 #### RateLimitType
 
 _Underlying type:_ `string`
@@ -1306,7 +1542,7 @@ _Underlying type:_ `string`
 RateLimitType specifies the types of RateLimiting.
 
 _Appears in:_
-- [RateLimitFilterSpec](#ratelimitfilterspec)
+- [RateLimitSpec](#ratelimitspec)
 
 
 
@@ -1347,7 +1583,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
 
 
 #### RemoteJWKS
@@ -1357,7 +1593,7 @@ _Appears in:_
 RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
 
 _Appears in:_
-- [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
+- [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
@@ -1390,6 +1626,59 @@ _Appears in:_
 
 
 
+#### SecurityPolicy
+
+
+
+SecurityPolicy allows the user to configure various security settings for a Gateway.
+
+_Appears in:_
+- [SecurityPolicyList](#securitypolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `SecurityPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[SecurityPolicySpec](#securitypolicyspec)_ | Spec defines the desired state of SecurityPolicy. |
+
+
+#### SecurityPolicyList
+
+
+
+SecurityPolicyList contains a list of SecurityPolicy resources.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `SecurityPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[SecurityPolicy](#securitypolicy) array_ |  |
+
+
+#### SecurityPolicySpec
+
+
+
+SecurityPolicySpec defines the desired state of SecurityPolicy.
+
+_Appears in:_
+- [SecurityPolicy](#securitypolicy)
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
+| `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
+| `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
+
+
+
+
 #### ServiceType
 
 _Underlying type:_ `string`
@@ -1401,6 +1690,20 @@ _Appears in:_
 
 
 
+#### SlowStart
+
+
+
+SlowStart defines the configuration related to the slow start load balancer policy.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Description |
+| --- | --- |
+| `window` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Window defines the duration of the warm up period for newly added host. During slow start window, traffic sent to the newly added hosts will gradually increase. Currently only supports linear growth of traffic. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
+
+
 #### SourceMatch
 
 
@@ -1410,20 +1713,32 @@ _Appears in:_
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
+
+
+#### StringMatch
+
+
+
+StringMatch defines how to match any strings. This is a general purpose match condition that can be used by other EG APIs that need to match against a string.
+
+_Appears in:_
+- [CORS](#cors)
+- [ProxyMetrics](#proxymetrics)
+
 | Field | Description |
 | --- | --- |
-| `type` _[SourceMatchType](#sourcematchtype)_ |  |
-| `value` _string_ | Value is the IP CIDR that represents the range of Source IP Addresses of the client. These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header. For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
+| `type` _[StringMatchType](#stringmatchtype)_ | Type specifies how to match against a string. |
+| `value` _string_ | Value specifies the string value that the match must have. |
 
 
-#### SourceMatchType
+#### StringMatchType
 
 _Underlying type:_ `string`
 
-
+StringMatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
 _Appears in:_
-- [SourceMatch](#sourcematch)
+- [StringMatch](#stringmatch)
 
 
 
@@ -1434,6 +1749,7 @@ _Appears in:_
 TCPKeepalive define the TCP Keepalive configuration.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Description |

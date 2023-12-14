@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -23,13 +23,18 @@ gateways:
         mode: Passthrough
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: TLS Passthrough mode is not supported, TLS mode must be Terminate.
         reason: UnsupportedTLSMode
         status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -37,7 +42,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null

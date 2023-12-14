@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -28,6 +28,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -109,25 +114,11 @@ xdsIR:
         destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
-            weight: 1
-        hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/1/*
-        pathMatch:
-          distinct: false
-          name: ""
-          safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
+            protocol: GRPC
             weight: 1
         hostname: '*'
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*
@@ -135,3 +126,21 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /com.ExampleExact
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: grpcroute/default/grpcroute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        name: grpcroute/default/grpcroute-1/rule/0/match/1/*
+        pathMatch:
+          distinct: false
+          name: ""
+          safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*

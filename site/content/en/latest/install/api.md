@@ -24,6 +24,10 @@ The Helm chart for Envoy Gateway
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| certgen.job.annotations | object | `{}` |  |
+| certgen.job.ttlSecondsAfterFinished | int | `0` |  |
+| certgen.rbac.annotations | object | `{}` |  |
+| certgen.rbac.labels | object | `{}` |  |
 | config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
@@ -35,13 +39,6 @@ The Helm chart for Envoy Gateway
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
 | deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |
-| deployment.kubeRbacProxy.image.repository | string | `"gcr.io/kubebuilder/kube-rbac-proxy"` |  |
-| deployment.kubeRbacProxy.image.tag | string | `"v0.14.1"` |  |
-| deployment.kubeRbacProxy.imagePullPolicy | string | `"IfNotPresent"` |  |
-| deployment.kubeRbacProxy.resources.limits.cpu | string | `"500m"` |  |
-| deployment.kubeRbacProxy.resources.limits.memory | string | `"128Mi"` |  |
-| deployment.kubeRbacProxy.resources.requests.cpu | string | `"5m"` |  |
-| deployment.kubeRbacProxy.resources.requests.memory | string | `"64Mi"` |  |
 | deployment.pod.annotations | object | `{}` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
@@ -51,9 +48,9 @@ The Helm chart for Envoy Gateway
 | deployment.ports[1].port | int | `18001` |  |
 | deployment.ports[1].targetPort | int | `18001` |  |
 | deployment.replicas | int | `1` |  |
-| envoyGatewayMetricsService.ports[0].name | string | `"https"` |  |
-| envoyGatewayMetricsService.ports[0].port | int | `8443` |  |
+| envoyGatewayMetricsService.ports[0].name | string | `"http"` |  |
+| envoyGatewayMetricsService.ports[0].port | int | `19001` |  |
 | envoyGatewayMetricsService.ports[0].protocol | string | `"TCP"` |  |
-| envoyGatewayMetricsService.ports[0].targetPort | string | `"https"` |  |
+| envoyGatewayMetricsService.ports[0].targetPort | int | `19001` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 

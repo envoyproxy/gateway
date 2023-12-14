@@ -7,30 +7,33 @@ package gatewayapi
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
-	KindEnvoyProxy    = "EnvoyProxy"
-	KindGateway       = "Gateway"
-	KindGatewayClass  = "GatewayClass"
-	KindGRPCRoute     = "GRPCRoute"
-	KindHTTPRoute     = "HTTPRoute"
-	KindNamespace     = "Namespace"
-	KindTLSRoute      = "TLSRoute"
-	KindTCPRoute      = "TCPRoute"
-	KindUDPRoute      = "UDPRoute"
-	KindService       = "Service"
-	KindServiceImport = "ServiceImport"
-	KindSecret        = "Secret"
+	KindEnvoyProxy     = "EnvoyProxy"
+	KindGateway        = "Gateway"
+	KindGatewayClass   = "GatewayClass"
+	KindGRPCRoute      = "GRPCRoute"
+	KindHTTPRoute      = "HTTPRoute"
+	KindNamespace      = "Namespace"
+	KindTLSRoute       = "TLSRoute"
+	KindTCPRoute       = "TCPRoute"
+	KindUDPRoute       = "UDPRoute"
+	KindService        = "Service"
+	KindServiceImport  = "ServiceImport"
+	KindSecret         = "Secret"
+	KindSecurityPolicy = "SecurityPolicy"
 
 	GroupMultiClusterService = "multicluster.x-k8s.io"
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
 	// The value should be the namespace of the accepted Envoy Gateway.
 	OwningGatewayNamespaceLabel = "gateway.envoyproxy.io/owning-gateway-namespace"
 
+	OwningGatewayClassLabel = "gateway.envoyproxy.io/owning-gatewayclass"
 	// OwningGatewayNameLabel is the owner reference label used for managed infra.
 	// The value should be the name of the accepted Envoy Gateway.
 	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
@@ -46,7 +49,7 @@ var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
 	Translate(resources *Resources) *TranslateResult
-	GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext
+	GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext
 
 	RoutesTranslator
 	ListenersTranslator
@@ -62,7 +65,7 @@ type Translator struct {
 
 	// GatewayClassName is the name of the GatewayClass
 	// to process Gateways for.
-	GatewayClassName v1beta1.ObjectName
+	GatewayClassName gwapiv1.ObjectName
 
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
@@ -72,6 +75,10 @@ type Translator struct {
 	// the Service Cluster IP for routing to the backend
 	// instead.
 	EndpointRoutingDisabled bool
+
+	// MergeGateways is true when all Gateway Listeners
+	// should be merged under the parent GatewayClass.
+	MergeGateways bool
 
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
@@ -92,6 +99,8 @@ func newTranslateResult(gateways []*GatewayContext,
 	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
+	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
+	securityPolicies []*egv1a1.SecurityPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -118,16 +127,18 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 
 	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
+	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
+	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
 
 	return translateResult
 }
 
 func (t *Translator) Translate(resources *Resources) *TranslateResult {
-	xdsIR := make(XdsIRMap)
-	infraIR := make(InfraIRMap)
-
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
+
+	// Build IR maps.
+	xdsIR, infraIR := t.InitIRs(gateways, resources)
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
@@ -156,15 +167,44 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, gateways, resources, xdsIR)
 
+	// Process BackendTrafficPolicies
+	routes := []RouteContext{}
+	for _, h := range httpRoutes {
+		routes = append(routes, h)
+	}
+	for _, g := range grpcRoutes {
+		routes = append(routes, g)
+	}
+	for _, t := range tlsRoutes {
+		routes = append(routes, t)
+	}
+	for _, t := range tcpRoutes {
+		routes = append(routes, t)
+	}
+	for _, u := range udpRoutes {
+		routes = append(routes, u)
+	}
+
+	// Process BackendTrafficPolicies
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
+		resources.BackendTrafficPolicies, gateways, routes, xdsIR)
+
+	// Process SecurityPolicies
+	securityPolicies := t.ProcessSecurityPolicies(
+		resources.SecurityPolicies, gateways, routes, resources, xdsIR)
+
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, clientTrafficPolicies, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
+		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
+		securityPolicies, xdsIR, infraIR)
+
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
 // Gateway with the Listener statuses reset.
-func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext {
+func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext {
 	var relevant []*GatewayContext
 
 	for _, gateway := range gateways {
@@ -183,4 +223,41 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 	}
 
 	return relevant
+}
+
+// InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
+func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (map[string]*ir.Xds, map[string]*ir.Infra) {
+	xdsIR := make(XdsIRMap)
+	infraIR := make(InfraIRMap)
+
+	var irKey string
+	for _, gateway := range gateways {
+		gwXdsIR := &ir.Xds{}
+		gwInfraIR := ir.NewInfra()
+		if isMergeGatewaysEnabled(resources) {
+			t.MergeGateways = true
+			irKey = string(t.GatewayClassName)
+			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
+		} else {
+			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
+			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
+		}
+
+		gwInfraIR.Proxy.Name = irKey
+		// save the IR references in the map before the translation starts
+		xdsIR[irKey] = gwXdsIR
+		infraIR[irKey] = gwInfraIR
+	}
+
+	return xdsIR, infraIR
+}
+
+// XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.
+func (t *Translator) getIRKey(gateway *gwapiv1.Gateway) string {
+	irKey := irStringKey(gateway.Namespace, gateway.Name)
+	if t.MergeGateways {
+		return string(t.GatewayClassName)
+	}
+
+	return irKey
 }

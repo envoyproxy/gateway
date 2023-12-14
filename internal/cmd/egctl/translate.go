@@ -27,8 +27,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -262,7 +262,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   egv1a1.GatewayControllerName,
-		GatewayClassName:        v1beta1.ObjectName(resources.GatewayClass.Name),
+		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 	}
@@ -273,12 +273,12 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxy); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(v1beta1.GatewayClassReasonInvalidParameters), msg)
+			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
 		}
 		gRes.EnvoyProxy = resources.EnvoyProxy
 	}
 	if !epInvalid {
-		status.SetGatewayClassAccepted(resources.GatewayClass, true, string(v1beta1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
+		status.SetGatewayClassAccepted(resources.GatewayClass, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
 	}
 
 	gRes.GatewayClass = resources.GatewayClass
@@ -293,7 +293,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   egv1a1.GatewayControllerName,
-		GatewayClassName:        v1beta1.ObjectName(resources.GatewayClass.Name),
+		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 	}
@@ -498,33 +498,33 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 	var objNamespace string
 	protocol := v1.Protocol(gatewayapi.TCPProtocol)
 
-	refs := []v1beta1.BackendRef{}
+	refs := []gwapiv1.BackendRef{}
 	switch route := obj.(type) {
-	case *v1beta1.HTTPRoute:
+	case *gwapiv1.HTTPRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			for _, httpBakcendRef := range rule.BackendRefs {
 				refs = append(refs, httpBakcendRef.BackendRef)
 			}
 		}
-	case *v1alpha2.GRPCRoute:
+	case *gwapiv1a2.GRPCRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			for _, gRPCBakcendRef := range rule.BackendRefs {
 				refs = append(refs, gRPCBakcendRef.BackendRef)
 			}
 		}
-	case *v1alpha2.TLSRoute:
+	case *gwapiv1a2.TLSRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
 		}
-	case *v1alpha2.TCPRoute:
+	case *gwapiv1a2.TCPRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
 		}
-	case *v1alpha2.UDPRoute:
+	case *gwapiv1a2.UDPRoute:
 		protocol = v1.Protocol(gatewayapi.UDPProtocol)
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
@@ -637,27 +637,27 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			resources.EnvoyProxy = envoyProxy
 		case gatewayapi.KindGatewayClass:
 			typedSpec := spec.Interface()
-			gatewayClass := &v1beta1.GatewayClass{
+			gatewayClass := &gwapiv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1beta1.GatewayClassSpec),
+				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
 			resources.GatewayClass = gatewayClass
 		case gatewayapi.KindGateway:
 			typedSpec := spec.Interface()
-			gateway := &v1beta1.Gateway{
+			gateway := &gwapiv1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1beta1.GatewaySpec),
+				Spec: typedSpec.(gwapiv1.GatewaySpec),
 			}
 			resources.Gateways = append(resources.Gateways, gateway)
 		case gatewayapi.KindTCPRoute:
 			typedSpec := spec.Interface()
-			tcpRoute := &v1alpha2.TCPRoute{
+			tcpRoute := &gwapiv1a2.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindTCPRoute,
 				},
@@ -665,12 +665,12 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1alpha2.TCPRouteSpec),
+				Spec: typedSpec.(gwapiv1a2.TCPRouteSpec),
 			}
 			resources.TCPRoutes = append(resources.TCPRoutes, tcpRoute)
 		case gatewayapi.KindUDPRoute:
 			typedSpec := spec.Interface()
-			udpRoute := &v1alpha2.UDPRoute{
+			udpRoute := &gwapiv1a2.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindUDPRoute,
 				},
@@ -678,12 +678,12 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1alpha2.UDPRouteSpec),
+				Spec: typedSpec.(gwapiv1a2.UDPRouteSpec),
 			}
 			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
 		case gatewayapi.KindTLSRoute:
 			typedSpec := spec.Interface()
-			tlsRoute := &v1alpha2.TLSRoute{
+			tlsRoute := &gwapiv1a2.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindTLSRoute,
 				},
@@ -691,12 +691,12 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1alpha2.TLSRouteSpec),
+				Spec: typedSpec.(gwapiv1a2.TLSRouteSpec),
 			}
 			resources.TLSRoutes = append(resources.TLSRoutes, tlsRoute)
 		case gatewayapi.KindHTTPRoute:
 			typedSpec := spec.Interface()
-			httpRoute := &v1beta1.HTTPRoute{
+			httpRoute := &gwapiv1.HTTPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindHTTPRoute,
 				},
@@ -704,12 +704,12 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1beta1.HTTPRouteSpec),
+				Spec: typedSpec.(gwapiv1.HTTPRouteSpec),
 			}
 			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
 		case gatewayapi.KindGRPCRoute:
 			typedSpec := spec.Interface()
-			grpcRoute := &v1alpha2.GRPCRoute{
+			grpcRoute := &gwapiv1a2.GRPCRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindGRPCRoute,
 				},
@@ -717,7 +717,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1alpha2.GRPCRouteSpec),
+				Spec: typedSpec.(gwapiv1a2.GRPCRouteSpec),
 			}
 			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case gatewayapi.KindNamespace:
@@ -738,20 +738,6 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(v1.ServiceSpec),
 			}
 			resources.Services = append(resources.Services, service)
-		case egv1a1.KindAuthenticationFilter:
-			typedSpec := spec.Interface()
-			authenticationFilter := &egv1a1.AuthenticationFilter{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindAuthenticationFilter,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Spec: typedSpec.(egv1a1.AuthenticationFilterSpec),
-			}
-			resources.AuthenticationFilters = append(resources.AuthenticationFilters, authenticationFilter)
 		case egv1a1.KindEnvoyPatchPolicy:
 			typedSpec := spec.Interface()
 			envoyPatchPolicy := &egv1a1.EnvoyPatchPolicy{
@@ -766,20 +752,48 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(egv1a1.EnvoyPatchPolicySpec),
 			}
 			resources.EnvoyPatchPolicies = append(resources.EnvoyPatchPolicies, envoyPatchPolicy)
-		case egv1a1.KindRateLimitFilter:
+		case egv1a1.KindClientTrafficPolicy:
 			typedSpec := spec.Interface()
-			rateLimitFilter := &egv1a1.RateLimitFilter{
+			clientTrafficPolicy := &egv1a1.ClientTrafficPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindRateLimitFilter,
+					Kind:       egv1a1.KindClientTrafficPolicy,
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      name,
 				},
-				Spec: typedSpec.(egv1a1.RateLimitFilterSpec),
+				Spec: typedSpec.(egv1a1.ClientTrafficPolicySpec),
 			}
-			resources.RateLimitFilters = append(resources.RateLimitFilters, rateLimitFilter)
+			resources.ClientTrafficPolicies = append(resources.ClientTrafficPolicies, clientTrafficPolicy)
+		case egv1a1.KindBackendTrafficPolicy:
+			typedSpec := spec.Interface()
+			backendTrafficPolicy := &egv1a1.BackendTrafficPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindBackendTrafficPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.BackendTrafficPolicySpec),
+			}
+			resources.BackendTrafficPolicies = append(resources.BackendTrafficPolicies, backendTrafficPolicy)
+		case egv1a1.KindSecurityPolicy:
+			typedSpec := spec.Interface()
+			securityPolicy := &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.SecurityPolicySpec),
+			}
+			resources.SecurityPolicies = append(resources.SecurityPolicies, securityPolicy)
 		}
 	}
 
@@ -889,9 +903,9 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 		},
 	}
 	resources.EnvoyProxy = ep
-	ns := v1beta1.Namespace(namespace)
-	resources.GatewayClass.Spec.ParametersRef = &v1beta1.ParametersReference{
-		Group:     v1beta1.Group(egv1a1.GroupVersion.Group),
+	ns := gwapiv1.Namespace(namespace)
+	resources.GatewayClass.Spec.ParametersRef = &gwapiv1.ParametersReference{
+		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
 		Kind:      gatewayapi.KindEnvoyProxy,
 		Name:      defaultEnvoyProxyName,
 		Namespace: &ns,

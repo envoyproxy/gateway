@@ -17,7 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
+func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	router := &routev3.Route{
 		Name:  httpRoute.Name,
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
@@ -43,7 +43,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite)
+		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -66,23 +66,22 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 		}
 	}
 
+	// Hash Policy
+	if router.GetRoute() != nil {
+		router.GetRoute().HashPolicy = buildHashPolicy(httpRoute)
+	}
+
 	// Timeouts
-	if httpRoute.Timeout != nil {
+	if router.GetRoute() != nil && httpRoute.Timeout != nil {
 		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.Duration)
 	}
 
-	// TODO: Convert this into a generic interface for API Gateway features.
-	//       https://github.com/envoyproxy/gateway/issues/882
-	if err := patchRouteWithRateLimit(router.GetRoute(), httpRoute); err != nil {
-		return nil
+	// Add per route filter configs to the route, if needed.
+	if err := patchRouteWithPerRouteConfig(router, httpRoute); err != nil {
+		return nil, err
 	}
 
-	// Add the jwt per route config to the route, if needed.
-	if err := patchRouteWithJwtConfig(router, httpRoute); err != nil {
-		return nil
-	}
-
-	return router
+	return router, nil
 }
 
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
@@ -102,14 +101,15 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 				Path: *pathMatch.Exact,
 			}
 		} else if pathMatch.Prefix != nil {
-			// when the prefix ends with "/", use RouteMatch_Prefix
-			if strings.HasSuffix(*pathMatch.Prefix, "/") {
+			if *pathMatch.Prefix == "/" {
 				outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
-					Prefix: *pathMatch.Prefix,
+					Prefix: "/",
 				}
 			} else {
+				// Remove trailing /
+				trimmedPrefix := strings.TrimSuffix(*pathMatch.Prefix, "/")
 				outMatch.PathSpecifier = &routev3.RouteMatch_PathSeparatedPrefix{
-					PathSeparatedPrefix: *pathMatch.Prefix,
+					PathSeparatedPrefix: trimmedPrefix,
 				}
 			}
 		} else if pathMatch.SafeRegex != nil {
@@ -253,7 +253,7 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 	return routeAction
 }
 
-func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite) *routev3.RouteAction {
+func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
 	routeAction := &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
 			Cluster: destName,
@@ -269,7 +269,21 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite) *route
 				Substitution: *urlRewrite.Path.FullReplace,
 			}
 		} else if urlRewrite.Path.PrefixMatchReplace != nil {
-			routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+			// Circumvent the case of "//" when the replace string is "/"
+			// An empty replace string does not seem to solve the issue so we are using
+			// a regex match and replace instead
+			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
+			if pathMatch != nil && pathMatch.Prefix != nil &&
+				(*urlRewrite.Path.PrefixMatchReplace == "" || *urlRewrite.Path.PrefixMatchReplace == "/") {
+				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
+					Pattern: &matcherv3.RegexMatcher{
+						Regex: "^" + *pathMatch.Prefix + `\/*`,
+					},
+					Substitution: "/",
+				}
+			} else {
+				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+			}
 		}
 	}
 
@@ -329,4 +343,24 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 	}
 
 	return headerValueOptions
+}
+
+func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy {
+	// Return early
+	if httpRoute == nil || httpRoute.LoadBalancer == nil || httpRoute.LoadBalancer.ConsistentHash == nil {
+		return nil
+	}
+
+	if httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil && *httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
+				ConnectionProperties: &routev3.RouteAction_HashPolicy_ConnectionProperties{
+					SourceIp: true,
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	}
+
+	return nil
 }

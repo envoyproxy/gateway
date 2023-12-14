@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -49,8 +49,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	message.HandleSubscription(r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
-		func(update message.Update[string, *gatewayapi.Resources]) {
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
+		func(update message.Update[string, *gatewayapi.Resources], errChan chan error) {
 			r.Logger.Info("received an update")
 
 			val := update.Value
@@ -62,7 +62,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{
 				GatewayControllerName:  r.Server.EnvoyGateway.Gateway.ControllerName,
-				GatewayClassName:       v1beta1.ObjectName(update.Key),
+				GatewayClassName:       v1.ObjectName(update.Key),
 				GlobalRateLimitEnabled: r.EnvoyGateway.RateLimit != nil,
 			}
 
@@ -93,6 +93,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for key, val := range result.InfraIR {
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+					errChan <- err
 				} else {
 					r.InfraIR.Store(key, val)
 					newKeys = append(newKeys, key)
@@ -102,6 +103,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for key, val := range result.XdsIR {
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+					errChan <- err
 				} else {
 					r.XdsIR.Store(key, val)
 				}
@@ -152,7 +154,16 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(clientTrafficPolicy)
 				r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
 			}
-
+			for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
+				backendTrafficPolicy := backendTrafficPolicy
+				key := utils.NamespacedName(backendTrafficPolicy)
+				r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
+			}
+			for _, securityPolicy := range result.SecurityPolicies {
+				securityPolicy := securityPolicy
+				key := utils.NamespacedName(securityPolicy)
+				r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+			}
 		},
 	)
 	r.Logger.Info("shutting down")

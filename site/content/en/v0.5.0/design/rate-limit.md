@@ -228,7 +228,7 @@ spec:
   jwtProviders:
   - name: example
     remoteJWKS:
-      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
     claimToHeaders:
     - claim: name
       header: custom-request-header

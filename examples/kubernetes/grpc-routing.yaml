@@ -1,4 +1,4 @@
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: example-gateway-class
@@ -7,7 +7,7 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: example-gateway
@@ -39,7 +39,7 @@ spec:
     spec:
       containers:
         - name: grpcsrv
-          image: quay.io/mhausenblas/yages:0.1.0
+          image: ghcr.io/projectcontour/yages:v0.1.0
           ports:
             - containerPort: 9000
               protocol: TCP

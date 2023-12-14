@@ -1,0 +1,34 @@
+envoyproxy:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeGateways: true
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      name: gateway-1
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          port: 80
+          protocol: HTTP
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      name: gateway-2
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          port: 80
+          protocol: HTTP
+        - name: udp
+          port: 80
+          protocol: UDP

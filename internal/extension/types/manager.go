@@ -6,7 +6,7 @@
 package types
 
 import (
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -19,7 +19,7 @@ type Manager interface {
 	//
 	// If a Group and Kind is registered with an extension, then it should
 	// return true, otherwise return false.
-	HasExtension(g v1beta1.Group, k v1beta1.Kind) bool
+	HasExtension(g v1.Group, k v1.Kind) bool
 
 	// GetPreXDSHookClient checks if the registered extension makes use of a particular hook type that modifies inputs
 	// that are used to generate an xDS resource.

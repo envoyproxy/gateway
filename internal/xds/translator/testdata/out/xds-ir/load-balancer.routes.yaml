@@ -1,0 +1,40 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+    - match:
+        prefix: /
+      name: third-route
+      route:
+        cluster: third-route-dest
+    - match:
+        prefix: /
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        hashPolicy:
+        - connectionProperties:
+            sourceIp: true
+    - match:
+        prefix: /
+      name: fifth-route
+      route:
+        cluster: fifth-route-dest
+    - match:
+        prefix: /
+      name: sixth-route
+      route:
+        cluster: sixth-route-dest

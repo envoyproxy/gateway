@@ -243,14 +243,14 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 
 		ds := &ir.DestinationSetting{
 			Weight:    ptr.To(uint32(1)),
+			Protocol:  ir.GRPC,
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
 		}
-		if err := addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         clusterName,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      nil,
-			protocol:     HTTP2,
-			endpointType: DefaultEndpointType,
+			endpointType: EndpointTypeDNS,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}

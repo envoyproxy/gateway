@@ -8,7 +8,6 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -17,6 +16,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=ctp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -36,6 +36,10 @@ type ClientTrafficPolicy struct {
 
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
+	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
+	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway'", message="this policy can only have a targetRef.kind of Gateway"
+	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
+	//
 	// TargetRef is the name of the Gateway resource this policy
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
@@ -48,28 +52,13 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-}
-
-// TCPKeepalive define the TCP Keepalive configuration.
-type TCPKeepalive struct {
-	// The total number of unacknowledged probes to send before deciding
-	// the connection is dead.
-	// Defaults to 9.
+	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
+	// Client Address into the X-Forwarded-For header.
+	// Note Proxy Protocol must be present when this field is set, else the connection
+	// is closed.
 	//
 	// +optional
-	Probes *uint32 `json:"probes,omitempty"`
-	// The duration a connection needs to be idle before keep-alive
-	// probes start being sent.
-	// The duration format is
-	// Defaults to `7200s`.
-	//
-	// +optional
-	IdleTime *gwapiv1b1.Duration `json:"idleTime,omitempty"`
-	// The duration between keep-alive probes.
-	// Defaults to `75s`.
-	//
-	// +optional
-	Interval *gwapiv1b1.Duration `json:"interval,omitempty"`
+	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy

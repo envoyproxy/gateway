@@ -25,11 +25,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -41,34 +42,31 @@ import (
 )
 
 const (
-	classGatewayIndex             = "classGatewayIndex"
-	gatewayTLSRouteIndex          = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex         = "gatewayHTTPRouteIndex"
-	gatewayGRPCRouteIndex         = "gatewayGRPCRouteIndex"
-	gatewayTCPRouteIndex          = "gatewayTCPRouteIndex"
-	gatewayUDPRouteIndex          = "gatewayUDPRouteIndex"
-	secretGatewayIndex            = "secretGatewayIndex"
-	targetRefGrantRouteIndex      = "targetRefGrantRouteIndex"
-	backendHTTPRouteIndex         = "backendHTTPRouteIndex"
-	backendGRPCRouteIndex         = "backendGRPCRouteIndex"
-	backendTLSRouteIndex          = "backendTLSRouteIndex"
-	backendTCPRouteIndex          = "backendTCPRouteIndex"
-	backendUDPRouteIndex          = "backendUDPRouteIndex"
-	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
-	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
-	authenFilterGRPCRouteIndex    = "authenGRPCRouteIndex"
-	rateLimitFilterGRPCRouteIndex = "rateLimitGRPCRouteIndex"
+	classGatewayIndex        = "classGatewayIndex"
+	gatewayTLSRouteIndex     = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex    = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex    = "gatewayGRPCRouteIndex"
+	gatewayTCPRouteIndex     = "gatewayTCPRouteIndex"
+	gatewayUDPRouteIndex     = "gatewayUDPRouteIndex"
+	secretGatewayIndex       = "secretGatewayIndex"
+	targetRefGrantRouteIndex = "targetRefGrantRouteIndex"
+	backendHTTPRouteIndex    = "backendHTTPRouteIndex"
+	backendGRPCRouteIndex    = "backendGRPCRouteIndex"
+	backendTLSRouteIndex     = "backendTLSRouteIndex"
+	backendTCPRouteIndex     = "backendTCPRouteIndex"
+	backendUDPRouteIndex     = "backendUDPRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
 	client          client.Client
 	log             logging.Logger
 	statusUpdater   status.Updater
-	classController gwapiv1b1.GatewayController
+	classController gwapiv1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
 	namespaceLabels []string
-	envoyGateway    *egv1a1.EnvoyGateway
+	envoyGateway    *v1alpha1.EnvoyGateway
+	mergeGateways   bool
 
 	resources *message.ProviderResources
 	extGVKs   []schema.GroupVersionKind
@@ -92,7 +90,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	byNamespaceSelector := cfg.EnvoyGateway.Provider != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes.Watch != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == egv1a1.KubernetesWatchModeTypeNamespaceSelectors &&
+		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == v1alpha1.KubernetesWatchModeTypeNamespaceSelectors &&
 		len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors) != 0
 	if byNamespaceSelector {
 		namespaceLabels = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
@@ -101,7 +99,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	r := &gatewayAPIReconciler{
 		client:          mgr.GetClient(),
 		log:             cfg.Logger,
-		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		classController: gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:       cfg.Namespace,
 		namespaceLabels: namespaceLabels,
 		statusUpdater:   su,
@@ -131,15 +129,9 @@ type resourceMappings struct {
 	// Map for storing namespaces for Route, Service and Gateway objects.
 	allAssociatedNamespaces map[string]struct{}
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
-	allAssociatedBackendRefs map[gwapiv1b1.BackendObjectReference]struct{}
+	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
 	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs.
-	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1a2.ReferenceGrant
-	// authenFilters is a map of AuthenticationFilters, where the key is the
-	// namespaced name of the AuthenticationFilter.
-	authenFilters map[types.NamespacedName]*egv1a1.AuthenticationFilter
-	// rateLimitFilters is a map of RateLimitFilters, where the key is the
-	// namespaced name of the RateLimitFilter.
-	rateLimitFilters map[types.NamespacedName]*egv1a1.RateLimitFilter
+	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1b1.ReferenceGrant
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name of the filter and the value is the
 	// unstructured form of the resource.
@@ -149,10 +141,8 @@ type resourceMappings struct {
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
 		allAssociatedNamespaces:  map[string]struct{}{},
-		allAssociatedBackendRefs: map[gwapiv1b1.BackendObjectReference]struct{}{},
-		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
-		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
-		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
+		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
+		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1b1.ReferenceGrant{},
 		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
 	}
 }
@@ -163,7 +153,7 @@ func newResourceMapping() *resourceMappings {
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	r.log.Info("reconciling gateways")
 
-	var gatewayClasses gwapiv1b1.GatewayClassList
+	var gatewayClasses gwapiv1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %v", err)
 	}
@@ -277,7 +267,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	// Add all EnvoyPatchPolicies
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
-		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
+		envoyPatchPolicies := v1alpha1.EnvoyPatchPolicyList{}
 		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %v", err)
 		}
@@ -286,13 +276,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			policy := policy
 			// Discard Status to reduce memory consumption in watchable
 			// It will be recomputed by the gateway-api layer
-			policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
+			policy.Status = v1alpha1.EnvoyPatchPolicyStatus{}
 			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 		}
 	}
 
 	// Add all ClientTrafficPolicies
-	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
+	clientTrafficPolicies := v1alpha1.ClientTrafficPolicyList{}
 	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing ClientTrafficPolicies: %v", err)
 	}
@@ -301,10 +291,41 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		policy.Status = v1alpha1.ClientTrafficPolicyStatus{}
 		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
 
 	}
+
+	// Add all BackendTrafficPolicies
+	backendTrafficPolicies := v1alpha1.BackendTrafficPolicyList{}
+	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing BackendTrafficPolicies: %v", err)
+	}
+
+	for _, policy := range backendTrafficPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = v1alpha1.BackendTrafficPolicyStatus{}
+		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
+	}
+
+	// Add all SecurityPolicies
+	securityPolicies := v1alpha1.SecurityPolicyList{}
+	if err := r.client.List(ctx, &securityPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing SecurityPolicies: %v", err)
+	}
+
+	for _, policy := range securityPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = v1alpha1.SecurityPolicyStatus{}
+		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
+	}
+
+	// Add the referenced Secrets in SecurityPolicies to the resourceTree
+	r.processSecurityPolicySecretRefs(ctx, resourceTree, resourceMap)
 
 	// For this particular Gateway, and all associated objects, check whether the
 	// namespace exists. Add to the resourceTree.
@@ -322,16 +343,22 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	}
 
 	// Process the parametersRef of the accepted GatewayClass.
-	if err := r.processParamsRef(ctx, acceptedGC, resourceTree); err != nil {
-		msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-		if err := r.gatewayClassUpdater(ctx, acceptedGC, false, string(gwapiv1b1.GatewayClassReasonInvalidParameters), msg); err != nil {
-			r.log.Error(err, "unable to update GatewayClass status")
+	if acceptedGC.Spec.ParametersRef != nil && acceptedGC.DeletionTimestamp == nil {
+		if err := r.processParamsRef(ctx, acceptedGC, resourceTree); err != nil {
+			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+			if err := r.gatewayClassUpdater(ctx, acceptedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
+				r.log.Error(err, "unable to update GatewayClass status")
+			}
+			r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
+			return reconcile.Result{}, err
 		}
-		r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
-		return reconcile.Result{}, err
 	}
 
-	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1b1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
+	if resourceTree.EnvoyProxy != nil && resourceTree.EnvoyProxy.Spec.MergeGateways != nil {
+		r.mergeGateways = *resourceTree.EnvoyProxy.Spec.MergeGateways
+	}
+
+	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 		r.log.Error(err, "unable to update GatewayClass status")
 		return reconcile.Result{}, err
 	}
@@ -339,6 +366,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// Update finalizer on the gateway class based on the resource tree.
 	if len(resourceTree.Gateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
+
 		// If needed, remove the finalizer from the accepted GatewayClass.
 		if err := r.removeFinalizer(ctx, acceptedGC); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
@@ -363,13 +391,112 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	return reconcile.Result{}, nil
 }
 
-func (r *gatewayAPIReconciler) gatewayClassUpdater(ctx context.Context, gc *gwapiv1b1.GatewayClass, accepted bool, reason, msg string) error {
+// processSecurityPolicySecretRefs adds the referenced Secrets in SecurityPolicies
+// to the resourceTree
+func (r *gatewayAPIReconciler) processSecurityPolicySecretRefs(
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	for _, policy := range resourceTree.SecurityPolicies {
+		oidc := policy.Spec.OIDC
+
+		if oidc != nil {
+			if err := r.processSecretRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				gatewayapi.KindSecurityPolicy,
+				policy.Namespace,
+				policy.Name,
+				oidc.ClientSecret); err != nil {
+				// we don't return an error here, because we want to continue
+				// reconciling the rest of the SecurityPolicies despite that this
+				// secret reference is invalid.
+				// This SecurityPolicy will be marked as invalid in its status
+				// when translating to IR because the referenced secret can't be
+				// found.
+				r.log.Error(err,
+					"failed to process OIDC SecretRef for SecurityPolicy",
+					"policy", policy, "secretRef", oidc.ClientSecret)
+			}
+		}
+		basicAuth := policy.Spec.BasicAuth
+		if basicAuth != nil {
+			if err := r.processSecretRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				gatewayapi.KindSecurityPolicy,
+				policy.Namespace,
+				policy.Name,
+				basicAuth.Users); err != nil {
+				r.log.Error(err,
+					"failed to process BasicAuth SecretRef for SecurityPolicy",
+					"policy", policy, "secretRef", basicAuth.Users)
+			}
+		}
+	}
+}
+
+// processSecretRef adds the referenced Secret to the resourceTree if it's valid.
+// - If it exists in the same namespace as the owner.
+// - If it exists in a different namespace, and there is a ReferenceGrant.
+func (r *gatewayAPIReconciler) processSecretRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *gatewayapi.Resources,
+	ownerKind string,
+	ownerNS string,
+	ownerName string,
+	secretRef gwapiv1b1.SecretObjectReference,
+) error {
+	secret := new(corev1.Secret)
+	secretNS := gatewayapi.NamespaceDerefOr(secretRef.Namespace, ownerNS)
+	err := r.client.Get(ctx,
+		types.NamespacedName{Namespace: secretNS, Name: string(secretRef.Name)},
+		secret,
+	)
+	if err != nil && !kerrors.IsNotFound(err) {
+		return fmt.Errorf("unable to find the Secret: %s/%s", secretNS, string(secretRef.Name))
+	}
+
+	if secretNS != ownerNS {
+		from := ObjectKindNamespacedName{
+			kind:      ownerKind,
+			namespace: ownerNS,
+			name:      ownerName,
+		}
+		to := ObjectKindNamespacedName{
+			kind:      gatewayapi.KindSecret,
+			namespace: secretNS,
+			name:      secret.Name,
+		}
+		refGrant, err := r.findReferenceGrant(ctx, from, to)
+		switch {
+		case err != nil:
+			return fmt.Errorf("failed to find ReferenceGrant: %v", err)
+		case refGrant == nil:
+			return fmt.Errorf(
+				"no matching ReferenceGrants found: from %s/%s to %s/%s",
+				from.kind, from.namespace, to.kind, to.namespace)
+		default:
+			// RefGrant found
+			resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+				"name", refGrant.Name)
+		}
+	}
+	resourceMap.allAssociatedNamespaces[secretNS] = struct{}{} // TODO Zhaohuabing do we need this line?
+	resourceTree.Secrets = append(resourceTree.Secrets, secret)
+	r.log.Info("processing Secret", "namespace", secretNS, "name", string(secretRef.Name))
+	return nil
+}
+
+func (r *gatewayAPIReconciler) gatewayClassUpdater(ctx context.Context, gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) error {
 	if r.statusUpdater != nil {
 		r.statusUpdater.Send(status.Update{
 			NamespacedName: types.NamespacedName{Name: gc.Name},
-			Resource:       &gwapiv1b1.GatewayClass{},
+			Resource:       &gwapiv1.GatewayClass{},
 			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-				gc, ok := obj.(*gwapiv1b1.GatewayClass)
+				gc, ok := obj.(*gwapiv1.GatewayClass)
 				if !ok {
 					panic(fmt.Sprintf("unsupported object type %T", obj))
 				}
@@ -398,7 +525,7 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 	return ns, nil
 }
 
-func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *gwapiv1b1.Gateway) {
+func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
 	// nil check for unit tests.
 	if r.statusUpdater == nil {
 		return
@@ -427,9 +554,9 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	// publish status
 	r.statusUpdater.Send(status.Update{
 		NamespacedName: key,
-		Resource:       new(gwapiv1b1.Gateway),
+		Resource:       new(gwapiv1.Gateway),
 		Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-			g, ok := obj.(*gwapiv1b1.Gateway)
+			g, ok := obj.(*gwapiv1.Gateway)
 			if !ok {
 				panic(fmt.Sprintf("unsupported object type %T", obj))
 			}
@@ -442,8 +569,8 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	})
 }
 
-func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1a2.ReferenceGrant, error) {
-	refGrantList := new(gwapiv1a2.ReferenceGrantList)
+func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1b1.ReferenceGrant, error) {
+	refGrantList := new(gwapiv1b1.ReferenceGrantList)
 	opts := &client.ListOptions{FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind)}
 	if err := r.client.List(ctx, refGrantList, opts); err != nil {
 		return nil, fmt.Errorf("failed to list ReferenceGrants: %v", err)
@@ -451,7 +578,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 
 	refGrants := refGrantList.Items
 	if len(r.namespaceLabels) != 0 {
-		var rgs []gwapiv1a2.ReferenceGrant
+		var rgs []gwapiv1b1.ReferenceGrant
 		for _, refGrant := range refGrants {
 			ns := refGrant.GetNamespace()
 			ok, err := r.checkObjectNamespaceLabels(ns)
@@ -482,10 +609,10 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1b1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	// Find gateways for the acceptedGC
 	// Find the Gateways that reference this Class.
-	gatewayList := &gwapiv1b1.GatewayList{}
+	gatewayList := &gwapiv1.GatewayList{}
 	if err := r.client.List(ctx, gatewayList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, acceptedGC.Name),
 	}); err != nil {
@@ -495,7 +622,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 
 	gateways := gatewayList.Items
 	if len(r.namespaceLabels) != 0 {
-		var gtws []gwapiv1b1.Gateway
+		var gtws []gwapiv1.Gateway
 		for _, gtw := range gateways {
 			ns := gtw.GetNamespace()
 			ok, err := r.checkObjectNamespaceLabels(ns)
@@ -523,47 +650,19 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 				for _, certRef := range listener.TLS.CertificateRefs {
 					certRef := certRef
 					if refsSecret(&certRef) {
-						secret := new(corev1.Secret)
-						secretNamespace := gatewayapi.NamespaceDerefOr(certRef.Namespace, gtw.Namespace)
-						err := r.client.Get(ctx,
-							types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)},
-							secret,
-						)
-						if err != nil && !kerrors.IsNotFound(err) {
-							r.log.Error(err, "unable to find Secret")
-							return err
+						if err := r.processSecretRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindGateway,
+							gtw.Namespace,
+							gtw.Name,
+							certRef); err != nil {
+
+							r.log.Error(err,
+								"failed to process TLS SecretRef for gateway",
+								"gateway", gtw, "secretRef", certRef)
 						}
-
-						r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(certRef.Name))
-
-						if secretNamespace != gtw.Namespace {
-							from := ObjectKindNamespacedName{
-								kind:      gatewayapi.KindGateway,
-								namespace: gtw.Namespace,
-								name:      gtw.Name,
-							}
-							to := ObjectKindNamespacedName{
-								kind:      gatewayapi.KindSecret,
-								namespace: secretNamespace,
-								name:      string(certRef.Name),
-							}
-							refGrant, err := r.findReferenceGrant(ctx, from, to)
-							switch {
-							case err != nil:
-								r.log.Error(err, "failed to find ReferenceGrant")
-							case refGrant == nil:
-								r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-									"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-							default:
-								// RefGrant found
-								resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
-								r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-									"name", refGrant.Name)
-							}
-						}
-
-						resourceMap.allAssociatedNamespaces[secretNamespace] = struct{}{}
-						resourceTree.Secrets = append(resourceTree.Secrets, secret)
 					}
 				}
 			}
@@ -597,15 +696,15 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		gtw.Status = gwapiv1b1.GatewayStatus{}
+		gtw.Status = gwapiv1.GatewayStatus{}
 		resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
 	}
 	return nil
 }
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
-		refGrant := rawObj.(*gwapiv1a2.ReferenceGrant)
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
+		refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
 		var referredServices []string
 		for _, target := range refGrant.Spec.To {
 			referredServices = append(referredServices, string(target.Kind))
@@ -620,72 +719,20 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
 //   - For Service, ServiceImports objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
 //     This helps in querying for HTTPRoutes that are affected by a particular Service CRUD.
-//   - For AuthenticationFilter and RateLimitFilter objects that are referenced in HTTPRoute objects via
-//     `.spec.rules[].filters`. This helps in querying for HTTPRoutes that are affected by a
-//     particular AuthenticationFilter CRUD.
 func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, authenFilterHTTPRouteIndex, authenFilterHTTPRouteIndexFunc); err != nil {
-		return err
-	}
-
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, rateLimitFilterHTTPRouteIndex, rateLimitFilterHTTPRouteIndexFunc); err != nil {
-		return err
-	}
 	return nil
 }
 
-func authenFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
-	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
-	var filters []string
-	for _, rule := range httproute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsAuthnHTTPFilter(&filter) {
-				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
-}
-
-func rateLimitFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
-	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
-	var filters []string
-	for _, rule := range httproute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsRateLimitHTTPFilter(&filter) {
-				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
-}
-
 func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
-	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
+	httproute := rawObj.(*gwapiv1.HTTPRoute)
 	var gateways []string
 	for _, parent := range httproute.Spec.ParentRefs {
 		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
@@ -703,7 +750,7 @@ func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
-	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
+	httproute := rawObj.(*gwapiv1.HTTPRoute)
 	var backendRefs []string
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
@@ -731,14 +778,6 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	}
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc); err != nil {
-		return err
-	}
-
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, authenFilterGRPCRouteIndex, authenFilterGRPCRouteIndexFunc); err != nil {
-		return err
-	}
-
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, rateLimitFilterGRPCRouteIndex, rateLimitFilterGRPCRouteIndexFunc); err != nil {
 		return err
 	}
 
@@ -781,48 +820,6 @@ func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return backendRefs
-}
-
-func authenFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
-	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
-	var filters []string
-	for _, rule := range grpcroute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsAuthnGRPCFilter(&filter) {
-				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: grpcroute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
-}
-
-func rateLimitFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
-	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
-	var filters []string
-	for _, rule := range grpcroute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsRateLimitGRPCFilter(&filter) {
-				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: grpcroute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
 }
 
 // addTLSRouteIndexers adds indexing on TLSRoute, for Service objects that are
@@ -979,12 +976,12 @@ func backendUDPRouteIndexFunc(rawObj client.Object) []string {
 // referenced in Gateway objects. This helps in querying for Gateways that are
 // affected by a particular Secret CRUD.
 func addGatewayIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.Gateway{}, classGatewayIndex, func(rawObj client.Object) []string {
-		gateway := rawObj.(*gwapiv1b1.Gateway)
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.Gateway{}, classGatewayIndex, func(rawObj client.Object) []string {
+		gateway := rawObj.(*gwapiv1.Gateway)
 		return []string{string(gateway.Spec.GatewayClassName)}
 	}); err != nil {
 		return err
@@ -993,10 +990,10 @@ func addGatewayIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 func secretGatewayIndexFunc(rawObj client.Object) []string {
-	gateway := rawObj.(*gwapiv1b1.Gateway)
+	gateway := rawObj.(*gwapiv1.Gateway)
 	var secretReferences []string
 	for _, listener := range gateway.Spec.Listeners {
-		if listener.TLS == nil || *listener.TLS.Mode != gwapiv1b1.TLSModeTerminate {
+		if listener.TLS == nil || *listener.TLS.Mode != gwapiv1.TLSModeTerminate {
 			continue
 		}
 		for _, cert := range listener.TLS.CertificateRefs {
@@ -1015,56 +1012,28 @@ func secretGatewayIndexFunc(rawObj client.Object) []string {
 	return secretReferences
 }
 
-// addGcFinalizer adds the gatewayclass or envoyproxy finalizer to the provided object, if it doesn't exist.
-func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, obj client.Object) error {
-	switch objType := obj.(type) {
-	case *gwapiv1b1.GatewayClass:
-		if !slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
-			base := client.MergeFrom(objType.DeepCopy())
-			objType.Finalizers = append(objType.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Patch(ctx, objType, base); err != nil {
-				return fmt.Errorf("failed to add finalizer to Gateway Class %s: %w", objType.Name, err)
-			}
+// removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
+func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
+	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+		base := client.MergeFrom(gc.DeepCopy())
+		gc.Finalizers = slice.RemoveString(gc.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Patch(ctx, gc, base); err != nil {
+			return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
 		}
-		return nil
-	case *egv1a1.EnvoyProxy:
-		if !slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
-			base := client.MergeFrom(objType.DeepCopy())
-			objType.Finalizers = append(objType.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Patch(ctx, objType, base); err != nil {
-				return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", objType.Name, err)
-			}
-		}
-		return nil
 	}
-
-	return fmt.Errorf("%s is not supported for finalizer processing", obj.GetObjectKind().GroupVersionKind().Kind)
+	return nil
 }
 
-// removeFinalizer removes the gatewayclass or envoyproxy finalizer from the provided object, if it exists.
-func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, obj client.Object) error {
-	switch objType := obj.(type) {
-	case *gwapiv1b1.GatewayClass:
-		if slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
-			base := client.MergeFrom(objType.DeepCopy())
-			objType.Finalizers = slice.RemoveString(objType.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Patch(ctx, objType, base); err != nil {
-				return fmt.Errorf("failed to add finalizer to Gateway Class %s: %w", objType.Name, err)
-			}
+// addFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
+func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
+	if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+		base := client.MergeFrom(gc.DeepCopy())
+		gc.Finalizers = append(gc.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Patch(ctx, gc, base); err != nil {
+			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
 		}
-		return nil
-	case *egv1a1.EnvoyProxy:
-		if slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
-			base := client.MergeFrom(objType.DeepCopy())
-			objType.Finalizers = slice.RemoveString(objType.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Patch(ctx, objType, base); err != nil {
-				return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", objType.Name, err)
-			}
-		}
-		return nil
 	}
-
-	return fmt.Errorf("%s is not supported for finalizer processing", obj.GetObjectKind().GroupVersionKind().Kind)
+	return nil
 }
 
 // subscribeAndUpdateStatus subscribes to gateway API object status updates and
@@ -1072,16 +1041,17 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, obj client.O
 func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Gateway object status updater
 	go func() {
-		message.HandleSubscription(r.resources.GatewayStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.GatewayStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "gateway-status"}, r.resources.GatewayStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
 				// Get gateway object
-				gtw := new(gwapiv1b1.Gateway)
+				gtw := new(gwapiv1.Gateway)
 				if err := r.client.Get(ctx, update.Key, gtw); err != nil {
 					r.log.Error(err, "gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
+					errChan <- err
 					return
 				}
 				// Set the updated Status and call the status update
@@ -1094,8 +1064,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// HTTPRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.HTTPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "httproute-status"}, r.resources.HTTPRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1.HTTPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1104,11 +1074,13 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				val := update.Value
 				r.statusUpdater.Send(status.Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1b1.HTTPRoute),
+					Resource:       new(gwapiv1.HTTPRoute),
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						h, ok := obj.(*gwapiv1b1.HTTPRoute)
+						h, ok := obj.(*gwapiv1.HTTPRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
 						}
 						hCopy := h.DeepCopy()
 						hCopy.Status.Parents = val.Parents
@@ -1122,8 +1094,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// GRPCRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1136,7 +1108,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						h, ok := obj.(*gwapiv1a2.GRPCRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
 						}
 						hCopy := h.DeepCopy()
 						hCopy.Status.Parents = val.Parents
@@ -1150,8 +1124,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// TLSRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "tlsroute-status"}, r.resources.TLSRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1164,7 +1138,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.TLSRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status.Parents = val.Parents
@@ -1178,8 +1154,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// TCPRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.TCPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "tcproute-status"}, r.resources.TCPRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1192,7 +1168,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.TCPRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status.Parents = val.Parents
@@ -1206,8 +1184,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// UDPRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.UDPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "udproute-status"}, r.resources.UDPRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1220,7 +1198,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.UDPRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status.Parents = val.Parents
@@ -1234,8 +1214,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// EnvoyPatchPolicy object status updater
 	go func() {
-		message.HandleSubscription(r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "envoypatchpolicy-status"}, r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *v1alpha1.EnvoyPatchPolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1244,11 +1224,13 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				val := update.Value
 				r.statusUpdater.Send(status.Update{
 					NamespacedName: key,
-					Resource:       new(egv1a1.EnvoyPatchPolicy),
+					Resource:       new(v1alpha1.EnvoyPatchPolicy),
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*egv1a1.EnvoyPatchPolicy)
+						t, ok := obj.(*v1alpha1.EnvoyPatchPolicy)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status = *val
@@ -1262,8 +1244,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// ClientTrafficPolicy object status updater
 	go func() {
-		message.HandleSubscription(r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus]) {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "clienttrafficpolicy-status"}, r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *v1alpha1.ClientTrafficPolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1272,11 +1254,13 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				val := update.Value
 				r.statusUpdater.Send(status.Update{
 					NamespacedName: key,
-					Resource:       new(egv1a1.ClientTrafficPolicy),
+					Resource:       new(v1alpha1.ClientTrafficPolicy),
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*egv1a1.ClientTrafficPolicy)
+						t, ok := obj.(*v1alpha1.ClientTrafficPolicy)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status = *val
@@ -1288,13 +1272,73 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		r.log.Info("clientTrafficPolicy status subscriber shutting down")
 	}()
 
+	// BackendTrafficPolicy object status updater
+	go func() {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "backendtrafficpolicy-status"}, r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *v1alpha1.BackendTrafficPolicyStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(v1alpha1.BackendTrafficPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*v1alpha1.BackendTrafficPolicy)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("backendTrafficPolicy status subscriber shutting down")
+	}()
+
+	// SecurityPolicy object status updater
+	go func() {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "securitypolicy-status"}, r.resources.SecurityPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *v1alpha1.SecurityPolicyStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(v1alpha1.SecurityPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*v1alpha1.SecurityPolicy)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("securityPolicy status subscriber shutting down")
+	}()
 }
 
 // watchResources watches gateway api resources.
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller) error {
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1b1.GatewayClass{}),
+		source.Kind(mgr.GetCache(), &gwapiv1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.hasMatchingController),
 	); err != nil {
 		return err
@@ -1302,6 +1346,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
 	epPredicates := []predicate.Predicate{
+		predicate.GenerationChangedPredicate{},
 		predicate.ResourceVersionChangedPredicate{},
 		predicate.NewPredicateFuncs(r.hasManagedClass),
 	}
@@ -1309,7 +1354,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		epPredicates = append(epPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.EnvoyProxy{}),
+		source.Kind(mgr.GetCache(), &v1alpha1.EnvoyProxy{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		epPredicates...,
 	); err != nil {
@@ -1317,12 +1362,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
-	gPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateGatewayForReconcile)}
+	gPredicates := []predicate.Predicate{
+		predicate.GenerationChangedPredicate{},
+		predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
+	}
 	if len(r.namespaceLabels) != 0 {
 		gPredicates = append(gPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1b1.Gateway{}),
+		source.Kind(mgr.GetCache(), &gwapiv1.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		gPredicates...,
 	); err != nil {
@@ -1333,12 +1381,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
-	httprPredicates := []predicate.Predicate{}
+	httprPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		httprPredicates = append(httprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1b1.HTTPRoute{}),
+		source.Kind(mgr.GetCache(), &gwapiv1.HTTPRoute{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		httprPredicates...,
 	); err != nil {
@@ -1349,7 +1397,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch GRPCRoute CRUDs and process affected Gateways.
-	grpcrPredicates := []predicate.Predicate{}
+	grpcrPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		grpcrPredicates = append(grpcrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1365,7 +1413,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch TLSRoute CRUDs and process affected Gateways.
-	tlsrPredicates := []predicate.Predicate{}
+	tlsrPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		tlsrPredicates = append(tlsrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1381,7 +1429,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch UDPRoute CRUDs and process affected Gateways.
-	udprPredicates := []predicate.Predicate{}
+	udprPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		udprPredicates = append(udprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1397,7 +1445,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch TCPRoute CRUDs and process affected Gateways.
-	tcprPredicates := []predicate.Predicate{}
+	tcprPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		tcprPredicates = append(tcprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1435,6 +1483,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &mcsapi.ServiceImport{}),
 			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+			predicate.GenerationChangedPredicate{},
 			predicate.NewPredicateFuncs(r.validateServiceImportForReconcile)); err != nil {
 			// ServiceImport is not available in the cluster, skip the watch and not throw error.
 			r.log.Info("unable to watch ServiceImport: %s", err.Error())
@@ -1442,7 +1491,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
-	esPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile)}
+	esPredicates := []predicate.Predicate{
+		predicate.GenerationChangedPredicate{},
+		predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile),
+	}
 	if len(r.namespaceLabels) != 0 {
 		esPredicates = append(esPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1456,7 +1508,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
-	nPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.handleNode)}
+	nPredicates := []predicate.Predicate{
+		predicate.GenerationChangedPredicate{},
+		predicate.NewPredicateFuncs(r.handleNode),
+	}
 	if len(r.namespaceLabels) != 0 {
 		nPredicates = append(nPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1470,7 +1525,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Secret CRUDs and process affected Gateways.
-	secretPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateSecretForReconcile)}
+	secretPredicates := []predicate.Predicate{
+		predicate.GenerationChangedPredicate{},
+		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+	}
 	if len(r.namespaceLabels) != 0 {
 		secretPredicates = append(secretPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1483,12 +1541,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch ReferenceGrant CRUDs and process affected Gateways.
-	rgPredicates := []predicate.Predicate{}
+	rgPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		rgPredicates = append(rgPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.ReferenceGrant{}),
+		source.Kind(mgr.GetCache(), &gwapiv1b1.ReferenceGrant{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		rgPredicates...,
 	); err != nil {
@@ -1511,41 +1569,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch AuthenticationFilter CRUDs and enqueue associated HTTPRoute objects.
-	afPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)}
-	if len(r.namespaceLabels) != 0 {
-		afPredicates = append(afPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.AuthenticationFilter{}),
-		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
-		afPredicates...,
-	); err != nil {
-		return err
-	}
-
-	rfPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)}
-	if len(r.namespaceLabels) != 0 {
-		rfPredicates = append(rfPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
-	}
-	// Watch RateLimitFilter CRUDs and enqueue associated HTTPRoute objects.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.RateLimitFilter{}),
-		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
-		rfPredicates...,
-	); err != nil {
-		return err
-	}
-
 	// Watch EnvoyPatchPolicy if enabled in config
-	eppPredicates := []predicate.Predicate{}
+	eppPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		eppPredicates = append(eppPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
 		// Watch EnvoyPatchPolicy CRUDs
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
+			source.Kind(mgr.GetCache(), &v1alpha1.EnvoyPatchPolicy{}),
 			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 			eppPredicates...,
 		); err != nil {
@@ -1554,15 +1586,43 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch ClientTrafficPolicy
-	ctpPredicates := []predicate.Predicate{}
+	ctpPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		ctpPredicates = append(ctpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.ClientTrafficPolicy{}),
+		source.Kind(mgr.GetCache(), &v1alpha1.ClientTrafficPolicy{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		ctpPredicates...,
+	); err != nil {
+		return err
+	}
+
+	// Watch BackendTrafficPolicy
+	btpPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
+	if len(r.namespaceLabels) != 0 {
+		btpPredicates = append(btpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &v1alpha1.BackendTrafficPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		btpPredicates...,
+	); err != nil {
+		return err
+	}
+
+	// Watch SecurityPolicy
+	spPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
+	if len(r.namespaceLabels) != 0 {
+		spPredicates = append(spPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &v1alpha1.SecurityPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		spPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1570,7 +1630,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
-	uPredicates := []predicate.Predicate{}
+	uPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
 		uPredicates = append(uPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1595,7 +1655,7 @@ func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) 
 }
 
 func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
-	ep, ok := obj.(*egv1a1.EnvoyProxy)
+	ep, ok := obj.(*v1alpha1.EnvoyProxy)
 	if !ok {
 		panic(fmt.Sprintf("unsupported object type %T", obj))
 	}
@@ -1607,7 +1667,7 @@ func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
 		return false
 	}
 
-	gcList := new(gwapiv1b1.GatewayClassList)
+	gcList := new(gwapiv1.GatewayClassList)
 	err := r.client.List(context.TODO(), gcList)
 	if err != nil {
 		r.log.Error(err, "failed to list gatewayclasses")
@@ -1628,13 +1688,13 @@ func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
 }
 
 // processParamsRef processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1b1.GatewayClass, resourceTree *gatewayapi.Resources) error {
-	if gc.Spec.ParametersRef != nil {
-		if !refsEnvoyProxy(gc) {
-			return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
-		}
+func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceTree *gatewayapi.Resources) error {
+	if !refsEnvoyProxy(gc) {
+		return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
 	}
-	epList := new(egv1a1.EnvoyProxyList)
+
+	epList := new(v1alpha1.EnvoyProxyList)
+
 	// The EnvoyProxy must be in the same namespace as EG.
 	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: r.namespace}); err != nil {
 		return fmt.Errorf("failed to list envoyproxies in namespace %s: %v", r.namespace, err)
@@ -1652,39 +1712,14 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 		ep := epList.Items[i]
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 		if classRefsEnvoyProxy(gc, &ep) {
-			if !gc.DeletionTimestamp.IsZero() {
-				if err := r.removeFinalizer(ctx, &ep); err != nil {
-					r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
-						ep.Name))
-					return err
-				}
-				return nil
-			}
 			found = true
 			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
 				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
 				continue
 			}
 			valid = true
-
-			if err := r.addFinalizer(ctx, &ep); err != nil {
-				r.log.Error(err, fmt.Sprintf("failed adding finalizer to envoy proxy %s",
-					ep.Name))
-				return err
-			}
-
 			resourceTree.EnvoyProxy = &ep
 			break
-		}
-
-		// Remove finalizer from EnvoyProxy when GatewayClass stops referencing it
-		if slice.ContainsString(ep.Finalizers, gatewayClassFinalizer) {
-			if err := r.removeFinalizer(ctx, &ep); err != nil {
-				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
-					ep.Name))
-				return err
-			}
-			return nil
 		}
 	}
 

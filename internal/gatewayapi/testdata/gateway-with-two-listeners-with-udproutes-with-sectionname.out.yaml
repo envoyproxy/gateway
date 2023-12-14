@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -34,6 +34,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp1
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -50,6 +55,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp2
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -150,9 +160,11 @@ xdsIR:
       destination:
         name: udproute/default/udproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8162
+          protocol: UDP
           weight: 1
       name: envoy-gateway/gateway-1/udp1/udproute-1
       port: 10162
@@ -160,9 +172,11 @@ xdsIR:
       destination:
         name: udproute/default/udproute-2/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8162
+          protocol: UDP
           weight: 1
       name: envoy-gateway/gateway-1/udp2/udproute-2
       port: 10163

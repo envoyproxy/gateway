@@ -8,7 +8,7 @@ Service. To learn more about GatewayClass and ParametersRef, please refer to [Ga
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Add GatewayClass ParametersRef
@@ -17,7 +17,7 @@ First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Co
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
@@ -55,7 +55,7 @@ After you apply the config, you should see the replicas of envoyproxy changes to
 And also you can dynamically change the value.
 
 ``` shell
-kubectl get deployment envoy-gateway
+kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg
 ```
 
 ## Customize EnvoyProxy Image
@@ -135,7 +135,7 @@ EOF
 
 ## Customize EnvoyProxy Deployment Env
 
-You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like: 
+You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like:
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -187,7 +187,7 @@ spec:
           volumes:
           - name: certs
             secret:
-              secretName: envoy-cert   
+              secretName: envoy-cert
 EOF
 ```
 
@@ -220,7 +220,7 @@ After applying the config, you can get the envoyproxy service, and see annotatio
 
 ## Customize EnvoyProxy Bootstrap Config
 
-You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config. 
+You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config.
 There are two ways to customize it:
 
 * Replace: the whole bootstrap config will be replaced by the config you provided.
@@ -236,7 +236,7 @@ metadata:
 spec:
   bootstrap:
     type: Replace
-    bootstrap: |
+    value: |
       admin:
         access_log:
         - name: envoy.access_loggers.file
@@ -310,12 +310,45 @@ spec:
 EOF
 ```
 
-You can use [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration)
+You can use [egctl translate][]
 to get the default xDS Bootstrap configuration used by Envoy Gateway.
 
 After applying the config, the bootstrap config will be overridden by the new config you provided.
 Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
-You can also validate this configuration using [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration).
+You can also validate this configuration using [egctl translate][].
+
+## Customize EnvoyProxy Horizontal Pod Autoscaler
+
+You can enable [Horizontal Pod Autoscaler](https://github.com/envoyproxy/gateway/issues/703) for EnvoyProxy Deployment. However, before enabling the HPA for EnvoyProxy, please ensure that the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) component is installed in the cluster.
+
+Once confirmed, you can apply it via EnvoyProxy Config as shown below:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyHpa:
+        minReplicas: 2
+        maxReplicas: 10
+        metrics:
+          - resource:
+              name: cpu
+              target:
+                averageUtilization: 60
+                type: Utilization
+            type: Resource
+EOF
+```
+
+After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is generated. However, upon activating the EnvoyProxy's HPA, the Envoy Gateway will no longer reference the `replicas` field specified in the `envoyDeployment`, as outlined [here](#customize-envoyproxy-deployment-replicas).
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy 
+[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[egctl translate]: ../egctl/#validating-gateway-api-configuration

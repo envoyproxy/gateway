@@ -1,7 +1,7 @@
 processor:
   # RE2 regular expressions describing types that should be excluded from the generated documentation.
   ignoreTypes:
-    - "(EnvoyProxy|AuthenticationFilter|RateLimitFilter)List$"
+    - "(EnvoyProxy)List$"
   # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
   ignoreFields:
     - "status$"
@@ -12,5 +12,5 @@ render:
   kubernetesVersion: 1.26
   knownTypes:
     - name: SecretObjectReference
-      package: sigs.k8s.io/gateway-api/apis/v1beta1
-      link: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference

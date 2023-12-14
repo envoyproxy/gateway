@@ -48,7 +48,7 @@
                 "routes": [
                   {
                     "match": {
-                      "prefix": "/v2/"
+                      "pathSeparatedPrefix": "/v2"
                     },
                     "name": "httproute/default/backend/rule/0/match/0/www_example2_com",
                     "route": {

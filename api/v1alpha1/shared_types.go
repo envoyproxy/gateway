@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	appv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -21,6 +22,10 @@ const (
 	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
+	// HTTPProtocol is the common-used http protocol.
+	HTTPProtocol = "http"
+	// GRPCProtocol is the common-used grpc protocol.
+	GRPCProtocol = "grpc"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -56,15 +61,21 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
 
-	// Pod defines the desired annotations and securityContext of container.
+	// Pod defines the desired specification of pod.
 	//
 	// +optional
 	Pod *KubernetesPodSpec `json:"pod,omitempty"`
 
-	// Container defines the resources and securityContext of container.
+	// Container defines the desired specification of main container.
 	//
 	// +optional
 	Container *KubernetesContainerSpec `json:"container,omitempty"`
+
+	// List of initialization containers belonging to the pod.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	//
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
@@ -189,12 +200,17 @@ type KubernetesServiceSpec struct {
 	// +optional
 	AllocateLoadBalancerNodePorts *bool `json:"allocateLoadBalancerNodePorts,omitempty"`
 
+	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
+	// may be ignored if the load balancer provider does not support this feature.
+	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
+	// providers such as GCP.
+	// +optional
+	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
+
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
 // LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
-// This type is not implemented for EnvoyProxy until
-// https://github.com/envoyproxy/gateway/issues/280 is fixed.
 // +kubebuilder:validation:Enum=debug;info;error;warn
 type LogLevel string
 
@@ -224,3 +240,74 @@ const (
 	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
 	XDSTranslation  XDSTranslatorHook = "Translation"
 )
+
+// StringMatch defines how to match any strings.
+// This is a general purpose match condition that can be used by other EG APIs
+// that need to match against a string.
+type StringMatch struct {
+	// Type specifies how to match against a string.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *StringMatchType `json:"type,omitempty"`
+
+	// Value specifies the string value that the match must have.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Value string `json:"value"`
+}
+
+// StringMatchType specifies the semantics of how a string value should be compared.
+// Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+//
+// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
+type StringMatchType string
+
+const (
+	// StringMatchExact :the input string must match exactly the match value.
+	StringMatchExact StringMatchType = "Exact"
+
+	// StringMatchPrefix :the input string must start with the match value.
+	StringMatchPrefix StringMatchType = "Prefix"
+
+	// StringMatchSuffix :the input string must end with the match value.
+	StringMatchSuffix StringMatchType = "Suffix"
+
+	// StringMatchRegularExpression :The input string must match the regular expression
+	// specified in the match value.
+	// The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
+	StringMatchRegularExpression StringMatchType = "RegularExpression"
+)
+
+// KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
+// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
+type KubernetesHorizontalPodAutoscalerSpec struct {
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler
+	// can scale down. It defaults to 1 replica.
+	//
+	// +optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	//
+	MaxReplicas *int32 `json:"maxReplicas"`
+
+	// metrics contains the specifications for which to use to calculate the
+	// desired replica count (the maximum replica count across all metrics will
+	// be used).
+	// If left empty, it defaults to being based on CPU utilization with average on 80% usage.
+	//
+	// +optional
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
+
+	// behavior configures the scaling behavior of the target
+	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
+	// If not set, the default HPAScalingRules for scale up and scale down are used.
+	// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior.
+	//
+	// +optional
+	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+}

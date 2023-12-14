@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -176,7 +176,7 @@ func TestDecode(t *testing.T) {
 							Redis: &v1alpha1.RateLimitRedisSettings{
 								URL: "localhost:6379",
 								TLS: &v1alpha1.RedisTLSSettings{
-									CertificateRef: &gwapiv1b1.SecretObjectReference{
+									CertificateRef: &gwapiv1.SecretObjectReference{
 										Name: "ratelimit-cert",
 									},
 								},

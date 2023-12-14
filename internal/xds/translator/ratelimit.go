@@ -128,7 +128,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
 func patchRouteWithRateLimit(xdsRouteAction *routev3.RouteAction, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
-	if irRoute.RateLimit == nil || irRoute.RateLimit.Global == nil {
+	if irRoute.RateLimit == nil || irRoute.RateLimit.Global == nil || xdsRouteAction == nil {
 		return nil
 	}
 
@@ -432,6 +432,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	host, port := t.getRateLimitServiceGrpcHostPort()
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To(uint32(1)),
+		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))},
 	}
 
@@ -440,12 +441,11 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		return err
 	}
 
-	if err := addXdsCluster(tCtx, addXdsClusterArgs{
+	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
-		protocol:     HTTP2,
-		endpointType: DefaultEndpointType,
+		endpointType: EndpointTypeDNS,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

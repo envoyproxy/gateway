@@ -6,6 +6,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -17,10 +19,11 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:  DefaultGateway(),
-			Provider: DefaultEnvoyGatewayProvider(),
-			Logging:  DefaultEnvoyGatewayLogging(),
-			Admin:    DefaultEnvoyGatewayAdmin(),
+			Gateway:   DefaultGateway(),
+			Provider:  DefaultEnvoyGatewayProvider(),
+			Logging:   DefaultEnvoyGatewayLogging(),
+			Admin:     DefaultEnvoyGatewayAdmin(),
+			Telemetry: DefaultEnvoyGatewayTelemetry(),
 		},
 	}
 }
@@ -45,6 +48,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Admin == nil {
 		e.Admin = DefaultEnvoyGatewayAdmin()
 	}
+	if e.Telemetry == nil {
+		e.Telemetry = DefaultEnvoyGatewayTelemetry()
+	}
 }
 
 // GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
@@ -60,6 +66,25 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 	return e.Admin
 }
 
+// GetEnvoyGatewayAdminAddress returns the EnvoyGateway Admin Address.
+func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
+	address := e.GetEnvoyGatewayAdmin().Address
+	if address != nil {
+		return fmt.Sprintf("%s:%d", address.Host, address.Port)
+	}
+
+	return ""
+}
+
+// NamespaceMode returns if uses namespace mode.
+func (e *EnvoyGateway) NamespaceMode() bool {
+	return e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.Watch != nil &&
+		e.Provider.Kubernetes.Watch.Type == KubernetesWatchModeTypeNamespaces &&
+		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
+}
+
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
@@ -73,6 +98,49 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 		Level: map[EnvoyGatewayLogComponent]LogLevel{
 			LogComponentGatewayDefault: LogLevelInfo,
 		},
+	}
+}
+
+// GetEnvoyGatewayTelemetry returns the EnvoyGatewayTelemetry of EnvoyGateway or a default EnvoyGatewayTelemetry if unspecified.
+func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
+	if e.Telemetry != nil {
+		if e.Telemetry.Metrics.Prometheus == nil {
+			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
+		}
+		if e.Telemetry.Metrics == nil {
+			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
+		}
+		return e.Telemetry
+	}
+	e.Telemetry = DefaultEnvoyGatewayTelemetry()
+
+	return e.Telemetry
+}
+
+// DisablePrometheus returns if disable prometheus.
+func (e *EnvoyGateway) DisablePrometheus() bool {
+	return e.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable
+}
+
+// DefaultEnvoyGatewayTelemetry returns a new EnvoyGatewayTelemetry with default configuration parameters.
+func DefaultEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
+	return &EnvoyGatewayTelemetry{
+		Metrics: DefaultEnvoyGatewayMetrics(),
+	}
+}
+
+// DefaultEnvoyGatewayMetrics returns a new EnvoyGatewayMetrics with default configuration parameters.
+func DefaultEnvoyGatewayMetrics() *EnvoyGatewayMetrics {
+	return &EnvoyGatewayMetrics{
+		Prometheus: DefaultEnvoyGatewayPrometheus(),
+	}
+}
+
+// DefaultEnvoyGatewayPrometheus returns a new EnvoyGatewayMetrics with default configuration parameters.
+func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
+	return &EnvoyGatewayPrometheusProvider{
+		// Enable prometheus pull by default.
+		Disable: false,
 	}
 }
 
@@ -103,8 +171,9 @@ func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 // DefaultEnvoyGatewayAdmin returns a new EnvoyGatewayAdmin with default configuration parameters.
 func DefaultEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 	return &EnvoyGatewayAdmin{
-		Debug:   false,
-		Address: DefaultEnvoyGatewayAdminAddress(),
+		Address:          DefaultEnvoyGatewayAdminAddress(),
+		EnableDumpConfig: false,
+		EnablePprof:      false,
 	}
 }
 

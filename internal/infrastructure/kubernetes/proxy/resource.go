@@ -50,9 +50,9 @@ var (
 		`"private_key":{"filename":"%s"}}}]}`, XdsTLSCertFilename, XdsTLSKeyFilename)
 )
 
-// ExpectedResourceHashedName returns expected resource hashed name.
+// ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
 func ExpectedResourceHashedName(name string) string {
-	hashedName := providerutils.GetHashedName(name)
+	hashedName := providerutils.GetHashedName(name, 48)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }
 
@@ -84,8 +84,21 @@ func envoyLabels(extraLabels map[string]string) map[string]string {
 	return labels
 }
 
+func enablePrometheus(infra *ir.ProxyInfra) bool {
+	if infra.Config != nil &&
+		infra.Config.Spec.Telemetry != nil &&
+		infra.Config.Spec.Telemetry.Metrics != nil &&
+		infra.Config.Spec.Telemetry.Metrics.Prometheus != nil &&
+		infra.Config.Spec.Telemetry.Metrics.Prometheus.Disable {
+		return false
+	}
+
+	return true
+}
+
 // expectedProxyContainers returns expected proxy containers.
-func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
+func expectedProxyContainers(infra *ir.ProxyInfra,
+	deploymentConfig *egv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
@@ -102,7 +115,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.Kube
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				Name:          p.Name,
+				// hashed container port name including up to the 6 characters of the port name and the maximum of 15 characters.
+				Name:          providerutils.GetHashedName(p.Name, 6),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}
@@ -110,12 +124,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.Kube
 		}
 	}
 
-	var proxyMetrics *egv1a1.ProxyMetrics
-	if infra.Config != nil {
-		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
-	}
-
-	if proxyMetrics != nil && proxyMetrics.Prometheus != nil {
+	if enablePrometheus(infra) {
 		ports = append(ports, corev1.ContainerPort{
 			Name:          "metrics",
 			ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
@@ -125,6 +134,11 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.Kube
 
 	var bootstrapConfigurations string
 
+	var proxyMetrics *egv1a1.ProxyMetrics
+	if infra.Config != nil &&
+		infra.Config.Spec.Telemetry != nil {
+		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
+	}
 	// Get the default Bootstrap
 	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(proxyMetrics)
 	if err != nil {

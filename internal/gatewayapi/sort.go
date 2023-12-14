@@ -16,7 +16,42 @@ type XdsIRRoutes []*ir.HTTPRoute
 func (x XdsIRRoutes) Len() int      { return len(x) }
 func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
-	// 1. Sort based on characters in a matching path.
+
+	// 1. Sort based on path match type
+	// Exact > PathPrefix > RegularExpression
+	if x[i].PathMatch != nil && x[i].PathMatch.Exact != nil {
+		if x[j].PathMatch != nil {
+			if x[j].PathMatch.Prefix != nil {
+				return false
+			}
+			if x[j].PathMatch.SafeRegex != nil {
+				return false
+			}
+		}
+	}
+	if x[i].PathMatch != nil && x[i].PathMatch.Prefix != nil {
+		if x[j].PathMatch != nil {
+			if x[j].PathMatch.Exact != nil {
+				return true
+			}
+			if x[j].PathMatch.SafeRegex != nil {
+				return false
+			}
+		}
+	}
+	if x[i].PathMatch != nil && x[i].PathMatch.SafeRegex != nil {
+		if x[j].PathMatch != nil {
+			if x[j].PathMatch.Exact != nil {
+				return true
+			}
+			if x[j].PathMatch.Prefix != nil {
+				return true
+			}
+		}
+	}
+	// Equal case
+
+	// 2. Sort based on characters in a matching path.
 	pCountI := pathMatchCount(x[i].PathMatch)
 	pCountJ := pathMatchCount(x[j].PathMatch)
 	if pCountI < pCountJ {
@@ -27,7 +62,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	}
 	// Equal case
 
-	// 2. Sort based on the number of Header matches.
+	// 3. Sort based on the number of Header matches.
 	hCountI := len(x[i].HeaderMatches)
 	hCountJ := len(x[j].HeaderMatches)
 	if hCountI < hCountJ {
@@ -38,7 +73,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	}
 	// Equal case
 
-	// 3. Sort based on the number of Query param matches.
+	// 4. Sort based on the number of Query param matches.
 	qCountI := len(x[i].QueryParamMatches)
 	qCountJ := len(x[j].QueryParamMatches)
 	return qCountI < qCountJ
@@ -46,7 +81,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 
 // sortXdsIR sorts the xdsIR based on the match precedence
 // defined in the Gateway API spec.
-// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
+// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
 func sortXdsIRMap(xdsIR XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {

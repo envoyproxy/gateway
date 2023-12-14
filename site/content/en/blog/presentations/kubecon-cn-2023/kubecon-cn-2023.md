@@ -22,4 +22,4 @@ Download from [Link](https://static.sched.com/hosted_files/kccncosschn2023/60/Ku
 
 ## Watch Videos
 
-*To be uploaded...*
+{{< youtube XBsDe9stMcg >}}

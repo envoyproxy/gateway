@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -36,6 +36,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -54,6 +59,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-2
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -61,7 +71,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -129,9 +139,11 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: foo.com
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
@@ -152,9 +164,11 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: bar.com
         name: httproute/default/httproute-1/rule/0/match/0/bar_com

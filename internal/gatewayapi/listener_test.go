@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -18,14 +18,14 @@ import (
 
 func TestProcessTracing(t *testing.T) {
 	cases := []struct {
-		gw    v1beta1.Gateway
+		gw    gwapiv1.Gateway
 		proxy *egcfgv1a1.EnvoyProxy
 
 		expected *ir.Tracing
 	}{
 		{},
 		{
-			gw: v1beta1.Gateway{
+			gw: gwapiv1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-gw",
 					Namespace: "fake-ns",
@@ -33,7 +33,7 @@ func TestProcessTracing(t *testing.T) {
 			},
 			proxy: &egcfgv1a1.EnvoyProxy{
 				Spec: egcfgv1a1.EnvoyProxySpec{
-					Telemetry: egcfgv1a1.ProxyTelemetry{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
 						Tracing: &egcfgv1a1.ProxyTracing{},
 					},
 				},
@@ -68,7 +68,7 @@ func TestProcessMetrics(t *testing.T) {
 			name: "virtual host stats enabled",
 			proxy: &egcfgv1a1.EnvoyProxy{
 				Spec: egcfgv1a1.EnvoyProxySpec{
-					Telemetry: egcfgv1a1.ProxyTelemetry{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
 						Metrics: &egcfgv1a1.ProxyMetrics{
 							EnableVirtualHostStats: true,
 						},

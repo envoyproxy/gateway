@@ -13,14 +13,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
 // setting conditions, accessing Listeners, etc.
 type GatewayContext struct {
-	*v1beta1.Gateway
+	*gwapiv1.Gateway
 
 	listeners []*ListenerContext
 }
@@ -29,11 +29,11 @@ type GatewayContext struct {
 // ListenerContexts from the Gateway spec.
 func (g *GatewayContext) ResetListeners() {
 	numListeners := len(g.Spec.Listeners)
-	g.Status.Listeners = make([]v1beta1.ListenerStatus, numListeners)
+	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
 	for i := range g.Spec.Listeners {
 		listener := &g.Spec.Listeners[i]
-		g.Status.Listeners[i] = v1beta1.ListenerStatus{Name: listener.Name}
+		g.Status.Listeners[i] = gwapiv1.ListenerStatus{Name: listener.Name}
 		g.listeners[i] = &ListenerContext{
 			Listener:          listener,
 			gateway:           g.Gateway,
@@ -46,15 +46,15 @@ func (g *GatewayContext) ResetListeners() {
 // setting conditions and other status information on the associated
 // Gateway, etc.
 type ListenerContext struct {
-	*v1beta1.Listener
+	*gwapiv1.Listener
 
-	gateway           *v1beta1.Gateway
+	gateway           *gwapiv1.Gateway
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
 	tlsSecrets        []*v1.Secret
 }
 
-func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionType, status metav1.ConditionStatus, reason v1beta1.ListenerConditionReason, message string) {
+func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, status metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
 		Status:             status,
@@ -86,7 +86,7 @@ func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionTy
 	}
 }
 
-func (l *ListenerContext) SetSupportedKinds(kinds ...v1beta1.RouteGroupKind) {
+func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = kinds
 }
 
@@ -98,7 +98,7 @@ func (l *ListenerContext) AttachedRoutes() int32 {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes
 }
 
-func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
+func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
 			allowed.Kind == kind.Kind {
@@ -119,9 +119,9 @@ func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
 	}
 
 	switch *l.AllowedRoutes.Namespaces.From {
-	case v1beta1.NamespacesFromAll:
+	case gwapiv1.NamespacesFromAll:
 		return true
-	case v1beta1.NamespacesFromSelector:
+	case gwapiv1.NamespacesFromSelector:
 		if l.namespaceSelector == nil {
 			return false
 		}
@@ -134,7 +134,7 @@ func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
 
 func (l *ListenerContext) IsReady() bool {
 	for _, cond := range l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions {
-		if cond.Type == string(v1beta1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionTrue {
+		if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionTrue {
 			return true
 		}
 	}
@@ -162,9 +162,9 @@ type HTTPRouteContext struct {
 	// GatewayControllerName is the name of the Gateway API controller.
 	GatewayControllerName string
 
-	*v1beta1.HTTPRoute
+	*gwapiv1.HTTPRoute
 
-	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
+	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
 // GRPCRouteContext wraps a GRPCRoute and provides helper methods for
@@ -175,7 +175,7 @@ type GRPCRouteContext struct {
 
 	*v1alpha2.GRPCRoute
 
-	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
+	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
@@ -186,7 +186,7 @@ type TLSRouteContext struct {
 
 	*v1alpha2.TLSRoute
 
-	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
+	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
@@ -197,7 +197,7 @@ type UDPRouteContext struct {
 
 	*v1alpha2.UDPRoute
 
-	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
+	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
@@ -208,18 +208,18 @@ type TCPRouteContext struct {
 
 	*v1alpha2.TCPRoute
 
-	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
+	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
 // GetRouteType returns the Kind of the Route object, HTTPRoute,
 // TLSRoute, TCPRoute, UDPRoute etc.
-func GetRouteType(route RouteContext) v1beta1.Kind {
+func GetRouteType(route RouteContext) gwapiv1.Kind {
 	rv := reflect.ValueOf(route).Elem()
-	return v1beta1.Kind(rv.FieldByName("Kind").String())
+	return gwapiv1.Kind(rv.FieldByName("Kind").String())
 }
 
-// TODO: [v1alpha2-v1beta1] This should not be required once all Route
-// objects being implemented are of type v1beta1.
+// TODO: [v1alpha2-gwapiv1] This should not be required once all Route
+// objects being implemented are of type gwapiv1.
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
@@ -236,39 +236,39 @@ func GetHostnames(route RouteContext) []string {
 	return hostnames
 }
 
-// TODO: [v1alpha2-v1beta1] This should not be required once all Route
-// objects being implemented are of type v1beta1.
+// TODO: [v1alpha2-gwapiv1] This should not be required once all Route
+// objects being implemented are of type gwapiv1.
 // GetParentReferences returns the ParentReference of the Route object.
-func GetParentReferences(route RouteContext) []v1beta1.ParentReference {
+func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	rv := reflect.ValueOf(route).Elem()
 	kind := rv.FieldByName("Kind").String()
 	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	if kind == KindHTTPRoute || kind == KindGRPCRoute {
-		return pr.Interface().([]v1beta1.ParentReference)
+		return pr.Interface().([]gwapiv1.ParentReference)
 	}
 
-	parentReferences := make([]v1beta1.ParentReference, pr.Len())
+	parentReferences := make([]gwapiv1.ParentReference, pr.Len())
 	for i := 0; i < len(parentReferences); i++ {
-		p := pr.Index(i).Interface().(v1beta1.ParentReference)
+		p := pr.Index(i).Interface().(gwapiv1.ParentReference)
 		parentReferences[i] = UpgradeParentReference(p)
 	}
 	return parentReferences
 }
 
 // GetRouteStatus returns the RouteStatus object associated with the Route.
-func GetRouteStatus(route RouteContext) *v1beta1.RouteStatus {
+func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	rv := reflect.ValueOf(route).Elem()
-	rs := rv.FieldByName("Status").FieldByName("RouteStatus").Interface().(v1beta1.RouteStatus)
+	rs := rv.FieldByName("Status").FieldByName("RouteStatus").Interface().(gwapiv1.RouteStatus)
 	return &rs
 }
 
 // GetRouteParentContext returns RouteParentContext by using the Route
 // objects' ParentReference.
-func GetRouteParentContext(route RouteContext, forParentRef v1beta1.ParentReference) *RouteParentContext {
+func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentReference) *RouteParentContext {
 	rv := reflect.ValueOf(route).Elem()
 	pr := rv.FieldByName("ParentRefs")
 	if pr.IsNil() {
-		mm := reflect.MakeMap(reflect.TypeOf(map[v1beta1.ParentReference]*RouteParentContext{}))
+		mm := reflect.MakeMap(reflect.TypeOf(map[gwapiv1.ParentReference]*RouteParentContext{}))
 		pr.Set(mm)
 	}
 
@@ -282,10 +282,10 @@ func GetRouteParentContext(route RouteContext, forParentRef v1beta1.ParentRefere
 		isHTTPRoute = true
 	}
 
-	var parentRef *v1beta1.ParentReference
+	var parentRef *gwapiv1.ParentReference
 	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	for i := 0; i < specParentRefs.Len(); i++ {
-		p := specParentRefs.Index(i).Interface().(v1beta1.ParentReference)
+		p := specParentRefs.Index(i).Interface().(gwapiv1.ParentReference)
 		up := p
 		if !isHTTPRoute {
 			up = UpgradeParentReference(p)
@@ -307,10 +307,10 @@ func GetRouteParentContext(route RouteContext, forParentRef v1beta1.ParentRefere
 	routeParentStatusIdx := -1
 	statusParents := rv.FieldByName("Status").FieldByName("Parents")
 	for i := 0; i < statusParents.Len(); i++ {
-		p := statusParents.Index(i).FieldByName("ParentRef").Interface().(v1beta1.ParentReference)
+		p := statusParents.Index(i).FieldByName("ParentRef").Interface().(gwapiv1.ParentReference)
 		if !isHTTPRoute {
 			p = UpgradeParentReference(p)
-			defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
+			defaultNamespace := gwapiv1.Namespace(metav1.NamespaceDefault)
 			if forParentRef.Namespace == nil {
 				forParentRef.Namespace = &defaultNamespace
 			}
@@ -350,11 +350,11 @@ func GetRouteParentContext(route RouteContext, forParentRef v1beta1.ParentRefere
 // setting conditions and other status information on the associated
 // HTTPRoute, TLSRoute etc.
 type RouteParentContext struct {
-	*v1beta1.ParentReference
+	*gwapiv1.ParentReference
 
-	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
-	// a single field pointing to *v1beta1.RouteStatus.
-	HTTPRoute *v1beta1.HTTPRoute
+	// TODO: [v1alpha2-gwapiv1] This can probably be replaced with
+	// a single field pointing to *gwapiv1.RouteStatus.
+	HTTPRoute *gwapiv1.HTTPRoute
 	GRPCRoute *v1alpha2.GRPCRoute
 	TLSRoute  *v1alpha2.TLSRoute
 	TCPRoute  *v1alpha2.TCPRoute
@@ -368,7 +368,7 @@ func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 	r.listeners = append(r.listeners, listeners...)
 }
 
-func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1beta1.RouteConditionType, status metav1.ConditionStatus, reason v1beta1.RouteConditionReason, message string) {
+func (r *RouteParentContext) SetCondition(route RouteContext, conditionType gwapiv1.RouteConditionType, status metav1.ConditionStatus, reason gwapiv1.RouteConditionReason, message string) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
 		Status:             status,
@@ -406,7 +406,7 @@ func (r *RouteParentContext) ResetConditions(route RouteContext) {
 	routeStatus.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 }
 
-func (r *RouteParentContext) HasCondition(route RouteContext, condType v1beta1.RouteConditionType, status metav1.ConditionStatus) bool {
+func (r *RouteParentContext) HasCondition(route RouteContext, condType gwapiv1.RouteConditionType, status metav1.ConditionStatus) bool {
 	var conditions []metav1.Condition
 	routeStatus := GetRouteStatus(route)
 	conditions = routeStatus.Parents[r.routeParentStatusIdx].Conditions
