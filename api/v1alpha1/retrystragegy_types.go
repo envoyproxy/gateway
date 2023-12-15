@@ -14,25 +14,25 @@ type RetryStrategy struct {
 	// NumRetries is the number of retries to be attempted. Defaults to 0. If nonzero, maxBudget is ignored.
 	//
 	// +optional
-	MaxRetries int `json:"maxRetries,omitempty"`
+	MaxRetries *int `json:"maxRetries,omitempty"`
 
 	// MaxBudget is specifies the limit on concurrent retries as a percentage of the sum of active requests and active pending requests.
 	// For example, if there are 100 active requests and the MaxBudget is set to 25, there may be 25 active retries.
 	// This parameter is optional. Defaults to 20%.
 	//
 	// +optional
-	MaxBudget int `json:"maxBudget,omitempty"`
+	MaxBudget *int `json:"maxBudget,omitempty"`
 
 	// Minconcurrent specifies the minimum retry concurrency allowed for the retry budget. The limit on the number of active retries may never go below this number.
 	// This parameter is optional. Defaults to 3.
 	//
 	// +optional
-	MinConcurrent int `json:"minConcurrent,omitempty"`
+	MinConcurrent *int `json:"minConcurrent,omitempty"`
 
 	// MaxParallel is the maximum number of parallel retries. If not specified, the default is 3. Priority lower than retry budget.
 	//
 	// +optional
-	MaxParallel int `json:"maxParallel,omitempty"`
+	MaxParallel *int `json:"maxParallel,omitempty"`
 
 	// RetryOn specifies the retry trigger condition.
 	//
@@ -42,7 +42,7 @@ type RetryStrategy struct {
 	// PerRetry is the retry policy to be applied per retry attempt.
 	//
 	// +optional
-	PerRetry PerRetryPolicy `json:"perRetry,omitempty"`
+	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
 }
 
 type RetryOn struct {
@@ -54,13 +54,10 @@ type RetryOn struct {
 	// HttpStatusCodes specifies the http status codes to be retried.
 	//
 	// +optional
-	HttpStatusCodes []int `json:"httpStatusCodes,omitempty"`
+	HTTPStatusCodes []int `json:"httpStatusCodes,omitempty"`
 }
 
-// RetryStrategyType specifies the types of RetryStrategy.
-// +kubebuilder:validation:Enum=Grpc;Http;
-type RetryStrategyType string
-
+// TriggerEnum specifies the conditions that trigger retries.
 type TriggerEnum string
 
 const (
@@ -96,7 +93,7 @@ const (
 	// The gRPC status code in the response headers is “resource-exhausted”.
 	ResourceExhausted TriggerEnum = "resource-exhausted"
 	// The gRPC status code in the response headers is “unavailable”.
-	unavailable TriggerEnum = "unavailable"
+	Unavailable TriggerEnum = "unavailable"
 )
 
 type PerRetryPolicy struct {

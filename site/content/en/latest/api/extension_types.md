@@ -2127,7 +2127,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-
+TriggerEnum specifies the conditions that trigger retries.
 
 _Appears in:_
 - [RetryOn](#retryon)

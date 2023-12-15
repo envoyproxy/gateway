@@ -734,6 +734,8 @@ spec:
                       triggers:
                         description: Triggers specifies the retry trigger condition(Http/Grpc).
                         items:
+                          description: TriggerEnum specifies the conditions that trigger
+                            retries.
                           type: string
                         type: array
                     type: object
