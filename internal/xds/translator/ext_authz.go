@@ -56,7 +56,7 @@ func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 
 // patchRouteCfgWithExtAuthzFilter patches the provided route configuration with
 // the ext authz filter if applicable.
-// Note: this method disables the ext authz filters on all routes not explicitely requiring it.
+// Note: this method disables the ext authz filters on all routes not explicitly requiring it.
 func patchRouteCfgWithExtAuthzFilter(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
 	if routeCfg == nil {
 		return errors.New("route configuration is nil")
@@ -153,7 +153,7 @@ func routeContainsExtAuthz(irRoute *ir.HTTPRoute) bool {
 }
 
 // listenerContainsExtAuthz returns true if the provided listener has external
-// authroization policies attached to its routes.
+// authorization policies attached to its routes.
 func listenerContainsExtAuthz(irListener *ir.HTTPListener) bool {
 	if irListener == nil {
 		return false
