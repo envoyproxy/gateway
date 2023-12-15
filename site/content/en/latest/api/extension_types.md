@@ -123,6 +123,7 @@ _Appears in:_
 | `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
 | `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
 | `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
+| `allowCredentials` _boolean_ | AllowCredentials indicates whether a request can include user credentials like cookies, authentication headers, or TLS client certificates. |
 
 
 #### ClaimToHeader
