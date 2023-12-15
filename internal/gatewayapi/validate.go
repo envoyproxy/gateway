@@ -19,6 +19,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/status"
 )
 
 func (t *Translator) validateBackendRef(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
@@ -285,64 +287,19 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 
 	secrets := make([]*v1.Secret, 0)
 	for _, certificateRef := range listener.TLS.CertificateRefs {
-		// TODO zhaohuabing: reuse validateSecretRef
-		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
+		from := crossNamespaceFrom{
+			group:     gwapiv1.GroupName,
+			kind:      KindGateway,
+			namespace: listener.gateway.Namespace,
+		}
+
+		secret, err := t.validateSecretRef(certificateRef, true, from, resources)
+		if err != nil {
 			listener.SetCondition(
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				"Listener's TLS certificate ref group must be unspecified/empty.",
-			)
-			break
-		}
-
-		if certificateRef.Kind != nil && string(*certificateRef.Kind) != KindSecret {
-			listener.SetCondition(
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Listener's TLS certificate ref kind must be %s.", KindSecret),
-			)
-			break
-		}
-
-		secretNamespace := listener.gateway.Namespace
-
-		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
-			if !t.validateCrossNamespaceRef(
-				crossNamespaceFrom{
-					group:     gwapiv1.GroupName,
-					kind:      KindGateway,
-					namespace: listener.gateway.Namespace,
-				},
-				crossNamespaceTo{
-					group:     "",
-					kind:      KindSecret,
-					namespace: string(*certificateRef.Namespace),
-					name:      string(certificateRef.Name),
-				},
-				resources.ReferenceGrants,
-			) {
-				listener.SetCondition(
-					gwapiv1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					gwapiv1.ListenerReasonRefNotPermitted,
-					fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant.", *certificateRef.Namespace, certificateRef.Name),
-				)
-				break
-			}
-
-			secretNamespace = string(*certificateRef.Namespace)
-		}
-
-		secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
-
-		if secret == nil {
-			listener.SetCondition(
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s does not exist.", listener.gateway.Namespace, certificateRef.Name),
+				status.Error2ConditionMsg(err),
 			)
 			break
 		}
@@ -732,9 +689,9 @@ func (t *Translator) validateHostname(hostname string) error {
 //     is it permitted by any ReferenceGrant
 //  3. Does the secret exist
 func (t *Translator) validateSecretRef(
+	secretRef gwapiv1b1.SecretObjectReference,
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretRef gwapiv1b1.SecretObjectReference,
 	resources *Resources) (*v1.Secret, error) {
 	if secretRef.Group != nil && string(*secretRef.Group) != "" {
 		return nil, errors.New("secret ref group must be unspecified/empty")

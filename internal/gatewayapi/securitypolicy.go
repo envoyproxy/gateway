@@ -443,7 +443,7 @@ func (t *Translator) buildOIDC(
 		namespace: policy.Namespace,
 	}
 	if clientSecret, err = t.validateSecretRef(
-		false, from, oidc.ClientSecret, resources); err != nil {
+		oidc.ClientSecret, false, from, resources); err != nil {
 		return nil, err
 	}
 
@@ -576,7 +576,7 @@ func (t *Translator) buildBasicAuth(
 		namespace: policy.Namespace,
 	}
 	if usersSecret, err = t.validateSecretRef(
-		false, from, basicAuth.Users, resources); err != nil {
+		basicAuth.Users, false, from, resources); err != nil {
 		return nil, err
 	}
 
