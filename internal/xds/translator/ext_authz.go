@@ -2,6 +2,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
@@ -53,6 +54,45 @@ func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 	return nil
 }
 
+// patchRouteCfgWithExtAuthzFilter patches the provided route configuration with
+// the ext authz filter if applicable.
+// Note: this method disables the ext authz filters on all routes not explicitely requiring it.
+func patchRouteCfgWithExtAuthzFilter(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
+	if routeCfg == nil {
+		return errors.New("route configuration is nil")
+	}
+	if irListener == nil {
+		return errors.New("ir listener is nil")
+	}
+	if !listenerContainsExtAuthz(irListener) {
+		return nil
+	}
+
+	for _, route := range irListener.Routes {
+		if !routeContainsExtAuthz(route) {
+			perRouteFilterName := extAuthzFilterName(route)
+			filterCfg := routeCfg.TypedPerFilterConfig
+
+			routeCfgProto := &extauthzv3.ExtAuthzPerRoute{
+				Override: &extauthzv3.ExtAuthzPerRoute_Disabled{Disabled: true},
+			}
+
+			routeCfgAny, err := anypb.New(routeCfgProto)
+			if err != nil {
+				return err
+			}
+
+			if filterCfg == nil {
+				routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
+			}
+
+			routeCfg.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
+		}
+	}
+
+	return nil
+}
+
 // buildHCMExtAuthzFilter returns an external authorization filter from the provided IR listener.
 func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 	// TODO: account for multiple authz backends
@@ -94,42 +134,6 @@ func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, err
 	}
 
 	return nil, nil
-}
-
-// patchRouteWithExtAuthz patches the provided route with an external authorization PerRouteConfig, if the
-// route doesn't contain it.
-func patchRouteWithExtAuthz(route *routev3.Route, irRoute *ir.HTTPRoute) error {
-	if route == nil {
-		return errors.New("xds route is nil")
-	}
-	if irRoute == nil {
-		return errors.New("ir route is nil")
-	}
-
-	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[extAuthzFilter]; !ok {
-		// when the filter is active, it applies to every routes
-		// disable the filter for routes not explictely setting ext_authz
-		if !routeContainsExtAuthz(irRoute) {
-			routeCfgProto := &extauthzv3.ExtAuthzPerRoute{
-				Override: &extauthzv3.ExtAuthzPerRoute_Disabled{Disabled: true},
-			}
-
-			routeCfgAny, err := anypb.New(routeCfgProto)
-			if err != nil {
-				return err
-			}
-
-			if filterCfg == nil {
-				route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-			}
-
-			route.TypedPerFilterConfig[extAuthzFilter] = routeCfgAny
-		}
-
-	}
-
-	return nil
 }
 
 // routeContainsExtAuthz returns true if external authorizations exists for the
@@ -245,4 +249,8 @@ func buildExtAuthzTLSocket() (*corev3.TransportSocket, error) {
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func extAuthzFilterName(route *ir.HTTPRoute) string {
+	return fmt.Sprintf("%s_%s", extAuthzFilter, route.Name)
 }
