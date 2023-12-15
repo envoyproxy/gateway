@@ -32,4 +32,5 @@ http:
       exposeHeaders:
       - "x-header-3"
       - "x-header-4"
+      allowCredentials: true
       maxAge: 1000s

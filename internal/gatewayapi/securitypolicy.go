@@ -413,11 +413,12 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 	}
 
 	return &ir.CORS{
-		AllowOrigins:  allowOrigins,
-		AllowMethods:  cors.AllowMethods,
-		AllowHeaders:  cors.AllowHeaders,
-		ExposeHeaders: cors.ExposeHeaders,
-		MaxAge:        cors.MaxAge,
+		AllowOrigins:     allowOrigins,
+		AllowMethods:     cors.AllowMethods,
+		AllowHeaders:     cors.AllowHeaders,
+		ExposeHeaders:    cors.ExposeHeaders,
+		MaxAge:           cors.MaxAge,
+		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
 	}, nil
 }
 
