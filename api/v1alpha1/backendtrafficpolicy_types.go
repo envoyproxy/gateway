@@ -65,6 +65,10 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+
+	// FaultInjection defines the fault injection policy to be applied. Support delays and aborts.
+	// +optional
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
