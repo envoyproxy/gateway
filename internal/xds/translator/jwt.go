@@ -142,6 +142,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				JwksSourceSpecifier: remote,
 				PayloadInMetadata:   irProvider.Issuer,
 				ClaimToHeaders:      claimToHeaders,
+				Forward:             true,
 			}
 
 			if irProvider.ExtractFrom != nil {

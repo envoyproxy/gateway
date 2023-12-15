@@ -140,6 +140,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute.CORS.MaxAge != nil {
 		maxAge = strconv.Itoa(int(irRoute.CORS.MaxAge.Seconds()))
 	}
+	allowCredentials = &wrappers.BoolValue{Value: irRoute.CORS.AllowCredentials}
 
 	routeCfgProto := &corsv3.CorsPolicy{
 		AllowOriginStringMatch: allowOrigins,

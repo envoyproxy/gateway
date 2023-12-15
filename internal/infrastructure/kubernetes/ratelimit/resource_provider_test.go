@@ -158,6 +158,7 @@ func TestDeployment(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: pointer.Int64(1000),
 					},
+					HostNetwork: true,
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Image: pointer.String("custom-image"),
