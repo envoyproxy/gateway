@@ -249,6 +249,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 	}
 
+	// change dnsPolicy if hostNetwork is being set
+	if deploymentConfig.Pod.HostNetwork {
+		deployment.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirstWithHostNet
+	}
+
 	// omit the deployment replicas if HPA is being set
 	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
 		deployment.Spec.Replicas = nil

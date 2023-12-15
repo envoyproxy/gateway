@@ -192,6 +192,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 	}
 
+	// change dnsPolicy if hostNetwork is being set
+	if r.rateLimitDeployment.Pod.HostNetwork {
+		deployment.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirstWithHostNet
+	}
+
 	if r.ownerReferenceUID != nil {
 		if uid, ok := r.ownerReferenceUID[ResourceKindDeployment]; ok {
 			deployment.OwnerReferences = []metav1.OwnerReference{

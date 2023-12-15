@@ -33,6 +33,14 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 	return e.Spec.Provider
 }
 
+// IsHostNetworkEnabled returns true if the provided EnvoyProxy enables hostNetwork.
+func (e *EnvoyProxy) IsHostNetworkEnabled() bool {
+	return e.Spec.Provider != nil &&
+		e.Spec.Provider.Type == ProviderTypeKubernetes && e.Spec.Provider.Kubernetes != nil &&
+		e.Spec.Provider.Kubernetes.EnvoyDeployment != nil && e.Spec.Provider.Kubernetes.EnvoyDeployment.Pod != nil &&
+		e.Spec.Provider.Kubernetes.EnvoyDeployment.Pod.HostNetwork
+}
+
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
 func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	return &EnvoyProxyKubernetesProvider{

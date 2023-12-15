@@ -463,6 +463,28 @@ func TestValidateEnvoyProxy(t *testing.T) {
 	}
 }
 
+func TestEnvoyProxySpec(t *testing.T) {
+	envoyProxy := &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Provider: egv1a1.DefaultEnvoyProxyProvider(),
+		},
+	}
+
+	isHostNetworkEnabled := envoyProxy.IsHostNetworkEnabled()
+	assert.True(t, isHostNetworkEnabled == false)
+
+	envoyProxy.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+		EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+			Pod: &egv1a1.KubernetesPodSpec{
+				HostNetwork: true,
+			},
+		},
+	}
+
+	isHostNetworkEnabled = envoyProxy.IsHostNetworkEnabled()
+	assert.True(t, isHostNetworkEnabled)
+}
+
 func TestEnvoyProxyProvider(t *testing.T) {
 	envoyProxy := &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{

@@ -81,6 +81,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// HostNetwork can be set to true to use
+	// Cluster node for listening.
+	HostNetwork bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
@@ -257,6 +261,8 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
 	}
+
+	t.HostNetwork = isHostNetworkEnabled(resources)
 
 	return xdsIR, infraIR
 }
