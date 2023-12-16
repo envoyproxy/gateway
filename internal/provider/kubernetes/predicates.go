@@ -69,6 +69,7 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool
 	for _, label := range r.namespaceLabels {
 		opt = append(opt, client.HasLabels{label})
 	}
+	opt = append(opt, client.InNamespace(nsString))
 
 	ns := &corev1.NamespaceList{}
 	if err := r.client.List(context.Background(), ns, opt...); err != nil {
