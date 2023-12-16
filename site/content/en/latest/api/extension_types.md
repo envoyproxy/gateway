@@ -1868,10 +1868,17 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `version` _[TLSVersions](#tlsversions)_ | Version details the minimum/maximum TLS protocol version that should be supported by this listener. |
-| `ciphers` _string array_ | CipherSuites specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. |
-| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. |
+| `ciphers` _string array_ | CipherSuites specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. 
+ In non-FIPS Envoy Proxy builds, the default cipher list is: 
+ [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] ECDHE-ECDSA-AES256-GCM-SHA384 ECDHE-RSA-AES256-GCM-SHA384 
+ In builds using BoringSSL FIPS the default cipher list is: 
+ ECDHE-ECDSA-AES128-GCM-SHA256 ECDHE-RSA-AES128-GCM-SHA256 ECDHE-ECDSA-AES256-GCM-SHA384 ECDHE-RSA-AES256-GCM-SHA384 |
+| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: 
+ X25519 P-256 
+ In builds using BoringSSL FIPS the default curve is: 
+ P-256 |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
-| `alpnProtocols` _string array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. If left empty, ALPN will not be exposed. |
+| `alpnProtocols` _string array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default http/2 and http/1.1 are enabled. |
 
 
 #### TLSVersion
