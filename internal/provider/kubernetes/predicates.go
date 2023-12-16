@@ -65,40 +65,17 @@ type NamespaceGetter interface {
 // this function.
 func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool, error) {
 	// TODO: add validation here because some objects don't have namespace
-	ns := &corev1.Namespace{}
-	if err := r.client.Get(
-		context.Background(),
-		client.ObjectKey{
-			Namespace: "", // Namespace object should have empty Namespace
-			Name:      nsString,
-		},
-		ns,
-	); err != nil {
+	var opt []client.ListOption
+	for _, label := range r.namespaceLabels {
+		opt = append(opt, client.HasLabels{label})
+	}
+
+	ns := &corev1.NamespaceList{}
+	if err := r.client.List(context.Background(), ns, opt...); err != nil {
 		return false, err
 	}
-	return containAll(ns.Labels, r.namespaceLabels), nil
-}
 
-func containAll(labels map[string]string, labelsToCheck []string) bool {
-	if len(labels) < len(labelsToCheck) {
-		return false
-	}
-	for _, l := range labelsToCheck {
-		if !contains(labels, l) {
-			return false
-		}
-	}
-	return true
-}
-
-func contains(m map[string]string, i string) bool {
-	for k := range m {
-		if k == i {
-			return true
-		}
-	}
-
-	return false
+	return ns.Size() != 0, nil
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
