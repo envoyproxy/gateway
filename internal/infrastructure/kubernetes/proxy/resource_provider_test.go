@@ -39,9 +39,16 @@ func newTestInfra() *ir.Infra {
 }
 
 func newTestInfraWithAnnotations(annotations map[string]string) *ir.Infra {
+	return newTestInfraWithAnnotationsAndLabels(annotations, nil)
+}
+
+func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string) *ir.Infra {
 	i := ir.NewInfra()
 
 	i.Proxy.GetProxyMetadata().Annotations = annotations
+	if len(labels) > 0 {
+		i.Proxy.GetProxyMetadata().Labels = labels
+	}
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = i.Proxy.Name
 	i.Proxy.Listeners = []ir.ProxyListener{
@@ -349,6 +356,26 @@ func TestDeployment(t *testing.T) {
 			}),
 			deploy: nil,
 		},
+		{
+			caseName: "override-labels-and-annotations",
+			infra: newTestInfraWithAnnotationsAndLabels(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}, map[string]string{
+				"label1": "value1",
+				"label2": "value2",
+			}),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"anno1": "value1-override",
+					},
+					Labels: map[string]string{
+						"label1": "value1-override",
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -448,6 +475,21 @@ func TestService(t *testing.T) {
 				"anno1": "value1",
 				"anno2": "value2",
 			}),
+		},
+		{
+			caseName: "override-annotations",
+			infra: newTestInfraWithAnnotationsAndLabels(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}, map[string]string{
+				"label1": "value1",
+				"label2": "value2",
+			}),
+			service: &egv1a1.KubernetesServiceSpec{
+				Annotations: map[string]string{
+					"anno1": "value1-override",
+				},
+			},
 		},
 	}
 	for _, tc := range cases {

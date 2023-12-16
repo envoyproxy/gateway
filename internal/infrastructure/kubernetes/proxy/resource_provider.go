@@ -99,7 +99,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
 	if envoyServiceConfig.Annotations != nil {
-		annotations = envoyServiceConfig.Annotations
+		maps.Copy(annotations, envoyServiceConfig.Annotations)
 	}
 	if len(annotations) == 0 {
 		annotations = nil
@@ -184,9 +184,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// Get annotations
 	podAnnotations := map[string]string{}
 	maps.Copy(podAnnotations, dpAnnotations)
-	if deploymentConfig.Pod.Annotations != nil {
-		podAnnotations = deploymentConfig.Pod.Annotations
-	}
+	maps.Copy(podAnnotations, deploymentConfig.Pod.Annotations)
 	if enablePrometheus(r.infra) {
 		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
 		podAnnotations["prometheus.io/scrape"] = "true"
