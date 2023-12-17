@@ -1,12 +1,14 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package translator
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
-	"github.com/envoyproxy/gateway/internal/xds/types"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
@@ -16,6 +18,10 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -95,10 +101,22 @@ func patchRouteCfgWithExtAuthzFilter(routeCfg *routev3.RouteConfiguration, irLis
 
 // buildHCMExtAuthzFilter returns an external authorization filter from the provided IR listener.
 func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
-	// TODO: account for multiple authz backends
-	// it seems Envoy Proxy does not really supports it
+	var grpcURI string
+
 	for _, route := range irListener.Routes {
-		grpc, err := url2Cluster(route.ExtAuthz.GRPCURI)
+		if !routeContainsExtAuthz(route) {
+			continue
+		}
+
+		if grpcURI != "" && grpcURI != route.ExtAuthz.GRPCURI {
+			return nil, errors.New("multiple grpcURI for this listener, unsupported configuration")
+		}
+
+		if grpcURI == "" {
+			grpcURI = route.ExtAuthz.GRPCURI
+		}
+
+		grpc, err := url2Cluster(grpcURI)
 		if err != nil {
 			return nil, err
 		}
