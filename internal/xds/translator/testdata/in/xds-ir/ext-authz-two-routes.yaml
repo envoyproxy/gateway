@@ -1,0 +1,29 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    extAuthz:
+      grpcURI: http://envoy-ext-jwt-auth.envoy-gateway-system.svc.cluster.local:10003
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      exact: "baz/qux"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
