@@ -7,42 +7,55 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// FaultInjection defines the fault injection policy to be applied. Support delays and aborts.
+// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
+// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+// +union
+//
+// +kubebuilder:validation:XValidation:rule=" has(self.delay) || has(self.abort) ",message="Delay and abort faults are set at least one."
 type FaultInjection struct {
 
-	// If specified, the delay will inject a fixed delay into the request
+	// If specified, a delay will be injected into the request.
 	//
 	// +optional
-	Delay *DelayConfig `json:"delay,omitempty"`
+	Delay *FaultInjectionDelay `json:"delay,omitempty"`
 
-	// If specified, the abort will abort the request with the specified HTTP status code
+	// If specified, the request will be aborted if it meets the configuration criteria.
 	//
 	// +optional
-	Abort *AbortConfig `json:"abort,omitempty"`
+	Abort *FaultInjectionAbort `json:"abort,omitempty"`
 }
 
-// DelayConfig defines the delay fault injection configuration
-type DelayConfig struct {
+// FaultInjectionDelay defines the delay fault injection configuration
+type FaultInjectionDelay struct {
 	// FixedDelay specifies the fixed delay duration
 	//
 	// +required
 	FixedDelay *metav1.Duration `json:"fixedDelay"`
 
-	// Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed.
+	// Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%.
 	// +optional
 	// +kubebuilder:default=100
-	Percentage *int `json:"percentage"`
+	Percentage *float64 `json:"percentage"`
 }
 
-// AbortConfig defines the abort fault injection configuration
-type AbortConfig struct {
-	// StatusCode specifies the HTTP/GRPC status code to be returned
+// FaultInjectionAbort defines the abort fault injection configuration
+// +union
+//
+// +kubebuilder:validation:XValidation:rule=" !(has(self.httpStatus) && has(self.grpcStatus)) && (has(self.httpStatus) || has(self.grpcStatus))",message="httpStatus and grpcStatus cannot be simultaneously defined."
+type FaultInjectionAbort struct {
+	// StatusCode specifies the HTTP status code to be returned
 	//
-	// +required
-	StatusCode *int `json:"statusCode"`
-
-	// Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted.
 	// +optional
-	// +kubebuilder:default=100
-	Percentage *int `json:"percentage"`
+	// +kubebuilder:validation:Minimum=200
+	// +kubebuilder:validation:Maximum=600
+	HTTPStatus *int32 `json:"httpStatus"`
+
+	// GrpcStatus specifies the GRPC status code to be returned
+	//
+	// +optional
+	GrpcStatus *int32 `json:"grpcStatus"`
+
+	// Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%.
+	// +optional
+	Percentage *float32 `json:"percentage"`
 }

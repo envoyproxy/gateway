@@ -27,21 +27,6 @@ API group.
 
 
 
-#### AbortConfig
-
-
-
-AbortConfig defines the abort fault injection configuration
-
-_Appears in:_
-- [FaultInjection](#faultinjection)
-
-| Field | Description |
-| --- | --- |
-| `statusCode` _integer_ | StatusCode specifies the HTTP/GRPC status code to be returned |
-| `percentage` _integer_ | Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. |
-
-
 #### BackendTrafficPolicy
 
 
@@ -91,7 +76,7 @@ _Appears in:_
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
-| `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. Support delays and aborts. |
+| `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 
 
 
@@ -259,21 +244,6 @@ _Underlying type:_ `string`
 _Appears in:_
 - [CustomTag](#customtag)
 
-
-
-#### DelayConfig
-
-
-
-DelayConfig defines the delay fault injection configuration
-
-_Appears in:_
-- [FaultInjection](#faultinjection)
-
-| Field | Description |
-| --- | --- |
-| `fixedDelay` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | FixedDelay specifies the fixed delay duration |
-| `percentage` _integer_ | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. |
 
 
 #### EnvironmentCustomTag
@@ -810,15 +780,46 @@ _Appears in:_
 
 
 
-FaultInjection defines the fault injection policy to be applied. Support delays and aborts.
+FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 | Field | Description |
 | --- | --- |
-| `delay` _[DelayConfig](#delayconfig)_ | If specified, the delay will inject a fixed delay into the request |
-| `abort` _[AbortConfig](#abortconfig)_ | If specified, the abort will abort the request with the specified HTTP status code |
+| `delay` _[FaultInjectionDelay](#faultinjectiondelay)_ | If specified, a delay will be injected into the request. |
+| `abort` _[FaultInjectionAbort](#faultinjectionabort)_ | If specified, the request will be aborted if it meets the configuration criteria. |
+
+
+#### FaultInjectionAbort
+
+
+
+FaultInjectionAbort defines the abort fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `httpStatus` _integer_ | StatusCode specifies the HTTP status code to be returned |
+| `grpcStatus` _integer_ | GrpcStatus specifies the GRPC status code to be returned |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%. |
+
+
+#### FaultInjectionDelay
+
+
+
+FaultInjectionDelay defines the delay fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `fixedDelay` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | FixedDelay specifies the fixed delay duration |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
 
 
 #### FileEnvoyProxyAccessLog
