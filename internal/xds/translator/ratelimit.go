@@ -25,9 +25,9 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -431,7 +431,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	// Create cluster if it does not exist
 	host, port := t.getRateLimitServiceGrpcHostPort()
 	ds := &ir.DestinationSetting{
-		Weight:    ptr.To(uint32(1)),
+		Weight:    ptr.To[uint32](1),
 		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))},
 	}
