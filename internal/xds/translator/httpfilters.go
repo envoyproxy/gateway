@@ -183,7 +183,7 @@ func (t *Translator) patchHCMWithFilters(
 func patchRouteCfgWithPerRouteConfig(
 	routeCfg *routev3.RouteConfiguration,
 	irListener *ir.HTTPListener) error {
-	// Only supports the oauth2 filter for now, other filters will be added later.
+	// Only supports the oauth2 filter & external authz for now, other filters will be added later.
 	for _, filter := range httpFilters {
 		if err := filter.patchRouteConfig(routeCfg, irListener); err != nil {
 			return err
