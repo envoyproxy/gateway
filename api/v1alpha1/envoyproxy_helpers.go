@@ -12,8 +12,7 @@ import (
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
-
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.

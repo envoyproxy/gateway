@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
