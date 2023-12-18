@@ -82,7 +82,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: envoy-gateway
         path: bin/
@@ -110,7 +110,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: envoy-gateway
         path: bin/
@@ -135,7 +135,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: envoy-gateway
         path: bin/
