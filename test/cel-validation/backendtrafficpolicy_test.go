@@ -307,33 +307,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: " more than one circuit breakers threshold is set",
-			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
-						},
-					},
-					CircuitBreakers: &egv1a1.CircuitBreakers{
-						Thresholds: []egv1a1.Thresholds{
-							{},
-							{},
-						},
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.circuitBreakers.thresholds: Too many: 2: must have at most 1 items",
-			},
-		},
-		{
 			desc: " valid config: min, max, nil",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				valMax := pointer.Uint32(4294967295)
-				valMin := pointer.Uint32(0)
+				valMax := pointer.Int64(4294967295)
+				valMin := pointer.Int64(0)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
@@ -342,19 +319,40 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
-					CircuitBreakers: &egv1a1.CircuitBreakers{
-						Thresholds: []egv1a1.Thresholds{
-							{
-								MaxConnections:     valMax,
-								MaxPendingRequests: valMin,
-								MaxRequests:        nil,
-								MaxRetries:         nil,
-							},
-						},
+					CircuitBreaker: &egv1a1.CircuitBreaker{
+						MaxConnections:      valMax,
+						MaxPendingRequests:  valMin,
+						MaxParallelRequests: nil,
 					},
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: " invalid config: min and max valyues",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				valOverMax := pointer.Int64(4294967296)
+				valUnderMin := pointer.Int64(-1)
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					CircuitBreaker: &egv1a1.CircuitBreaker{
+						MaxConnections:      valOverMax,
+						MaxPendingRequests:  valUnderMin,
+						MaxParallelRequests: valOverMax,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.circuitBreaker.maxParallelRequests: Invalid value: 4294967296: spec.circuitBreaker.maxParallelRequests in body should be less than or equal to 4294967295",
+				"spec.circuitBreaker.maxPendingRequests: Invalid value: -1: spec.circuitBreaker.maxPendingRequests in body should be greater than or equal to 0",
+				"spec.circuitBreaker.maxConnections: Invalid value: 4294967296: spec.circuitBreaker.maxConnections in body should be less than or equal to 4294967295",
+			},
 		},
 	}
 

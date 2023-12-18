@@ -44,51 +44,38 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
-              circuitBreakers:
+              circuitBreaker:
                 description: Circuit Breaker settings for the upstream connections
                   and requests. If not set, circuit breakers will be enabled with
-                  the highest supported thresholds
+                  the default thresholds
                 properties:
-                  thresholds:
-                    description: List of Circuit Breaker Thresholds At most one Thresholds
-                      resource is supported.
-                    items:
-                      properties:
-                        maxConnections:
-                          default: 1024
-                          description: The maximum number of connections that Envoy
-                            will establish to the referenced backend (per xRoute).
-                          format: int32
-                          maximum: 4294967295
-                          minimum: 0
-                          type: integer
-                        maxParallelRequests:
-                          default: 1024
-                          description: The maximum number of parallel requests that
-                            Envoy will make to the referenced backend (per xRoute).
-                          format: int32
-                          maximum: 4294967295
-                          minimum: 0
-                          type: integer
-                        maxPendingRequests:
-                          default: 1024
-                          description: The maximum number of pending requests that
-                            Envoy will queue to the referenced backend (per xRoute).
-                          format: int32
-                          maximum: 4294967295
-                          minimum: 0
-                          type: integer
-                        maxRetries:
-                          default: 3
-                          description: The maximum number of parallel retries that
-                            Envoy will allow to the referenced backend (per xRoute).
-                          format: int32
-                          maximum: 4294967295
-                          minimum: 0
-                          type: integer
-                      type: object
-                    maxItems: 1
-                    type: array
+                  maxConnections:
+                    default: 1024
+                    description: The maximum number of connections that Envoy will
+                      establish to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxParallelRequests:
+                    default: 1024
+                    description: The maximum number of parallel requests that Envoy
+                      will make to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxPendingRequests:
+                    default: 1024
+                    description: The maximum number of pending requests that Envoy
+                      will queue to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
                 type: object
               loadBalancer:
                 description: LoadBalancer policy to apply when routing traffic from

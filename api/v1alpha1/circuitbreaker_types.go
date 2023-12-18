@@ -5,46 +5,29 @@
 
 package v1alpha1
 
-// CircuitBreakers defines the Circuit Breakers configuration.
-type CircuitBreakers struct {
-	// List of Circuit Breaker Thresholds
-	// At most one Thresholds resource is supported.
-	//
-	// +kubebuilder:validation:MaxItems:=1
-	// +optional
-	Thresholds []Thresholds `json:"thresholds,omitempty"`
-}
-
-type Thresholds struct {
-	// The maximum number of connections that Envoy will establish to the referenced backend (per xRoute).
+// CircuitBreaker defines the Circuit Breaker configuration.
+type CircuitBreaker struct {
+	// The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=4294967295
 	// +kubebuilder:default=1024
 	// +optional
-	MaxConnections *uint32 `json:"maxConnections,omitempty"`
+	MaxConnections *int64 `json:"maxConnections,omitempty"`
 
-	// The maximum number of pending requests that Envoy will queue to the referenced backend (per xRoute).
+	// The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=4294967295
 	// +kubebuilder:default=1024
 	// +optional
-	MaxPendingRequests *uint32 `json:"maxPendingRequests,omitempty"`
+	MaxPendingRequests *int64 `json:"maxPendingRequests,omitempty"`
 
-	// The maximum number of parallel requests that Envoy will make to the referenced backend (per xRoute).
+	// The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=4294967295
 	// +kubebuilder:default=1024
 	// +optional
-	MaxRequests *uint32 `json:"maxParallelRequests,omitempty"`
-
-	// The maximum number of parallel retries that Envoy will allow to the referenced backend (per xRoute).
-	//
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=4294967295
-	// +kubebuilder:default=3
-	// +optional
-	MaxRetries *uint32 `json:"maxRetries,omitempty"`
+	MaxParallelRequests *int64 `json:"maxParallelRequests,omitempty"`
 }

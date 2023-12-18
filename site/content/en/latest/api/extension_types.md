@@ -76,7 +76,7 @@ _Appears in:_
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
-| `circuitBreakers` _[CircuitBreakers](#circuitbreakers)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the highest supported thresholds |
+| `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 
 
 
@@ -126,18 +126,20 @@ _Appears in:_
 | `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
 
 
-#### CircuitBreakers
+#### CircuitBreaker
 
 
 
-CircuitBreakers defines the Circuit Breakers configuration.
+CircuitBreaker defines the Circuit Breaker configuration.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 | Field | Description |
 | --- | --- |
-| `thresholds` _[Thresholds](#thresholds) array_ | List of Circuit Breaker Thresholds At most one Thresholds resource is supported. |
+| `maxConnections` _integer_ | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
+| `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
+| `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 
 
 #### ClaimToHeader
@@ -1771,23 +1773,6 @@ _Appears in:_
 | `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
 | `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
-
-
-#### Thresholds
-
-
-
-
-
-_Appears in:_
-- [CircuitBreakers](#circuitbreakers)
-
-| Field | Description |
-| --- | --- |
-| `maxConnections` _integer_ | The maximum number of connections that Envoy will establish to the referenced backend (per xRoute). |
-| `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will queue to the referenced backend (per xRoute). |
-| `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend (per xRoute). |
-| `maxRetries` _integer_ | The maximum number of parallel retries that Envoy will allow to the referenced backend (per xRoute). |
 
 
 #### TracingProvider

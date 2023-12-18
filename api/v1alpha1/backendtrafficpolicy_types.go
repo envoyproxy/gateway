@@ -67,10 +67,10 @@ type BackendTrafficPolicySpec struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
 
 	// Circuit Breaker settings for the upstream connections and requests.
-	// If not set, circuit breakers will be enabled with the highest supported thresholds
+	// If not set, circuit breakers will be enabled with the default thresholds
 	//
 	// +optional
-	CircuitBreakers *CircuitBreakers `json:"circuitBreakers,omitempty"`
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
