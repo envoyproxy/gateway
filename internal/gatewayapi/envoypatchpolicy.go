@@ -37,6 +37,10 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		// Get the IR
 		// It must exist since the gateways have already been processed
 		irKey := irStringKey(string(*targetNs), string(policy.Spec.TargetRef.Name))
+		if t.MergeGateways {
+			irKey = string(t.GatewayClassName)
+		}
+
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
 			// This status condition will not get updated in the resource because
