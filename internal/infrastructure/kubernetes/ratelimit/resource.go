@@ -13,7 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -183,7 +183,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  string(rateLimit.Backend.Redis.TLS.CertificateRef.Name),
-					DefaultMode: pointer.Int32(420),
+					DefaultMode: ptr.To[int32](420),
 				},
 			},
 		})
@@ -194,7 +194,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "envoy-rate-limit",
-				DefaultMode: pointer.Int32(420),
+				DefaultMode: ptr.To[int32](420),
 			},
 		},
 	})

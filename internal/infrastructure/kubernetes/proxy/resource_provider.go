@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -210,8 +209,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-					AutomountServiceAccountToken:  pointer.Bool(false),
-					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
+					AutomountServiceAccountToken:  ptr.To(false),
+					TerminationGracePeriodSeconds: ptr.To[int64](300),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
@@ -222,8 +221,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Volumes:                       expectedDeploymentVolumes(r.infra.Name, deploymentConfig),
 				},
 			},
-			RevisionHistoryLimit:    pointer.Int32(10),
-			ProgressDeadlineSeconds: pointer.Int32(600),
+			RevisionHistoryLimit:    ptr.To[int32](10),
+			ProgressDeadlineSeconds: ptr.To[int32](600),
 		},
 	}
 
@@ -262,7 +261,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 				Name:       r.Name(),
 			},
 			MinReplicas: hpaConfig.MinReplicas,
-			MaxReplicas: ptr.Deref[int32](hpaConfig.MaxReplicas, 1),
+			MaxReplicas: ptr.Deref(hpaConfig.MaxReplicas, 1),
 			Metrics:     hpaConfig.Metrics,
 			Behavior:    hpaConfig.Behavior,
 		},
