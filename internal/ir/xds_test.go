@@ -1138,6 +1138,39 @@ func TestValidateJWT(t *testing.T) {
 	}
 }
 
+func TestValidateExtAuthz(t *testing.T) {
+	tests := []struct {
+		name  string
+		input ExtAuthz
+		want  error
+	}{
+		{
+			name: "nil rules",
+			input: ExtAuthz{
+				GRPCURI: "",
+			},
+			want: ErrExtAuthzEmptyURI,
+		},
+		{
+			name: "provider with valid extauthz uri",
+			input: ExtAuthz{
+				GRPCURI: "http://grpc-ext-auth",
+			},
+			want: nil,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.validate())
+			} else {
+				require.EqualError(t, test.input.validate(), test.want.Error())
+			}
+		})
+	}
+}
+
 func TestValidateLoadBalancer(t *testing.T) {
 	tests := []struct {
 		name  string
