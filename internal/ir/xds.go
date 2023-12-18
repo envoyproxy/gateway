@@ -537,7 +537,7 @@ func (a *ExtAuthz) validate() error {
 		return ErrExtAuthzEmptyURI
 	}
 
-	if err := validation.ValidateExtAuthzURI(a.GRPCURI); err != nil {
+	if err := egv1a1validation.ValidateExtAuthzURI(a.GRPCURI); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 

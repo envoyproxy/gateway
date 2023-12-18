@@ -28,9 +28,18 @@ const (
 	extAuthzFilter = "envoy.filters.http.ext_authz"
 )
 
-// patchHCMWithExtAuthzFilter builds and appends the external authorization Filter to the HTTP
+func init() {
+	registerHTTPFilter(&extAuth{})
+}
+
+type extAuth struct {
+}
+
+var _ httpFilter = &extAuth{}
+
+// patchHCM builds and appends the external authorization Filter to the HTTP
 // Connection Manager if applicable.
-func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -50,7 +59,7 @@ func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 		}
 	}
 
-	extAuthzFilter, err := buildHCMExtAuthzFilter(irListener)
+	extAuthzFilter, err := buildHCM(irListener)
 	if err != nil {
 		return err
 	}
@@ -60,10 +69,10 @@ func patchHCMWithExtAuthzFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 	return nil
 }
 
-// patchRouteCfgWithExtAuthzFilter patches the provided route configuration with
+// patchRouteConfig patches the provided route configuration with
 // the ext authz filter if applicable.
 // Note: this method disables the ext authz filters on all routes not explicitly requiring it.
-func patchRouteCfgWithExtAuthzFilter(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
+func (*extAuth) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
 	if routeCfg == nil {
 		return errors.New("route configuration is nil")
 	}
@@ -99,8 +108,8 @@ func patchRouteCfgWithExtAuthzFilter(routeCfg *routev3.RouteConfiguration, irLis
 	return nil
 }
 
-// buildHCMExtAuthzFilter returns an external authorization filter from the provided IR listener.
-func buildHCMExtAuthzFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
+// buildHCM returns an external authorization filter from the provided IR listener.
+func buildHCM(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 	var grpcURI string
 
 	for _, route := range irListener.Routes {
@@ -186,8 +195,8 @@ func listenerContainsExtAuthz(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-// createExtAuthzClusters creates external authorizations clusters from the provided routes, if needed.
-func createExtAuthzClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+// patchResources creates external authorizations clusters from the provided routes, if needed.
+func (*extAuth) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -271,4 +280,8 @@ func buildExtAuthzTLSocket() (*corev3.TransportSocket, error) {
 
 func extAuthzFilterName(route *ir.HTTPRoute) string {
 	return fmt.Sprintf("%s_%s", extAuthzFilter, route.Name)
+}
+
+func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+	return nil
 }
