@@ -6,6 +6,12 @@ on:
     - "release/v*"
     paths:
     - 'site/**'
+  pull_request:
+    branches:
+      - "main"
+      - "release/v*"
+    paths:
+      - 'site/**'
 
 jobs:
   docs-lint:
