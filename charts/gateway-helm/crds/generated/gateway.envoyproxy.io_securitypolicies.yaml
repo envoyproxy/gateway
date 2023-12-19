@@ -101,6 +101,11 @@ spec:
                 description: CORS defines the configuration for Cross-Origin Resource
                   Sharing (CORS).
                 properties:
+                  allowCredentials:
+                    description: AllowCredentials indicates whether a request can
+                      include user credentials like cookies, authentication headers,
+                      or TLS client certificates.
+                    type: boolean
                   allowHeaders:
                     description: AllowHeaders defines the headers that are allowed
                       to be sent with requests.

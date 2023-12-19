@@ -123,6 +123,7 @@ _Appears in:_
 | `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
 | `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
 | `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
+| `allowCredentials` _boolean_ | AllowCredentials indicates whether a request can include user credentials like cookies, authentication headers, or TLS client certificates. |
 
 
 #### ClaimToHeader
@@ -1011,6 +1012,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
 | `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volume-v1-core) array_ | Volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes |
+| `hostNetwork` _boolean_ | HostNetwork, If this is set to true, the pod will use host's network namespace. |
 
 
 #### KubernetesServiceSpec

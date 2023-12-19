@@ -1,6 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    anno1: value1
+    anno2: value2
   labels:
     app.kubernetes.io/name: envoy
     app.kubernetes.io/component: proxy
@@ -10,7 +13,7 @@ metadata:
   name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
   selector:
@@ -20,21 +23,19 @@ spec:
       app.kubernetes.io/managed-by: envoy-gateway
       gateway.envoyproxy.io/owning-gateway-name: default
       gateway.envoyproxy.io/owning-gateway-namespace: default
-      foo.bar: custom-label
   template:
     metadata:
+      annotations:
+        anno1: value1
+        anno2: value2
       labels:
         app.kubernetes.io/name: envoy
         app.kubernetes.io/component: proxy
         app.kubernetes.io/managed-by: envoy-gateway
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
-        foo.bar: custom-label
-      annotations:
-        prometheus.io/scrape: "true"
     spec:
       automountServiceAccountToken: false
-      hostNetwork: true
       containers:
         - args:
             - --service-cluster default
@@ -149,7 +150,7 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
-          image: envoyproxy/envoy:v1.2.3
+          image: envoyproxy/envoy-dev:latest
           imagePullPolicy: IfNotPresent
           name: envoy
           ports:
@@ -160,12 +161,9 @@ spec:
               name: EnvoyH-6658f727
               protocol: TCP
           resources:
-            limits:
-              cpu: 400m
-              memory: 2Gi
             requests:
-              cpu: 200m
-              memory: 1Gi
+              cpu: 100m
+              memory: 512Mi
           readinessProbe:
             httpGet:
               path: /ready
@@ -177,8 +175,6 @@ spec:
             failureThreshold: 3
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
-          securityContext:
-            privileged: true
           volumeMounts:
             - mountPath: /certs
               name: certs
@@ -190,8 +186,6 @@ spec:
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 300
-      securityContext:
-        runAsUser: 1000
       volumes:
         - name: certs
           secret:

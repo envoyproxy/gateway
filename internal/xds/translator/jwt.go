@@ -18,9 +18,9 @@ import (
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -142,6 +142,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				JwksSourceSpecifier: remote,
 				PayloadInMetadata:   irProvider.Issuer,
 				ClaimToHeaders:      claimToHeaders,
+				Forward:             true,
 			}
 
 			if irProvider.ExtractFrom != nil {
@@ -268,7 +269,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 			}
 
 			ds = &ir.DestinationSetting{
-				Weight:    ptr.To(uint32(1)),
+				Weight:    ptr.To[uint32](1),
 				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
 			}
 
