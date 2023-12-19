@@ -522,6 +522,7 @@ spec:
       kinds:
       - kind: UDPRoute
 ---
+apiVersion: v1
 kind: Service
 metadata:
   name: ext-authz
