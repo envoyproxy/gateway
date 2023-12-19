@@ -56,9 +56,10 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name(),
-			Labels:    labels,
+			Namespace:   r.Namespace,
+			Name:        r.Name(),
+			Labels:      labels,
+			Annotations: r.infra.GetProxyMetadata().Annotations,
 		},
 	}, nil
 }
@@ -91,11 +92,16 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Get annotations
-	var annotations map[string]string
+	annotations := map[string]string{}
+	maps.Copy(annotations, r.infra.GetProxyMetadata().Annotations)
+
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
 	if envoyServiceConfig.Annotations != nil {
-		annotations = envoyServiceConfig.Annotations
+		maps.Copy(annotations, envoyServiceConfig.Annotations)
+	}
+	if len(annotations) == 0 {
+		annotations = nil
 	}
 
 	// Set the spec of gateway service
@@ -135,9 +141,10 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name(),
-			Labels:    labels,
+			Namespace:   r.Namespace,
+			Name:        r.Name(),
+			Labels:      labels,
+			Annotations: r.infra.GetProxyMetadata().Annotations,
 		},
 		Data: map[string]string{
 			SdsCAFilename:   SdsCAConfigMapData,
@@ -162,6 +169,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Set the labels based on the owning gateway name.
+	dpAnnotations := r.infra.GetProxyMetadata().Annotations
 	labels := r.infra.GetProxyMetadata().Labels
 	dpLabels := envoyLabels(labels)
 	if (len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(dpLabels[gatewayapi.OwningGatewayClassLabel]) == 0 {
@@ -173,17 +181,16 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	selector := resource.GetSelector(podLabels)
 
 	// Get annotations
-	var annotations map[string]string
-	if deploymentConfig.Pod.Annotations != nil {
-		annotations = deploymentConfig.Pod.Annotations
-	}
+	podAnnotations := map[string]string{}
+	maps.Copy(podAnnotations, dpAnnotations)
+	maps.Copy(podAnnotations, deploymentConfig.Pod.Annotations)
 	if enablePrometheus(r.infra) {
-		if annotations == nil {
-			annotations = make(map[string]string, 2)
-		}
-		annotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
-		annotations["prometheus.io/scrape"] = "true"
-		annotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
+		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
+		podAnnotations["prometheus.io/scrape"] = "true"
+		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
+	}
+	if len(podAnnotations) == 0 {
+		podAnnotations = nil
 	}
 
 	deployment := &appsv1.Deployment{
@@ -192,9 +199,10 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name(),
-			Labels:    dpLabels,
+			Namespace:   r.Namespace,
+			Name:        r.Name(),
+			Labels:      dpLabels,
+			Annotations: dpAnnotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deploymentConfig.Replicas,
@@ -203,7 +211,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      selector.MatchLabels,
-					Annotations: annotations,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
@@ -251,8 +259,10 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name(),
+			Namespace:   r.Namespace,
+			Name:        r.Name(),
+			Annotations: r.infra.GetProxyMetadata().Annotations,
+			Labels:      r.infra.GetProxyMetadata().Labels,
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{

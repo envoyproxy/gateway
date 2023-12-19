@@ -44,6 +44,9 @@ type ProxyInfra struct {
 // InfraMetadata defines metadata for the managed proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type InfraMetadata struct {
+	// Annotations define a map of string keys and values that can be used to
+	// organize and categorize proxy infrastructure objects.
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// Labels define a map of string keys and values that can be used to organize
 	// and categorize proxy infrastructure objects.
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
