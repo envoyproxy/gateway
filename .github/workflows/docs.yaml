@@ -8,10 +8,10 @@ on:
     - 'site/**'
   pull_request:
     branches:
-      - "main"
-      - "release/v*"
+    - "main"
+    - "release/v*"
     paths:
-      - 'site/**'
+    - 'site/**'
 
 jobs:
   docs-lint:
