@@ -4,11 +4,11 @@ descriptors:
     value: first-route
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
-        value: rule-0-match-0
+      - key: masked_remote_address
+        value: 192.168.0.10/32
         rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
+          requests_per_unit: 15
+          unit: HOUR
           unlimited: false
           name: ""
           replaces: []
@@ -21,11 +21,11 @@ descriptors:
     value: second-route
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
-        value: rule-0-match-0
+      - key: masked_remote_address
+        value: 192.168.0.10/32
         rate_limit:
-          requests_per_unit: 10
-          unit: SECOND
+          requests_per_unit: 300
+          unit: HOUR
           unlimited: false
           name: ""
           replaces: []
