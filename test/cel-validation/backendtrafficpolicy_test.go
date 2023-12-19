@@ -373,6 +373,26 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "httpStatus and grpcStatus are set at least one",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Abort: &egv1a1.FaultInjectionAbort{
+							Percentage: ptr.To[float32](20),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.faultInjection.abort: Invalid value: \"object\": httpStatus and grpcStatus are set at least one."},
+		},
+		{
 			desc: "Neither delay nor abort faults are set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

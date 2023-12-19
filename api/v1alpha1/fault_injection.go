@@ -35,27 +35,28 @@ type FaultInjectionDelay struct {
 	// Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%.
 	// +optional
 	// +kubebuilder:default=100
-	Percentage *float64 `json:"percentage"`
+	Percentage *float32 `json:"percentage,omitempty"`
 }
 
 // FaultInjectionAbort defines the abort fault injection configuration
 // +union
 //
-// +kubebuilder:validation:XValidation:rule=" !(has(self.httpStatus) && has(self.grpcStatus)) && (has(self.httpStatus) || has(self.grpcStatus))",message="httpStatus and grpcStatus cannot be simultaneously defined."
+// +kubebuilder:validation:XValidation:rule=" !(has(self.httpStatus) && has(self.grpcStatus)) ",message="httpStatus and grpcStatus cannot be simultaneously defined."
+// +kubebuilder:validation:XValidation:rule=" has(self.httpStatus) || has(self.grpcStatus) ",message="httpStatus and grpcStatus are set at least one."
 type FaultInjectionAbort struct {
 	// StatusCode specifies the HTTP status code to be returned
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=200
 	// +kubebuilder:validation:Maximum=600
-	HTTPStatus *int32 `json:"httpStatus"`
+	HTTPStatus *int32 `json:"httpStatus,omitempty"`
 
 	// GrpcStatus specifies the GRPC status code to be returned
 	//
 	// +optional
-	GrpcStatus *int32 `json:"grpcStatus"`
+	GrpcStatus *int32 `json:"grpcStatus,omitempty"`
 
 	// Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%.
 	// +optional
-	Percentage *float32 `json:"percentage"`
+	Percentage *float32 `json:"percentage,omitempty"`
 }

@@ -1227,7 +1227,7 @@ func (in *FaultInjectionDelay) DeepCopyInto(out *FaultInjectionDelay) {
 	}
 	if in.Percentage != nil {
 		in, out := &in.Percentage, &out.Percentage
-		*out = new(float64)
+		*out = new(float32)
 		**out = **in
 	}
 }
