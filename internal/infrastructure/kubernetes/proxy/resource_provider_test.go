@@ -34,8 +34,20 @@ const (
 )
 
 func newTestInfra() *ir.Infra {
+	return newTestInfraWithAnnotations(nil)
+}
+
+func newTestInfraWithAnnotations(annotations map[string]string) *ir.Infra {
+	return newTestInfraWithAnnotationsAndLabels(annotations, nil)
+}
+
+func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string) *ir.Infra {
 	i := ir.NewInfra()
 
+	i.Proxy.GetProxyMetadata().Annotations = annotations
+	if len(labels) > 0 {
+		i.Proxy.GetProxyMetadata().Labels = labels
+	}
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = i.Proxy.Name
 	i.Proxy.Listeners = []ir.ProxyListener{
@@ -335,6 +347,34 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-annotations",
+			infra: newTestInfraWithAnnotations(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}),
+			deploy: nil,
+		},
+		{
+			caseName: "override-labels-and-annotations",
+			infra: newTestInfraWithAnnotationsAndLabels(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}, map[string]string{
+				"label1": "value1",
+				"label2": "value2",
+			}),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"anno1": "value1-override",
+					},
+					Labels: map[string]string{
+						"label1": "value1-override",
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -428,6 +468,28 @@ func TestService(t *testing.T) {
 				Type: &svcType,
 			},
 		},
+		{
+			caseName: "with-annotations",
+			infra: newTestInfraWithAnnotations(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}),
+		},
+		{
+			caseName: "override-annotations",
+			infra: newTestInfraWithAnnotationsAndLabels(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}, map[string]string{
+				"label1": "value1",
+				"label2": "value2",
+			}),
+			service: &egv1a1.KubernetesServiceSpec{
+				Annotations: map[string]string{
+					"anno1": "value1-override",
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -461,21 +523,38 @@ func loadService(caseName string) (*corev1.Service, error) {
 func TestConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
+	cases := []struct {
+		name  string
+		infra *ir.Infra
+	}{
+		{
+			name:  "default",
+			infra: newTestInfra(),
+		}, {
+			name: "with-annotations",
+			infra: newTestInfraWithAnnotations(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}),
+		},
+	}
 
-	infra := newTestInfra()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
+			cm, err := r.ConfigMap()
+			require.NoError(t, err)
 
-	r := NewResourceRender(cfg.Namespace, infra.GetProxyInfra())
-	cm, err := r.ConfigMap()
-	require.NoError(t, err)
+			expected, err := loadConfigmap(tc.name)
+			require.NoError(t, err)
 
-	expected, err := loadConfigmap()
-	require.NoError(t, err)
-
-	assert.Equal(t, expected, cm)
+			assert.Equal(t, expected, cm)
+		})
+	}
 }
 
-func loadConfigmap() (*corev1.ConfigMap, error) {
-	cmYAML, err := os.ReadFile("testdata/configmap.yaml")
+func loadConfigmap(tc string) (*corev1.ConfigMap, error) {
+	cmYAML, err := os.ReadFile(fmt.Sprintf("testdata/configmap/%s.yaml", tc))
 	if err != nil {
 		return nil, err
 	}
@@ -485,23 +564,41 @@ func loadConfigmap() (*corev1.ConfigMap, error) {
 }
 
 func TestServiceAccount(t *testing.T) {
+
 	cfg, err := config.New()
 	require.NoError(t, err)
+	cases := []struct {
+		name  string
+		infra *ir.Infra
+	}{
+		{
+			name:  "default",
+			infra: newTestInfra(),
+		}, {
+			name: "with-annotations",
+			infra: newTestInfraWithAnnotations(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}),
+		},
+	}
 
-	infra := newTestInfra()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
+			sa, err := r.ServiceAccount()
+			require.NoError(t, err)
 
-	r := NewResourceRender(cfg.Namespace, infra.GetProxyInfra())
-	sa, err := r.ServiceAccount()
-	require.NoError(t, err)
+			expected, err := loadServiceAccount(tc.name)
+			require.NoError(t, err)
 
-	expected, err := loadServiceAccount()
-	require.NoError(t, err)
-
-	assert.Equal(t, expected, sa)
+			assert.Equal(t, expected, sa)
+		})
+	}
 }
 
-func loadServiceAccount() (*corev1.ServiceAccount, error) {
-	saYAML, err := os.ReadFile("testdata/serviceaccount.yaml")
+func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
+	saYAML, err := os.ReadFile(fmt.Sprintf("testdata/serviceaccount/%s.yaml", tc))
 	if err != nil {
 		return nil, err
 	}
