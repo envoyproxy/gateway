@@ -48,13 +48,17 @@ type GlobalRateLimit struct {
 	// rate limit decisions of all matching rules. For example, if a request
 	// matches two rules, one rate limited and one not, the final decision will be
 	// to rate limit the request.
+	//
 	// +kubebuilder:validation:MaxItems=16
 	Rules []RateLimitRule `json:"rules"`
 }
 
 // LocalRateLimit defines local rate limit configuration.
 type LocalRateLimit struct {
-	// Rules are a list of RateLimit selectors and limits.
+	// Rules are a list of RateLimit selectors and limits. If a request matches
+	// multiple rules, the strictest limit is applied. For example, if a request
+	// matches two rules, one with 10rps and one with 20rps, the final limit will
+	// be based on the rule with 10rps.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
