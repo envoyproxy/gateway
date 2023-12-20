@@ -244,6 +244,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
 		pp *ir.ProxyProtocol
+		cb *ir.CircuitBreaker
 	)
 
 	// Build IR
@@ -256,6 +257,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
 	}
+	if policy.Spec.CircuitBreaker != nil {
+		cb = t.buildCircuitBreaker(policy)
+	}
+
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -266,6 +271,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.RateLimit = rl
 					r.LoadBalancer = lb
 					r.ProxyProtocol = pp
+					r.CircuitBreaker = cb
 				}
 			}
 		}
@@ -278,6 +284,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
 		pp *ir.ProxyProtocol
+		cb *ir.CircuitBreaker
 	)
 
 	// Build IR
@@ -289,6 +296,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.CircuitBreaker != nil {
+		cb = t.buildCircuitBreaker(policy)
 	}
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -308,6 +318,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.ProxyProtocol == nil {
 				r.ProxyProtocol = pp
+			}
+			if r.CircuitBreaker == nil {
+				r.CircuitBreaker = cb
 			}
 		}
 	}
@@ -642,4 +655,58 @@ func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
 		seconds = 60 * 60 * 24
 	}
 	return seconds
+}
+
+func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *ir.CircuitBreaker {
+	var cb *ir.CircuitBreaker
+	pcb := policy.Spec.CircuitBreaker
+
+	if pcb != nil {
+		cb = &ir.CircuitBreaker{}
+
+		if pcb.MaxConnections != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
+				cb.MaxConnections = &ui32
+			} else {
+				setCircuitBreakerPolicyErrorCondition(policy)
+				return nil
+			}
+		}
+
+		if pcb.MaxParallelRequests != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
+				cb.MaxParallelRequests = &ui32
+			} else {
+				setCircuitBreakerPolicyErrorCondition(policy)
+				return nil
+			}
+		}
+
+		if pcb.MaxPendingRequests != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
+				cb.MaxPendingRequests = &ui32
+			} else {
+				setCircuitBreakerPolicyErrorCondition(policy)
+				return nil
+			}
+		}
+	}
+
+	return cb
+}
+
+func setCircuitBreakerPolicyErrorCondition(policy *egv1a1.BackendTrafficPolicy) {
+	message := "Unable to translate Circuit Breaker"
+	status.SetBackendTrafficPolicyCondition(policy,
+		gwv1a2.PolicyConditionAccepted,
+		metav1.ConditionFalse,
+		gwv1a2.PolicyReasonInvalid,
+		message,
+	)
+}
+func int64ToUint32(in int64) (uint32, bool) {
+	if in >= 0 && in <= math.MaxUint32 {
+		return uint32(in), true
+	}
+	return 0, false
 }
