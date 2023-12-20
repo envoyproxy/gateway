@@ -49,9 +49,9 @@ backendTrafficPolicies:
       type: Local
       local:
         rules:
-        - limit:    # The Rule without selector is used as default
-            requests: 10
-            unit: Minute
+        - limit:
+            requests: 1000
+            unit: Hour
         - clientSelectors:
           - headers:
             - name: x-user-id
@@ -71,4 +71,4 @@ backendTrafficPolicies:
               value: 192.168.0.0/16
           limit:
             requests: 10
-            unit: Minute
+            unit: Minute    # Local rateLimit rule limit unit is not a multiple of the default limit unit.

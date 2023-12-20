@@ -132,7 +132,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 
 	local := irRoute.RateLimit.Local
 
-	rateLimits, descriptors, err := buildRouteLocalRateLimits(irRoute.Name, local)
+	rateLimits, descriptors, err := buildRouteLocalRateLimits(local)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 	return nil
 }
 
-func buildRouteLocalRateLimits(descriptorPrefix string, local *ir.LocalRateLimit) (
+func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor, error) {
 	var rateLimits []*routev3.RateLimit
 	var descriptors []*rlv3.LocalRateLimitDescriptor
@@ -212,8 +212,8 @@ func buildRouteLocalRateLimits(descriptorPrefix string, local *ir.LocalRateLimit
 			}
 
 			// Setup HeaderValueMatch actions
-			descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
-			descriptorVal := getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
+			descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
+			descriptorVal := getRouteRuleDescriptor(rIdx, mIdx)
 			headerMatcher := &routev3.HeaderMatcher{
 				Name: match.Name,
 				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{

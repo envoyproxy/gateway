@@ -48,9 +48,6 @@ backendTrafficPolicies:
     rateLimit:
       type: Local
       local:
-        default:
-          requests: 100
-          unit: Second
         rules:
         - clientSelectors:
           - headers:

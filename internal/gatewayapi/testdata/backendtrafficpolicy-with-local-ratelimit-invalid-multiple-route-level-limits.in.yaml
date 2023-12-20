@@ -48,10 +48,30 @@ backendTrafficPolicies:
     rateLimit:
       type: Local
       local:
-        default:
-          requests: 100
-          unit: Second
         rules:
+        - limit:    # There are two Rule without selector, so this is invalid.
+            requests: 10
+            unit: Minute
         - limit:
+            requests: 20
+            unit: Minute
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: one
+            - name: x-org-id
+              value: foo
+          limit:
+            requests: 10
+            unit: Hour
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: two
+            - name: x-org-id
+              value: bar
+            sourceCIDR:
+              value: 192.168.0.0/16
+          limit:
             requests: 10
             unit: Minute

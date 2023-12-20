@@ -168,10 +168,18 @@ spec:
                             for them.
                           properties:
                             clientSelectors:
-                              description: ClientSelectors holds the list of select
+                              description: "ClientSelectors holds the list of select
                                 conditions to select specific clients using attributes
                                 from the traffic flow. All individual select conditions
                                 must hold True for this rule and its limit to be applied.
+                                \n If no client selectors are specified, the rule
+                                applies to all traffic of the targeted Route. \n If
+                                the policy targets a Gateway, the rule applies to
+                                each Route of the Gateway. Please note that each Route
+                                has its own rate limit counters. For example, if a
+                                Gateway has two Routes, and the policy has a rule
+                                with limit 10rps, the Gateway will have 20rps limit
+                                in total."
                               items:
                                 description: RateLimitSelectCondition specifies the
                                   attributes within the traffic flow that can be used
@@ -244,7 +252,6 @@ spec:
                                     type: object
                                 type: object
                               maxItems: 8
-                              minItems: 1
                               type: array
                             limit:
                               description: Limit holds the rate limit values. This
@@ -282,32 +289,6 @@ spec:
                   local:
                     description: Local defines local rate limit configuration.
                     properties:
-                      default:
-                        description: "Limit is the default rate limit for a route
-                          if no rules match. If a request does not match any of the
-                          rules, it is counted towards this limit. \n Note: Limit
-                          is applied per route. Even if a policy targets a gateway,
-                          each route in that gateway still has a separate rate limit
-                          bucket. For example, if a gateway has 2 routes, and the
-                          limit is 100r/s, then each route has its own 100r/s rate
-                          limit bucket."
-                        properties:
-                          requests:
-                            type: integer
-                          unit:
-                            description: RateLimitUnit specifies the intervals for
-                              setting rate limits. Valid RateLimitUnit values are
-                              "Second", "Minute", "Hour", and "Day".
-                            enum:
-                            - Second
-                            - Minute
-                            - Hour
-                            - Day
-                            type: string
-                        required:
-                        - requests
-                        - unit
-                        type: object
                       rules:
                         description: "Rules are a list of RateLimit selectors and
                           limits. They're used to define fine-grained rate limits
@@ -321,10 +302,18 @@ spec:
                             for them.
                           properties:
                             clientSelectors:
-                              description: ClientSelectors holds the list of select
+                              description: "ClientSelectors holds the list of select
                                 conditions to select specific clients using attributes
                                 from the traffic flow. All individual select conditions
                                 must hold True for this rule and its limit to be applied.
+                                \n If no client selectors are specified, the rule
+                                applies to all traffic of the targeted Route. \n If
+                                the policy targets a Gateway, the rule applies to
+                                each Route of the Gateway. Please note that each Route
+                                has its own rate limit counters. For example, if a
+                                Gateway has two Routes, and the policy has a rule
+                                with limit 10rps, the Gateway will have 20rps limit
+                                in total."
                               items:
                                 description: RateLimitSelectCondition specifies the
                                   attributes within the traffic flow that can be used
@@ -397,7 +386,6 @@ spec:
                                     type: object
                                 type: object
                               maxItems: 8
-                              minItems: 1
                               type: array
                             limit:
                               description: Limit holds the rate limit values. This
@@ -429,8 +417,6 @@ spec:
                           type: object
                         maxItems: 16
                         type: array
-                    required:
-                    - default
                     type: object
                   type:
                     description: Type decides the scope for the RateLimits. Valid

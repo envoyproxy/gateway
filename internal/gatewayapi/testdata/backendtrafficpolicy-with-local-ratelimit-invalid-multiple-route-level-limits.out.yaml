@@ -8,11 +8,31 @@ backendTrafficPolicies:
   spec:
     rateLimit:
       local:
-        default:
-          requests: 100
-          unit: Second
         rules:
         - limit:
+            requests: 10
+            unit: Minute
+        - limit:
+            requests: 20
+            unit: Minute
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: one
+            - name: x-org-id
+              value: foo
+          limit:
+            requests: 10
+            unit: Hour
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: two
+            - name: x-org-id
+              value: bar
+            sourceCIDR:
+              value: 192.168.0.0/16
+          limit:
             requests: 10
             unit: Minute
       type: Local
@@ -24,8 +44,7 @@ backendTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Unable to translate rateLimit. At least one clientSelector must be
-        specified.
+      message: Local rateLimit can not have more than one rule without clientSelectors.
       reason: Invalid
       status: "False"
       type: Accepted

@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"sort"
 	"strings"
@@ -343,13 +344,46 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *i
 	}
 
 	local := policy.Spec.RateLimit.Local
-	defaultLimitUnit := ratelimitUnitToDuration(local.Limit.Unit)
+
+	// Envoy local rateLimit requires a default limit to be set for a route.
+	// EG uses the first rule without clientSelectors as the default route-level
+	// limit. If no such rule is found, EG uses a default limit of uint32 max.
+	var defaultLimit *ir.RateLimitValue
+	for _, rule := range local.Rules {
+		if rule.ClientSelectors == nil || len(rule.ClientSelectors) == 0 {
+			if defaultLimit != nil {
+				message := "Local rateLimit can not have more than one rule without clientSelectors."
+				status.SetBackendTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					message,
+				)
+				return nil
+			}
+			defaultLimit = &ir.RateLimitValue{
+				Requests: rule.Limit.Requests,
+				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+			}
+		}
+	}
+	// If no rule without clientSelectors is found, use uint32 max as the default
+	// limit, which effectively make the default limit unlimited.
+	if defaultLimit == nil {
+		defaultLimit = &ir.RateLimitValue{
+			Requests: math.MaxUint32,
+			Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
+		}
+	}
+
+	// Validate that the rule limit unit is a multiple of the default limit unit.
+	// This is required by Envoy local rateLimit implementation.
+	// see https://github.com/envoyproxy/envoy/blob/6d9a6e995f472526de2b75233abca69aa00021ed/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc#L49
+	defaultLimitUnit := ratelimitUnitToDuration(egv1a1.RateLimitUnit(defaultLimit.Unit))
 	for _, rule := range local.Rules {
 		ruleLimitUint := ratelimitUnitToDuration(rule.Limit.Unit)
 		if defaultLimitUnit == 0 || ruleLimitUint%defaultLimitUnit != 0 {
 			message := "Local rateLimit rule limit unit must be a multiple of the default limit unit."
-			// This is required by Envoy local rateLimit implementation.
-			// see https://github.com/envoyproxy/envoy/blob/6d9a6e995f472526de2b75233abca69aa00021ed/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc#L49
 			status.SetBackendTrafficPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
 				metav1.ConditionFalse,
@@ -360,20 +394,17 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *i
 		}
 	}
 
-	rateLimit := &ir.RateLimit{
-		Local: &ir.LocalRateLimit{
-			Default: ir.RateLimitValue{
-				Requests: local.Limit.Requests,
-				Unit:     ir.RateLimitUnit(local.Limit.Unit),
-			},
-			Rules: make([]*ir.RateLimitRule, len(local.Rules)),
-		},
-	}
-
-	irRules := rateLimit.Local.Rules
 	var err error
-	for i, rule := range local.Rules {
-		irRules[i], err = buildRateLimitRule(rule)
+	var irRule *ir.RateLimitRule
+	var irRules = make([]*ir.RateLimitRule, 0)
+	for _, rule := range local.Rules {
+		// We don't process the rule without clientSelectors here because it's
+		// previously used as the default route-level limit.
+		if len(rule.ClientSelectors) == 0 {
+			continue
+		}
+
+		irRule, err = buildRateLimitRule(rule)
 		if err != nil {
 			status.SetBackendTrafficPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
@@ -383,7 +414,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *i
 			)
 			return nil
 		}
-		if irRules[i].CIDRMatch != nil && irRules[i].CIDRMatch.Distinct {
+		if irRule.CIDRMatch != nil && irRule.CIDRMatch.Distinct {
 			message := "Local rateLimit does not support distinct CIDRMatch."
 			status.SetBackendTrafficPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
@@ -393,7 +424,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *i
 			)
 			return nil
 		}
-		for _, match := range irRules[i].HeaderMatches {
+		for _, match := range irRule.HeaderMatches {
 			if match.Distinct {
 				message := "Local rateLimit does not support distinct HeaderMatch."
 				status.SetBackendTrafficPolicyCondition(policy,
@@ -405,8 +436,15 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *i
 				return nil
 			}
 		}
+		irRules = append(irRules, irRule)
 	}
 
+	rateLimit := &ir.RateLimit{
+		Local: &ir.LocalRateLimit{
+			Default: *defaultLimit,
+			Rules:   irRules,
+		},
+	}
 	return rateLimit
 }
 
@@ -466,10 +504,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
 	}
-	if len(rule.ClientSelectors) == 0 {
-		return nil, errors.New(
-			"unable to translate rateLimit. At least one clientSelector must be specified")
-	}
+
 	for _, match := range rule.ClientSelectors {
 		if len(match.Headers) == 0 && match.SourceCIDR == nil {
 			return nil, errors.New(

@@ -8,9 +8,6 @@ backendTrafficPolicies:
   spec:
     rateLimit:
       local:
-        default:
-          requests: 1000
-          unit: Hour
         rules:
         - clientSelectors:
           - headers:
@@ -41,10 +38,9 @@ backendTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Local rateLimit rule limit unit must be a multiple of the default limit
-        unit.
-      reason: Invalid
-      status: "False"
+      message: BackendTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
       type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -172,3 +168,34 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        rateLimit:
+          local:
+            default:
+              requests: 4294967295
+              unit: Second
+            rules:
+            - headerMatches:
+              - distinct: false
+                exact: one
+                name: x-user-id
+              - distinct: false
+                exact: foo
+                name: x-org-id
+              limit:
+                requests: 10
+                unit: Hour
+            - cidrMatch:
+                cidr: 192.168.0.0/16
+                distinct: false
+                ipv6: false
+                maskLen: 16
+              headerMatches:
+              - distinct: false
+                exact: two
+                name: x-user-id
+              - distinct: false
+                exact: bar
+                name: x-org-id
+              limit:
+                requests: 10
+                unit: Minute

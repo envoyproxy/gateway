@@ -48,10 +48,7 @@ backendTrafficPolicies:
     rateLimit:
       type: Local
       local:
-        default:
-          requests: 1000
-          unit: Hour
-        rules:
+        rules:    # No Rule without selector is specified, so int32 max is used as default.
         - clientSelectors:
           - headers:
             - name: x-user-id

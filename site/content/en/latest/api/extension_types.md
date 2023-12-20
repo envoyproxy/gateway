@@ -1129,8 +1129,6 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `default` _[RateLimitValue](#ratelimitvalue)_ | Limit is the default rate limit for a route if no rules match. If a request does not match any of the rules, it is counted towards this limit. 
- Note: Limit is applied per route. Even if a policy targets a gateway, each route in that gateway still has a separate rate limit bucket. For example, if a gateway has 2 routes, and the limit is 100r/s, then each route has its own 100r/s rate limit bucket. |
 | `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. They're used to define fine-grained rate limits that can be applied to specific clients using attributes from the traffic flow. 
  Orders matters here as the rules are processed sequentially. The first rule that matches the request is applied. |
 
@@ -1537,7 +1535,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. |
+| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. 
+ If no client selectors are specified, the rule applies to all traffic of the targeted Route. 
+ If the policy targets a Gateway, the rule applies to each Route of the Gateway. Please note that each Route has its own rate limit counters. For example, if a Gateway has two Routes, and the policy has a rule with limit 10rps, the Gateway will have 20rps limit in total. |
 | `limit` _[RateLimitValue](#ratelimitvalue)_ | Limit holds the rate limit values. This limit is applied for traffic flows when the selectors compute to True, causing the request to be counted towards the limit. The limit is enforced and the request is ratelimited, i.e. a response with 429 HTTP status code is sent back to the client when the selected requests have reached the limit. |
 
 
@@ -1601,7 +1601,6 @@ _Appears in:_
 RateLimitValue defines the limits for rate limiting.
 
 _Appears in:_
-- [LocalRateLimit](#localratelimit)
 - [RateLimitRule](#ratelimitrule)
 
 | Field | Description |
