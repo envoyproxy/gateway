@@ -109,7 +109,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		for i := range route.JWT.Providers {
 			irProvider := route.JWT.Providers[i]
 			// Create the cluster for the remote jwks, if it doesn't exist.
-			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI)
+			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI, false)
 			if err != nil {
 				return nil, err
 			}
@@ -262,7 +262,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 			)
 
 			provider := route.JWT.Providers[i]
-			jwks, err = url2Cluster(provider.RemoteJWKS.URI)
+			jwks, err = url2Cluster(provider.RemoteJWKS.URI, false)
 			if err != nil {
 				errs = multierror.Append(errs, err)
 				continue
