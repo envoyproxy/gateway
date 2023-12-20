@@ -77,6 +77,7 @@ _Appears in:_
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
+| `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 
 
 
@@ -125,6 +126,22 @@ _Appears in:_
 | `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
 | `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
 | `allowCredentials` _boolean_ | AllowCredentials indicates whether a request can include user credentials like cookies, authentication headers, or TLS client certificates. |
+
+
+#### CircuitBreaker
+
+
+
+CircuitBreaker defines the Circuit Breaker configuration.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `maxConnections` _integer_ | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
+| `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
+| `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 
 
 #### ClaimToHeader

@@ -12,10 +12,10 @@ routes:
           cidr: "192.168.0.0/16"
           ipv6: false
           maskLen: 16
+          distinct: true
         limit:
           requests: 5
           unit: second
-        distinct: true
   pathMatch:
     exact: "foo/bar"
   destination:

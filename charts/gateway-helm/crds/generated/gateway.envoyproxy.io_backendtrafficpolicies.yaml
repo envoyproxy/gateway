@@ -44,6 +44,39 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              circuitBreaker:
+                description: Circuit Breaker settings for the upstream connections
+                  and requests. If not set, circuit breakers will be enabled with
+                  the default thresholds
+                properties:
+                  maxConnections:
+                    default: 1024
+                    description: The maximum number of connections that Envoy will
+                      establish to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxParallelRequests:
+                    default: 1024
+                    description: The maximum number of parallel requests that Envoy
+                      will make to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxPendingRequests:
+                    default: 1024
+                    description: The maximum number of pending requests that Envoy
+                      will queue to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                type: object
               faultInjection:
                 description: FaultInjection defines the fault injection policy to
                   be applied. This configuration can be used to inject delays and

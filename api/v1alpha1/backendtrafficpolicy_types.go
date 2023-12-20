@@ -70,6 +70,11 @@ type BackendTrafficPolicySpec struct {
 	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
 	// +optional
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
+	// Circuit Breaker settings for the upstream connections and requests.
+	// If not set, circuit breakers will be enabled with the default thresholds
+	//
+	// +optional
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
