@@ -25,13 +25,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -115,22 +115,22 @@ func TestTranslate(t *testing.T) {
 						Ports: []discoveryv1.EndpointPort{
 							{
 								Name:     ptr.To("http"),
-								Port:     ptr.To(int32(8080)),
+								Port:     ptr.To[int32](8080),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("https"),
-								Port:     ptr.To(int32(8443)),
+								Port:     ptr.To[int32](8443),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("tcp"),
-								Port:     ptr.To(int32(8163)),
+								Port:     ptr.To[int32](8163),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("udp"),
-								Port:     ptr.To(int32(8162)),
+								Port:     ptr.To[int32](8162),
 								Protocol: ptr.To(corev1.ProtocolUDP),
 							},
 						},
@@ -180,7 +180,7 @@ func TestTranslate(t *testing.T) {
 					Ports: []discoveryv1.EndpointPort{
 						{
 							Name:     ptr.To("http"),
-							Port:     ptr.To(int32(8080)),
+							Port:     ptr.To[int32](8080),
 							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
 					},
@@ -303,22 +303,22 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 						Ports: []discoveryv1.EndpointPort{
 							{
 								Name:     ptr.To("http"),
-								Port:     ptr.To(int32(8080)),
+								Port:     ptr.To[int32](8080),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("https"),
-								Port:     ptr.To(int32(8443)),
+								Port:     ptr.To[int32](8443),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("tcp"),
-								Port:     ptr.To(int32(8163)),
+								Port:     ptr.To[int32](8163),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("udp"),
-								Port:     ptr.To(int32(8162)),
+								Port:     ptr.To[int32](8162),
 								Protocol: ptr.To(corev1.ProtocolUDP),
 							},
 						},
@@ -367,7 +367,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					Ports: []discoveryv1.EndpointPort{
 						{
 							Name:     ptr.To("http"),
-							Port:     ptr.To(int32(8080)),
+							Port:     ptr.To[int32](8080),
 							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
 					},

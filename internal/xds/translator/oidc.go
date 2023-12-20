@@ -19,9 +19,9 @@ import (
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -251,7 +251,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 		}
 
 		ds = &ir.DestinationSetting{
-			Weight: ptr.To(uint32(1)),
+			Weight: ptr.To[uint32](1),
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(
 				cluster.hostname,
 				cluster.port),
