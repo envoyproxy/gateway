@@ -218,7 +218,7 @@ _Appears in:_
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
-| `tls` _[TLSSettings](#tlssettings)_ | TLS settings controlling how connections are established with the downstream host. |
+| `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 
 
 
@@ -1878,7 +1878,10 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `version` _[TLSVersions](#tlsversions)_ | Version details the minimum/maximum TLS protocol version that should be supported by this listener. |
+| `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. 
+ The default is TLS 1.2 if this is not specified. |
+| `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow 
+ The default is TLS 1.3 if this is not specified. |
 | `ciphers` _string array_ | CipherSuites specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. 
  In non-FIPS Envoy Proxy builds, the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 
  In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
@@ -1896,23 +1899,8 @@ _Underlying type:_ `string`
 TLSVersion specifies the TLS version
 
 _Appears in:_
-- [TLSVersions](#tlsversions)
-
-
-
-#### TLSVersions
-
-
-
-
-
-_Appears in:_
 - [TLSSettings](#tlssettings)
 
-| Field | Description |
-| --- | --- |
-| `min` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS version to use |
-| `max` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS version to use |
 
 
 #### TracingProvider

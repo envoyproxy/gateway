@@ -5,13 +5,20 @@
 
 package v1alpha1
 
-// +kubebuilder:validation:XValidation:rule="self.version.min == 'TLSv1_3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
+// +kubebuilder:validation:XValidation:rule="self.minVersion == 'v1_3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
 type TLSSettings struct {
 
-	// Version details the minimum/maximum TLS protocol version that
-	// should be supported by this listener.
+	// Min specifies the minimal TLS protocol version to allow.
+	//
+	// The default is TLS 1.2 if this is not specified.
 	// +optional
-	Version *TLSVersions `json:"version,omitempty"`
+	MinVersion *TLSVersion `json:"minVersion,omitempty"`
+
+	// Max specifies the maximal TLS protocol version to allow
+	//
+	// The default is TLS 1.3 if this is not specified.
+	// +optional
+	MaxVersion *TLSVersion `json:"maxVersion,omitempty"`
 
 	// CipherSuites specifies the set of cipher suites supported when
 	// negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
@@ -86,13 +93,3 @@ const (
 	// TLSv1.3 specifies TLS version 1.3
 	TLSv13 TLSVersion = "v1_3"
 )
-
-type TLSVersions struct {
-	// Min specifies the minimal TLS version to use
-	// +optional
-	Min *TLSVersion `json:"min,omitempty"`
-
-	// Max specifies the maximal TLS version to use
-	// +optional
-	Max *TLSVersion `json:"max,omitempty"`
-}
