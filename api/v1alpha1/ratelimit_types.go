@@ -40,26 +40,21 @@ const (
 
 // GlobalRateLimit defines global rate limit configuration.
 type GlobalRateLimit struct {
-	// Rules are a list of RateLimit selectors and limits.
-	// Each rule and its associated limit is applied
-	// in a mutually exclusive way i.e. if multiple
-	// rules get selected, each of their associated
-	// limits get applied, so a single traffic request
-	// might increase the rate limit counters for multiple
-	// rules if selected.
-	//
+	// Rules are a list of RateLimit selectors and limits. Each rule and its
+	// associated limit is applied in a mutually exclusive way. If a request
+	// matches multiple rules, each of their associated limits get applied, so a
+	// single request might increase the rate limit counters for multiple rules
+	// if selected. The rate limit service will return a logical OR of the individual
+	// rate limit decisions of all matching rules. For example, if a request
+	// matches two rules, one rate limited and one not, the final decision will be
+	// to rate limit the request.
 	// +kubebuilder:validation:MaxItems=16
 	Rules []RateLimitRule `json:"rules"`
 }
 
 // LocalRateLimit defines local rate limit configuration.
 type LocalRateLimit struct {
-	// Rules are a list of RateLimit selectors and limits. They're used to define
-	// fine-grained rate limits that can be applied to specific clients using
-	// attributes from the traffic flow.
-	//
-	// Orders matters here as the rules are processed sequentially.
-	// The first rule that matches the request is applied.
+	// Rules are a list of RateLimit selectors and limits.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16

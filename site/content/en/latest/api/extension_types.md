@@ -1129,7 +1129,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. They're used to define fine-grained rate limits that can be applied to specific clients using attributes from the traffic flow. 
+| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. 
  Orders matters here as the rules are processed sequentially. The first rule that matches the request is applied. |
 
 
