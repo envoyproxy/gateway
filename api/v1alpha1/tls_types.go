@@ -71,20 +71,20 @@ const (
 )
 
 // TLSVersion specifies the TLS version
-// +kubebuilder:validation:Enum=TLS_Auto;TLSv1_0;TLSv1_1;TLSv1_2;TLSv1_3
+// +kubebuilder:validation:Enum=Auto;v1_0;v1_1;v1_2;v1_3
 type TLSVersion string
 
 const (
 	// TLSAuto allows Envoy to choose the optimal TLS Version
-	TLSAuto TLSVersion = "TLS_Auto"
+	TLSAuto TLSVersion = "Auto"
 	// TLSv1_0 specifies TLS version 1.0
-	TLSv10 TLSVersion = "TLSv1_0"
+	TLSv10 TLSVersion = "v1_0"
 	// TLSv1_1 specifies TLS version 1.1
-	TLSv11 TLSVersion = "TLSv1_1"
+	TLSv11 TLSVersion = "v1_1"
 	// TLSv1.2 specifies TLS version 1.2
-	TLSv12 TLSVersion = "TLSv1_2"
+	TLSv12 TLSVersion = "v1_2"
 	// TLSv1.3 specifies TLS version 1.3
-	TLSv13 TLSVersion = "TLSv1_3"
+	TLSv13 TLSVersion = "v1_3"
 )
 
 type TLSVersions struct {
