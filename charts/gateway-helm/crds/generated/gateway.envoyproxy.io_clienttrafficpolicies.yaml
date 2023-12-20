@@ -132,8 +132,8 @@ spec:
                     type: integer
                 type: object
               tls:
-                description: TLS settings controlling how connections are established
-                  with the downstream host.
+                description: TLS settings configure TLS termination settings with
+                  the downstream client.
                 properties:
                   alpnProtocols:
                     description: "ALPNProtocols supplies the list of ALPN protocols
