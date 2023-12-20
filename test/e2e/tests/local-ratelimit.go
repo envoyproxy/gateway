@@ -156,7 +156,7 @@ var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
 				t.Errorf("fail to get expected response at first three request: %v", err)
 			}
 
-			// this request should be limited because the user is john and the limit is 3
+			// this request should be limited because the limit is 3
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("fail to get expected response at last fourth request: %v", err)
 			}
