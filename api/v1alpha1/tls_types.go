@@ -17,31 +17,27 @@ type TLSSettings struct {
 	// negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
 	//
 	// In non-FIPS Envoy Proxy builds, the default cipher list is:
-	//
-	// [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
-	// [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
-	// ECDHE-ECDSA-AES256-GCM-SHA384
-	// ECDHE-RSA-AES256-GCM-SHA384
+	// - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
+	// - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
+	// - ECDHE-ECDSA-AES256-GCM-SHA384
+	// - ECDHE-RSA-AES256-GCM-SHA384
 	//
 	// In builds using BoringSSL FIPS the default cipher list is:
-	//
-	// ECDHE-ECDSA-AES128-GCM-SHA256
-	// ECDHE-RSA-AES128-GCM-SHA256
-	// ECDHE-ECDSA-AES256-GCM-SHA384
-	// ECDHE-RSA-AES256-GCM-SHA384
+	// - ECDHE-ECDSA-AES128-GCM-SHA256
+	// - ECDHE-RSA-AES128-GCM-SHA256
+	// - ECDHE-ECDSA-AES256-GCM-SHA384
+	// - ECDHE-RSA-AES256-GCM-SHA384
 	//
 	// +optional
 	CipherSuites []string `json:"ciphers,omitempty"`
 
 	// ECDHCurves specifies the set of supported ECDH curves.
 	// In non-FIPS Envoy Proxy builds the default curves are:
-	//
-	// X25519
-	// P-256
+	// - X25519
+	// - P-256
 	//
 	// In builds using BoringSSL FIPS the default curve is:
-	//
-	// P-256
+	// - P-256
 	// +optional
 	ECDHCurves []string `json:"ecdhCurves,omitempty"`
 
@@ -52,9 +48,27 @@ type TLSSettings struct {
 
 	// ALPNProtocols supplies the list of ALPN protocols that should be
 	// exposed by the listener. By default http/2 and http/1.1 are enabled.
+	//
+	// Supported values are:
+	// - http/1.0
+	// - http/1.1
+	// - http/2
 	// +optional
-	ALPNProtocols []string `json:"alpnProtocols,omitempty"`
+	ALPNProtocols []ALPNProtocol `json:"alpnProtocols,omitempty"`
 }
+
+// ALPNProtocol specifies the protocol to be negotiated using ALPN
+// +kubebuilder:validation:Enum=http/1.0;http/1.1;http/2
+type ALPNProtocol string
+
+const (
+	// HTTPProtocolVersion1_0 specifies that HTTP/1.0 should be negotiable with ALPN
+	HTTPProtocolVersion1_0 ALPNProtocol = "http/1.0"
+	// HTTPProtocolVersion1_1 specifies that HTTP/1.1 should be negotiable with ALPN
+	HTTPProtocolVersion1_1 ALPNProtocol = "http/1.1"
+	// HTTPProtocolVersion2 specifies that HTTP/2 should be negotiable with ALPN
+	HTTPProtocolVersion2 ALPNProtocol = "http/2"
+)
 
 // TLSVersion specifies the TLS version
 // +kubebuilder:validation:Enum=TLS_Auto;TLSv1_0;TLSv1_1;TLSv1_2;TLSv1_3

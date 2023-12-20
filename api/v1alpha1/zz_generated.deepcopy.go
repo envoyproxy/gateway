@@ -2610,7 +2610,7 @@ func (in *TLSSettings) DeepCopyInto(out *TLSSettings) {
 	}
 	if in.ALPNProtocols != nil {
 		in, out := &in.ALPNProtocols, &out.ALPNProtocols
-		*out = make([]string, len(*in))
+		*out = make([]ALPNProtocol, len(*in))
 		copy(*out, *in)
 	}
 }
