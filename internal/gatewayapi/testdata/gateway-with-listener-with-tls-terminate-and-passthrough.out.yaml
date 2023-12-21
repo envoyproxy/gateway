@@ -115,12 +115,16 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/tls-passthrough
         ports:
         - containerPort: 10090
           name: tls-passthrough
           protocol: TLS
           servicePort: 90
+      - address: null
+        name: envoy-gateway/gateway-1/tls-terminate
+        ports:
         - containerPort: 10443
           name: tls-terminate
           protocol: HTTPS
@@ -181,7 +185,8 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -201,7 +206,8 @@ xdsIR:
       destination:
         name: tlsroute/default/tlsroute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8080
           protocol: HTTPS

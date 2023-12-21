@@ -88,7 +88,14 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-weighted-invalid-backend",
 		},
 		{
+			name: "http-route-dns-cluster",
+		},
+		{
 			name:           "simple-tls",
+			requireSecrets: true,
+		},
+		{
+			name:           "http3",
 			requireSecrets: true,
 		},
 		{
@@ -195,6 +202,18 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "http-route-partial-invalid",
+		},
+		{
+			name: "listener-proxy-protocol",
+		},
+		{
+			name: "jwt-custom-extractor",
+		},
+		{
+			name: "proxy-protocol-upstream",
+		},
+		{
+			name: "basic-auth",
 		},
 	}
 
@@ -325,6 +344,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			name: "distinct-match",
 		},
 		{
+			name: "distinct-remote-address-match",
+		},
+		{
 			name: "value-match",
 		},
 		{
@@ -338,6 +360,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		},
 		{
 			name: "masked-remote-address-match",
+		},
+		{
+			name: "multiple-masked-remote-address-match-with-same-cidr",
 		},
 	}
 

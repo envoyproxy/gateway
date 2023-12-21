@@ -5,10 +5,13 @@
 
 package v1alpha1
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // LoadBalancer defines the load balancer policy to be applied.
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
@@ -24,6 +27,13 @@ type LoadBalancer struct {
 	//
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
+
+	// SlowStart defines the configuration related to the slow start load balancer policy.
+	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
+	// Currently this is only supported for RoundRobin and LeastRequest load balancers
+	//
+	// +optional
+	SlowStart *SlowStart `json:"slowStart,omitempty"`
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
@@ -55,3 +65,14 @@ const (
 	// SourceIPConsistentHashType hashes based on the source IP address.
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
 )
+
+// SlowStart defines the configuration related to the slow start load balancer policy.
+type SlowStart struct {
+	// Window defines the duration of the warm up period for newly added host.
+	// During slow start window, traffic sent to the newly added hosts will gradually increase.
+	// Currently only supports linear growth of traffic. For additional details,
+	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+	// +kubebuilder:validation:Required
+	Window *metav1.Duration `json:"window"`
+	// TODO: Add support for non-linear traffic increases based on user usage.
+}

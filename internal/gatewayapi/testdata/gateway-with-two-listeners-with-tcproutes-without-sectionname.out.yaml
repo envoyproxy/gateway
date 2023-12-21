@@ -68,12 +68,16 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/tcp1
         ports:
         - containerPort: 10161
           name: tcp1
           protocol: TCP
           servicePort: 161
+      - address: null
+        name: envoy-gateway/gateway-1/tcp2
+        ports:
         - containerPort: 10162
           name: tcp2
           protocol: TCP
@@ -156,7 +160,8 @@ xdsIR:
       destination:
         name: tcproute/default/tcproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8163
           protocol: TCP
@@ -168,7 +173,8 @@ xdsIR:
       destination:
         name: tcproute/default/tcproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8163
           protocol: TCP

@@ -44,6 +44,92 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              circuitBreaker:
+                description: Circuit Breaker settings for the upstream connections
+                  and requests. If not set, circuit breakers will be enabled with
+                  the default thresholds
+                properties:
+                  maxConnections:
+                    default: 1024
+                    description: The maximum number of connections that Envoy will
+                      establish to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxParallelRequests:
+                    default: 1024
+                    description: The maximum number of parallel requests that Envoy
+                      will make to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxPendingRequests:
+                    default: 1024
+                    description: The maximum number of pending requests that Envoy
+                      will queue to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                type: object
+              faultInjection:
+                description: FaultInjection defines the fault injection policy to
+                  be applied. This configuration can be used to inject delays and
+                  abort requests to mimic failure scenarios such as service failures
+                  and overloads
+                properties:
+                  abort:
+                    description: If specified, the request will be aborted if it meets
+                      the configuration criteria.
+                    properties:
+                      grpcStatus:
+                        description: GrpcStatus specifies the GRPC status code to
+                          be returned
+                        format: int32
+                        type: integer
+                      httpStatus:
+                        description: StatusCode specifies the HTTP status code to
+                          be returned
+                        format: int32
+                        maximum: 600
+                        minimum: 200
+                        type: integer
+                      percentage:
+                        description: Percentage specifies the percentage of requests
+                          to be aborted. Default 100%, if set 0, no requests will
+                          be aborted. Accuracy to 0.0001%.
+                        type: number
+                    type: object
+                    x-kubernetes-validations:
+                    - message: httpStatus and grpcStatus cannot be simultaneously
+                        defined.
+                      rule: ' !(has(self.httpStatus) && has(self.grpcStatus)) '
+                    - message: httpStatus and grpcStatus are set at least one.
+                      rule: ' has(self.httpStatus) || has(self.grpcStatus) '
+                  delay:
+                    description: If specified, a delay will be injected into the request.
+                    properties:
+                      fixedDelay:
+                        description: FixedDelay specifies the fixed delay duration
+                        type: string
+                      percentage:
+                        default: 100
+                        description: Percentage specifies the percentage of requests
+                          to be delayed. Default 100%, if set 0, no requests will
+                          be delayed. Accuracy to 0.0001%.
+                        type: number
+                    required:
+                    - fixedDelay
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: Delay and abort faults are set at least one.
+                  rule: ' has(self.delay) || has(self.abort) '
               loadBalancer:
                 description: LoadBalancer policy to apply when routing traffic from
                   the gateway to the backend endpoints
@@ -60,6 +146,23 @@ spec:
                         type: string
                     required:
                     - type
+                    type: object
+                  slowStart:
+                    description: SlowStart defines the configuration related to the
+                      slow start load balancer policy. If set, during slow start window,
+                      traffic sent to the newly added hosts will gradually increase.
+                      Currently this is only supported for RoundRobin and LeastRequest
+                      load balancers
+                    properties:
+                      window:
+                        description: Window defines the duration of the warm up period
+                          for newly added host. During slow start window, traffic
+                          sent to the newly added hosts will gradually increase. Currently
+                          only supports linear growth of traffic. For additional details,
+                          see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                        type: string
+                    required:
+                    - window
                     type: object
                   type:
                     description: Type decides the type of Load Balancer policy. Valid
@@ -79,6 +182,10 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
+                - message: Currently SlowStart is only supported for RoundRobin and
+                    LeastRequest load balancers.
+                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
+                    : true '
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.

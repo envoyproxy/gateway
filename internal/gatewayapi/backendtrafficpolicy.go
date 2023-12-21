@@ -13,13 +13,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 type policyTargetRouteKey struct {
@@ -241,6 +241,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	var (
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
+		pp *ir.ProxyProtocol
 	)
 
 	// Build IR
@@ -250,7 +251,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.LoadBalancer != nil {
 		lb = t.buildLoadBalancer(policy)
 	}
-
+	if policy.Spec.ProxyProtocol != nil {
+		pp = t.buildProxyProtocol(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -260,6 +263,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 				if strings.HasPrefix(r.Name, prefix) {
 					r.RateLimit = rl
 					r.LoadBalancer = lb
+					r.ProxyProtocol = pp
 				}
 			}
 		}
@@ -271,6 +275,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	var (
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
+		pp *ir.ProxyProtocol
 	)
 
 	// Build IR
@@ -279,6 +284,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.LoadBalancer != nil {
 		lb = t.buildLoadBalancer(policy)
+	}
+	if policy.Spec.ProxyProtocol != nil {
+		pp = t.buildProxyProtocol(policy)
 	}
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -295,6 +303,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.LoadBalancer == nil {
 				r.LoadBalancer = lb
+			}
+			if r.ProxyProtocol == nil {
+				r.ProxyProtocol = pp
 			}
 		}
 	}
@@ -422,8 +433,15 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 			lb.ConsistentHash.SourceIP = ptr.To(true)
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
-		lb = &ir.LoadBalancer{
-			LeastRequest: &ir.LeastRequest{},
+		lb = &ir.LoadBalancer{}
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.LeastRequest = &ir.LeastRequest{
+					SlowStart: &ir.SlowStart{
+						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+					},
+				}
+			}
 		}
 	case egv1a1.RandomLoadBalancerType:
 		lb = &ir.LoadBalancer{
@@ -431,9 +449,36 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		}
 	case egv1a1.RoundRobinLoadBalancerType:
 		lb = &ir.LoadBalancer{
-			RoundRobin: &ir.RoundRobin{},
+			RoundRobin: &ir.RoundRobin{
+				SlowStart: &ir.SlowStart{},
+			},
+		}
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.RoundRobin = &ir.RoundRobin{
+					SlowStart: &ir.SlowStart{
+						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+					},
+				}
+			}
 		}
 	}
 
 	return lb
+}
+
+func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {
+	var pp *ir.ProxyProtocol
+	switch policy.Spec.ProxyProtocol.Version {
+	case egv1a1.ProxyProtocolVersionV1:
+		pp = &ir.ProxyProtocol{
+			Version: ir.ProxyProtocolVersionV1,
+		}
+	case egv1a1.ProxyProtocolVersionV2:
+		pp = &ir.ProxyProtocol{
+			Version: ir.ProxyProtocolVersionV2,
+		}
+	}
+
+	return pp
 }

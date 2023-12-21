@@ -127,6 +127,15 @@ type EnvoyProxyKubernetesProvider struct {
 	// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="!has(self.loadBalancerIP) || self.loadBalancerIP.matches(r\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4})\")"
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
+
+	// EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
+	// Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored.
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:message="minReplicas must be greater than 0",rule="!has(self.minReplicas) || self.minReplicas > 0"
+	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="!has(self.maxReplicas) || self.maxReplicas > 0"
+	// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than or equal to minReplicas",rule="!has(self.minReplicas) || self.maxReplicas > self.minReplicas"
+	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.

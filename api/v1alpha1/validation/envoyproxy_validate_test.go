@@ -15,10 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -301,7 +300,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Bootstrap: &egv1a1.ProxyBootstrap{
-						Type:  (*egv1a1.BootstrapType)(pointer.String(string(egv1a1.BootstrapTypeMerge))),
+						Type:  ptr.To(egv1a1.BootstrapTypeMerge),
 						Value: mergeUserBootstrap,
 					},
 				},
@@ -390,7 +389,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								{
 									Format: egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
-										Text: pointer.String("[%START_TIME%]"),
+										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{

@@ -5,6 +5,7 @@ type: application
 
 version: v0.0.0-latest
 appVersion: "latest"
+icon: https://raw.githubusercontent.com/envoyproxy/gateway/main/site/assets/icons/logo.svg
 
 maintainers:
   - name: envoy-gateway-steering-committee

@@ -66,7 +66,7 @@ jobs:
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: envoy-gateway
         path: bin/
@@ -76,13 +76,13 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        version: [ v1.26.6, v1.27.3, v1.28.0 ]
+        version: [ v1.27.3, v1.28.0, v1.29.0 ]
     steps:
     - uses: actions/checkout@v4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: envoy-gateway
         path: bin/
@@ -104,13 +104,13 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        version: [ v1.26.6, v1.27.3, v1.28.0 ]
+        version: [ v1.27.3, v1.28.0, v1.29.0 ]
     steps:
     - uses: actions/checkout@v4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: envoy-gateway
         path: bin/
@@ -135,7 +135,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: envoy-gateway
         path: bin/

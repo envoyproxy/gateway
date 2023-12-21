@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,6 +26,7 @@ type ResourceRender interface {
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
+	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
 }
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -68,6 +70,10 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 		return errors.Wrapf(err, "failed to create or update service %s/%s", i.Namespace, r.Name())
 	}
 
+	if err := i.createOrUpdateHPA(ctx, r); err != nil {
+		return errors.Wrapf(err, "failed to create or update hpa %s/%s", i.Namespace, r.Name())
+	}
+
 	return nil
 }
 
@@ -87,6 +93,10 @@ func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 
 	if err := i.deleteService(ctx, r); err != nil {
 		return errors.Wrapf(err, "failed to delete service %s/%s", i.Namespace, r.Name())
+	}
+
+	if err := i.deleteHPA(ctx, r); err != nil {
+		return errors.Wrapf(err, "failed to delete hpa %s/%s", i.Namespace, r.Name())
 	}
 
 	return nil

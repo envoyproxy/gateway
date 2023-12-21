@@ -17,9 +17,10 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 var (
@@ -33,7 +34,7 @@ var (
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty          = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP address")
+	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid       = errors.New("field Port specified is invalid")
 	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
 	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
@@ -156,6 +157,9 @@ func (x Xds) Printable() *Xds {
 			if route.OIDC != nil {
 				route.OIDC.ClientSecret = []byte{}
 			}
+			if route.BasicAuth != nil {
+				route.BasicAuth.Users = []byte{}
+			}
 		}
 	}
 	return out
@@ -184,6 +188,11 @@ type HTTPListener struct {
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// EnableProxyProtocol enables the listener to interpret proxy protocol header
+	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// HTTP3 provides HTTP/3 configuration on the listener.
+	// +optional
+	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -291,6 +300,10 @@ type HTTPRoute struct {
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// Proxy Protocol Settings
+	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// BasicAuth defines the schema for the HTTP Basic Authentication.
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -318,6 +331,8 @@ type CORS struct {
 	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
 	// MaxAge defines how long the results of a preflight request can be cached.
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+	// AllowCredentials indicates whether a request can include user credentials.
+	AllowCredentials bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
 }
 
 // JWT defines the schema for authenticating HTTP requests using
@@ -351,6 +366,14 @@ type OIDC struct {
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+}
+
+// BasicAuth defines the schema for the HTTP Basic Authentication.
+//
+// +k8s:deepcopy-gen=true
+type BasicAuth struct {
+	// The username-password pairs in htpasswd format.
+	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
 }
 
 type OIDCProvider struct {
@@ -479,7 +502,7 @@ func (h HTTPRoute) Validate() error {
 func (j *JWT) validate() error {
 	var errs error
 
-	if err := validation.ValidateJWTProvider(j.Providers); err != nil {
+	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
@@ -520,6 +543,8 @@ type DestinationSetting struct {
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	// AddressTypeState specifies the state of DestinationEndpoint address type.
+	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -534,6 +559,15 @@ func (d DestinationSetting) Validate() error {
 	return errs
 }
 
+// DestinationAddressType describes the address type state for a group of DestinationEndpoint
+type DestinationAddressType string
+
+const (
+	IP    DestinationAddressType = "IP"
+	FQDN  DestinationAddressType = "FQDN"
+	MIXED DestinationAddressType = "Mixed"
+)
+
 // DestinationEndpoint holds the endpoint details associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationEndpoint struct {
@@ -546,10 +580,14 @@ type DestinationEndpoint struct {
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
-	// Only support IP hosts for now
-	if ip := net.ParseIP(d.Host); ip == nil {
+
+	err := validation.IsDNS1123Subdomain(d.Host)
+	ip := net.ParseIP(d.Host)
+
+	if err != nil && ip == nil {
 		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
 	}
+
 	if d.Port == 0 {
 		errs = multierror.Append(errs, ErrDestEndpointPortInvalid)
 	}
@@ -573,7 +611,7 @@ type AddHeader struct {
 	Append bool   `json:"append" yaml:"append"`
 }
 
-// / Validate the fields within the AddHeader structure
+// Validate the fields within the AddHeader structure
 func (h AddHeader) Validate() error {
 	var errs error
 	if h.Name == "" {
@@ -1044,11 +1082,19 @@ func (l *LoadBalancer) Validate() error {
 
 // RoundRobin load balancer settings
 // +k8s:deepcopy-gen=true
-type RoundRobin struct{}
+type RoundRobin struct {
+	// SlowStart defines the slow start configuration.
+	// If set, slow start mode is enabled for newly added hosts in the cluster.
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+}
 
 // LeastRequest load balancer settings
 // +k8s:deepcopy-gen=true
-type LeastRequest struct{}
+type LeastRequest struct {
+	// SlowStart defines the slow start configuration.
+	// If set, slow start mode is enabled for newly added hosts in the cluster.
+	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+}
 
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
@@ -1059,4 +1105,27 @@ type Random struct{}
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
 	SourceIP *bool `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+}
+
+type ProxyProtocolVersion string
+
+const (
+	// ProxyProtocolVersionV1 is the PROXY protocol version 1 (human readable format).
+	ProxyProtocolVersionV1 ProxyProtocolVersion = "V1"
+	// ProxyProtocolVersionV2 is the PROXY protocol version 2 (binary format).
+	ProxyProtocolVersionV2 ProxyProtocolVersion = "V2"
+)
+
+// ProxyProtocol upstream settings
+// +k8s:deepcopy-gen=true
+type ProxyProtocol struct {
+	// Version of proxy protocol to use
+	Version ProxyProtocolVersion `json:"version,omitempty" yaml:"version,omitempty"`
+}
+
+// SlowStart defines the slow start configuration.
+// +k8s:deepcopy-gen=true
+type SlowStart struct {
+	// Window defines the duration of the warm up period for newly added host.
+	Window *metav1.Duration `json:"window" yaml:"window"`
 }

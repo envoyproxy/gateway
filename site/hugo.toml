@@ -1,4 +1,4 @@
-baseURL = "https://gateway.envoyproxy.io/"
+baseURL = "/"
 title = "Envoy Gateway"
 
 # Language settings

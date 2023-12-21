@@ -68,12 +68,16 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/udp1
         ports:
         - containerPort: 10162
           name: udp1
           protocol: UDP
           servicePort: 162
+      - address: null
+        name: envoy-gateway/gateway-1/udp2
+        ports:
         - containerPort: 10163
           name: udp2
           protocol: UDP
@@ -160,7 +164,8 @@ xdsIR:
       destination:
         name: udproute/default/udproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8162
           protocol: UDP
@@ -171,7 +176,8 @@ xdsIR:
       destination:
         name: udproute/default/udproute-2/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8162
           protocol: UDP

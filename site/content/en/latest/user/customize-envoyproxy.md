@@ -135,7 +135,7 @@ EOF
 
 ## Customize EnvoyProxy Deployment Env
 
-You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like: 
+You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like:
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -187,7 +187,7 @@ spec:
           volumes:
           - name: certs
             secret:
-              secretName: envoy-cert   
+              secretName: envoy-cert
 EOF
 ```
 
@@ -220,7 +220,7 @@ After applying the config, you can get the envoyproxy service, and see annotatio
 
 ## Customize EnvoyProxy Bootstrap Config
 
-You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config. 
+You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config.
 There are two ways to customize it:
 
 * Replace: the whole bootstrap config will be replaced by the config you provided.
@@ -317,6 +317,38 @@ After applying the config, the bootstrap config will be overridden by the new co
 Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
 You can also validate this configuration using [egctl translate][].
 
+## Customize EnvoyProxy Horizontal Pod Autoscaler
+
+You can enable [Horizontal Pod Autoscaler](https://github.com/envoyproxy/gateway/issues/703) for EnvoyProxy Deployment. However, before enabling the HPA for EnvoyProxy, please ensure that the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) component is installed in the cluster.
+
+Once confirmed, you can apply it via EnvoyProxy Config as shown below:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyHpa:
+        minReplicas: 2
+        maxReplicas: 10
+        metrics:
+          - resource:
+              name: cpu
+              target:
+                averageUtilization: 60
+                type: Utilization
+            type: Resource
+EOF
+```
+
+After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is generated. However, upon activating the EnvoyProxy's HPA, the Envoy Gateway will no longer reference the `replicas` field specified in the `envoyDeployment`, as outlined [here](#customize-envoyproxy-deployment-replicas).
+
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: ../../api/extension_types#envoyproxy 
+[EnvoyProxy]: ../../api/extension_types#envoyproxy
 [egctl translate]: ../egctl/#validating-gateway-api-configuration
