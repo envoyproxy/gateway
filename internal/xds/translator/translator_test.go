@@ -218,6 +218,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "local-ratelimit",
 		},
+		{
+			name: "circuit-breaker",
+		},
 	}
 
 	for _, tc := range testCases {

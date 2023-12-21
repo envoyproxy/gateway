@@ -31,12 +31,13 @@ const (
 )
 
 type xdsClusterArgs struct {
-	name          string
-	settings      []*ir.DestinationSetting
-	tSocket       *corev3.TransportSocket
-	endpointType  EndpointType
-	loadBalancer  *ir.LoadBalancer
-	proxyProtocol *ir.ProxyProtocol
+	name           string
+	settings       []*ir.DestinationSetting
+	tSocket        *corev3.TransportSocket
+	endpointType   EndpointType
+	loadBalancer   *ir.LoadBalancer
+	proxyProtocol  *ir.ProxyProtocol
+	circuitBreaker *ir.CircuitBreaker
 }
 
 type EndpointType int
@@ -130,7 +131,41 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 	}
 
+	if args.circuitBreaker != nil {
+		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+	}
+
 	return cluster
+}
+
+func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
+	cbt := &clusterv3.CircuitBreakers_Thresholds{
+		Priority: corev3.RoutingPriority_DEFAULT,
+	}
+
+	if circuitBreaker.MaxConnections != nil {
+		cbt.MaxConnections = &wrapperspb.UInt32Value{
+			Value: *circuitBreaker.MaxConnections,
+		}
+	}
+
+	if circuitBreaker.MaxPendingRequests != nil {
+		cbt.MaxPendingRequests = &wrapperspb.UInt32Value{
+			Value: *circuitBreaker.MaxPendingRequests,
+		}
+	}
+
+	if circuitBreaker.MaxParallelRequests != nil {
+		cbt.MaxRequests = &wrapperspb.UInt32Value{
+			Value: *circuitBreaker.MaxParallelRequests,
+		}
+	}
+
+	ecb := &clusterv3.CircuitBreakers{
+		Thresholds: []*clusterv3.CircuitBreakers_Thresholds{cbt},
+	}
+
+	return ecb
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {

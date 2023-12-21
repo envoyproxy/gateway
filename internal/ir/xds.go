@@ -306,6 +306,8 @@ type HTTPRoute struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// Circuit Breaker Settings
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1145,4 +1147,17 @@ type ProxyProtocol struct {
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
 	Window *metav1.Duration `json:"window" yaml:"window"`
+}
+
+// Backend CircuitBreaker settings for the DEFAULT routing priority
+// +k8s:deepcopy-gen=true
+type CircuitBreaker struct {
+	// The maximum number of connections that Envoy will establish.
+	MaxConnections *uint32 `json:"maxConnections,omitempty" yaml:"maxConnections,omitempty"`
+
+	// The maximum number of pending requests that Envoy will queue.
+	MaxPendingRequests *uint32 `json:"maxPendingRequests,omitempty" yaml:"maxPendingRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make.
+	MaxParallelRequests *uint32 `json:"maxParallelRequests,omitempty" yaml:"maxParallelRequests,omitempty"`
 }
