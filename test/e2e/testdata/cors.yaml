@@ -30,6 +30,11 @@ spec:
     exposeHeaders:
     - "x-header-3"
     - "x-header-4"
+  jwt:   # Make sure cors is not affected by jwt https://github.com/envoyproxy/gateway/issues/2312
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
