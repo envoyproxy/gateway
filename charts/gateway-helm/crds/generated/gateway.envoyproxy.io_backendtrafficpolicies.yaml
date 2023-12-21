@@ -77,6 +77,59 @@ spec:
                     minimum: 0
                     type: integer
                 type: object
+              faultInjection:
+                description: FaultInjection defines the fault injection policy to
+                  be applied. This configuration can be used to inject delays and
+                  abort requests to mimic failure scenarios such as service failures
+                  and overloads
+                properties:
+                  abort:
+                    description: If specified, the request will be aborted if it meets
+                      the configuration criteria.
+                    properties:
+                      grpcStatus:
+                        description: GrpcStatus specifies the GRPC status code to
+                          be returned
+                        format: int32
+                        type: integer
+                      httpStatus:
+                        description: StatusCode specifies the HTTP status code to
+                          be returned
+                        format: int32
+                        maximum: 600
+                        minimum: 200
+                        type: integer
+                      percentage:
+                        description: Percentage specifies the percentage of requests
+                          to be aborted. Default 100%, if set 0, no requests will
+                          be aborted. Accuracy to 0.0001%.
+                        type: number
+                    type: object
+                    x-kubernetes-validations:
+                    - message: httpStatus and grpcStatus cannot be simultaneously
+                        defined.
+                      rule: ' !(has(self.httpStatus) && has(self.grpcStatus)) '
+                    - message: httpStatus and grpcStatus are set at least one.
+                      rule: ' has(self.httpStatus) || has(self.grpcStatus) '
+                  delay:
+                    description: If specified, a delay will be injected into the request.
+                    properties:
+                      fixedDelay:
+                        description: FixedDelay specifies the fixed delay duration
+                        type: string
+                      percentage:
+                        default: 100
+                        description: Percentage specifies the percentage of requests
+                          to be delayed. Default 100%, if set 0, no requests will
+                          be delayed. Accuracy to 0.0001%.
+                        type: number
+                    required:
+                    - fixedDelay
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: Delay and abort faults are set at least one.
+                  rule: ' has(self.delay) || has(self.abort) '
               loadBalancer:
                 description: LoadBalancer policy to apply when routing traffic from
                   the gateway to the backend endpoints

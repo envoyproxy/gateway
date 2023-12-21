@@ -76,6 +76,7 @@ _Appears in:_
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
+| `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 
 
@@ -791,6 +792,52 @@ _Appears in:_
 | --- | --- |
 | `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
  CertificateRef can only reference a Kubernetes Secret at this time. |
+
+
+#### FaultInjection
+
+
+
+FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `delay` _[FaultInjectionDelay](#faultinjectiondelay)_ | If specified, a delay will be injected into the request. |
+| `abort` _[FaultInjectionAbort](#faultinjectionabort)_ | If specified, the request will be aborted if it meets the configuration criteria. |
+
+
+#### FaultInjectionAbort
+
+
+
+FaultInjectionAbort defines the abort fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `httpStatus` _integer_ | StatusCode specifies the HTTP status code to be returned |
+| `grpcStatus` _integer_ | GrpcStatus specifies the GRPC status code to be returned |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%. |
+
+
+#### FaultInjectionDelay
+
+
+
+FaultInjectionDelay defines the delay fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `fixedDelay` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | FixedDelay specifies the fixed delay duration |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
 
 
 #### FileEnvoyProxyAccessLog
