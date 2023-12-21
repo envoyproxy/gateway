@@ -9,7 +9,7 @@ package v1alpha1
 // +union
 type RateLimitSpec struct {
 	// Type decides the scope for the RateLimits.
-	// Valid RateLimitType values are "Global".
+	// Valid RateLimitType values are "Global" or "Local".
 	//
 	// +unionDiscriminator
 	Type RateLimitType `json:"type"`
@@ -17,27 +17,50 @@ type RateLimitSpec struct {
 	//
 	// +optional
 	Global *GlobalRateLimit `json:"global,omitempty"`
+
+	// Local defines local rate limit configuration.
+	//
+	// +optional
+	Local *LocalRateLimit `json:"local,omitempty"`
 }
 
 // RateLimitType specifies the types of RateLimiting.
-// +kubebuilder:validation:Enum=Global
+// +kubebuilder:validation:Enum=Global;Local
 type RateLimitType string
 
 const (
-	// GlobalRateLimitType allows the rate limits to be applied across all Envoy proxy instances.
+	// GlobalRateLimitType allows the rate limits to be applied across all Envoy
+	// proxy instances.
 	GlobalRateLimitType RateLimitType = "Global"
+
+	// LocalRateLimitType allows the rate limits to be applied on a per Envoy
+	// proxy instance basis.
+	LocalRateLimitType RateLimitType = "Local"
 )
 
 // GlobalRateLimit defines global rate limit configuration.
 type GlobalRateLimit struct {
-	// Rules are a list of RateLimit selectors and limits.
-	// Each rule and its associated limit is applied
-	// in a mutually exclusive way i.e. if multiple
-	// rules get selected, each of their associated
-	// limits get applied, so a single traffic request
-	// might increase the rate limit counters for multiple
-	// rules if selected.
+	// Rules are a list of RateLimit selectors and limits. Each rule and its
+	// associated limit is applied in a mutually exclusive way. If a request
+	// matches multiple rules, each of their associated limits get applied, so a
+	// single request might increase the rate limit counters for multiple rules
+	// if selected. The rate limit service will return a logical OR of the individual
+	// rate limit decisions of all matching rules. For example, if a request
+	// matches two rules, one rate limited and one not, the final decision will be
+	// to rate limit the request.
 	//
+	// +kubebuilder:validation:MaxItems=16
+	Rules []RateLimitRule `json:"rules"`
+}
+
+// LocalRateLimit defines local rate limit configuration.
+type LocalRateLimit struct {
+	// Rules are a list of RateLimit selectors and limits. If a request matches
+	// multiple rules, the strictest limit is applied. For example, if a request
+	// matches two rules, one with 10rps and one with 20rps, the final limit will
+	// be based on the rule with 10rps.
+	//
+	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Rules []RateLimitRule `json:"rules"`
 }
@@ -49,8 +72,14 @@ type RateLimitRule struct {
 	// specific clients using attributes from the traffic flow.
 	// All individual select conditions must hold True for this rule
 	// and its limit to be applied.
-	// If this field is empty, it is equivalent to True, and
-	// the limit is applied.
+	//
+	// If no client selectors are specified, the rule applies to all traffic of
+	// the targeted Route.
+	//
+	// If the policy targets a Gateway, the rule applies to each Route of the Gateway.
+	// Please note that each Route has its own rate limit counters. For example,
+	// if a Gateway has two Routes, and the policy has a rule with limit 10rps,
+	// each Route will have its own 10rps limit.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=8
@@ -70,6 +99,7 @@ type RateLimitRule struct {
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
+	// At least one of headers or sourceCIDR condition must be specified.
 	//
 	// +listType=map
 	// +listMapKey=name
@@ -78,6 +108,7 @@ type RateLimitSelectCondition struct {
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
 	// SourceCIDR is the client IP Address range to match on.
+	// At least one of headers or sourceCIDR condition must be specified.
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
@@ -91,6 +122,7 @@ const (
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
+	// Note: This is only supported for Global Rate Limits.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
@@ -148,6 +180,7 @@ const (
 	// HeaderMatchDistinct matches any and all possible unique values encountered in the
 	// specified HTTP Header. Note that each unique value will receive its own rate limit
 	// bucket.
+	// Note: This is only supported for Global Rate Limits.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
 
@@ -162,3 +195,18 @@ type RateLimitValue struct {
 //
 // +kubebuilder:validation:Enum=Second;Minute;Hour;Day
 type RateLimitUnit string
+
+// RateLimitUnit constants.
+const (
+	// RateLimitUnitSecond specifies the rate limit interval to be 1 second.
+	RateLimitUnitSecond RateLimitUnit = "Second"
+
+	// RateLimitUnitMinute specifies the rate limit interval to be 1 minute.
+	RateLimitUnitMinute RateLimitUnit = "Minute"
+
+	// RateLimitUnitHour specifies the rate limit interval to be 1 hour.
+	RateLimitUnitHour RateLimitUnit = "Hour"
+
+	// RateLimitUnitDay specifies the rate limit interval to be 1 day.
+	RateLimitUnitDay RateLimitUnit = "Day"
+)

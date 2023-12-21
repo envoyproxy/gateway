@@ -895,11 +895,27 @@ func (h UDPListener) Validate() error {
 type RateLimit struct {
 	// Global rate limit settings.
 	Global *GlobalRateLimit `json:"global,omitempty" yaml:"global,omitempty"`
+
+	// Local rate limit settings.
+	Local *LocalRateLimit `json:"local,omitempty" yaml:"local,omitempty"`
 }
 
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
+	// TODO zhaohuabing: add default values for Global rate limiting.
+
+	// Rules for rate limiting.
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+}
+
+// LocalRateLimit holds the local rate limiting configuration.
+// +k8s:deepcopy-gen=true
+type LocalRateLimit struct {
+	// Default rate limiting values.
+	// If a request does not match any of the rules, the default values are used.
+	Default RateLimitValue `json:"default,omitempty" yaml:"default,omitempty"`
+
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
@@ -912,7 +928,7 @@ type RateLimitRule struct {
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
-	Limit *RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
+	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 }
 
 type CIDRMatch struct {
@@ -924,6 +940,7 @@ type CIDRMatch struct {
 	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
+// TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
 	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
 }

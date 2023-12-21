@@ -880,7 +880,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Each rule and its associated limit is applied in a mutually exclusive way i.e. if multiple rules get selected, each of their associated limits get applied, so a single traffic request might increase the rate limit counters for multiple rules if selected. |
+| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Each rule and its associated limit is applied in a mutually exclusive way. If a request matches multiple rules, each of their associated limits get applied, so a single request might increase the rate limit counters for multiple rules if selected. The rate limit service will return a logical OR of the individual rate limit decisions of all matching rules. For example, if a request matches two rules, one rate limited and one not, the final decision will be to rate limit the request. |
 
 
 #### GroupVersionKind
@@ -1175,6 +1175,20 @@ LoadBalancerType specifies the types of LoadBalancer.
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
 
+
+
+#### LocalRateLimit
+
+
+
+LocalRateLimit defines local rate limit configuration.
+
+_Appears in:_
+- [RateLimitSpec](#ratelimitspec)
+
+| Field | Description |
+| --- | --- |
+| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. If a request matches multiple rules, the strictest limit is applied. For example, if a request matches two rules, one with 10rps and one with 20rps, the final limit will be based on the rule with 10rps. |
 
 
 #### LogLevel
@@ -1575,10 +1589,13 @@ RateLimitRule defines the semantics for matching attributes from the incoming re
 
 _Appears in:_
 - [GlobalRateLimit](#globalratelimit)
+- [LocalRateLimit](#localratelimit)
 
 | Field | Description |
 | --- | --- |
-| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. If this field is empty, it is equivalent to True, and the limit is applied. |
+| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. 
+ If no client selectors are specified, the rule applies to all traffic of the targeted Route. 
+ If the policy targets a Gateway, the rule applies to each Route of the Gateway. Please note that each Route has its own rate limit counters. For example, if a Gateway has two Routes, and the policy has a rule with limit 10rps, each Route will have its own 10rps limit. |
 | `limit` _[RateLimitValue](#ratelimitvalue)_ | Limit holds the rate limit values. This limit is applied for traffic flows when the selectors compute to True, causing the request to be counted towards the limit. The limit is enforced and the request is ratelimited, i.e. a response with 429 HTTP status code is sent back to the client when the selected requests have reached the limit. |
 
 
@@ -1593,8 +1610,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. |
-| `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
+| `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. At least one of headers or sourceCIDR condition must be specified. |
+| `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. At least one of headers or sourceCIDR condition must be specified. |
 
 
 #### RateLimitSpec
@@ -1608,8 +1625,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global" or "Local". |
 | `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
+| `local` _[LocalRateLimit](#localratelimit)_ | Local defines local rate limit configuration. |
 
 
 #### RateLimitType
