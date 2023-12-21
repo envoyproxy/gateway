@@ -71,12 +71,4 @@
   name: "192_168_1_250_8080"
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
-  transportSocket:
-    name: envoy.transport_sockets.tls
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      commonTlsContext:
-        validationContext:
-          trustedCa:
-            filename: /etc/ssl/certs/ca-certificates.crt
   type: EDS

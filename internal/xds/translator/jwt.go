@@ -273,18 +273,21 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
 			}
 
-			tSocket, err = buildXdsUpstreamTLSSocket()
-			if err != nil {
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if err = addXdsCluster(tCtx, &xdsClusterArgs{
+			clusterArgs := &xdsClusterArgs{
 				name:         jwks.name,
 				settings:     []*ir.DestinationSetting{ds},
-				tSocket:      tSocket,
 				endpointType: jwks.endpointType,
-			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			}
+			if jwks.tls {
+				tSocket, err = buildXdsUpstreamTLSSocket()
+				if err != nil {
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				clusterArgs.tSocket = tSocket
+			}
+
+			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = multierror.Append(errs, err)
 			}
 		}
