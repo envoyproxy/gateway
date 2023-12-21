@@ -95,6 +95,10 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "http3",
+			requireSecrets: true,
+		},
+		{
 			name: "tls-route-passthrough",
 		},
 		{

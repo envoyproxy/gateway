@@ -41,7 +41,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/tcp
         ports:
         - containerPort: 10080
           name: tcp
