@@ -76,6 +76,7 @@ _Appears in:_
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
+| `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 
 
@@ -205,6 +206,7 @@ _Appears in:_
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
+| `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 
 
 
@@ -792,6 +794,52 @@ _Appears in:_
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
+#### FaultInjection
+
+
+
+FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `delay` _[FaultInjectionDelay](#faultinjectiondelay)_ | If specified, a delay will be injected into the request. |
+| `abort` _[FaultInjectionAbort](#faultinjectionabort)_ | If specified, the request will be aborted if it meets the configuration criteria. |
+
+
+#### FaultInjectionAbort
+
+
+
+FaultInjectionAbort defines the abort fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `httpStatus` _integer_ | StatusCode specifies the HTTP status code to be returned |
+| `grpcStatus` _integer_ | GrpcStatus specifies the GRPC status code to be returned |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%. |
+
+
+#### FaultInjectionDelay
+
+
+
+FaultInjectionDelay defines the delay fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `fixedDelay` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | FixedDelay specifies the fixed delay duration |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
+
+
 #### FileEnvoyProxyAccessLog
 
 
@@ -849,6 +897,17 @@ _Appears in:_
 | `group` _string_ |  |
 | `version` _string_ |  |
 | `kind` _string_ |  |
+
+
+#### HTTP3Settings
+
+
+
+HTTP3Settings provides HTTP/3 configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
 
 
 #### HeaderMatch

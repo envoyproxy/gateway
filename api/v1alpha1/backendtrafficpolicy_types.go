@@ -66,6 +66,10 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
 
+	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
+	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+	// +optional
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
 	// Circuit Breaker settings for the upstream connections and requests.
 	// If not set, circuit breakers will be enabled with the default thresholds
 	//

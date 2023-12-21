@@ -50,7 +50,7 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 	}
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = i.Proxy.Name
-	i.Proxy.Listeners = []ir.ProxyListener{
+	i.Proxy.Listeners = []*ir.ProxyListener{
 		{
 			Ports: []ir.ListenerPort{
 				{
