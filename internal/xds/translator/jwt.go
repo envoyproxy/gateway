@@ -172,8 +172,9 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 	}
 
 	return &jwtauthnv3.JwtAuthentication{
-		RequirementMap: reqMap,
-		Providers:      jwtProviders,
+		RequirementMap:      reqMap,
+		Providers:           jwtProviders,
+		BypassCorsPreflight: true,
 	}, nil
 }
 

@@ -392,6 +392,7 @@
                               "name": "envoy.filters.http.jwt_authn",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication",
+                                "bypassCorsPreflight": true,
                                 "providers": {
                                   "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example": {
                                     "forward": true,
