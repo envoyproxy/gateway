@@ -35,7 +35,7 @@ spec:
         imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy }}
         {{- with .Values.deployment.envoyGateway.imagePullSecrets }}
         imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
+          {{- toYaml . | nindent 8 }}
         {{- end }}
         name: envoy-gateway-certgen
       restartPolicy: Never
