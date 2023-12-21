@@ -79,7 +79,7 @@ type RateLimitRule struct {
 	// If the policy targets a Gateway, the rule applies to each Route of the Gateway.
 	// Please note that each Route has its own rate limit counters. For example,
 	// if a Gateway has two Routes, and the policy has a rule with limit 10rps,
-	// the Gateway will have 20rps limit in total.
+	// each Route will have its own 10rps limit.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=8

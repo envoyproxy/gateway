@@ -182,8 +182,8 @@ spec:
                                 each Route of the Gateway. Please note that each Route
                                 has its own rate limit counters. For example, if a
                                 Gateway has two Routes, and the policy has a rule
-                                with limit 10rps, the Gateway will have 20rps limit
-                                in total."
+                                with limit 10rps, each Route will have its own 10rps
+                                limit."
                               items:
                                 description: RateLimitSelectCondition specifies the
                                   attributes within the traffic flow that can be used
@@ -315,8 +315,8 @@ spec:
                                 each Route of the Gateway. Please note that each Route
                                 has its own rate limit counters. For example, if a
                                 Gateway has two Routes, and the policy has a rule
-                                with limit 10rps, the Gateway will have 20rps limit
-                                in total."
+                                with limit 10rps, each Route will have its own 10rps
+                                limit."
                               items:
                                 description: RateLimitSelectCondition specifies the
                                   attributes within the traffic flow that can be used
