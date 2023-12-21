@@ -6,7 +6,9 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"net"
 	"sort"
 	"strings"
@@ -313,8 +315,142 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
+	switch policy.Spec.RateLimit.Type {
+	case egv1a1.GlobalRateLimitType:
+		return t.buildGlobalRateLimit(policy)
+	case egv1a1.LocalRateLimitType:
+		return t.buildLocalRateLimit(policy)
+	}
+
+	status.SetBackendTrafficPolicyCondition(policy,
+		gwv1a2.PolicyConditionAccepted,
+		metav1.ConditionFalse,
+		gwv1a2.PolicyReasonInvalid,
+		"Invalid rateLimit type",
+	)
+	return nil
+}
+
+func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
+	if policy.Spec.RateLimit.Local == nil {
+		message := "Local configuration empty for rateLimit."
+		status.SetBackendTrafficPolicyCondition(policy,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwv1a2.PolicyReasonInvalid,
+			message,
+		)
+		return nil
+	}
+
+	local := policy.Spec.RateLimit.Local
+
+	// Envoy local rateLimit requires a default limit to be set for a route.
+	// EG uses the first rule without clientSelectors as the default route-level
+	// limit. If no such rule is found, EG uses a default limit of uint32 max.
+	var defaultLimit *ir.RateLimitValue
+	for _, rule := range local.Rules {
+		if rule.ClientSelectors == nil || len(rule.ClientSelectors) == 0 {
+			if defaultLimit != nil {
+				message := "Local rateLimit can not have more than one rule without clientSelectors."
+				status.SetBackendTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					message,
+				)
+				return nil
+			}
+			defaultLimit = &ir.RateLimitValue{
+				Requests: rule.Limit.Requests,
+				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+			}
+		}
+	}
+	// If no rule without clientSelectors is found, use uint32 max as the default
+	// limit, which effectively make the default limit unlimited.
+	if defaultLimit == nil {
+		defaultLimit = &ir.RateLimitValue{
+			Requests: math.MaxUint32,
+			Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
+		}
+	}
+
+	// Validate that the rule limit unit is a multiple of the default limit unit.
+	// This is required by Envoy local rateLimit implementation.
+	// see https://github.com/envoyproxy/envoy/blob/6d9a6e995f472526de2b75233abca69aa00021ed/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc#L49
+	defaultLimitUnit := ratelimitUnitToDuration(egv1a1.RateLimitUnit(defaultLimit.Unit))
+	for _, rule := range local.Rules {
+		ruleLimitUint := ratelimitUnitToDuration(rule.Limit.Unit)
+		if defaultLimitUnit == 0 || ruleLimitUint%defaultLimitUnit != 0 {
+			message := "Local rateLimit rule limit unit must be a multiple of the default limit unit."
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
+			return nil
+		}
+	}
+
+	var err error
+	var irRule *ir.RateLimitRule
+	var irRules = make([]*ir.RateLimitRule, 0)
+	for _, rule := range local.Rules {
+		// We don't process the rule without clientSelectors here because it's
+		// previously used as the default route-level limit.
+		if len(rule.ClientSelectors) == 0 {
+			continue
+		}
+
+		irRule, err = buildRateLimitRule(rule)
+		if err != nil {
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				status.Error2ConditionMsg(err),
+			)
+			return nil
+		}
+		if irRule.CIDRMatch != nil && irRule.CIDRMatch.Distinct {
+			message := "Local rateLimit does not support distinct CIDRMatch."
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
+			return nil
+		}
+		for _, match := range irRule.HeaderMatches {
+			if match.Distinct {
+				message := "Local rateLimit does not support distinct HeaderMatch."
+				status.SetBackendTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					message,
+				)
+				return nil
+			}
+		}
+		irRules = append(irRules, irRule)
+	}
+
+	rateLimit := &ir.RateLimit{
+		Local: &ir.LocalRateLimit{
+			Default: *defaultLimit,
+			Rules:   irRules,
+		},
+	}
+	return rateLimit
+}
+
+func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
 	if policy.Spec.RateLimit.Global == nil {
-		message := "Global configuration empty for rateLimit"
+		message := "Global configuration empty for rateLimit."
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -323,8 +459,9 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.Rat
 		)
 		return nil
 	}
+
 	if !t.GlobalRateLimitEnabled {
-		message := "Enable Ratelimit in the EnvoyGateway config to configure global rateLimit"
+		message := "Enable Ratelimit in the EnvoyGateway config to configure global rateLimit."
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -333,92 +470,100 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.Rat
 		)
 		return nil
 	}
+
+	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules: make([]*ir.RateLimitRule, len(policy.Spec.RateLimit.Global.Rules)),
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
-	rules := rateLimit.Global.Rules
-	for i, rule := range policy.Spec.RateLimit.Global.Rules {
-		rules[i] = &ir.RateLimitRule{
-			Limit: &ir.RateLimitValue{
-				Requests: rule.Limit.Requests,
-				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
-			},
-			HeaderMatches: make([]*ir.StringMatch, 0),
-		}
-		for _, match := range rule.ClientSelectors {
-			for _, header := range match.Headers {
-				switch {
-				case header.Type == nil && header.Value != nil:
-					fallthrough
-				case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
-					m := &ir.StringMatch{
-						Name:  header.Name,
-						Exact: header.Value,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
-					m := &ir.StringMatch{
-						Name:      header.Name,
-						SafeRegex: header.Value,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
-					m := &ir.StringMatch{
-						Name:     header.Name,
-						Distinct: true,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				default:
-					// set negative status condition.
-					message := "Unable to translate rateLimit. Either the header.Type is not valid or the header is missing a value"
-					status.SetBackendTrafficPolicyCondition(policy,
-						gwv1a2.PolicyConditionAccepted,
-						metav1.ConditionFalse,
-						gwv1a2.PolicyReasonInvalid,
-						message,
-					)
-
-					return nil
-				}
-			}
-
-			if match.SourceCIDR != nil {
-				// distinct means that each IP Address within the specified Source IP CIDR is treated as a
-				// distinct client selector and uses a separate rate limit bucket/counter.
-				distinct := false
-				sourceCIDR := match.SourceCIDR.Value
-				if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
-					distinct = true
-				}
-
-				ip, ipn, err := net.ParseCIDR(sourceCIDR)
-				if err != nil {
-					message := "Unable to translate rateLimit"
-					status.SetBackendTrafficPolicyCondition(policy,
-						gwv1a2.PolicyConditionAccepted,
-						metav1.ConditionFalse,
-						gwv1a2.PolicyReasonInvalid,
-						message,
-					)
-
-					return nil
-				}
-
-				mask, _ := ipn.Mask.Size()
-				rules[i].CIDRMatch = &ir.CIDRMatch{
-					CIDR:     ipn.String(),
-					IPv6:     ip.To4() == nil,
-					MaskLen:  mask,
-					Distinct: distinct,
-				}
-			}
+	irRules := rateLimit.Global.Rules
+	var err error
+	for i, rule := range global.Rules {
+		irRules[i], err = buildRateLimitRule(rule)
+		if err != nil {
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				status.Error2ConditionMsg(err),
+			)
+			return nil
 		}
 	}
 
 	return rateLimit
+}
+
+func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
+	irRule := &ir.RateLimitRule{
+		Limit: ir.RateLimitValue{
+			Requests: rule.Limit.Requests,
+			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+		},
+		HeaderMatches: make([]*ir.StringMatch, 0),
+	}
+
+	for _, match := range rule.ClientSelectors {
+		if len(match.Headers) == 0 && match.SourceCIDR == nil {
+			return nil, errors.New(
+				"unable to translate rateLimit. At least one of the" +
+					" header or sourceCIDR must be specified")
+		}
+		for _, header := range match.Headers {
+			switch {
+			case header.Type == nil && header.Value != nil:
+				fallthrough
+			case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
+				m := &ir.StringMatch{
+					Name:  header.Name,
+					Exact: header.Value,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
+				m := &ir.StringMatch{
+					Name:      header.Name,
+					SafeRegex: header.Value,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
+				m := &ir.StringMatch{
+					Name:     header.Name,
+					Distinct: true,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			default:
+				return nil, errors.New(
+					"unable to translate rateLimit. Either the header." +
+						"Type is not valid or the header is missing a value")
+			}
+		}
+
+		if match.SourceCIDR != nil {
+			// distinct means that each IP Address within the specified Source IP CIDR is treated as a
+			// distinct client selector and uses a separate rate limit bucket/counter.
+			distinct := false
+			sourceCIDR := match.SourceCIDR.Value
+			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
+				distinct = true
+			}
+
+			ip, ipn, err := net.ParseCIDR(sourceCIDR)
+			if err != nil {
+				return nil, errors.New("unable to translate rateLimit")
+			}
+
+			mask, _ := ipn.Mask.Size()
+			irRule.CIDRMatch = &ir.CIDRMatch{
+				CIDR:     ipn.String(),
+				IPv6:     ip.To4() == nil,
+				MaskLen:  mask,
+				Distinct: distinct,
+			}
+		}
+	}
+	return irRule, nil
 }
 
 func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.LoadBalancer {
@@ -481,4 +626,20 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 	}
 
 	return pp
+}
+
+func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
+	var seconds int64
+
+	switch unit {
+	case egv1a1.RateLimitUnitSecond:
+		seconds = 1
+	case egv1a1.RateLimitUnitMinute:
+		seconds = 60
+	case egv1a1.RateLimitUnitHour:
+		seconds = 60 * 60
+	case egv1a1.RateLimitUnitDay:
+		seconds = 60 * 60 * 24
+	}
+	return seconds
 }
