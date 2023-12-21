@@ -34,7 +34,8 @@ var CorsTest = suite.ConformanceTest{
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/cors",
+					Method: "OPTIONS",
+					Path:   "/cors",
 					Headers: map[string]string{
 						"Origin": "https://www.foo.com",
 					},
@@ -103,7 +104,8 @@ var CorsTest = suite.ConformanceTest{
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/cors",
+					Method: "OPTIONS",
+					Path:   "/cors",
 					Headers: map[string]string{
 						"Origin": "https://unknown.foo.com",
 					},
