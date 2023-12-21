@@ -16,7 +16,8 @@ backendTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Unable to translate Circuit Breaker: invalid MaxConnections value -1'
+      message: 'Unable to translate Circuit Breaker: invalid MaxConnections value
+        -1'
       reason: Invalid
       status: "False"
       type: Accepted
