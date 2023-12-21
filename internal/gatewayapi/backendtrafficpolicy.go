@@ -668,7 +668,7 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
 				cb.MaxConnections = &ui32
 			} else {
-				setCircuitBreakerPolicyErrorCondition(policy)
+				setCircuitBreakerPolicyErrorCondition(policy, fmt.Sprintf("invalid MaxConnections value %d", *pcb.MaxConnections))
 				return nil
 			}
 		}
@@ -677,7 +677,7 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
 				cb.MaxParallelRequests = &ui32
 			} else {
-				setCircuitBreakerPolicyErrorCondition(policy)
+				setCircuitBreakerPolicyErrorCondition(policy, fmt.Sprintf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests))
 				return nil
 			}
 		}
@@ -686,7 +686,7 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
 				cb.MaxPendingRequests = &ui32
 			} else {
-				setCircuitBreakerPolicyErrorCondition(policy)
+				setCircuitBreakerPolicyErrorCondition(policy, fmt.Sprintf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests))
 				return nil
 			}
 		}
@@ -695,8 +695,8 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 	return cb
 }
 
-func setCircuitBreakerPolicyErrorCondition(policy *egv1a1.BackendTrafficPolicy) {
-	message := "Unable to translate Circuit Breaker"
+func setCircuitBreakerPolicyErrorCondition(policy *egv1a1.BackendTrafficPolicy, errMsg string) {
+	message := fmt.Sprintf("Unable to translate Circuit Breaker: %s", errMsg)
 	status.SetBackendTrafficPolicyCondition(policy,
 		gwv1a2.PolicyConditionAccepted,
 		metav1.ConditionFalse,
@@ -704,6 +704,7 @@ func setCircuitBreakerPolicyErrorCondition(policy *egv1a1.BackendTrafficPolicy) 
 		message,
 	)
 }
+
 func int64ToUint32(in int64) (uint32, bool) {
 	if in >= 0 && in <= math.MaxUint32 {
 		return uint32(in), true
