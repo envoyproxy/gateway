@@ -150,10 +150,10 @@ spec:
                       type: string
                     type: array
                   ciphers:
-                    description: "CipherSuites specifies the set of cipher suites
-                      supported when negotiating TLS 1.0 - 1.2. This setting has no
-                      effect for TLS 1.3. \n In non-FIPS Envoy Proxy builds, the default
-                      cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
+                    description: "Ciphers specifies the set of cipher suites supported
+                      when negotiating TLS 1.0 - 1.2. This setting has no effect for
+                      TLS 1.3. \n In non-FIPS Envoy Proxy builds the default cipher
+                      list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
                       - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384
                       \n In builds using BoringSSL FIPS the default cipher list is:

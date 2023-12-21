@@ -2598,8 +2598,8 @@ func (in *TLSSettings) DeepCopyInto(out *TLSSettings) {
 		*out = new(TLSVersion)
 		**out = **in
 	}
-	if in.CipherSuites != nil {
-		in, out := &in.CipherSuites, &out.CipherSuites
+	if in.Ciphers != nil {
+		in, out := &in.Ciphers, &out.Ciphers
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

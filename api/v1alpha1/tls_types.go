@@ -20,10 +20,10 @@ type TLSSettings struct {
 	// +optional
 	MaxVersion *TLSVersion `json:"maxVersion,omitempty"`
 
-	// CipherSuites specifies the set of cipher suites supported when
+	// Ciphers specifies the set of cipher suites supported when
 	// negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
 	//
-	// In non-FIPS Envoy Proxy builds, the default cipher list is:
+	// In non-FIPS Envoy Proxy builds the default cipher list is:
 	// - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
 	// - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
 	// - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -36,7 +36,7 @@ type TLSSettings struct {
 	// - ECDHE-RSA-AES256-GCM-SHA384
 	//
 	// +optional
-	CipherSuites []string `json:"ciphers,omitempty"`
+	Ciphers []string `json:"ciphers,omitempty"`
 
 	// ECDHCurves specifies the set of supported ECDH curves.
 	// In non-FIPS Envoy Proxy builds the default curves are:
@@ -45,11 +45,13 @@ type TLSSettings struct {
 	//
 	// In builds using BoringSSL FIPS the default curve is:
 	// - P-256
+	//
 	// +optional
 	ECDHCurves []string `json:"ecdhCurves,omitempty"`
 
 	// SignatureAlgorithms specifies which signature algorithms the listener should
 	// support.
+	//
 	// +optional
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty"`
 
@@ -60,6 +62,7 @@ type TLSSettings struct {
 	// - http/1.0
 	// - http/1.1
 	// - http/2
+	//
 	// +optional
 	ALPNProtocols []ALPNProtocol `json:"alpnProtocols,omitempty"`
 }
