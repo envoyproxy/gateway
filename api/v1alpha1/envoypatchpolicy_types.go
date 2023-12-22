@@ -49,7 +49,8 @@ type EnvoyPatchPolicySpec struct {
 	JSONPatches []EnvoyJSONPatchConfig `json:"jsonPatches,omitempty"`
 	// TargetRef is the name of the Gateway API resource this policy
 	// is being attached to.
-	// Currently only attaching to Gateway is supported
+	// By default attaching to Gateway is supported and
+	// when mergeGateways is enabled it should attach to GatewayClass.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway
 	// TargetRef

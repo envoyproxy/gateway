@@ -99,6 +99,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 4
 	case filter.Name == wellknown.HTTPRateLimit:
 		order = 5
+	case filter.Name == localRateLimitFilter:
+		order = 6
 	case filter.Name == wellknown.Router:
 		order = 100
 	}

@@ -215,6 +215,12 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "basic-auth",
 		},
+		{
+			name: "local-ratelimit",
+		},
+		{
+			name: "circuit-breaker",
+		},
 	}
 
 	for _, tc := range testCases {

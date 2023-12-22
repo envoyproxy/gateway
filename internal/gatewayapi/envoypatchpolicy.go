@@ -28,6 +28,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	for _, policy := range envoyPatchPolicies {
 		policy := policy.DeepCopy()
 		targetNs := policy.Spec.TargetRef.Namespace
+		targetKind := KindGateway
 
 		// If empty, default to namespace of policy
 		if targetNs == nil {
@@ -37,12 +38,17 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		// Get the IR
 		// It must exist since the gateways have already been processed
 		irKey := irStringKey(string(*targetNs), string(policy.Spec.TargetRef.Name))
+		if t.MergeGateways {
+			irKey = string(t.GatewayClassName)
+			targetKind = KindGatewayClass
+		}
+
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
 			// This status condition will not get updated in the resource because
 			// the IR is missing, but it has been kept here in case we publish
 			// the status from this layer instead of the xds layer.
-			message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
+			message := fmt.Sprintf("%s:%s not found.", targetKind, policy.Spec.TargetRef.Name)
 
 			status.SetEnvoyPatchPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
@@ -61,11 +67,9 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		// Append the IR
 		gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
-
-		// Ensure policy can only target a Gateway
-		if policy.Spec.TargetRef.Group != gwv1b1.GroupName || policy.Spec.TargetRef.Kind != KindGateway {
+		if policy.Spec.TargetRef.Group != gwv1b1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
 			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1b1.GroupName, KindGateway)
+				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1b1.GroupName, targetKind)
 
 			status.SetEnvoyPatchPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
@@ -78,8 +82,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		// Ensure Policy and target Gateway are in the same namespace
 		if policy.Namespace != string(*targetNs) {
-			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a Gateway in the same namespace.",
-				policy.Namespace, *targetNs)
+			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a %s in the same namespace.",
+				policy.Namespace, *targetNs, targetKind)
 
 			status.SetEnvoyPatchPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
