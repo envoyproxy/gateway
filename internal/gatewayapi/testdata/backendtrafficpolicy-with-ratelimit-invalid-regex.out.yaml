@@ -1,3 +1,38 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway
+    namespace: envoy-gateway
+  spec:
+    rateLimit:
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              type: RegularExpression
+              value: '*.illegal.regex'
+            - name: x-org-id
+              type: Distinct
+          limit:
+            requests: 10
+            unit: Hour
+      type: Global
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Regex "*.illegal.regex" is invalid: error parsing regexp: missing
+        argument to repetition operator: `*`'
+      reason: Invalid
+      status: "False"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -11,7 +46,6 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      hostname: '*.envoyproxy.io'
       name: http
       port: 80
       protocol: HTTP
@@ -40,16 +74,14 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
   metadata:
     creationTimestamp: null
-    name: httproute-1
+    name: grpcroute-1
     namespace: default
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -58,16 +90,6 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      filters:
-      - requestMirror:
-          backendRef:
-            kind: Service
-            name: service-1
-            port: 8080
-        type: RequestMirror
-      matches:
-      - path:
-          value: /
   status:
     parents:
     - conditions:
@@ -110,8 +132,8 @@ xdsIR:
     http:
     - address: 0.0.0.0
       hostnames:
-      - '*.envoyproxy.io'
-      isHTTP2: false
+      - '*'
+      isHTTP2: true
       name: envoy-gateway/gateway-1/http
       port: 10080
       routes:
@@ -119,26 +141,13 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          name: httproute/default/httproute-1/rule/0
+          name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            protocol: HTTP
+            protocol: GRPC
             weight: 1
-        hostname: gateway.envoyproxy.io
-        mirrors:
-        - name: httproute/default/httproute-1/rule/0-mirror-0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
+        hostname: '*'
+        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*

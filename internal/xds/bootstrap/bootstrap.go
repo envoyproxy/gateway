@@ -9,6 +9,7 @@ import (
 	// Register embed
 	_ "embed"
 	"fmt"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -168,6 +169,9 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 				case egv1a1.StringMatchSuffix:
 					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
 				case egv1a1.StringMatchRegularExpression:
+					if err := validateRegex(match.Value); err != nil {
+						return "", err
+					}
 					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
 				}
 			}
@@ -203,4 +207,11 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 	}
 
 	return cfg.rendered, nil
+}
+
+func validateRegex(regex string) error {
+	if _, err := regexp.Compile(regex); err != nil {
+		return fmt.Errorf("regex %q is invalid: %v", regex, err)
+	}
+	return nil
 }

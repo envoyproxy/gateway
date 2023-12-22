@@ -161,11 +161,6 @@ func Error2ConditionMsg(err error) string {
 		runes[0] = unicode.ToUpper(runes[0])
 	}
 
-	// check if the last rune is .
-	if runes[len(runes)-1] != '.' {
-		return string(runes) + "."
-	}
-
 	// Convert the rune slice back to a string
 	return string(runes)
 }

@@ -404,7 +404,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 			})
 		case egv1a1.StringMatchRegularExpression:
 			if err := validateRegex(origin.Value); err != nil {
-				return nil, err // TODO zhaohuabing: also check regex in other places
+				return nil, err
 			}
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				SafeRegex: &origin.Value,

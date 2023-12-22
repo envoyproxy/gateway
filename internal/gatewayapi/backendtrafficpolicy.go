@@ -535,6 +535,9 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				}
 				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
 			case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
+				if err := validateRegex(*header.Value); err != nil {
+					return nil, err
+				}
 				m := &ir.StringMatch{
 					Name:      header.Name,
 					SafeRegex: header.Value,
