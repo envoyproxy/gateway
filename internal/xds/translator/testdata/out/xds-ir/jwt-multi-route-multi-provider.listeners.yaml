@@ -31,9 +31,9 @@
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_443
+                    cluster: localhost_80
                     timeout: 5s
-                    uri: https://localhost/jwt/public-key/jwks.json
+                    uri: http://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
               first-route-www.test.com/example2:
                 audiences:
@@ -45,15 +45,15 @@
                 - claimName: name
                   headerName: one-route-example2-key2
                 forward: true
-                issuer: http://www.two.example.com
-                payloadInMetadata: http://www.two.example.com
+                issuer: https://www.two.example.com
+                payloadInMetadata: https://www.two.example.com
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: "192_168_1_250_8080"
                     timeout: 5s
-                    uri: http://192.168.1.250:8080/jwt/public-key/jwks.json
+                    uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
                   retryPolicy: {}
               second-route-www.test.com/example:
                 audiences:
@@ -68,24 +68,24 @@
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_443
+                    cluster: localhost_80
                     timeout: 5s
-                    uri: https://localhost/jwt/public-key/jwks.json
+                    uri: http://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
               second-route-www.test.com/example2:
                 audiences:
                 - one.foo.com
                 - two.foo.com
                 forward: true
-                issuer: http://www.two.example.com
-                payloadInMetadata: http://www.two.example.com
+                issuer: https://www.two.example.com
+                payloadInMetadata: https://www.two.example.com
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: "192_168_1_250_8080"
                     timeout: 5s
-                    uri: http://192.168.1.250:8080/jwt/public-key/jwks.json
+                    uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
                   retryPolicy: {}
             requirementMap:
               first-route-www.test.com:
