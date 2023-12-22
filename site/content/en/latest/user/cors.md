@@ -31,8 +31,8 @@ spec:
     name: backend
   cors:
     allowOrigins:
-    - type: Exact
-      value: "www.foo.com"
+    - type: RegularExpression
+      value: .*\.foo\.com
     allowMethods:
     - GET
     - POST
