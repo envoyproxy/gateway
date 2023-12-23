@@ -134,7 +134,7 @@ type EnvoyProxyKubernetesProvider struct {
 	// +optional
 	// +kubebuilder:validation:XValidation:message="minReplicas must be greater than 0",rule="!has(self.minReplicas) || self.minReplicas > 0"
 	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="!has(self.maxReplicas) || self.maxReplicas > 0"
-	// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than or equal to minReplicas",rule="!has(self.minReplicas) || self.maxReplicas > self.minReplicas"
+	// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
 }
 

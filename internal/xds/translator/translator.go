@@ -498,12 +498,13 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 	}
 
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
-		name:          httpRoute.Destination.Name,
-		settings:      httpRoute.Destination.Settings,
-		tSocket:       nil,
-		endpointType:  endpointType,
-		loadBalancer:  httpRoute.LoadBalancer,
-		proxyProtocol: httpRoute.ProxyProtocol,
+		name:           httpRoute.Destination.Name,
+		settings:       httpRoute.Destination.Settings,
+		tSocket:        nil,
+		endpointType:   endpointType,
+		loadBalancer:   httpRoute.LoadBalancer,
+		proxyProtocol:  httpRoute.ProxyProtocol,
+		circuitBreaker: httpRoute.CircuitBreaker,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

@@ -146,7 +146,7 @@ output xDS is created.
 semantics.
 
 ## Design Decisions
-* This API will only support a single `targetRef` and can bind to only a `Gateway` resource. This simplifies reasoning of how
+* This API will only support a single `targetRef` and can bind to only a `Gateway` or `GatewayClass` resource. This simplifies reasoning of how
 patches will work.
 * This API will always be an experimental API and cannot be graduated into a stable API because Envoy Gateway cannot garuntee
   * that the naming scheme for the generated resources names will not change across releases
@@ -162,7 +162,7 @@ patches will work.
 
 
 
-[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment 
+[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment
 [RFC 6902]: https://datatracker.ietf.org/doc/html/rfc6902
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Kubernetes]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
