@@ -182,6 +182,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
+					ImagePullSecrets:              r.rateLimitDeployment.Pod.ImagePullSecrets,
 				},
 			},
 			RevisionHistoryLimit:    ptr.To[int32](10),
