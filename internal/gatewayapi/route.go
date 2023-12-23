@@ -20,6 +20,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 var (
@@ -268,7 +269,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: match.Path.Value,
 				}
 			case gwapiv1.PathMatchRegularExpression:
-				if err := validateRegex(*match.Path.Value); err != nil {
+				if err := regex.Validate(*match.Path.Value); err != nil {
 					return nil, err
 				}
 				irRoute.PathMatch = &ir.StringMatch{
@@ -284,7 +285,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: ptr.To(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
-				if err := validateRegex(headerMatch.Value); err != nil {
+				if err := regex.Validate(headerMatch.Value); err != nil {
 					return nil, err
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
@@ -301,7 +302,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: ptr.To(queryParamMatch.Value),
 				})
 			case gwapiv1.QueryParamMatchRegularExpression:
-				if err := validateRegex(queryParamMatch.Value); err != nil {
+				if err := regex.Validate(queryParamMatch.Value); err != nil {
 					return nil, err
 				}
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
@@ -495,7 +496,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 					Exact: ptr.To(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
-				if err := validateRegex(headerMatch.Value); err != nil {
+				if err := regex.Validate(headerMatch.Value); err != nil {
 					return nil, err
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
@@ -512,12 +513,12 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 				t.processGRPCRouteMethodExact(match.Method, irRoute)
 			case gwapiv1a1.GRPCMethodMatchRegularExpression:
 				if match.Method.Service != nil {
-					if err := validateRegex(*match.Method.Service); err != nil {
+					if err := regex.Validate(*match.Method.Service); err != nil {
 						return nil, err
 					}
 				}
 				if match.Method.Method != nil {
-					if err := validateRegex(*match.Method.Method); err != nil {
+					if err := regex.Validate(*match.Method.Method); err != nil {
 						return nil, err
 					}
 				}

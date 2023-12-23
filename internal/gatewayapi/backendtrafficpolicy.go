@@ -22,6 +22,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 type policyTargetRouteKey struct {
@@ -535,7 +536,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				}
 				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
 			case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
-				if err := validateRegex(*header.Value); err != nil {
+				if err := regex.Validate(*header.Value); err != nil {
 					return nil, err
 				}
 				m := &ir.StringMatch{

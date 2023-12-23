@@ -9,13 +9,13 @@ import (
 	// Register embed
 	_ "embed"
 	"fmt"
-	"regexp"
 	"strings"
 	"text/template"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 const (
@@ -169,7 +169,7 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 				case egv1a1.StringMatchSuffix:
 					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
 				case egv1a1.StringMatchRegularExpression:
-					if err := validateRegex(match.Value); err != nil {
+					if err := regex.Validate(match.Value); err != nil {
 						return "", err
 					}
 					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
@@ -207,11 +207,4 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 	}
 
 	return cfg.rendered, nil
-}
-
-func validateRegex(regex string) error {
-	if _, err := regexp.Compile(regex); err != nil {
-		return fmt.Errorf("regex %q is invalid: %v", regex, err)
-	}
-	return nil
 }

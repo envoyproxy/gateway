@@ -27,6 +27,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
@@ -403,7 +404,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 				Suffix: &origin.Value,
 			})
 		case egv1a1.StringMatchRegularExpression:
-			if err := validateRegex(origin.Value); err != nil {
+			if err := regex.Validate(origin.Value); err != nil {
 				return nil, err
 			}
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
