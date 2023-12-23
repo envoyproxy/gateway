@@ -210,6 +210,10 @@ spec:
             required:
             - targetRef
             type: object
+            x-kubernetes-validations:
+            - message: alpn protocols can't be set if HTTP/3 is enabled
+              rule: 'has(self.http3) && has(self.tls) && has(self.tls.alpnProtocols)
+                ? self.tls.alpnProtocols.size() == 0 : true'
           status:
             description: Status defines the current status of ClientTrafficPolicy.
             properties:
