@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	defaultPort = 443
+	defaultHTTPSPort = 443
+	defaultHTTPPort  = 80
 )
 
 // urlCluster is a cluster that is created from a URL.
@@ -29,10 +30,11 @@ type urlCluster struct {
 	hostname     string
 	port         uint32
 	endpointType EndpointType
+	tls          bool
 }
 
 // url2Cluster returns a urlCluster from the provided url.
-func url2Cluster(strURL string) (*urlCluster, error) {
+func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 	epType := EndpointTypeDNS
 
 	// The URL should have already been validated in the gateway API translator.
@@ -41,11 +43,17 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		return nil, err
 	}
 
-	if u.Scheme != "https" {
+	if secure && u.Scheme != "https" {
 		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 
-	port := defaultPort
+	var port int
+	if u.Scheme == "https" {
+		port = defaultHTTPSPort
+	} else {
+		port = defaultHTTPPort
+	}
+
 	if u.Port() != "" {
 		port, err = strconv.Atoi(u.Port())
 		if err != nil {
@@ -66,6 +74,7 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		hostname:     u.Hostname(),
 		port:         uint32(port),
 		endpointType: epType,
+		tls:          u.Scheme == "https",
 	}, nil
 }
 
