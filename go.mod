@@ -9,7 +9,7 @@ require (
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.7.0
 	github.com/go-logfmt/logfmt v0.6.0
-	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.3
@@ -33,8 +33,8 @@ require (
 	go.opentelemetry.io/proto/otlp v1.0.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
-	google.golang.org/grpc v1.60.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/grpc v1.60.1
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.29.0
 	k8s.io/apiextensions-apiserver v0.29.0

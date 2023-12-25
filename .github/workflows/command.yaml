@@ -31,7 +31,7 @@ jobs:
           ^/(retest)
 
     # retest
-    - uses: envoyproxy/toolshed/gh-actions/retest@actions-v0.2.18
+    - uses: envoyproxy/toolshed/gh-actions/retest@actions-v0.2.20
       if: ${{ steps.command.outputs.command == 'retest' }}
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
