@@ -6,8 +6,10 @@ on:
     - "release/v*"
     paths:
     - 'site/**'
-  pull_request_target:
-    types: [opened, synchronize, reopened]
+  pull_request:
+    branches:
+    - "main"
+    - "release/v*"
     paths:
     - 'site/**'
 
@@ -61,44 +63,6 @@ jobs:
         # Duration after which artifact will expire in days.
         # retention-days: # optional, default is 1
 
-  docs-preview:
-    if: "github.event_name == 'pull_request_target'"
-    needs: docs-build
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Git checkout
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
-    - name: Setup Hugo
-      uses: peaceiris/actions-hugo@v2
-      with:
-        hugo-version: 'latest'
-        extended: true
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    - name: Install Site Dependencies and Build Site
-      run: make docs
-    - name: Deploy to Netlify
-      uses: nwtgck/actions-netlify@v2.0
-      with:
-        publish-dir: 'site/public'
-        production-deploy: false
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        deploy-message: "Deploy from GitHub Actions"
-        alias: "${{ github.event.repository.name }}-pr-${{ github.event.pull_request.number }}-preview"
-        # these all default to 'true'
-        enable-pull-request-comment: true
-        enable-commit-comment: false
-        enable-commit-status: true
-        overwrites-pull-request-comment: true
-      env:
-        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-      timeout-minutes: 1
-
   # This workflow contains a single job called "build"
   docs-publish:
     if: github.event_name == 'push'
@@ -119,4 +83,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v2.0.5
+      uses: actions/deploy-pages@v3.0.1

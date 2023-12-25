@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -139,7 +139,7 @@ var (
 		Name:     "happy",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("example"),
+			Exact: ptr.To("example"),
 		},
 		Destination: &happyRouteDestination,
 	}
@@ -147,7 +147,7 @@ var (
 		Name:     "invalid-backend",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("invalid-backend"),
+			Exact: ptr.To("invalid-backend"),
 		},
 		BackendWeights: BackendWeights{
 			Invalid: 1,
@@ -157,7 +157,7 @@ var (
 		Name:     "weighted-invalid-backends",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("invalid-backends"),
+			Exact: ptr.To("invalid-backends"),
 		},
 		Destination: &happyRouteDestination,
 		BackendWeights: BackendWeights{
@@ -170,16 +170,16 @@ var (
 		Name:     "redirect",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("redirect"),
+			Exact: ptr.To("redirect"),
 		},
 		Redirect: &Redirect{
-			Scheme:   ptrTo("https"),
-			Hostname: ptrTo("redirect.example.com"),
+			Scheme:   ptr.To("https"),
+			Hostname: ptr.To("redirect.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace: ptrTo("/redirect"),
+				FullReplace: ptr.To("/redirect"),
 			},
-			Port:       ptrTo(uint32(8443)),
-			StatusCode: ptrTo(int32(301)),
+			Port:       ptr.To(uint32(8443)),
+			StatusCode: ptr.To[int32](301),
 		},
 	}
 	// A direct response error is used when an invalid filter type is supplied
@@ -187,10 +187,10 @@ var (
 		Name:     "filter-error",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("filter-error"),
+			Exact: ptr.To("filter-error"),
 		},
 		DirectResponse: &DirectResponse{
-			Body:       ptrTo("invalid filter type"),
+			Body:       ptr.To("invalid filter type"),
 			StatusCode: uint32(500),
 		},
 	}
@@ -199,41 +199,41 @@ var (
 		Name:     "redirect-bad-status-scheme-nopat",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("redirect"),
+			Exact: ptr.To("redirect"),
 		},
 		Redirect: &Redirect{
-			Scheme:     ptrTo("err"),
-			Hostname:   ptrTo("redirect.example.com"),
+			Scheme:     ptr.To("err"),
+			Hostname:   ptr.To("redirect.example.com"),
 			Path:       &HTTPPathModifier{},
-			Port:       ptrTo(uint32(8443)),
-			StatusCode: ptrTo(int32(305)),
+			Port:       ptr.To(uint32(8443)),
+			StatusCode: ptr.To[int32](305),
 		},
 	}
 	redirectFilterBadPath = HTTPRoute{
 		Name:     "redirect",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("redirect"),
+			Exact: ptr.To("redirect"),
 		},
 		Redirect: &Redirect{
-			Scheme:   ptrTo("https"),
-			Hostname: ptrTo("redirect.example.com"),
+			Scheme:   ptr.To("https"),
+			Hostname: ptr.To("redirect.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace:        ptrTo("/redirect"),
-				PrefixMatchReplace: ptrTo("/redirect"),
+				FullReplace:        ptr.To("/redirect"),
+				PrefixMatchReplace: ptr.To("/redirect"),
 			},
-			Port:       ptrTo(uint32(8443)),
-			StatusCode: ptrTo(int32(301)),
+			Port:       ptr.To(uint32(8443)),
+			StatusCode: ptr.To[int32](301),
 		},
 	}
 	directResponseBadStatus = HTTPRoute{
 		Name:     "redirect",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("redirect"),
+			Exact: ptr.To("redirect"),
 		},
 		DirectResponse: &DirectResponse{
-			Body:       ptrTo("invalid filter type"),
+			Body:       ptr.To("invalid filter type"),
 			StatusCode: uint32(799),
 		},
 	}
@@ -242,12 +242,12 @@ var (
 		Name:     "rewrite",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("rewrite"),
+			Exact: ptr.To("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
-			Hostname: ptrTo("rewrite.example.com"),
+			Hostname: ptr.To("rewrite.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace: ptrTo("/rewrite"),
+				FullReplace: ptr.To("/rewrite"),
 			},
 		},
 	}
@@ -256,13 +256,13 @@ var (
 		Name:     "rewrite",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("rewrite"),
+			Exact: ptr.To("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
-			Hostname: ptrTo("rewrite.example.com"),
+			Hostname: ptr.To("rewrite.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace:        ptrTo("/rewrite"),
-				PrefixMatchReplace: ptrTo("/rewrite"),
+				FullReplace:        ptr.To("/rewrite"),
+				PrefixMatchReplace: ptr.To("/rewrite"),
 			},
 		},
 	}
@@ -271,7 +271,7 @@ var (
 		Name:     "addheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("addheader"),
+			Exact: ptr.To("addheader"),
 		},
 		AddRequestHeaders: []AddHeader{
 			{
@@ -296,7 +296,7 @@ var (
 		Name:     "remheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("remheader"),
+			Exact: ptr.To("remheader"),
 		},
 		RemoveRequestHeaders: []string{
 			"x-request-header",
@@ -309,7 +309,7 @@ var (
 		Name:     "duplicateheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("duplicateheader"),
+			Exact: ptr.To("duplicateheader"),
 		},
 		AddRequestHeaders: []AddHeader{
 			{
@@ -334,7 +334,7 @@ var (
 		Name:     "addemptyheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("addemptyheader"),
+			Exact: ptr.To("addemptyheader"),
 		},
 		AddRequestHeaders: []AddHeader{
 			{
@@ -349,7 +349,7 @@ var (
 		Name:     "addheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("addheader"),
+			Exact: ptr.To("addheader"),
 		},
 		AddResponseHeaders: []AddHeader{
 			{
@@ -374,7 +374,7 @@ var (
 		Name:     "remheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("remheader"),
+			Exact: ptr.To("remheader"),
 		},
 		RemoveResponseHeaders: []string{
 			"x-request-header",
@@ -387,7 +387,7 @@ var (
 		Name:     "duplicateheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("duplicateheader"),
+			Exact: ptr.To("duplicateheader"),
 		},
 		AddResponseHeaders: []AddHeader{
 			{
@@ -412,7 +412,7 @@ var (
 		Name:     "addemptyheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("addemptyheader"),
+			Exact: ptr.To("addemptyheader"),
 		},
 		AddResponseHeaders: []AddHeader{
 			{
@@ -427,7 +427,7 @@ var (
 		Name:     "jwtauthen",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("jwtauthen"),
+			Exact: ptr.To("jwtauthen"),
 		},
 		JWT: &JWT{
 			Providers: []egv1a1.JWTProvider{
@@ -444,7 +444,7 @@ var (
 		Name:     "mirrorfilter",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptrTo("mirrorfilter"),
+			Exact: ptr.To("mirrorfilter"),
 		},
 		Mirrors: []*RouteDestination{&happyRouteDestination},
 	}
@@ -464,11 +464,6 @@ var (
 		},
 	}
 )
-
-// Creates a pointer to any type
-func ptrTo[T any](x T) *T {
-	return &x
-}
 
 func TestValidateXds(t *testing.T) {
 	tests := []struct {
@@ -805,7 +800,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: HTTPRoute{
 				Hostname: "*",
 				PathMatch: &StringMatch{
-					Exact: ptrTo("example"),
+					Exact: ptr.To("example"),
 				},
 				Destination: &happyRouteDestination,
 			},
@@ -816,7 +811,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: HTTPRoute{
 				Name: "invalid hostname",
 				PathMatch: &StringMatch{
-					Exact: ptrTo("example"),
+					Exact: ptr.To("example"),
 				},
 				Destination: &happyRouteDestination,
 			},
@@ -836,7 +831,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name: "empty name and invalid match",
 			input: HTTPRoute{
 				Hostname:      "*",
-				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
+				HeaderMatches: []*StringMatch{ptr.To(StringMatch{})},
 				Destination:   &happyRouteDestination,
 			},
 			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
@@ -1073,7 +1068,7 @@ func TestValidateStringMatch(t *testing.T) {
 		{
 			name: "happy",
 			input: StringMatch{
-				Exact: ptrTo("example"),
+				Exact: ptr.To("example"),
 			},
 			want: nil,
 		},
@@ -1085,9 +1080,9 @@ func TestValidateStringMatch(t *testing.T) {
 		{
 			name: "multiple fields set",
 			input: StringMatch{
-				Exact:  ptrTo("example"),
+				Exact:  ptr.To("example"),
 				Name:   "example",
-				Prefix: ptrTo("example"),
+				Prefix: ptr.To("example"),
 			},
 			want: ErrStringMatchConditionInvalid,
 		},

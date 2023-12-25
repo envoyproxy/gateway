@@ -50,6 +50,9 @@ spec:
                   Proxy Protocol must be present when this field is set, else the
                   connection is closed.
                 type: boolean
+              http3:
+                description: HTTP3 provides HTTP/3 configuration on the listener.
+                type: object
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy
                   is being attached to. This Policy and the TargetRef MUST be in the

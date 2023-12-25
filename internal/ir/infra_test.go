@@ -20,7 +20,7 @@ func TestValidateInfra(t *testing.T) {
 		{
 			name:   "default",
 			infra:  NewInfra(),
-			expect: false,
+			expect: true,
 		},
 		{
 			name: "no-name",
@@ -46,7 +46,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{},
 						},
@@ -60,7 +60,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{
 								{
@@ -79,7 +79,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{
 								{
@@ -98,7 +98,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{
 								{
@@ -157,9 +157,8 @@ func TestNewProxyInfra(t *testing.T) {
 		{
 			name: "default infra",
 			expected: &ProxyInfra{
-				Metadata:  NewInfraMetadata(),
-				Name:      DefaultProxyName,
-				Listeners: NewProxyListeners(),
+				Metadata: NewInfraMetadata(),
+				Name:     DefaultProxyName,
 			},
 		},
 	}

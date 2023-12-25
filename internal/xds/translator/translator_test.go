@@ -95,6 +95,10 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "http3",
+			requireSecrets: true,
+		},
+		{
 			name: "tls-route-passthrough",
 		},
 		{
@@ -213,6 +217,12 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "health-check",
+		},
+		{
+			name: "local-ratelimit",
+		},
+		{
+			name: "circuit-breaker",
 		},
 	}
 
@@ -343,6 +353,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			name: "distinct-match",
 		},
 		{
+			name: "distinct-remote-address-match",
+		},
+		{
 			name: "value-match",
 		},
 		{
@@ -356,6 +369,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		},
 		{
 			name: "masked-remote-address-match",
+		},
+		{
+			name: "multiple-masked-remote-address-match-with-same-cidr",
 		},
 	}
 

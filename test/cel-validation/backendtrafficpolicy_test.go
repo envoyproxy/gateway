@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -308,6 +310,177 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "Using both httpStatus and grpcStatus in abort fault injection",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Abort: &egv1a1.FaultInjectionAbort{
+							HTTPStatus: ptr.To[int32](200),
+							GrpcStatus: ptr.To[int32](80),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.faultInjection.abort: Invalid value: \"object\": httpStatus and grpcStatus cannot be simultaneously defined.",
+			},
+		},
+		{
+			desc: "Using httpStatus in abort fault injection",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Abort: &egv1a1.FaultInjectionAbort{
+							HTTPStatus: ptr.To[int32](200),
+							Percentage: ptr.To[float32](80),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Using grpcStatus in abort fault injection",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Abort: &egv1a1.FaultInjectionAbort{
+							GrpcStatus: ptr.To[int32](10),
+							Percentage: ptr.To[float32](20),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "httpStatus and grpcStatus are set at least one",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Abort: &egv1a1.FaultInjectionAbort{
+							Percentage: ptr.To[float32](20),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.faultInjection.abort: Invalid value: \"object\": httpStatus and grpcStatus are set at least one."},
+		},
+		{
+			desc: "Neither delay nor abort faults are set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{},
+				}
+			},
+			wantErrors: []string{"spec.faultInjection: Invalid value: \"object\": Delay and abort faults are set at least one."},
+		},
+		{
+			desc: "Using delay fault injection",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Delay: &egv1a1.FaultInjectionDelay{
+							FixedDelay: &metav1.Duration{
+								Duration: 10000000,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: " valid config: min, max, nil",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				valMax := pointer.Int64(4294967295)
+				valMin := pointer.Int64(0)
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					CircuitBreaker: &egv1a1.CircuitBreaker{
+						MaxConnections:      valMax,
+						MaxPendingRequests:  valMin,
+						MaxParallelRequests: nil,
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: " invalid config: min and max valyues",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				valOverMax := pointer.Int64(4294967296)
+				valUnderMin := pointer.Int64(-1)
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					CircuitBreaker: &egv1a1.CircuitBreaker{
+						MaxConnections:      valOverMax,
+						MaxPendingRequests:  valUnderMin,
+						MaxParallelRequests: valOverMax,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.circuitBreaker.maxParallelRequests: Invalid value: 4294967296: spec.circuitBreaker.maxParallelRequests in body should be less than or equal to 4294967295",
+				"spec.circuitBreaker.maxPendingRequests: Invalid value: -1: spec.circuitBreaker.maxPendingRequests in body should be greater than or equal to 0",
+				"spec.circuitBreaker.maxConnections: Invalid value: 4294967296: spec.circuitBreaker.maxConnections in body should be less than or equal to 4294967295",
+			},
+		},
+		{
 			desc: "invalid path of http health checker",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -584,7 +757,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
-					HealthCheck: &egv1a1.HealthCheck{
 						HealthChecker: egv1a1.HealthChecker{
 							Type: egv1a1.HealthCheckerTypeTCP,
 							TCP: &egv1a1.TCPHealthChecker{
@@ -605,6 +777,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				`[spec.healthCheck.healthChecker.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.healthChecker.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
+		
 	}
 
 	for _, tc := range cases {

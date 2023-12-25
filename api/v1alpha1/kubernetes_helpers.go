@@ -9,7 +9,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultKubernetesDeploymentReplicas returns the default replica settings.
@@ -27,7 +27,7 @@ func DefaultKubernetesDeploymentStrategy() *appv1.DeploymentStrategy {
 
 // DefaultKubernetesContainerImage returns the default envoyproxy image.
 func DefaultKubernetesContainerImage(image string) *string {
-	return pointer.String(image)
+	return ptr.To(image)
 }
 
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.

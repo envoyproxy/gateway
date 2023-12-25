@@ -156,7 +156,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http
@@ -170,7 +171,8 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
           name: http
@@ -235,10 +237,10 @@ securityPolicies:
         claimToHeaders:
         - claim: claim2
           header: two-route-example-key
-        issuer: https://two.example.com
+        issuer: http://two.example.com
         name: example2
         remoteJWKS:
-          uri: https://two.example.com/jwt/public-key/jwks.json
+          uri: http://two.example.com/jwt/public-key/jwks.json
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -293,10 +295,10 @@ xdsIR:
             claimToHeaders:
             - claim: claim2
               header: two-route-example-key
-            issuer: https://two.example.com
+            issuer: http://two.example.com
             name: example2
             remoteJWKS:
-              uri: https://two.example.com/jwt/public-key/jwks.json
+              uri: http://two.example.com/jwt/public-key/jwks.json
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
   envoy-gateway/gateway-2:
     accessLog:

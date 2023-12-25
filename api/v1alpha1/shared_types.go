@@ -113,6 +113,18 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// HostNetwork, If this is set to true, the pod will use host's network namespace.
+	// +optional
+	HostNetwork bool `json:"hostNetwork,omitempty"`
+
+	// ImagePullSecrets is an optional list of references to secrets
+	// in the same namespace to use for pulling any of the images used by this PodSpec.
+	// If specified, these secrets will be passed to individual puller implementations for them to use.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+	//
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.

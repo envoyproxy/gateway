@@ -46,6 +46,7 @@
                 claimToHeaders:
                 - claimName: claim.neteased.key
                   headerName: first-route-key
+                forward: true
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
@@ -59,6 +60,7 @@
               second-route/example:
                 audiences:
                 - foo.com
+                forward: true
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:

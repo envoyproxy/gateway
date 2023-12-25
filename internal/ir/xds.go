@@ -201,6 +201,9 @@ type HTTPListener struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// HTTP3 provides HTTP/3 configuration on the listener.
+	// +optional
+	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -316,6 +319,8 @@ type HTTPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// Circuit Breaker Settings
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -341,6 +346,8 @@ type CORS struct {
 	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
 	// MaxAge defines how long the results of a preflight request can be cached.
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+	// AllowCredentials indicates whether a request can include user credentials.
+	AllowCredentials bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
 }
 
 // JWT defines the schema for authenticating HTTP requests using
@@ -908,11 +915,27 @@ func (h UDPListener) Validate() error {
 type RateLimit struct {
 	// Global rate limit settings.
 	Global *GlobalRateLimit `json:"global,omitempty" yaml:"global,omitempty"`
+
+	// Local rate limit settings.
+	Local *LocalRateLimit `json:"local,omitempty" yaml:"local,omitempty"`
 }
 
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
+	// TODO zhaohuabing: add default values for Global rate limiting.
+
+	// Rules for rate limiting.
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+}
+
+// LocalRateLimit holds the local rate limiting configuration.
+// +k8s:deepcopy-gen=true
+type LocalRateLimit struct {
+	// Default rate limiting values.
+	// If a request does not match any of the rules, the default values are used.
+	Default RateLimitValue `json:"default,omitempty" yaml:"default,omitempty"`
+
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
@@ -925,7 +948,7 @@ type RateLimitRule struct {
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
-	Limit *RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
+	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 }
 
 type CIDRMatch struct {
@@ -937,6 +960,7 @@ type CIDRMatch struct {
 	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
+// TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
 	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
 }
@@ -1141,6 +1165,19 @@ type ProxyProtocol struct {
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
 	Window *metav1.Duration `json:"window" yaml:"window"`
+}
+
+// Backend CircuitBreaker settings for the DEFAULT routing priority
+// +k8s:deepcopy-gen=true
+type CircuitBreaker struct {
+	// The maximum number of connections that Envoy will establish.
+	MaxConnections *uint32 `json:"maxConnections,omitempty" yaml:"maxConnections,omitempty"`
+
+	// The maximum number of pending requests that Envoy will queue.
+	MaxPendingRequests *uint32 `json:"maxPendingRequests,omitempty" yaml:"maxPendingRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make.
+	MaxParallelRequests *uint32 `json:"maxParallelRequests,omitempty" yaml:"maxParallelRequests,omitempty"`
 }
 
 // HealthCheck defines health check settings
