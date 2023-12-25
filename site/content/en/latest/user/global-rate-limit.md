@@ -825,7 +825,7 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting
-[BackendTrafficPolicy]: https://gateway.envoyproxy.io/latest/api/extension_types.html#backendtrafficpolicy
+[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
 [EnvoyGateway]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoygateway
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
