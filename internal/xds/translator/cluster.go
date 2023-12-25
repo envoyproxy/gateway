@@ -215,12 +215,13 @@ func buildHTTPStatusRange(irStatuses []ir.HTTPStatus) []*xdstype.Int64Range {
 	})
 	var start, end int64
 	for i := 0; i < len(irStatuses); i++ {
-		if start == 0 {
+		switch {
+		case start == 0:
 			start = int64(irStatuses[i])
 			end = int64(irStatuses[i] + 1)
-		} else if int64(irStatuses[i]) == end {
+		case int64(irStatuses[i]) == end:
 			end++
-		} else {
+		default:
 			ranges = append(ranges, &xdstype.Int64Range{Start: start, End: end})
 			start = int64(irStatuses[i])
 			end = int64(irStatuses[i] + 1)

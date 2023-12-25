@@ -15,13 +15,12 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestBackendTrafficPolicyTarget(t *testing.T) {
@@ -757,6 +756,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
+					HealthCheck: &egv1a1.HealthCheck{
 						HealthChecker: egv1a1.HealthChecker{
 							Type: egv1a1.HealthCheckerTypeTCP,
 							TCP: &egv1a1.TCPHealthChecker{
@@ -777,7 +777,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				`[spec.healthCheck.healthChecker.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.healthChecker.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
-		
 	}
 
 	for _, tc := range cases {
