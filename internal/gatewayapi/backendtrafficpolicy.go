@@ -533,8 +533,13 @@ func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTT
 	}
 
 	var irStatuses []ir.HTTPStatus
+	// deduplicate http statuses
+	statusSet := make(map[egv1a1.HTTPStatus]bool, len(h.ExpectedStatuses))
 	for _, r := range h.ExpectedStatuses {
-		irStatuses = append(irStatuses, ir.HTTPStatus(r))
+		if _, ok := statusSet[r]; !ok {
+			statusSet[r] = true
+			irStatuses = append(irStatuses, ir.HTTPStatus(r))
+		}
 	}
 	irHTTP.ExpectedStatuses = irStatuses
 
