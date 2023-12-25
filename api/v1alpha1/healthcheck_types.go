@@ -93,11 +93,10 @@ type HTTPHealthChecker struct {
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
 	// Defaults to 200 only
 	// +optional
-	// +kubebuilder:validation:UniqueItems=true
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
-	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
+	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponse,omitempty"`
 }
 
 // GRPCHealthChecker defines the settings of grpc health check.
@@ -117,7 +116,7 @@ type TCPHealthChecker struct {
 	// Send defines the request payload.
 	// +optional
 	Send *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
-	// Receive defines the expected response payloads.
+	// Receive defines the expected response payload.
 	// +optional
 	Receive *HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
 }

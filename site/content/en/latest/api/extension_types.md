@@ -1872,7 +1872,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `send` _[HealthCheckPayload](#healthcheckpayload)_ | Send defines the request payload. |
-| `receive` _[HealthCheckPayload](#healthcheckpayload)_ | Receive defines the expected response payloads. |
+| `receive` _[HealthCheckPayload](#healthcheckpayload)_ | Receive defines the expected response payload. |
 
 
 #### TCPKeepalive

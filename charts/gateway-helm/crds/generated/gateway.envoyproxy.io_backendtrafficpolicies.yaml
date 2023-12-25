@@ -117,7 +117,6 @@ spec:
                               minimum: 100
                               type: integer
                             type: array
-                            uniqueItems: true
                           method:
                             description: Method defines the HTTP method used for health
                               checking. Defaults to GET
@@ -136,7 +135,7 @@ spec:
                           It's required while the health checker type is TCP.
                         properties:
                           receive:
-                            description: Receive defines the expected response payloads.
+                            description: Receive defines the expected response payload.
                             properties:
                               binary:
                                 description: Binary payload base64 encoded.
