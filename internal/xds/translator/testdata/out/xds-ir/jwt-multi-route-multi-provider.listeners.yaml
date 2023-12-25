@@ -31,9 +31,9 @@
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_443
+                    cluster: localhost_80
                     timeout: 5s
-                    uri: https://localhost/jwt/public-key/jwks.json
+                    uri: http://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
               first-route-www.test.com/example2:
                 audiences:
@@ -68,9 +68,9 @@
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_443
+                    cluster: localhost_80
                     timeout: 5s
-                    uri: https://localhost/jwt/public-key/jwks.json
+                    uri: http://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
               second-route-www.test.com/example2:
                 audiences:

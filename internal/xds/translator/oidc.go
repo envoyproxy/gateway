@@ -109,7 +109,7 @@ func oauth2FilterName(route *ir.HTTPRoute) string {
 }
 
 func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
-	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint)
+	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			err     error
 		)
 
-		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint)
+		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 			continue
