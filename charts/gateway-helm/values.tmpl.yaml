@@ -20,6 +20,7 @@ deployment:
       targetPort: 18001
   replicas: 1
   pod:
+    affinity: {}
     annotations: {}
     labels: {}
 
