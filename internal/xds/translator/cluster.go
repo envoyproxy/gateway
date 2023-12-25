@@ -8,6 +8,7 @@ package translator
 import (
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -151,13 +152,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			if args.healthCheck.HTTP.Method != nil {
 				httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*args.healthCheck.HTTP.Method])
 			}
-			for _, status := range args.healthCheck.HTTP.ExpectedStatuses {
-				httpChecker.ExpectedStatuses = append(httpChecker.ExpectedStatuses, &xdstype.Int64Range{Start: status.Start, End: status.End})
-			}
-			for _, resp := range args.healthCheck.HTTP.ExpectedResponses {
-				if receive := buildHealthCheckPayload(resp); receive != nil {
-					httpChecker.Receive = append(httpChecker.Receive, receive)
-				}
+			httpChecker.ExpectedStatuses = buildHTTPStatusRange(args.healthCheck.HTTP.ExpectedStatuses)
+			if receive := buildHealthCheckPayload(args.healthCheck.HTTP.ExpectedResponse); receive != nil {
+				httpChecker.Receive = append(httpChecker.Receive, receive)
 			}
 			hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 				HttpHealthCheck: httpChecker,
@@ -190,10 +187,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			tcpChecker := &corev3.HealthCheck_TcpHealthCheck{
 				Send: buildHealthCheckPayload(args.healthCheck.TCP.Send),
 			}
-			for _, recv := range args.healthCheck.TCP.Receive {
-				if receive := buildHealthCheckPayload(recv); receive != nil {
-					tcpChecker.Receive = append(tcpChecker.Receive, receive)
-				}
+			if receive := buildHealthCheckPayload(args.healthCheck.TCP.Receive); receive != nil {
+				tcpChecker.Receive = append(tcpChecker.Receive, receive)
 			}
 			hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
 				TcpHealthCheck: tcpChecker,
@@ -203,6 +198,34 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	}
 
 	return cluster
+}
+
+// buildHTTPStatusRange converts an array of http status to an array of the range of http status.
+func buildHTTPStatusRange(irStatuses []ir.HTTPStatus) []*xdstype.Int64Range {
+	if len(irStatuses) == 0 {
+		return nil
+	}
+	ranges := []*xdstype.Int64Range{}
+	sort.Slice(irStatuses, func(i int, j int) bool {
+		return irStatuses[i] < irStatuses[j]
+	})
+	var start, end int64
+	for i := 0; i < len(irStatuses); i++ {
+		if start == 0 {
+			start = int64(irStatuses[i])
+			end = int64(irStatuses[i] + 1)
+		} else if int64(irStatuses[i]) == end {
+			end++
+		} else {
+			ranges = append(ranges, &xdstype.Int64Range{Start: start, End: end})
+			start = int64(irStatuses[i])
+			end = int64(irStatuses[i] + 1)
+		}
+	}
+	if start != 0 {
+		ranges = append(ranges, &xdstype.Int64Range{Start: start, End: end})
+	}
+	return ranges
 }
 
 func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_Payload {

@@ -863,23 +863,19 @@ _Appears in:_
 | --- | --- |
 | `path` _string_ | Path defines the HTTP path that will be requested during health checking. |
 | `method` _string_ | Method defines the HTTP method used for health checking. Defaults to GET |
-| `expectedStatuses` _[HTTPStatusRange](#httpstatusrange) array_ | ExpectedStatuses defines a list of HTTP response statuses considered healthy. |
-| `expectedResponses` _[HealthCheckPayload](#healthcheckpayload) array_ | ExpectedResponses defines a list of HTTP expected responses to match. |
+| `expectedStatuses` _[HTTPStatus](#httpstatus) array_ | ExpectedStatuses defines a list of HTTP response statuses considered healthy. Defaults to 200 only |
+| `expectedResponse` _[HealthCheckPayload](#healthcheckpayload)_ | ExpectedResponse defines a list of HTTP expected responses to match. |
 
 
-#### HTTPStatusRange
+#### HTTPStatus
 
+_Underlying type:_ `integer`
 
-
-HTTPStatusRange defines the start and end of the http status range using half-open interval semantics [start, end). Only statuses in the range [100, 600) are allowed.
+HTTPStatus defines the http status code.
 
 _Appears in:_
 - [HTTPHealthChecker](#httphealthchecker)
 
-| Field | Description |
-| --- | --- |
-| `start` _integer_ | Start defines start of the range (inclusive) |
-| `end` _integer_ | End defines end of the range (exclusive) |
 
 
 #### HeaderMatch
@@ -1876,7 +1872,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `send` _[HealthCheckPayload](#healthcheckpayload)_ | Send defines the request payload. |
-| `receive` _[HealthCheckPayload](#healthcheckpayload) array_ | Receive defines the expected response payloads. |
+| `receive` _[HealthCheckPayload](#healthcheckpayload)_ | Receive defines the expected response payloads. |
 
 
 #### TCPKeepalive

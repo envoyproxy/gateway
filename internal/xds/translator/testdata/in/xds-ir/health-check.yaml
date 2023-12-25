@@ -14,14 +14,11 @@ http:
       healthyThreshold: 1
       http:
         path: "/healthz"
+        expectedResponse:
+          text: "ok"
         expectedStatuses:
-        - start: 200
-          end: 300
-        - start: 300
-          end: 400
-        expectedResponses:
-        - text: "ok"
-        - binary: "RXZlcnl0aGluZyBPSw=="
+        - 200
+        - 300
     destination:
       name: "first-route-dest"
       settings:
@@ -57,7 +54,7 @@ http:
         send:
           text: "ping"
         receive:
-        - text: "pong"
+          text: "pong"
     destination:
       name: "third-route-dest"
       settings:
@@ -75,7 +72,7 @@ http:
         send:
           binary: "cGluZw=="
         receive:
-        - binary: "cG9uZw=="
+          binary: "cG9uZw=="
     destination:
       name: "fourth-route-dest"
       settings:

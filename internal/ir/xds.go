@@ -57,7 +57,7 @@ var (
 	ErrHCHTTPMethodInvalid                  = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid        = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
 	ErrHealthCheckPayloadInvalid            = errors.New("one of Text, Binary fields must be set in payload")
-	ErrInt64RangeInvalid                    = errors.New("Int64Range.Start should be not greater than Int64Range.End")
+	ErrHTTPStatusInvalid                    = errors.New("HTTPStatus should be in [200,600)")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -1215,9 +1215,9 @@ type HTTPHealthChecker struct {
 	// Method defines the HTTP method used for health checking.
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
-	ExpectedStatuses []Int64Range `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
-	// ExpectedResponses defines a list of HTTP expected responses to match.
-	ExpectedResponses []*HealthCheckPayload `json:"expectedResponses,omitempty" yaml:"expectedResponses,omitempty"`
+	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// ExpectedResponse defines a list of HTTP expected responses to match.
+	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
 }
 
 // Validate the fields within the HTTPHealthChecker structure.
@@ -1249,12 +1249,22 @@ func (c *HTTPHealthChecker) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	for _, r := range c.ExpectedResponses {
-		if err := r.Validate(); err != nil {
+	if c.ExpectedResponse != nil {
+		if err := c.ExpectedResponse.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
 	return errs
+}
+
+// HTTPStatus represents http status code.
+type HTTPStatus int
+
+func (h HTTPStatus) Validate() error {
+	if h < 100 || h >= 600 {
+		return ErrHTTPStatusInvalid
+	}
+	return nil
 }
 
 // GRPCHealthChecker defines the settings of grpc health check.
@@ -1268,8 +1278,8 @@ type GRPCHealthChecker struct {
 // TCPHealthChecker defines the settings of tcp health check.
 // +k8s:deepcopy-gen=true
 type TCPHealthChecker struct {
-	Send    *HealthCheckPayload   `json:"send,omitempty" yaml:"send,omitempty"`
-	Receive []*HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
+	Send    *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
+	Receive *HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
 }
 
 // Validate the fields within the TCPHealthChecker structure.
@@ -1280,26 +1290,10 @@ func (c *TCPHealthChecker) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	for _, r := range c.Receive {
-		if err := r.Validate(); err != nil {
+	if c.Receive != nil {
+		if err := c.Receive.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
-	}
-	return errs
-}
-
-// Int64Range defines the int64 start and end of the range using half-open interval semantics [start, end).
-type Int64Range struct {
-	// Start defines start of the range (inclusive)
-	Start int64 `json:"start" yaml:"start"`
-	// End defines end of the range (exclusive)
-	End int64 `json:"end" yaml:"end"`
-}
-
-func (r *Int64Range) Validate() error {
-	var errs error
-	if r.Start > r.End {
-		errs = multierror.Append(errs, ErrInt64RangeInvalid)
 	}
 	return errs
 }

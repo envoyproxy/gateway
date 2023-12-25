@@ -349,19 +349,13 @@ func (in *HTTPHealthChecker) DeepCopyInto(out *HTTPHealthChecker) {
 	}
 	if in.ExpectedStatuses != nil {
 		in, out := &in.ExpectedStatuses, &out.ExpectedStatuses
-		*out = make([]Int64Range, len(*in))
+		*out = make([]HTTPStatus, len(*in))
 		copy(*out, *in)
 	}
-	if in.ExpectedResponses != nil {
-		in, out := &in.ExpectedResponses, &out.ExpectedResponses
-		*out = make([]*HealthCheckPayload, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(HealthCheckPayload)
-				(*in).DeepCopyInto(*out)
-			}
-		}
+	if in.ExpectedResponse != nil {
+		in, out := &in.ExpectedResponse, &out.ExpectedResponse
+		*out = new(HealthCheckPayload)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -1244,14 +1238,8 @@ func (in *TCPHealthChecker) DeepCopyInto(out *TCPHealthChecker) {
 	}
 	if in.Receive != nil {
 		in, out := &in.Receive, &out.Receive
-		*out = make([]*HealthCheckPayload, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(HealthCheckPayload)
-				(*in).DeepCopyInto(*out)
-			}
-		}
+		*out = new(HealthCheckPayload)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

@@ -11,14 +11,13 @@
   - healthyThreshold: 1
     httpHealthCheck:
       expectedStatuses:
-      - end: "300"
+      - end: "201"
         start: "200"
-      - end: "400"
+      - end: "301"
         start: "300"
       path: /healthz
       receive:
       - text: 6f6b
-      - binary: RXZlcnl0aGluZyBPSw==
     interval: 3s
     timeout: 0.500s
     unhealthyThreshold: 3

@@ -532,19 +532,13 @@ func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTT
 		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
 	}
 
-	var irStatuses []ir.Int64Range
+	var irStatuses []ir.HTTPStatus
 	for _, r := range h.ExpectedStatuses {
-		irStatuses = append(irStatuses, ir.Int64Range{Start: r.Start, End: r.End})
+		irStatuses = append(irStatuses, ir.HTTPStatus(r))
 	}
 	irHTTP.ExpectedStatuses = irStatuses
 
-	var irResponses []*ir.HealthCheckPayload
-	for i := range h.ExpectedResponses {
-		r := &h.ExpectedResponses[i]
-		irResponses = append(irResponses, translateHealthCheckPayload(r))
-	}
-	irHTTP.ExpectedResponses = irResponses
-
+	irHTTP.ExpectedResponse = translateHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
 }
 
@@ -568,15 +562,9 @@ func (t *Translator) buildTCPHealthChecker(h *egv1a1.TCPHealthChecker) *ir.TCPHe
 	}
 
 	irTCP := &ir.TCPHealthChecker{
-		Send: translateHealthCheckPayload(h.Send),
+		Send:    translateHealthCheckPayload(h.Send),
+		Receive: translateHealthCheckPayload(h.Receive),
 	}
-	var irRecv []*ir.HealthCheckPayload
-	for i := range h.Receive {
-		r := &h.Receive[i]
-		irRecv = append(irRecv, translateHealthCheckPayload(r))
-	}
-	irTCP.Receive = irRecv
-
 	return irTCP
 }
 

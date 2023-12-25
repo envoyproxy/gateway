@@ -75,72 +75,49 @@ spec:
                           checker. It's required while the health checker type is
                           HTTP.
                         properties:
-                          expectedResponses:
-                            description: ExpectedResponses defines a list of HTTP
-                              expected responses to match.
-                            items:
-                              description: HealthCheckPayload defines the encoding
-                                of the payload bytes in the payload.
-                              properties:
-                                binary:
-                                  description: Binary payload base64 encoded.
-                                  format: byte
-                                  type: string
-                                text:
-                                  description: Text payload in plain text.
-                                  type: string
-                                type:
-                                  allOf:
-                                  - enum:
-                                    - Text
-                                    - Binary
-                                  - enum:
-                                    - Text
-                                    - Binary
-                                  description: Type defines the type of the payload.
-                                  type: string
-                              required:
-                              - type
-                              type: object
-                              x-kubernetes-validations:
-                              - message: If payload type is Text, text field needs
-                                  to be set.
-                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
-                              - message: If payload type is Binary, binary field needs
-                                  to be set.
-                                rule: 'self.type == ''Binary'' ? has(self.binary)
-                                  : !has(self.binary)'
-                            type: array
+                          expectedResponse:
+                            description: ExpectedResponse defines a list of HTTP expected
+                              responses to match.
+                            properties:
+                              binary:
+                                description: Binary payload base64 encoded.
+                                format: byte
+                                type: string
+                              text:
+                                description: Text payload in plain text.
+                                type: string
+                              type:
+                                allOf:
+                                - enum:
+                                  - Text
+                                  - Binary
+                                - enum:
+                                  - Text
+                                  - Binary
+                                description: Type defines the type of the payload.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: If payload type is Text, text field needs to
+                                be set.
+                              rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                            - message: If payload type is Binary, binary field needs
+                                to be set.
+                              rule: 'self.type == ''Binary'' ? has(self.binary) :
+                                !has(self.binary)'
                           expectedStatuses:
                             description: ExpectedStatuses defines a list of HTTP response
-                              statuses considered healthy.
+                              statuses considered healthy. Defaults to 200 only
                             items:
-                              description: HTTPStatusRange defines the start and end
-                                of the http status range using half-open interval
-                                semantics [start, end). Only statuses in the range
-                                [100, 600) are allowed.
-                              properties:
-                                end:
-                                  description: End defines end of the range (exclusive)
-                                  format: int64
-                                  maximum: 600
-                                  minimum: 100
-                                  type: integer
-                                start:
-                                  description: Start defines start of the range (inclusive)
-                                  exclusiveMaximum: true
-                                  format: int64
-                                  maximum: 600
-                                  minimum: 100
-                                  type: integer
-                              required:
-                              - end
-                              - start
-                              type: object
-                              x-kubernetes-validations:
-                              - message: start should be not greater than end
-                                rule: self.start <= self.end
+                              description: HTTPStatus defines the http status code.
+                              exclusiveMaximum: true
+                              maximum: 600
+                              minimum: 100
+                              type: integer
                             type: array
+                            uniqueItems: true
                           method:
                             description: Method defines the HTTP method used for health
                               checking. Defaults to GET
@@ -160,39 +137,35 @@ spec:
                         properties:
                           receive:
                             description: Receive defines the expected response payloads.
-                            items:
-                              description: HealthCheckPayload defines the encoding
-                                of the payload bytes in the payload.
-                              properties:
-                                binary:
-                                  description: Binary payload base64 encoded.
-                                  format: byte
-                                  type: string
-                                text:
-                                  description: Text payload in plain text.
-                                  type: string
-                                type:
-                                  allOf:
-                                  - enum:
-                                    - Text
-                                    - Binary
-                                  - enum:
-                                    - Text
-                                    - Binary
-                                  description: Type defines the type of the payload.
-                                  type: string
-                              required:
-                              - type
-                              type: object
-                              x-kubernetes-validations:
-                              - message: If payload type is Text, text field needs
-                                  to be set.
-                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
-                              - message: If payload type is Binary, binary field needs
-                                  to be set.
-                                rule: 'self.type == ''Binary'' ? has(self.binary)
-                                  : !has(self.binary)'
-                            type: array
+                            properties:
+                              binary:
+                                description: Binary payload base64 encoded.
+                                format: byte
+                                type: string
+                              text:
+                                description: Text payload in plain text.
+                                type: string
+                              type:
+                                allOf:
+                                - enum:
+                                  - Text
+                                  - Binary
+                                - enum:
+                                  - Text
+                                  - Binary
+                                description: Type defines the type of the payload.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: If payload type is Text, text field needs to
+                                be set.
+                              rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                            - message: If payload type is Binary, binary field needs
+                                to be set.
+                              rule: 'self.type == ''Binary'' ? has(self.binary) :
+                                !has(self.binary)'
                           send:
                             description: Send defines the request payload.
                             properties:

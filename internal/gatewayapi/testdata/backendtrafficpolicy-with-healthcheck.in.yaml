@@ -123,14 +123,10 @@ backendTrafficPolicies:
           path: "/healthz"
           method: "GET"
           expectedStatuses:
-          - start: 200
-            end: 300
-          - start: 300
-            end: 400
-          expectedResponses:
-          - type: Text
-            text: "ok"
-          - type: Binary
+          - 200
+          - 300
+          expectedResponse:
+            type: Binary
             binary: RXZlcnl0aGluZyBPSw==
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -178,7 +174,7 @@ backendTrafficPolicies:
             type: Text
             text: ping
           receive:
-          - type: Text
+            type: Text
             text: pong
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -203,5 +199,5 @@ backendTrafficPolicies:
             type: Binary
             binary: cGluZw==
           receive:
-          - type: Binary
+            type: Binary
             binary: RXZlcnl0aGluZyBPSw==

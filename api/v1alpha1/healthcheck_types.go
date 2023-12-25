@@ -91,11 +91,13 @@ type HTTPHealthChecker struct {
 	// +optional
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
+	// Defaults to 200 only
 	// +optional
-	ExpectedStatuses []HTTPStatusRange `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
-	// ExpectedResponses defines a list of HTTP expected responses to match.
+	// +kubebuilder:validation:UniqueItems=true
+	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
-	ExpectedResponses []HealthCheckPayload `json:"expectedResponses,omitempty" yaml:"expectedResponses,omitempty"`
+	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
 }
 
 // GRPCHealthChecker defines the settings of grpc health check.
@@ -117,22 +119,14 @@ type TCPHealthChecker struct {
 	Send *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
 	// Receive defines the expected response payloads.
 	// +optional
-	Receive []HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
+	Receive *HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
 }
 
-// HTTPStatusRange defines the start and end of the http status range using half-open interval semantics [start, end). Only statuses in the range [100, 600) are allowed.
-// +kubebuilder:validation:XValidation:rule="self.start <= self.end",message="start should be not greater than end"
-type HTTPStatusRange struct {
-	// Start defines start of the range (inclusive)
-	// +kubebuilder:validation:Minimum=100
-	// +kubebuilder:validation:Maximum=600
-	// +kubebuilder:validation:ExclusiveMaximum=true
-	Start int64 `json:"start" yaml:"start"`
-	// End defines end of the range (exclusive)
-	// +kubebuilder:validation:Minimum=100
-	// +kubebuilder:validation:Maximum=600
-	End int64 `json:"end" yaml:"end"`
-}
+// HTTPStatus defines the http status code.
+// +kubebuilder:validation:Minimum=100
+// +kubebuilder:validation:Maximum=600
+// +kubebuilder:validation:ExclusiveMaximum=true
+type HTTPStatus int
 
 // HealthCheckPayloadType is the type of the payload.
 // +kubebuilder:validation:Enum=Text;Binary

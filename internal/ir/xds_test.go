@@ -1243,7 +1243,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				HealthyThreshold:   ptr.To[uint32](3),
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
-					ExpectedStatuses: []Int64Range{{200, 400}},
+					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
 			want: ErrHealthCheckTimeoutInvalid,
@@ -1258,7 +1258,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodGet),
-					ExpectedStatuses: []Int64Range{{200, 400}},
+					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
 			want: ErrHealthCheckIntervalInvalid,
@@ -1273,7 +1273,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodPatch),
-					ExpectedStatuses: []Int64Range{{200, 400}},
+					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
 			want: ErrHealthCheckUnhealthyThresholdInvalid,
@@ -1288,7 +1288,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodPost),
-					ExpectedStatuses: []Int64Range{{200, 400}},
+					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
 			want: ErrHealthCheckHealthyThresholdInvalid,
@@ -1303,7 +1303,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "",
 					Method:           ptr.To(http.MethodPut),
-					ExpectedStatuses: []Int64Range{{200, 400}},
+					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
 			want: ErrHCHTTPPathInvalid,
@@ -1318,7 +1318,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodConnect),
-					ExpectedStatuses: []Int64Range{{200, 400}},
+					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
 			want: ErrHCHTTPMethodInvalid,
@@ -1333,7 +1333,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodDelete),
-					ExpectedStatuses: []Int64Range{},
+					ExpectedStatuses: []HTTPStatus{},
 				},
 			},
 			want: ErrHCHTTPExpectedStatusesInvalid,
@@ -1348,10 +1348,10 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodHead),
-					ExpectedStatuses: []Int64Range{{300, 200}},
+					ExpectedStatuses: []HTTPStatus{100, 600},
 				},
 			},
-			want: ErrInt64RangeInvalid,
+			want: ErrHTTPStatusInvalid,
 		},
 		{
 			name: "http-health-check: invalid expected-responses",
@@ -1363,12 +1363,10 @@ func TestValidateHealthCheck(t *testing.T) {
 				HTTP: &HTTPHealthChecker{
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodOptions),
-					ExpectedStatuses: []Int64Range{{200, 300}},
-					ExpectedResponses: []*HealthCheckPayload{
-						{
-							Text:   ptr.To("foo"),
-							Binary: []byte{'f', 'o', 'o'},
-						},
+					ExpectedStatuses: []HTTPStatus{200, 300},
+					ExpectedResponse: &HealthCheckPayload{
+						Text:   ptr.To("foo"),
+						Binary: []byte{'f', 'o', 'o'},
 					},
 				},
 			},
@@ -1386,10 +1384,8 @@ func TestValidateHealthCheck(t *testing.T) {
 						Text:   ptr.To("foo"),
 						Binary: []byte{'f', 'o', 'o'},
 					},
-					Receive: []*HealthCheckPayload{
-						{
-							Text: ptr.To("foo"),
-						},
+					Receive: &HealthCheckPayload{
+						Text: ptr.To("foo"),
 					},
 				},
 			},
@@ -1406,11 +1402,9 @@ func TestValidateHealthCheck(t *testing.T) {
 					Send: &HealthCheckPayload{
 						Text: ptr.To("foo"),
 					},
-					Receive: []*HealthCheckPayload{
-						{
-							Text:   ptr.To("foo"),
-							Binary: []byte{'f', 'o', 'o'},
-						},
+					Receive: &HealthCheckPayload{
+						Text:   ptr.To("foo"),
+						Binary: []byte{'f', 'o', 'o'},
 					},
 				},
 			},

@@ -41,7 +41,7 @@ backendTrafficPolicies:
       healthChecker:
         tcp:
           receive:
-          - text: pong
+            text: pong
             type: Text
           send:
             text: ping
@@ -74,7 +74,7 @@ backendTrafficPolicies:
       healthChecker:
         tcp:
           receive:
-          - binary: RXZlcnl0aGluZyBPSw==
+            binary: RXZlcnl0aGluZyBPSw==
             type: Binary
           send:
             binary: cGluZw==
@@ -106,16 +106,12 @@ backendTrafficPolicies:
     healthCheck:
       healthChecker:
         http:
-          expectedResponses:
-          - text: ok
-            type: Text
-          - binary: RXZlcnl0aGluZyBPSw==
+          expectedResponse:
+            binary: RXZlcnl0aGluZyBPSw==
             type: Binary
           expectedStatuses:
-          - end: 300
-            start: 200
-          - end: 400
-            start: 300
+          - 200
+          - 300
           method: GET
           path: /healthz
         type: HTTP
@@ -422,14 +418,11 @@ xdsIR:
         healthCheck:
           healthyThreshold: 1
           http:
-            expectedResponses:
-            - text: ok
-            - binary: RXZlcnl0aGluZyBPSw==
+            expectedResponse:
+              binary: RXZlcnl0aGluZyBPSw==
             expectedStatuses:
-            - end: 300
-              start: 200
-            - end: 400
-              start: 300
+            - 200
+            - 300
             method: GET
             path: /healthz
           interval: 3s
@@ -466,7 +459,7 @@ xdsIR:
           interval: 5s
           tcp:
             receive:
-            - text: pong
+              text: pong
             send:
               text: ping
           timeout: 1s
@@ -494,7 +487,7 @@ xdsIR:
           interval: 3s
           tcp:
             receive:
-            - binary: RXZlcnl0aGluZyBPSw==
+              binary: RXZlcnl0aGluZyBPSw==
             send:
               binary: cGluZw==
           timeout: 1s
