@@ -58,5 +58,6 @@ type FaultInjectionAbort struct {
 
 	// Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%.
 	// +optional
+	// +kubebuilder:default=100
 	Percentage *float32 `json:"percentage,omitempty"`
 }
