@@ -355,12 +355,7 @@ func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPLi
 }
 
 func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *ir.HTTPListener) {
-	// Return early if not set
-	if suppressEnvoyHeaders == nil {
-		return
-	}
-
-	if *suppressEnvoyHeaders {
-		httpIR.SuppressEnvoyHeaders = true
+	if suppressEnvoyHeaders != nil {
+		httpIR.SuppressEnvoyHeaders = *suppressEnvoyHeaders
 	}
 }
