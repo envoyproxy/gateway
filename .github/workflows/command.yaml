@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  retest:
+  command:
     if: |
       ${{
          github.event.issue.pull_request
@@ -22,6 +22,19 @@ jobs:
       pull-requests: write
       actions: write
     steps:
+    - uses: envoyproxy/toolshed/gh-actions/github/command@actions-v0.2.18
+      name: Parse command from comment
+      id: command
+      with:
+        text: ${{ github.event.comment.body }}
+        matching: >-
+          ^/(retest)
+
+    # retest
     - uses: envoyproxy/toolshed/gh-actions/retest@actions-v0.2.20
+      if: ${{ steps.command.outputs.command == 'retest' }}
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        comment-id: ${{ github.event.comment.id }}
+        pr-url: ${{ github.event.issue.pull_request.url }}
+        args: ${{ steps.command.outputs.args }}
