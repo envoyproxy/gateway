@@ -120,12 +120,12 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      suppressEnvoyHeaders: true
       hostnames:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
       port: 10080
+      suppressEnvoyHeaders: true
     - address: 0.0.0.0
       hostnames:
       - '*'
