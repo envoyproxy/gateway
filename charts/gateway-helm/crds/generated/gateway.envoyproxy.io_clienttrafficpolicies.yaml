@@ -53,6 +53,11 @@ spec:
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
                 type: object
+              suppressEnvoyHeaders:
+                description: SuppressEnvoyHeaders configures the Envoy Router filter
+                  to suppress the "x-envoy-' headers from both requests and responses.
+                  By default these headers are added to both requests and responses.
+                type: boolean
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy
                   is being attached to. This Policy and the TargetRef MUST be in the
