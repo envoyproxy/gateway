@@ -166,7 +166,7 @@ func (t *Translator) patchHCMWithFilters(
 	t.patchHCMWithRateLimit(mgr, irListener)
 
 	// Add the router filter
-	mgr.HttpFilters = append(mgr.HttpFilters, filters.HTTPRouter)
+	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(irListener.SuppressEnvoyHeaders))
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)
