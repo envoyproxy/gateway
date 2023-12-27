@@ -50,3 +50,31 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+  - name: "fourth-route"
+    hostname: "*"
+    faultInjection:
+      abort:
+        grpcStatus: 14
+        percentage: 100
+      delay:
+        fixedDelay: 5.005s
+        percentage: 100
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fifth-route"
+    hostname: "*"
+    faultInjection:
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "fifth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

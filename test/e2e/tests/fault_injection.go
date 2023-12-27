@@ -53,7 +53,7 @@ var FaultTest = suite.ConformanceTest{
 			}
 		})
 
-		t.Run("inject a abort and delay error", func(t *testing.T) {
+		t.Run("inject abort and delay error", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-route-delayandabort", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}

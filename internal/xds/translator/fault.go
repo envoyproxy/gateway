@@ -142,7 +142,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if _, ok := filterCfg[wellknown.Fault]; ok {
 		// This should not happen since this is the only place where the fault
 		// filter is added in a route.
-		return fmt.Errorf("route already contains cors config: %+v", route)
+		return fmt.Errorf("route already contains fault config: %+v", route)
 	}
 
 	routeCfgProto := &xdshttpfaultv3.HTTPFault{}

@@ -62,6 +62,25 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/route2"
+      backendRefs:
+      - name: service-1
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -72,7 +91,7 @@ backendTrafficPolicies:
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
-      name: gateway-1
+      name: gateway-2
       namespace: envoy-gateway
     faultInjection:
       abort:
@@ -92,6 +111,24 @@ backendTrafficPolicies:
     faultInjection:
       abort:
         httpStatus: 500
+        percentage: 100
+      delay:
+        fixedDelay: 5.4s
+        percentage: 80
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-grpcroute
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+      namespace: default
+    faultInjection:
+      abort:
+        grpcStatus: 14
         percentage: 100
       delay:
         fixedDelay: 5.4s

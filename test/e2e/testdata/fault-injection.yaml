@@ -9,7 +9,7 @@ spec:
     kind: HTTPRoute
     name: http-fault-abort
     namespace: gateway-conformance-infra
-  fault:
+  faultInjection:
     abort:
       httpStatus: 501
 ---
@@ -24,7 +24,7 @@ spec:
     kind: HTTPRoute
     name: http-route-delayandabort
     namespace: gateway-conformance-infra
-  fault:
+  faultInjection:
     delay:
       fixedDelay: 2s
     abort:
