@@ -235,6 +235,55 @@ func TestDecode(t *testing.T) {
 			expect: true,
 		},
 		{
+			in: inPath + "gateway-ns-watch.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaces,
+								Namespaces: []string{
+									"ns-a",
+									"ns-b",
+								},
+							},
+						},
+					},
+					Gateway: v1alpha1.DefaultGateway(),
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "gateway-nsselector-watch.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
+								NamespaceSelectors: []string{
+									"label-a",
+								},
+							},
+						},
+					},
+					Gateway: v1alpha1.DefaultGateway(),
+				},
+			},
+			expect: true,
+		},
+		{
 			in:     inPath + "invalid-gateway-logging.yaml",
 			expect: false,
 		},
