@@ -27,6 +27,17 @@ API group.
 
 
 
+#### ALPNProtocol
+
+_Underlying type:_ `string`
+
+ALPNProtocol specifies the protocol to be negotiated using ALPN
+
+_Appears in:_
+- [TLSSettings](#tlssettings)
+
+
+
 #### BackendTrafficPolicy
 
 
@@ -208,6 +219,7 @@ _Appears in:_
 | `suppressEnvoyHeaders` _boolean_ | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
+| `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 
 
 
@@ -1855,6 +1867,42 @@ _Appears in:_
 | `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
 | `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
+
+
+#### TLSSettings
+
+
+
+
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. 
+ The default is TLS 1.2 if this is not specified. |
+| `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow 
+ The default is TLS 1.3 if this is not specified. |
+| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. 
+ In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 
+ In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
+| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 
+ In builds using BoringSSL FIPS the default curve is: - P-256 |
+| `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
+| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default http/2 and http/1.1 are enabled. 
+ Supported values are: - http/1.0 - http/1.1 - http/2 |
+
+
+#### TLSVersion
+
+_Underlying type:_ `string`
+
+TLSVersion specifies the TLS version
+
+_Appears in:_
+- [TLSSettings](#tlssettings)
+
 
 
 #### TracingProvider

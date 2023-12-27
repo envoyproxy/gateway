@@ -19,6 +19,8 @@ import (
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 var (
@@ -96,7 +98,16 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+		routeRoutes, err := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+		if err != nil {
+			parentRef.SetCondition(httpRoute,
+				gwapiv1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				gwapiv1.RouteReasonUnsupportedValue, // TODO: better reason
+				status.Error2ConditionMsg(err),
+			)
+			continue
+		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
@@ -137,7 +148,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
 
 	// compute matches, filters, backends
@@ -147,7 +158,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
-		var ruleRoutes = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		if err != nil {
+			return nil, err
+		}
 
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
@@ -201,7 +215,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		routeRoutes = append(routeRoutes, ruleRoutes...)
 	}
 
-	return routeRoutes
+	return routeRoutes, nil
 }
 
 func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
@@ -222,7 +236,7 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	}
 }
 
-func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.HTTPRouteRule) []*ir.HTTPRoute {
+func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.HTTPRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
@@ -255,6 +269,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: match.Path.Value,
 				}
 			case gwapiv1.PathMatchRegularExpression:
+				if err := regex.Validate(*match.Path.Value); err != nil {
+					return nil, err
+				}
 				irRoute.PathMatch = &ir.StringMatch{
 					SafeRegex: match.Path.Value,
 				}
@@ -268,6 +285,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: ptr.To(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
+				if err := regex.Validate(headerMatch.Value); err != nil {
+					return nil, err
+				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
 					SafeRegex: ptr.To(headerMatch.Value),
@@ -282,6 +302,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: ptr.To(queryParamMatch.Value),
 				})
 			case gwapiv1.QueryParamMatchRegularExpression:
+				if err := regex.Validate(queryParamMatch.Value); err != nil {
+					return nil, err
+				}
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:      string(queryParamMatch.Name),
 					SafeRegex: ptr.To(queryParamMatch.Value),
@@ -299,7 +322,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
-	return ruleRoutes
+	return ruleRoutes, nil
 }
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
@@ -341,7 +364,16 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		routeRoutes, err := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		if err != nil {
+			parentRef.SetCondition(grpcRoute,
+				gwapiv1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				gwapiv1.RouteReasonUnsupportedValue, // TODO: better reason
+				status.Error2ConditionMsg(err),
+			)
+			continue
+		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
@@ -380,7 +412,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
 
 	// compute matches, filters, backends
@@ -390,7 +422,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
-		var ruleRoutes = t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
+		ruleRoutes, err := t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
+		if err != nil {
+			return nil, err
+		}
 
 		for _, backendRef := range rule.BackendRefs {
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
@@ -430,10 +465,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		routeRoutes = append(routeRoutes, ruleRoutes...)
 	}
 
-	return routeRoutes
+	return routeRoutes, nil
 }
 
-func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1a1.GRPCRouteRule) []*ir.HTTPRoute {
+func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1a1.GRPCRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every gRPC request.
@@ -461,6 +496,9 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 					Exact: ptr.To(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
+				if err := regex.Validate(headerMatch.Value); err != nil {
+					return nil, err
+				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
 					SafeRegex: ptr.To(headerMatch.Value),
@@ -474,6 +512,16 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 			case gwapiv1a1.GRPCMethodMatchExact:
 				t.processGRPCRouteMethodExact(match.Method, irRoute)
 			case gwapiv1a1.GRPCMethodMatchRegularExpression:
+				if match.Method.Service != nil {
+					if err := regex.Validate(*match.Method.Service); err != nil {
+						return nil, err
+					}
+				}
+				if match.Method.Method != nil {
+					if err := regex.Validate(*match.Method.Method); err != nil {
+						return nil, err
+					}
+				}
 				t.processGRPCRouteMethodRegularExpression(match.Method, irRoute)
 			}
 		}
@@ -481,7 +529,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		ruleRoutes = append(ruleRoutes, irRoute)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 	}
-	return ruleRoutes
+	return ruleRoutes, nil
 }
 
 func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1a1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
