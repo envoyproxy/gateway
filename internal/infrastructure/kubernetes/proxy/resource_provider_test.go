@@ -17,7 +17,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -402,7 +402,7 @@ func TestDeployment(t *testing.T) {
 							MaxSkew:           1,
 							TopologyKey:       "kubernetes.io/hostname",
 							WhenUnsatisfiable: corev1.DoNotSchedule,
-							LabelSelector: &v1.LabelSelector{
+							LabelSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{"app": "foo"},
 							},
 							MatchLabelKeys: []string{"pod-template-hash"},
