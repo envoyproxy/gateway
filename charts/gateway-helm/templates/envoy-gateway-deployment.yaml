@@ -47,6 +47,10 @@ spec:
           value: {{ .Values.kubernetesClusterDomain }}
         image: {{ .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy }}
+        {{- with .Values.deployment.envoyGateway.imagePullSecrets }}
+        imagePullSecrets:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
