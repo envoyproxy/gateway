@@ -321,6 +321,11 @@ func (in *ClientTrafficPolicySpec) DeepCopyInto(out *ClientTrafficPolicySpec) {
 		*out = new(TCPKeepalive)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.SuppressEnvoyHeaders != nil {
+		in, out := &in.SuppressEnvoyHeaders, &out.SuppressEnvoyHeaders
+		*out = new(bool)
+		**out = **in
+	}
 	if in.EnableProxyProtocol != nil {
 		in, out := &in.EnableProxyProtocol, &out.EnableProxyProtocol
 		*out = new(bool)
