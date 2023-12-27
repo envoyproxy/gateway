@@ -188,6 +188,9 @@ type HTTPListener struct {
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// SuppressEnvoyHeaders controls if "x-envoy-" headers are suppressed by the HTTP Router filter
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
+	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.

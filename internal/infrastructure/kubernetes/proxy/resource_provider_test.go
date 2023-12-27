@@ -375,6 +375,22 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-image-pull-secrets",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					ImagePullSecrets: []corev1.LocalObjectReference{
+						{
+							Name: "aaa",
+						},
+						{
+							Name: "bbb",
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
