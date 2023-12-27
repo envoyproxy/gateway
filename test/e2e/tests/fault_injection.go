@@ -26,7 +26,7 @@ var FaultTest = suite.ConformanceTest{
 	Description: "Resource with Fault enabled",
 	Manifests:   []string{"testdata/fault-injection.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("inject an abort error ", func(t *testing.T) {
+		t.Run("inject an abort error", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-fault-abort", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
