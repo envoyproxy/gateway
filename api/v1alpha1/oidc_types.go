@@ -30,6 +30,13 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 
+	// The redirect URI to be used in the OIDC
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	RedirectURI string `json:"redirectURI"`
+
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// The "openid" scope is always added to the list of scopes if not already

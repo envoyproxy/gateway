@@ -107,6 +107,7 @@ securityPolicies:
       clientID: "client1.apps.googleusercontent.com"
       clientSecret:
         name: "client1-secret"
+      redirectURI: "https://www.example.com/bar/oauth2/callback"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -126,6 +127,7 @@ securityPolicies:
       clientID: "client2.oauth.foo.com"
       clientSecret:
         name: "client2-secret"
+      redirectURI: "https://www.example.com/foo/oauth2/callback"
       scopes: ["openid", "email", "profile"]
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy

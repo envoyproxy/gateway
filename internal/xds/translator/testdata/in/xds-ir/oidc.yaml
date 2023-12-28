@@ -18,6 +18,8 @@ http:
     oidc:
       clientID: client.oauth.foo.com
       clientSecret: Y2xpZW50MTpzZWNyZXQK
+      redirectURI: "https://www.example.com/foo/oauth2/callback"
+      redirectPathMatcher: "/foo/oauth2/callback"
       provider:
         authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
         tokenEndpoint: https://oauth.foo.com/token
@@ -38,6 +40,8 @@ http:
     oidc:
       clientID: client.oauth.bar.com
       clientSecret: Y2xpZW50MTpzZWNyZXQK
+      redirectURI: "https://www.example.com/bar/oauth2/callback"
+      redirectPathMatcher: "/bar/oauth2/callback"
       provider:
         authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
         tokenEndpoint: https://oauth.bar.com/token
@@ -58,6 +62,8 @@ http:
     oidc:
       clientID: test.oauth.bar.com
       clientSecret: Y2xpZW50MTpzZWNyZXQK
+      redirectURI: "https://www.example.com/test/oauth2/callback"
+      redirectPathMatcher: "/test/oauth2/callback"
       provider:
         authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
         tokenEndpoint: https://oauth.bar.com/token

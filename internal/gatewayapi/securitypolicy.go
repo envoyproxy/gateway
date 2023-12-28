@@ -467,12 +467,32 @@ func (t *Translator) buildOIDC(
 	}
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
 
+	redirectPathMatcher := redirectPath(oidc.RedirectURI)
+	if redirectPathMatcher == "" {
+		return nil, fmt.Errorf("invalid redirect URI: %s", oidc.RedirectURI)
+	}
+
 	return &ir.OIDC{
-		Provider:     *provider,
-		ClientID:     oidc.ClientID,
-		ClientSecret: clientSecretBytes,
-		Scopes:       scopes,
+		Provider:            *provider,
+		ClientID:            oidc.ClientID,
+		ClientSecret:        clientSecretBytes,
+		RedirectURI:         oidc.RedirectURI,
+		RedirectPathMatcher: redirectPathMatcher,
+		Scopes:              scopes,
 	}, nil
+}
+
+func redirectPath(redirectURI string) string {
+	count := 0
+	for i, char := range redirectURI {
+		if char == '/' {
+			count++
+			if count == 3 {
+				return redirectURI[i:]
+			}
+		}
+	}
+	return ""
 }
 
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes

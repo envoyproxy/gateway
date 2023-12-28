@@ -38,3 +38,4 @@ securityPolicies:
       clientID: "client1.apps.foo.bar.com"
       clientSecret:
         name: "client1-secret"
+      redirectURI: "https://www.example.com/oauth2/callback"

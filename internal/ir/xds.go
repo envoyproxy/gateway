@@ -365,8 +365,14 @@ type OIDC struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key "client-secret".
+	ClientSecret []byte `json:"clientSecret" yaml:"clientSecret"`
 
-	ClientSecret []byte `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
+	// The redirect URI to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	RedirectURI string `json:"redirectURI" yaml:"redirectURI"`
+
+	// Matching rule for the redirect path.
+	RedirectPathMatcher string `json:"redirectPathMatcher" yaml:"redirectPathMatcher"`
 
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).

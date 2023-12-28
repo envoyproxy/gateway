@@ -71,6 +71,7 @@ securityPolicies:
         name: client1-secret
       provider:
         issuer: https://httpbin.org/
+      redirectURI: https://www.example.com/oauth2/callback
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

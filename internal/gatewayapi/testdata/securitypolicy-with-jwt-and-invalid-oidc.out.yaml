@@ -159,6 +159,7 @@ securityPolicies:
         name: client2-secret
       provider:
         issuer: https://accounts.google.com
+      redirectURI: https://www.example.com/oauth2/callback
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -197,6 +198,7 @@ securityPolicies:
         name: client1-secret
       provider:
         issuer: https://accounts.google.com
+      redirectURI: https://www.example.com/oauth2/callback
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
