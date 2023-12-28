@@ -334,6 +334,12 @@ spec:
                     required:
                     - issuer
                     type: object
+                  redirectURI:
+                    description: The redirect URI to be used in the OIDC [Authentication
+                      Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                   scopes:
                     description: The OIDC scopes to be used in the [Authentication
                       Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -346,6 +352,7 @@ spec:
                 - clientID
                 - clientSecret
                 - provider
+                - redirectURI
                 type: object
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy
