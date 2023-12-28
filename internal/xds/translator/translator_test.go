@@ -221,6 +221,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "circuit-breaker",
 		},
+		{
+			name: "suppress-envoy-headers",
+		},
 	}
 
 	for _, tc := range testCases {

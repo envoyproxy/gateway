@@ -291,6 +291,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 
 		// Translate Proxy Protocol
 		translateListenerProxyProtocol(policySpec.EnableProxyProtocol, httpIR)
+
+		// Translate Suppress Envoy Headers
+		translateListenerSuppressEnvoyHeaders(policySpec.SuppressEnvoyHeaders, httpIR)
+
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policySpec.HTTP3 != nil {
 			httpIR.HTTP3 = &ir.HTTP3Settings{}
@@ -347,5 +351,11 @@ func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPLi
 
 	if *enableProxyProtocol {
 		httpIR.EnableProxyProtocol = true
+	}
+}
+
+func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *ir.HTTPListener) {
+	if suppressEnvoyHeaders != nil {
+		httpIR.SuppressEnvoyHeaders = *suppressEnvoyHeaders
 	}
 }

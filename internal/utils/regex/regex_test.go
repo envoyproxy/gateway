@@ -3,35 +3,31 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package gatewayapi
+package regex
 
-import (
-	"testing"
-)
+import "testing"
 
-func Test_validateRegex(t *testing.T) {
+func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
 		regex   string
 		wantErr bool
 	}{
 		{
-			name:    "valid regex",
-			regex:   "^[a-zA-Z0-9-]+$",
+			name:    "Valid regex",
+			regex:   "^[a-z0-9-]+$",
 			wantErr: false,
 		},
 		{
-			name:    "invalid regex",
-			regex:   "*.foo.com",
+			name:    "Invalid regex",
+			regex:   "^[a-z0-9-++$",
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateRegex(tt.regex)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateRegex() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err := Validate(tt.regex); (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
