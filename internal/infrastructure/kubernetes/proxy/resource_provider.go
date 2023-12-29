@@ -241,6 +241,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Volumes:                       expectedDeploymentVolumes(r.infra.Name, deploymentConfig),
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
+					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
 				},
 			},
 			RevisionHistoryLimit:    ptr.To[int32](10),
