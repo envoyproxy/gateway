@@ -203,6 +203,33 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 	}
 
+	// Check if need Set Capabilities when listening on privileged ports
+	if deploymentConfig.Pod.HostNetwork && deploymentConfig.Container.SecurityContext == nil {
+		needCapabilities := false
+		for _, port := range ports {
+			if port.ContainerPort < 1024 {
+				needCapabilities = true
+				break
+			}
+		}
+
+		if needCapabilities {
+			containers[0].SecurityContext = &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Add: []corev1.Capability{
+						"NET_BIND_SERVICE",
+					},
+					Drop: []corev1.Capability{
+						"ALL",
+					},
+				},
+				ReadOnlyRootFilesystem:   ptr.To(true),
+				AllowPrivilegeEscalation: ptr.To(true),
+				RunAsNonRoot:             ptr.To(false),
+			}
+		}
+	}
+
 	return containers, nil
 }
 
