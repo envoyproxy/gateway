@@ -1,0 +1,49 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches:
+    - "main"
+  pull_request:
+    branches:
+    - "main"
+  schedule:
+  - cron: '16 11 * * 5'
+
+permissions:
+  contents: read
+
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-22.04' }}
+    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+        - go
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+    - uses: ./tools/github-actions/setup-deps
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@012739e5082ff0c22ca6d6ab32e07c36df03c4a4  # v3.22.12
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@012739e5082ff0c22ca6d6ab32e07c36df03c4a4  # v3.22.12
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@012739e5082ff0c22ca6d6ab32e07c36df03c4a4  # v3.22.12
+      with:
+        category: "/language:${{matrix.language}}"
