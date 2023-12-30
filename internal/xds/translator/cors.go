@@ -16,8 +16,8 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -125,7 +125,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		allowHeaders     string
 		exposeHeaders    string
 		maxAge           string
-		allowCredentials *wrappers.BoolValue
+		allowCredentials *wrapperspb.BoolValue
 	)
 
 	//nolint:gocritic
@@ -140,7 +140,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute.CORS.MaxAge != nil {
 		maxAge = strconv.Itoa(int(irRoute.CORS.MaxAge.Seconds()))
 	}
-	allowCredentials = &wrappers.BoolValue{Value: irRoute.CORS.AllowCredentials}
+	allowCredentials = &wrapperspb.BoolValue{Value: irRoute.CORS.AllowCredentials}
 
 	routeCfgProto := &corsv3.CorsPolicy{
 		AllowOriginStringMatch: allowOrigins,

@@ -20,7 +20,6 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -42,13 +41,13 @@ const (
 
 func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 	return &corev3.Http2ProtocolOptions{
-		MaxConcurrentStreams: &wrappers.UInt32Value{
+		MaxConcurrentStreams: &wrapperspb.UInt32Value{
 			Value: http2MaxConcurrentStreamsLimit,
 		},
-		InitialStreamWindowSize: &wrappers.UInt32Value{
+		InitialStreamWindowSize: &wrapperspb.UInt32Value{
 			Value: http2InitialStreamWindowSize,
 		},
-		InitialConnectionWindowSize: &wrappers.UInt32Value{
+		InitialConnectionWindowSize: &wrapperspb.UInt32Value{
 			Value: http2InitialConnectionWindowSize,
 		},
 	}
@@ -134,7 +133,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress: &wrappers.BoolValue{Value: true},
+		UseRemoteAddress: &wrapperspb.BoolValue{Value: true},
 		// normalize paths according to RFC 3986
 		NormalizePath: &wrapperspb.BoolValue{Value: true},
 		// merge adjacent slashes in the path
@@ -346,7 +345,7 @@ func buildDownstreamQUICTransportSocket(tlsConfigs []*ir.TLSListenerConfig) (*co
 			CommonTlsContext: &tlsv3.CommonTlsContext{
 				AlpnProtocols: []string{"h3"},
 			},
-			RequireClientCertificate: &wrappers.BoolValue{Value: false},
+			RequireClientCertificate: &wrapperspb.BoolValue{Value: false},
 		},
 	}
 

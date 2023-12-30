@@ -16,7 +16,7 @@ import (
 	listenerV3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routeV3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsV3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
