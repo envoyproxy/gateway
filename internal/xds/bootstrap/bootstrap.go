@@ -114,7 +114,7 @@ type StatsMatcherParameters struct {
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
 	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
-		return fmt.Errorf("failed to render bootstrap config: %v", err)
+		return fmt.Errorf("failed to render bootstrap config: %w", err)
 	}
 	b.rendered = buf.String()
 

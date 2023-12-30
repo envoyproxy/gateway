@@ -149,7 +149,7 @@ func verifyCert(certPEM []byte, roots *x509.CertPool, dnsname string, currentTim
 		CurrentTime: currentTime,
 	}
 	if _, err = cert.Verify(opts); err != nil {
-		return fmt.Errorf("certificate verification failed: %s", err)
+		return fmt.Errorf("certificate verification failed: %w", err)
 	}
 
 	return nil

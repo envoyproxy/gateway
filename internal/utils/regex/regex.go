@@ -13,7 +13,7 @@ import (
 // Validate validates a regex string.
 func Validate(regex string) error {
 	if _, err := regexp.Compile(regex); err != nil {
-		return fmt.Errorf("regex %q is invalid: %v", regex, err)
+		return fmt.Errorf("regex %q is invalid: %w", regex, err)
 	}
 	return nil
 }

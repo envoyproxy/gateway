@@ -11,7 +11,6 @@ import (
 	"io"
 	"sort"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -95,7 +94,7 @@ func versions(w io.Writer, containerName, output string, remote bool) error {
 
 	pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
 	if err != nil {
-		return errors.Wrap(err, "list EG pods failed")
+		return fmt.Errorf("list EG pods failed: %w", err)
 	}
 
 	for _, pod := range pods.Items {

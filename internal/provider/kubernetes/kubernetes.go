@@ -56,7 +56,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 
 	updateHandler := status.NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
 	if err := mgr.Add(updateHandler); err != nil {
-		return nil, fmt.Errorf("failed to add status update handler %v", err)
+		return nil, fmt.Errorf("failed to add status update handler %w", err)
 	}
 
 	// Create and register the controllers with the manager.

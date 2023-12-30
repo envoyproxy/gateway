@@ -7,8 +7,8 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
@@ -31,7 +31,7 @@ func (cli *InfraClient) CreateOrUpdate(ctx context.Context, key client.ObjectKey
 			if kerrors.IsNotFound(err) {
 				// Create if it does not exist.
 				if err := cli.Client.Create(ctx, specific); err != nil {
-					return errors.Wrap(err, "for Create")
+					return fmt.Errorf("for Create: %w", err)
 				}
 			}
 		} else {
@@ -40,7 +40,7 @@ func (cli *InfraClient) CreateOrUpdate(ctx context.Context, key client.ObjectKey
 			if updateChecker() {
 				specific.SetUID(current.GetUID())
 				if err := cli.Client.Update(ctx, specific); err != nil {
-					return errors.Wrap(err, "for Update")
+					return fmt.Errorf("for Update: %w", err)
 				}
 			}
 		}
