@@ -45,7 +45,7 @@ type PathSettings struct {
 	//
 	// +optional
 	EscapedSlashesAction *PathEscapedSlashAction `json:"escapedSlashesAction,omitempty"`
-	// DisableMergeSlashes allows disabling the default configuration of merging adjecent
+	// DisableMergeSlashes allows disabling the default configuration of merging adjacent
 	// slashes in the path.
 	// Note that slash merging is not part of the HTTP spec and is provided for convenience.
 	//

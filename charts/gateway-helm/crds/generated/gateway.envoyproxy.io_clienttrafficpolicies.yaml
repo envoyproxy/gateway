@@ -59,7 +59,7 @@ spec:
                 properties:
                   disableMergeSlashes:
                     description: DisableMergeSlashes allows disabling the default
-                      configuration of merging adjecent slashes in the path. Note
+                      configuration of merging adjacent slashes in the path. Note
                       that slash merging is not part of the HTTP spec and is provided
                       for convenience.
                     type: boolean
