@@ -53,6 +53,27 @@ spec:
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
                 type: object
+              path:
+                description: Path enables managing how the incoming path set by clients
+                  can be normalized.
+                properties:
+                  disableMergeSlashes:
+                    description: DisableMergeSlashes allows disabling the default
+                      configuration of merging adjecent slashes in the path. Note
+                      that slash merging is not part of the HTTP spec and is provided
+                      for convenience.
+                    type: boolean
+                  escapedSlashesAction:
+                    description: EscapedSlashesAction determines how %2f, %2F, %5c,
+                      or %5C sequences in the path URI should be handled. The default
+                      is UnescapeRedirect.
+                    enum:
+                    - KeepUnchanged
+                    - RejectRequest
+                    - UnescapeForward
+                    - UnescapeRedirect
+                    type: string
+                type: object
               suppressEnvoyHeaders:
                 description: SuppressEnvoyHeaders configures the Envoy Router filter
                   to suppress the "x-envoy-' headers from both requests and responses.
