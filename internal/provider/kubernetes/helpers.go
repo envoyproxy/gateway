@@ -61,13 +61,13 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 
 		gw := new(gwapiv1.Gateway)
 		if err := client.Get(ctx, gwKey, gw); err != nil {
-			return nil, fmt.Errorf("failed to get gateway %s/%s: %v", gwKey.Namespace, gwKey.Name, err)
+			return nil, fmt.Errorf("failed to get gateway %s/%s: %w", gwKey.Namespace, gwKey.Name, err)
 		}
 
 		gcKey := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
 		gc := new(gwapiv1.GatewayClass)
 		if err := client.Get(ctx, gcKey, gc); err != nil {
-			return nil, fmt.Errorf("failed to get gatewayclass %s: %v", gcKey.Name, err)
+			return nil, fmt.Errorf("failed to get gatewayclass %s: %w", gcKey.Name, err)
 		}
 		if gc.Spec.ControllerName == gatewayClassController {
 			gateways = append(gateways, *gw)

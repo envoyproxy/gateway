@@ -155,7 +155,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	var gatewayClasses gwapiv1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %w", err)
 	}
 
 	var cc controlledClasses
@@ -269,7 +269,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
 		envoyPatchPolicies := v1alpha1.EnvoyPatchPolicyList{}
 		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %v", err)
+			return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
 		}
 
 		for _, policy := range envoyPatchPolicies.Items {
@@ -284,7 +284,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// Add all ClientTrafficPolicies
 	clientTrafficPolicies := v1alpha1.ClientTrafficPolicyList{}
 	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing ClientTrafficPolicies: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
 	}
 
 	for _, policy := range clientTrafficPolicies.Items {
@@ -299,7 +299,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// Add all BackendTrafficPolicies
 	backendTrafficPolicies := v1alpha1.BackendTrafficPolicyList{}
 	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing BackendTrafficPolicies: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
 	}
 
 	for _, policy := range backendTrafficPolicies.Items {
@@ -313,7 +313,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// Add all SecurityPolicies
 	securityPolicies := v1alpha1.SecurityPolicyList{}
 	if err := r.client.List(ctx, &securityPolicies); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing SecurityPolicies: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error listing SecurityPolicies: %w", err)
 	}
 
 	for _, policy := range securityPolicies.Items {
@@ -472,7 +472,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 		refGrant, err := r.findReferenceGrant(ctx, from, to)
 		switch {
 		case err != nil:
-			return fmt.Errorf("failed to find ReferenceGrant: %v", err)
+			return fmt.Errorf("failed to find ReferenceGrant: %w", err)
 		case refGrant == nil:
 			return fmt.Errorf(
 				"no matching ReferenceGrants found: from %s/%s to %s/%s",
@@ -573,7 +573,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	refGrantList := new(gwapiv1b1.ReferenceGrantList)
 	opts := &client.ListOptions{FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind)}
 	if err := r.client.List(ctx, refGrantList, opts); err != nil {
-		return nil, fmt.Errorf("failed to list ReferenceGrants: %v", err)
+		return nil, fmt.Errorf("failed to list ReferenceGrants: %w", err)
 	}
 
 	refGrants := refGrantList.Items
@@ -584,7 +584,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return nil, fmt.Errorf("failed to check namespace labels for ReferenceGrant %s in namespace %s: %s", refGrant.GetName(), ns, err)
+				return nil, fmt.Errorf("failed to check namespace labels for ReferenceGrant %s in namespace %s: %w", refGrant.GetName(), ns, err)
 			}
 			if !ok {
 				// TODO: should log?
@@ -628,7 +628,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for gateway %s in namespace %s: %s", gtw.GetName(), ns, err)
+				return fmt.Errorf("failed to check namespace labels for gateway %s in namespace %s: %w", gtw.GetName(), ns, err)
 			}
 
 			if ok {
@@ -1697,7 +1697,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 
 	// The EnvoyProxy must be in the same namespace as EG.
 	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: r.namespace}); err != nil {
-		return fmt.Errorf("failed to list envoyproxies in namespace %s: %v", r.namespace, err)
+		return fmt.Errorf("failed to list envoyproxies in namespace %s: %w", r.namespace, err)
 	}
 
 	if len(epList.Items) == 0 {
@@ -1714,7 +1714,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 		if classRefsEnvoyProxy(gc, &ep) {
 			found = true
 			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
-				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
+				validationErr = fmt.Errorf("invalid envoyproxy: %w", err)
 				continue
 			}
 			valid = true
@@ -1728,7 +1728,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	if !valid {
-		return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, validationErr)
+		return fmt.Errorf("invalid gatewayclass %s: %w", gc.Name, validationErr)
 	}
 
 	return nil

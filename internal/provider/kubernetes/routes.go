@@ -41,7 +41,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for TLSRoute %s in namespace %s: %s", rt.GetName(), ns, err)
+				return fmt.Errorf("failed to check namespace labels for TLSRoute %s in namespace %s: %w", rt.GetName(), ns, err)
 			}
 
 			if ok {
@@ -122,7 +122,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for GRPCRoute %s in namespace %s: %s", gr.GetName(), ns, err)
+				return fmt.Errorf("failed to check namespace labels for GRPCRoute %s in namespace %s: %w", gr.GetName(), ns, err)
 			}
 			if ok {
 				grs = append(grs, gr)
@@ -251,7 +251,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for HTTPRoute %s in namespace %s: %s", hr.GetName(), ns, err)
+				return fmt.Errorf("failed to check namespace labels for HTTPRoute %s in namespace %s: %w", hr.GetName(), ns, err)
 			}
 
 			if ok {
@@ -424,7 +424,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for TCPRoute %s in namespace %s: %s", tr.GetName(), ns, err)
+				return fmt.Errorf("failed to check namespace labels for TCPRoute %s in namespace %s: %w", tr.GetName(), ns, err)
 			}
 
 			if ok {
@@ -505,7 +505,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for UDPRoute %s in namespace %s: %s", ur.GetName(), ns, err)
+				return fmt.Errorf("failed to check namespace labels for UDPRoute %s in namespace %s: %w", ur.GetName(), ns, err)
 			}
 
 			if ok {
