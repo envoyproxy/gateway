@@ -17,6 +17,11 @@ envoyProxy:
             socket_address:
               address: 127.0.0.1
               port_value: 19000
+        layered_runtime:
+          layers:
+          - name: global_config
+            static_layer:
+              envoy.restart_features.use_eds_cache_for_ads: true
         dynamic_resources:
           ads_config:
             api_type: DELTA_GRPC
@@ -494,6 +499,11 @@ xds:
           ldsConfig:
             ads: {}
             resourceApiVersion: V3
+        layeredRuntime:
+          layers:
+          - name: global_config
+            staticLayer:
+              envoy.restart_features.use_eds_cache_for_ads: true
         staticResources:
           clusters:
           - connectTimeout: 0.250s
