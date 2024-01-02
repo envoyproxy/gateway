@@ -131,7 +131,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `allowOrigins` _[StringMatch](#stringmatch) array_ | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowOrigins` _Origin array_ | AllowOrigins defines the origins that are allowed to make requests. |
 | `allowMethods` _string array_ | AllowMethods defines the methods that are allowed to make requests. |
 | `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
 | `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
@@ -1833,7 +1833,6 @@ _Appears in:_
 StringMatch defines how to match any strings. This is a general purpose match condition that can be used by other EG APIs that need to match against a string.
 
 _Appears in:_
-- [CORS](#cors)
 - [ProxyMetrics](#proxymetrics)
 
 | Field | Description |

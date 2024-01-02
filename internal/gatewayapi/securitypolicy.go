@@ -27,7 +27,6 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
@@ -269,9 +268,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	)
 
 	if policy.Spec.CORS != nil {
-		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
-			errs = multierror.Append(errs, err)
-		}
+		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
 	if policy.Spec.JWT != nil {
@@ -325,10 +322,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors, err = t.buildCORS(policy.Spec.CORS)
-		if err != nil {
-			errs = multierror.Append(errs, err)
-		}
+		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
 	if policy.Spec.JWT != nil {
@@ -377,38 +371,19 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
+func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
-		origin := origin.DeepCopy()
-
-		// matchType default to exact
-		matchType := egv1a1.StringMatchExact
-		if origin.Type != nil {
-			matchType = *origin.Type
-		}
-
-		// TODO zhaohuabing: extract a utils function to build StringMatch
-		switch matchType {
-		case egv1a1.StringMatchExact:
+		origin := origin
+		if isWildcard(string(origin)) {
+			regexStr := wildcard2regex(string(origin))
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Exact: &origin.Value,
+				SafeRegex: &regexStr,
 			})
-		case egv1a1.StringMatchPrefix:
+		} else {
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Prefix: &origin.Value,
-			})
-		case egv1a1.StringMatchSuffix:
-			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Suffix: &origin.Value,
-			})
-		case egv1a1.StringMatchRegularExpression:
-			if err := regex.Validate(origin.Value); err != nil {
-				return nil, err
-			}
-			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				SafeRegex: &origin.Value,
+				Exact: (*string)(&origin),
 			})
 		}
 	}
@@ -420,7 +395,17 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 		ExposeHeaders:    cors.ExposeHeaders,
 		MaxAge:           cors.MaxAge,
 		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
-	}, nil
+	}
+}
+
+func isWildcard(s string) bool {
+	return strings.ContainsAny(s, "*")
+}
+
+func wildcard2regex(wildcard string) string {
+	regexStr := strings.ReplaceAll(wildcard, ".", "\\.")
+	regexStr = strings.ReplaceAll(regexStr, "*", ".*")
+	return regexStr
 }
 
 func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
