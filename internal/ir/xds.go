@@ -279,7 +279,7 @@ func (t TLSListenerConfig) Validate() error {
 	// dependent on the version of EnvoyProxy being used - different values are valid
 	// depending if Envoy was compiled against BoringSSL or OpenSSL, or even the exact version
 	// of each of these libraries.
-	// Validation for TLS versions was done in the layer above, when translating to ir.
+	// Validation for TLS versions was done with CEL
 	return errs
 }
 

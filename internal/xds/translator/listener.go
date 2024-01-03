@@ -434,20 +434,16 @@ func buildTLSParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
 }
 
 func buildTLSVersion(version *gwv1a1.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
-	switch *version {
-	case gwv1a1.TLSv10:
-		return tlsv3.TlsParameters_TLSv1_0
-	case gwv1a1.TLSv11:
-		return tlsv3.TlsParameters_TLSv1_1
-	case gwv1a1.TLSv12:
-		return tlsv3.TlsParameters_TLSv1_2
-	case gwv1a1.TLSv13:
-		return tlsv3.TlsParameters_TLSv1_3
-	case gwv1a1.TLSAuto:
-		fallthrough
-	default:
-		return tlsv3.TlsParameters_TLS_AUTO
+	lookup := map[gwv1a1.TLSVersion]tlsv3.TlsParameters_TlsProtocol{
+		gwv1a1.TLSv10: tlsv3.TlsParameters_TLSv1_0,
+		gwv1a1.TLSv11: tlsv3.TlsParameters_TLSv1_1,
+		gwv1a1.TLSv12: tlsv3.TlsParameters_TLSv1_2,
+		gwv1a1.TLSv13: tlsv3.TlsParameters_TLSv1_3,
 	}
+	if r, found := lookup[*version]; found {
+		return r
+	}
+	return tlsv3.TlsParameters_TLS_AUTO
 }
 
 func buildALPNProtocols(in []gwv1a1.ALPNProtocol) []string {
