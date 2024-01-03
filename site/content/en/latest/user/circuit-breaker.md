@@ -115,7 +115,7 @@ EOF
 ```
 
 ### Install the hey load testing tool
-* The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [hey project]() docs.   
+* The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.   
 
 ## Test and customize circuit breaker settings
 
@@ -150,7 +150,7 @@ Response time histogram:
   10.342 [11]	|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 ```
 
-The default circuit nreaker threshold (1024) is not met. As a result, requests do not overflow: all requests are proxied upstream and both Envoy and clients wait for 10s.
+The default circuit breaker threshold (1024) is not met. As a result, requests do not overflow: all requests are proxied upstream and both Envoy and clients wait for 10s.
 
 In order to fail fast, apply a `BackendTrafficPolicy` that limits concurrent requests to 10 and pending requests to 0.  
 
