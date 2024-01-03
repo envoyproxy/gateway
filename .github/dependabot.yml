@@ -9,6 +9,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: github-actions
+    directory: /tools/github-actions/setup-deps
+    schedule:
+      interval: weekly
   - package-ecosystem: gomod
     directory: /
     schedule:
