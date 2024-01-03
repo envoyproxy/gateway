@@ -7,6 +7,7 @@ package v1alpha1
 
 // ExtAuthz defines the configuration for External Authorization.
 type ExtAuthz struct {
+
 	// GRPCURI defines the gRPC cluster name to use in that route.
 	GRPCURI string `json:"grpcURI,omitempty" yaml:"grpcURI"`
 }

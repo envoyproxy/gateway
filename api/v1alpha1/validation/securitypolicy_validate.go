@@ -71,7 +71,7 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 // ValidateExtAuthzURI validates the provided URI is valid.
 func ValidateExtAuthzURI(uri string) error {
 	if _, err := url.ParseRequestURI(uri); err != nil {
-		return fmt.Errorf("invalid grpcURI URI: %v", err)
+		return fmt.Errorf("invalid grpcURI URI: %w", err)
 	}
 	return nil
 }

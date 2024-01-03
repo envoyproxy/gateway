@@ -1,5 +1,9 @@
 - ignorePortInHostMatching: true
   name: first-listener
+  typedPerFilterConfig:
+    envoy.filters.http.ext_authz_first-route:
+      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+      disabled: true
   virtualHosts:
   - domains:
     - '*'
@@ -10,3 +14,7 @@
       name: first-route
       route:
         cluster: first-route-dest
+      typedPerFilterConfig:
+        envoy.filters.http.ext_authz_first-route:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

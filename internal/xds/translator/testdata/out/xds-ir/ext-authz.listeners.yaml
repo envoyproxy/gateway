@@ -14,7 +14,7 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.ext_authz
+        - name: envoy.filters.http.ext_authz_first-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             grpcService:

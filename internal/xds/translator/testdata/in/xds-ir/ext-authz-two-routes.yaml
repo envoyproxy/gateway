@@ -21,6 +21,8 @@ http:
     hostname: "*"
     pathMatch:
       exact: "baz/qux"
+    extAuthz:
+      grpcURI: https://envoy-ext-jwt-auth.envoy-gateway-system.svc.cluster.local:10003
     destination:
       name: "second-route-dest"
       settings:

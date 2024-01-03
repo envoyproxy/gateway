@@ -37,9 +37,13 @@ type extAuth struct {
 
 var _ httpFilter = &extAuth{}
 
-// patchHCM builds and appends the external authorization Filter to the HTTP
-// Connection Manager if applicable.
+// patchHCM builds and appends external auth Filters to the HTTP Connection
+// Manager if applicable, and it does not already exist.
+// Note: this method creates an external auth filter for each route that contains
+// an external auth config.
 func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+	var errs error
+
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -48,119 +52,78 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		return errors.New("ir listener is nil")
 	}
 
-	if !listenerContainsExtAuthz(irListener) {
-		return nil
-	}
-
-	// Return early if filter already exists.
-	for _, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == extAuthzFilter {
-			return nil
-		}
-	}
-
-	extAuthzFilter, err := buildHCM(irListener)
-	if err != nil {
-		return err
-	}
-
-	mgr.HttpFilters = append(mgr.HttpFilters, extAuthzFilter)
-
-	return nil
-}
-
-// patchRouteConfig patches the provided route configuration with
-// the ext authz filter if applicable.
-// Note: this method disables the ext authz filters on all routes not explicitly requiring it.
-func (*extAuth) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
-	if routeCfg == nil {
-		return errors.New("route configuration is nil")
-	}
-	if irListener == nil {
-		return errors.New("ir listener is nil")
-	}
-	if !listenerContainsExtAuthz(irListener) {
-		return nil
-	}
-
-	for _, route := range irListener.Routes {
-		if !routeContainsExtAuthz(route) {
-			perRouteFilterName := extAuthzFilterName(route)
-			filterCfg := routeCfg.TypedPerFilterConfig
-
-			routeCfgProto := &extauthzv3.ExtAuthzPerRoute{
-				Override: &extauthzv3.ExtAuthzPerRoute_Disabled{Disabled: true},
-			}
-
-			routeCfgAny, err := anypb.New(routeCfgProto)
-			if err != nil {
-				return err
-			}
-
-			if filterCfg == nil {
-				routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
-			}
-
-			routeCfg.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
-		}
-	}
-
-	return nil
-}
-
-// buildHCM returns an external authorization filter from the provided IR listener.
-func buildHCM(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
-	var grpcURI string
-
 	for _, route := range irListener.Routes {
 		if !routeContainsExtAuthz(route) {
 			continue
 		}
 
-		if grpcURI != "" && grpcURI != route.ExtAuthz.GRPCURI {
-			return nil, errors.New("multiple grpcURI for this listener, unsupported configuration")
-		}
-
-		if grpcURI == "" {
-			grpcURI = route.ExtAuthz.GRPCURI
-		}
-
-		grpc, err := url2Cluster(grpcURI)
+		filter, err := buildHCMExtAuthzFilter(route)
 		if err != nil {
-			return nil, err
+			errs = multierror.Append(errs, err)
+			continue
 		}
 
-		authProto := &extauthzv3.ExtAuthz{
-			Services: &extauthzv3.ExtAuthz_GrpcService{
-				GrpcService: &corev3.GrpcService{
-					TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
-						EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{ClusterName: grpc.name},
-					},
-				},
-			},
-			TransportApiVersion: corev3.ApiVersion_V3,
-			FailureModeAllow:    false, // do not let the request pass when authz unavailable
-			StatusOnError:       &typev3.HttpStatus{Code: typev3.StatusCode_ServiceUnavailable},
+		// skip if the filter already exists
+		for _, existingFilter := range mgr.HttpFilters {
+			if filter.Name == existingFilter.Name {
+				continue
+			}
 		}
 
-		if err := authProto.ValidateAll(); err != nil {
-			return nil, err
-		}
-
-		authAny, err := anypb.New(authProto)
-		if err != nil {
-			return nil, err
-		}
-
-		return &hcmv3.HttpFilter{
-			Name: extAuthzFilter,
-			ConfigType: &hcmv3.HttpFilter_TypedConfig{
-				TypedConfig: authAny,
-			},
-		}, nil
+		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil, nil
+	return nil
+}
+
+// buildHCMExtAuthzFilter returns an external auth HTTP filter from the provided IR HTTPRoute.
+func buildHCMExtAuthzFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
+	extAuthzProto, err := extAuthzConfig(route)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := extAuthzProto.ValidateAll(); err != nil {
+		return nil, err
+	}
+
+	extAuthzAny, err := anypb.New(extAuthzProto)
+	if err != nil {
+		return nil, err
+	}
+
+	return &hcmv3.HttpFilter{
+		Name: extAuthzFilterName(route),
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: extAuthzAny,
+		},
+	}, nil
+}
+
+func extAuthzFilterName(route *ir.HTTPRoute) string {
+	return fmt.Sprintf("%s_%s", extAuthzFilter, route.Name)
+}
+
+func extAuthzConfig(route *ir.HTTPRoute) (*extauthzv3.ExtAuthz, error) {
+	grpcURI := route.ExtAuthz.GRPCURI
+	grpc, err := url2Cluster(grpcURI, false)
+	if err != nil {
+		return nil, err
+	}
+
+	authProto := &extauthzv3.ExtAuthz{
+		Services: &extauthzv3.ExtAuthz_GrpcService{
+			GrpcService: &corev3.GrpcService{
+				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{ClusterName: grpc.name},
+				},
+			},
+		},
+		TransportApiVersion: corev3.ApiVersion_V3,
+		FailureModeAllow:    false, // do not let the request pass when authz unavailable
+		StatusOnError:       &typev3.HttpStatus{Code: typev3.StatusCode_ServiceUnavailable},
+	}
+	return authProto, nil
 }
 
 // routeContainsExtAuthz returns true if external authorizations exists for the
@@ -174,22 +137,6 @@ func routeContainsExtAuthz(irRoute *ir.HTTPRoute) bool {
 		irRoute.ExtAuthz != nil &&
 		irRoute.ExtAuthz.GRPCURI != "" {
 		return true
-	}
-
-	return false
-}
-
-// listenerContainsExtAuthz returns true if the provided listener has external
-// authorization policies attached to its routes.
-func listenerContainsExtAuthz(irListener *ir.HTTPListener) bool {
-	if irListener == nil {
-		return false
-	}
-
-	for _, route := range irListener.Routes {
-		if route.ExtAuthz != nil {
-			return true
-		}
 	}
 
 	return false
@@ -215,7 +162,7 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HT
 		)
 
 		url := route.ExtAuthz.GRPCURI
-		grpc, err = url2Cluster(url)
+		grpc, err = url2Cluster(url, false)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 			continue
@@ -227,7 +174,7 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HT
 			Protocol:  ir.GRPC,
 		}
 
-		if !grpc.tlsDisabled {
+		if grpc.tls {
 			// grpcURI is using TLS gRPC HT
 			tSocket, err = buildExtAuthzTLSocket()
 			if err != nil {
@@ -278,10 +225,67 @@ func buildExtAuthzTLSocket() (*corev3.TransportSocket, error) {
 	}, nil
 }
 
-func extAuthzFilterName(route *ir.HTTPRoute) string {
-	return fmt.Sprintf("%s_%s", extAuthzFilter, route.Name)
+// patchRouteCfg patches the provided route configuration with the ext auth filter
+// if applicable.
+// Note: this method disables all the ext auth filters by default. The filter will
+// be enabled per-route in the typePerFilterConfig of the route.
+func (*extAuth) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
+	if routeCfg == nil {
+		return errors.New("route configuration is nil")
+	}
+	if irListener == nil {
+		return errors.New("ir listener is nil")
+	}
+
+	var errs error
+	for _, route := range irListener.Routes {
+		if !routeContainsExtAuthz(route) {
+			continue
+		}
+
+		filterName := extAuthzFilterName(route)
+		filterCfg := routeCfg.TypedPerFilterConfig
+
+		if _, ok := filterCfg[filterName]; ok {
+			// This should not happen since this is the only place where the ext
+			// auth filter is added in a route.
+			errs = multierror.Append(errs, fmt.Errorf(
+				"route config already contains oauth2 config: %+v", route))
+			continue
+		}
+
+		// Disable all the filters by default. The filter will be enabled
+		// per-route in the typePerFilterConfig of the route.
+		routeCfgAny, err := anypb.New(&routev3.FilterConfig{Disabled: true})
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		if filterCfg == nil {
+			routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
+		}
+
+		routeCfg.TypedPerFilterConfig[filterName] = routeCfgAny
+	}
+	return errs
 }
 
+// patchRoute patches the provided route with the ext auth config if applicable.
+// Note: this method enables the corresponding ext auth filter for the provided route.
 func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+	if route == nil {
+		return errors.New("xds route is nil")
+	}
+	if irRoute == nil {
+		return errors.New("ir route is nil")
+	}
+	if irRoute.ExtAuthz == nil {
+		return nil
+	}
+
+	if err := enableFilterOnRoute(extAuthzFilter, route, irRoute); err != nil {
+		return err
+	}
 	return nil
 }
