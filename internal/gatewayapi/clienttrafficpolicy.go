@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -20,6 +21,12 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/tetratelabs/multierror"
+)
+
+var (
+	ErrTLSMinVersionBiggerThanMax = errors.New("minimum TLS protocol version can't be bigger than maximum protocol version")
+	ErrInvalidTLSProtocolVersion  = errors.New("invalid TLS protocol version specified")
 )
 
 const (
@@ -89,19 +96,29 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 			policyMap[key].Insert(section)
 
 			// Translate for listener matching section name
+			var err error
 			for _, l := range gateway.listeners {
 				if string(l.Name) == section {
-					t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
+					err = t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
 					break
 				}
 			}
-			// Set Accepted=True
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"ClientTrafficPolicy has been accepted.",
-			)
+			if err != nil {
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					status.Error2ConditionMsg(err),
+				)
+			} else {
+				// Set Accepted=True
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionTrue,
+					gwv1a2.PolicyReasonAccepted,
+					"ClientTrafficPolicy has been accepted.",
+				)
+			}
 		}
 	}
 
@@ -162,22 +179,34 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 			policyMap[key].Insert(AllSections)
 
 			// Translate sections that have not yet been targeted
+			var errs error
 			for _, l := range gateway.listeners {
 				// Skip if section has already been targeted
 				if s != nil && s.Has(string(l.Name)) {
 					continue
 				}
 
-				t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
+				if err := t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR); err != nil {
+					errs = multierror.Append(errs, err)
+				}
 			}
 
-			// Set Accepted=True
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"ClientTrafficPolicy has been accepted.",
-			)
+			if errs != nil {
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					status.Error2ConditionMsg(errs),
+				)
+			} else {
+				// Set Accepted=True
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionTrue,
+					gwv1a2.PolicyReasonAccepted,
+					"ClientTrafficPolicy has been accepted.",
+				)
+			}
 		}
 	}
 
@@ -265,7 +294,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 	return gateway
 }
 
-func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap, infraIR InfraIRMap) {
+func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap, infraIR InfraIRMap) error {
 	// Find IR
 	irKey := irStringKey(l.gateway.Namespace, l.gateway.Name)
 	// It must exist since we've already finished processing the gateways
@@ -284,6 +313,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		}
 	}
 
+	var errs error
 	// IR must exist since we're past validation
 	if httpIR != nil {
 		// Translate TCPKeepalive
@@ -308,8 +338,14 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 			if proxyListenerIR != nil {
 				proxyListenerIR.HTTP3 = &ir.HTTP3Settings{}
 			}
+
+		// Translate TLS parameters
+		if err := translateListenerTLSParameters(policySpec.TLS, httpIR); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
+
+	return errs
 }
 
 func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir.HTTPListener) {
@@ -359,3 +395,63 @@ func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *i
 		httpIR.SuppressEnvoyHeaders = *suppressEnvoyHeaders
 	}
 }
+
+func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HTTPListener) error {
+	// Return early if not set
+	if tlsParams == nil {
+		return nil
+	}
+	// Return if this listener isn't a TLS listener. There has to be
+	// at least one certificate defined, which would cause httpIR to
+	// have a TLS structure.
+	if httpIR.TLS == nil {
+		return nil
+	}
+	var errs error
+	if tlsParams.Version != nil {
+		var minVersion, maxVersion int
+		var err error
+		if minVersion, err = tlsVersionToNumericVersion(tlsParams.Version.Min); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+		if maxVersion, err = tlsVersionToNumericVersion(tlsParams.Version.Max); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+
+		if minVersion >= 0 && maxVersion >= 0 && minVersion > maxVersion {
+			errs = multierror.Append(errs, ErrTLSMinVersionBiggerThanMax)
+		} else {
+			httpIR.TLS.Version = tlsParams.Version.DeepCopy()
+		}
+	}
+	if len(tlsParams.CipherSuites) > 0 {
+		httpIR.TLS.CipherSuites = tlsParams.CipherSuites
+	}
+	if len(tlsParams.ECDHCurves) > 0 {
+		httpIR.TLS.ECDHCurves = tlsParams.ECDHCurves
+	}
+	if len(tlsParams.SignatureAlgorithms) > 0 {
+		httpIR.TLS.SignatureAlgorithms = tlsParams.SignatureAlgorithms
+	}
+	if len(tlsParams.ALPNProtocols) > 0 {
+		httpIR.TLS.ALPNProtocols = tlsParams.ALPNProtocols
+	}
+	return errs
+}
+
+func tlsVersionToNumericVersion(version *egv1a1.TLSVersion) (int, error) {
+	if version == nil {
+		return -1, nil
+	}
+	lookup := map[egv1a1.TLSVersion]int{
+		egv1a1.TLSAuto: -1,
+		egv1a1.TLSv10:  0,
+		egv1a1.TLSv11:  1,
+		egv1a1.TLSv12:  2,
+		egv1a1.TLSv13:  3,
+	}
+	value, found := lookup[*version]
+	if !found {
+		return -1, ErrInvalidTLSProtocolVersion
+	}
+	return value, nil

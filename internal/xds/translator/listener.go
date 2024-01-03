@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	gwv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -340,17 +341,18 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	return nil
 }
 
-func buildDownstreamQUICTransportSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &quicv3.QuicDownstreamTransport{
 		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
+				TlsParams:     buildTlsParams(tlsConfig),
 				AlpnProtocols: []string{"h3"},
 			},
 			RequireClientCertificate: &wrappers.BoolValue{Value: false},
 		},
 	}
 
-	for _, tlsConfig := range tlsConfigs {
+	for _, tlsConfig := range tlsConfig.Certificates {
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
 			tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs,
 			&tlsv3.SdsSecretConfig{
@@ -371,15 +373,16 @@ func buildDownstreamQUICTransportSocket(tlsConfigs []*ir.TLSListenerConfig) (*co
 	}, nil
 }
 
-func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
-			AlpnProtocols:                  []string{"h2", "http/1.1"},
+			TlsParams:                      buildTlsParams(tlsConfig),
+			AlpnProtocols:                  tlsConfig.ALPNProtocols,
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
 	}
 
-	for _, tlsConfig := range tlsConfigs {
+	for _, tlsConfig := range tlsConfig.Certificates {
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
 			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
 			&tlsv3.SdsSecretConfig{
@@ -401,7 +404,55 @@ func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.Tr
 	}, nil
 }
 
-func buildXdsDownstreamTLSSecret(tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret {
+func buildTlsParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
+	p := &tlsv3.TlsParameters{}
+	isEmpty := true
+	if tlsConfig.Version != nil {
+		if tlsConfig.Version.Min != nil {
+			p.TlsMinimumProtocolVersion = buildTlsVersion(tlsConfig.Version.Min)
+			isEmpty = false
+		}
+		if tlsConfig.Version.Max != nil {
+			p.TlsMaximumProtocolVersion = buildTlsVersion(tlsConfig.Version.Max)
+			isEmpty = false
+		}
+	}
+	if len(tlsConfig.CipherSuites) > 0 {
+		p.CipherSuites = tlsConfig.CipherSuites
+		isEmpty = false
+	}
+	if len(tlsConfig.ECDHCurves) > 0 {
+		p.EcdhCurves = tlsConfig.ECDHCurves
+		isEmpty = false
+	}
+	if len(tlsConfig.SignatureAlgorithms) > 0 {
+		p.SignatureAlgorithms = tlsConfig.SignatureAlgorithms
+		isEmpty = false
+	}
+	if isEmpty {
+		return nil
+	}
+	return p
+}
+
+func buildTlsVersion(version *gwv1a1.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
+	switch *version {
+	case gwv1a1.TLSv10:
+		return tlsv3.TlsParameters_TLSv1_0
+	case gwv1a1.TLSv11:
+		return tlsv3.TlsParameters_TLSv1_1
+	case gwv1a1.TLSv12:
+		return tlsv3.TlsParameters_TLSv1_2
+	case gwv1a1.TLSv13:
+		return tlsv3.TlsParameters_TLSv1_3
+	case gwv1a1.TLSAuto:
+		fallthrough
+	default:
+		return tlsv3.TlsParameters_TLS_AUTO
+	}
+}
+
+func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 	// Build the tls secret
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,

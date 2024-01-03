@@ -185,8 +185,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
-			for t := range httpListener.TLS {
-				secret := buildXdsDownstreamTLSSecret(httpListener.TLS[t])
+			for t := range httpListener.TLS.Certificates {
+				secret := buildXdsDownstreamTLSSecret(httpListener.TLS.Certificates[t])
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 					errs = multierror.Append(errs, err)
 				}
@@ -357,7 +357,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		}
 
 		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
-			for _, s := range tcpListener.TLS.Terminate {
+			for _, s := range tcpListener.TLS.Terminate.Certificates {
 				secret := buildXdsDownstreamTLSSecret(s)
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 					errs = multierror.Append(errs, err)

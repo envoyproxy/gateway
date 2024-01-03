@@ -995,6 +995,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				},
 				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
 			}
+			// TODO: Remove this once it's possible to attach a ClientTrafficPolicy to TLS routes,
+			// (waiting for https://github.com/envoyproxy/gateway/issues/1635 before this is implemented)
+			// set the ALPNProtocols to include the defaults used by EG previously
+			if irListener.TLS.Terminate != nil {
+				irListener.TLS.Terminate.ALPNProtocols = []string{"h2", "http/1.1"}
+			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 

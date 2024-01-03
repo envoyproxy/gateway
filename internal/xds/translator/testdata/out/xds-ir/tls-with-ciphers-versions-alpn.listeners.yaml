@@ -3,7 +3,10 @@
       address: 0.0.0.0
       portValue: 10080
   filterChains:
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - foo.com
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -14,26 +17,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.jwt_authn
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
-            providers:
-              first-route/example:
-                audiences:
-                - foo.com
-                issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
-                remoteJwks:
-                  asyncFetch: {}
-                  cacheDuration: 300s
-                  httpUri:
-                    cluster: localhost_443
-                    timeout: 5s
-                    uri: https://localhost/jwt/public-key/jwks.json
-                  retryPolicy: {}
-            requirementMap:
-              first-route:
-                providerName: first-route/example
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -55,12 +38,38 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           alpnProtocols:
-          - h2
-          - http/1.1
+          - some-other-protocol
           tlsCertificateSdsSecretConfigs:
-          - name: first-listener
+          - name: secret-1
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          tlsParams:
+            cipherSuites:
+            - ECDHE-ECDSA-AES128-GCM-SHA256
+            - ECDHE-RSA-AES128-GCM-SHA256
+            - ECDHE-ECDSA-AES256-GCM-SHA384
+            - ECDHE-RSA-AES256-GCM-SHA384
+            ecdhCurves:
+            - X25519
+            - P-256
+            signatureAlgorithms:
+            - ecdsa_secp256r1_sha256
+            - rsa_pss_rsae_sha256
+            - rsa_pkcs1_sha256
+            - ecdsa_secp384r1_sha384
+            - rsa_pss_rsae_sha384
+            - rsa_pkcs1_sha384
+            - rsa_pss_rsae_sha512
+            - rsa_pkcs1_sha512
+            - rsa_pkcs1_sha1
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: first-listener
   perConnectionBufferLimitBytes: 32768
