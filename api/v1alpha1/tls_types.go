@@ -8,7 +8,6 @@ package v1alpha1
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == 'v1_3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && has(self.maxVersion) ? {\"Auto\":0,\"v1_1\":1,\"v1_2\":2,\"v1_3\":3}[self.minVersion] <= {\"v1_1\":1,\"v1_2\":2,\"v1_3\":3,\"Auto\":4}[self.maxVersion] : !has(self.minVersion) && has(self.maxVersion) ? 2 <= {\"v1_1\":1,\"v1_2\":2,\"v1_3\":3,\"Auto\":4}[self.maxVersion] : true", message="minVersion must be smaller or equal to maxVersion"
 type TLSSettings struct {
-
 	// Min specifies the minimal TLS protocol version to allow.
 	//
 	// The default is TLS 1.2 if this is not specified.
