@@ -18,6 +18,7 @@ import (
 	gwapiv1a1 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
@@ -995,11 +996,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				},
 				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
 			}
-			// TODO: Remove this once it's possible to attach a ClientTrafficPolicy to TLS routes,
-			// (waiting for https://github.com/envoyproxy/gateway/issues/1635 before this is implemented)
-			// set the ALPNProtocols to include the defaults used by EG previously
 			if irListener.TLS.Terminate != nil {
-				irListener.TLS.Terminate.ALPNProtocols = []string{"h2", "http/1.1"}
+				irListener.TLS.Terminate.ALPNProtocols = []egv1a1.ALPNProtocol{egv1a1.HTTPProtocolVersion2, egv1a1.HTTPProtocolVersion1_1}
 			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)

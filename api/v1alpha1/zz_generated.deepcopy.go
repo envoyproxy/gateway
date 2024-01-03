@@ -11,9 +11,9 @@ package v1alpha1
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	v2 "k8s.io/api/autoscaling/v2"
+	"k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	apisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )

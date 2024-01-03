@@ -345,7 +345,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSListenerConfig) (*corev
 	tlsCtx := &quicv3.QuicDownstreamTransport{
 		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
-				TlsParams:     buildTlsParams(tlsConfig),
+				TlsParams:     buildTLSParams(tlsConfig),
 				AlpnProtocols: []string{"h3"},
 			},
 			RequireClientCertificate: &wrappers.BoolValue{Value: false},
@@ -377,7 +377,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.Trans
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsParams:                      buildTLSParams(tlsConfig),
-			AlpnProtocols:                  tlsConfig.ALPNProtocols,
+			AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols),
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
 	}
@@ -407,18 +407,16 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.Trans
 func buildTLSParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
 	p := &tlsv3.TlsParameters{}
 	isEmpty := true
-	if tlsConfig.Version != nil {
-		if tlsConfig.Version.Min != nil {
-			p.TlsMinimumProtocolVersion = buildTLSVersion(tlsConfig.Version.Min)
-			isEmpty = false
-		}
-		if tlsConfig.Version.Max != nil {
-			p.TlsMaximumProtocolVersion = buildTLSVersion(tlsConfig.Version.Max)
-			isEmpty = false
-		}
+	if tlsConfig.MinVersion != nil {
+		p.TlsMinimumProtocolVersion = buildTLSVersion(tlsConfig.MinVersion)
+		isEmpty = false
 	}
-	if len(tlsConfig.CipherSuites) > 0 {
-		p.CipherSuites = tlsConfig.CipherSuites
+	if tlsConfig.MaxVersion != nil {
+		p.TlsMaximumProtocolVersion = buildTLSVersion(tlsConfig.MaxVersion)
+		isEmpty = false
+	}
+	if len(tlsConfig.Ciphers) > 0 {
+		p.CipherSuites = tlsConfig.Ciphers
 		isEmpty = false
 	}
 	if len(tlsConfig.ECDHCurves) > 0 {
@@ -450,6 +448,14 @@ func buildTLSVersion(version *gwv1a1.TLSVersion) tlsv3.TlsParameters_TlsProtocol
 	default:
 		return tlsv3.TlsParameters_TLS_AUTO
 	}
+}
+
+func buildALPNProtocols(in []gwv1a1.ALPNProtocol) []string {
+	r := make([]string, len(in))
+	for i, v := range in {
+		r[i] = string(v)
+	}
+	return r
 }
 
 func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {

@@ -1394,13 +1394,18 @@ func (in *TLSListenerConfig) DeepCopyInto(out *TLSListenerConfig) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Version != nil {
-		in, out := &in.Version, &out.Version
-		*out = new(v1alpha1.TLSVersions)
-		(*in).DeepCopyInto(*out)
+	if in.MinVersion != nil {
+		in, out := &in.MinVersion, &out.MinVersion
+		*out = new(v1alpha1.TLSVersion)
+		**out = **in
 	}
-	if in.CipherSuites != nil {
-		in, out := &in.CipherSuites, &out.CipherSuites
+	if in.MaxVersion != nil {
+		in, out := &in.MaxVersion, &out.MaxVersion
+		*out = new(v1alpha1.TLSVersion)
+		**out = **in
+	}
+	if in.Ciphers != nil {
+		in, out := &in.Ciphers, &out.Ciphers
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -1416,7 +1421,7 @@ func (in *TLSListenerConfig) DeepCopyInto(out *TLSListenerConfig) {
 	}
 	if in.ALPNProtocols != nil {
 		in, out := &in.ALPNProtocols, &out.ALPNProtocols
-		*out = make([]string, len(*in))
+		*out = make([]v1alpha1.ALPNProtocol, len(*in))
 		copy(*out, *in)
 	}
 }

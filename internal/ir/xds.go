@@ -229,17 +229,20 @@ func (h HTTPListener) Validate() error {
 // TLSListenerConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
+	// Certificates contains the set of certificates associated with this listener
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
-	// Versions of the TLS protocol supported by this listener.
-	Version *egv1a1.TLSVersions `json:"version,omitempty" yaml:"version,omitempty"`
+	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
+	MinVersion *egv1a1.TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
+	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
+	MaxVersion *egv1a1.TLSVersion `json:"maxVersion,omitempty" yaml:"version,omitempty"`
 	// CipherSuites supported by this listener
-	CipherSuites []string `json:"ciphers,omitempty" yaml:"ciphers,omitempty"`
+	Ciphers []string `json:"ciphers,omitempty" yaml:"ciphers,omitempty"`
 	// EDCHCurves supported by this listener
 	ECDHCurves []string `json:"ecdhCurves,omitempty" yaml:"ecdhCurves,omitempty"`
 	// SignatureAlgorithms supported by this listener
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
-	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+	ALPNProtocols []egv1a1.ALPNProtocol `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details

@@ -112,7 +112,7 @@ xdsIR:
       tls:
         terminate:
           alpnProtocols:
-          - h2
+          - http/2
           - http/1.1
           certificates:
           - name: envoy-gateway-tls-secret-1

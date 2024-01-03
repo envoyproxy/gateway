@@ -11,11 +11,10 @@ clientTrafficPolicies:
       name: gateway-1
       namespace: envoy-gateway
     tls:
-      version:
-        min: TLSv1_0
-        max: TLSv1_3
+      minVersion: v1_0
+      maxVersion: v1_3
       alpnProtocols:
-      - testALPN
+      - http/2
       ecdhCurves:
       - curve1
       ciphers:
