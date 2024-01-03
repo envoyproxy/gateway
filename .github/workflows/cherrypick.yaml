@@ -5,6 +5,9 @@ on:
       - main
     types: ["closed"]
 
+permissions:
+  contents: read
+
 jobs:
   cherry_pick_release_v0_6:
     runs-on: ubuntu-22.04

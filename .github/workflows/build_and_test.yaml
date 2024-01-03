@@ -12,6 +12,10 @@ on:
     - "release/v*"
     paths-ignore:
     - "**/*.png"
+
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest

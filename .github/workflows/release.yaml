@@ -5,6 +5,9 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v*.*.*"
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: ubuntu-22.04
