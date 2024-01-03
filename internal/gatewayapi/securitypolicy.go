@@ -293,7 +293,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Apply IR to all relevant routes
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
-	prefix := irRoutePrefix(route) + "/" // Prevent mismatching routes with the same prefix
+	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
 		for _, http := range ir.HTTP {
 			for _, r := range http.Routes {
