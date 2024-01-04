@@ -1,3 +1,79 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route
+    namespace: default
+  spec:
+    faultInjection:
+      abort:
+        httpStatus: 500
+        percentage: 100
+      delay:
+        fixedDelay: 5.4s
+        percentage: 80
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: BackendTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-grpcroute
+    namespace: default
+  spec:
+    faultInjection:
+      abort:
+        grpcStatus: 14
+        percentage: 100
+      delay:
+        fixedDelay: 5.4s
+        percentage: 80
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+      namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: BackendTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway
+    namespace: envoy-gateway
+  spec:
+    faultInjection:
+      abort:
+        httpStatus: 14
+        percentage: 0.01
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      namespace: envoy-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: BackendTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -56,7 +132,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -152,6 +228,44 @@ httpRoutes:
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-2
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /route2
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -183,73 +297,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-2
-securityPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-route
-    namespace: default
-  spec:
-    cors:
-      allowHeaders:
-      - x-header-5
-      - x-header-6
-      allowMethods:
-      - GET
-      - POST
-      allowOrigins:
-      - https://*.test.com:8080
-      - https://www.test.org:8080
-      exposeHeaders:
-      - x-header-7
-      - x-header-8
-      maxAge: 33m20s
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-      namespace: default
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
-  spec:
-    cors:
-      allowHeaders:
-      - x-header-1
-      - x-header-2
-      allowMethods:
-      - GET
-      - POST
-      allowOrigins:
-      - http://*.example.com
-      - http://foo.bar.com
-      exposeHeaders:
-      - x-header-3
-      - x-header-4
-      maxAge: 16m40s
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -266,24 +313,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-1
-          - x-header-2
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: http://.*\.example\.com
-          - distinct: false
-            exact: http://foo.bar.com
-            name: ""
-          exposeHeaders:
-          - x-header-3
-          - x-header-4
-          maxAge: 16m40s
         destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
@@ -293,6 +322,13 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
+        faultInjection:
+          abort:
+            grpcStatus: 14
+            percentage: 100
+          delay:
+            fixedDelay: 5.4s
+            percentage: 80
         hostname: '*'
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
   envoy-gateway/gateway-2:
@@ -310,24 +346,28 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: https://.*\.test\.com:8080
-          - distinct: false
-            exact: https://www.test.org:8080
-            name: ""
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
+        destination:
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        faultInjection:
+          abort:
+            httpStatus: 14
+            percentage: 0.01
+        hostname: gateway.envoyproxy.io
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route2
+      - backendWeights:
+          invalid: 0
+          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -337,6 +377,13 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        faultInjection:
+          abort:
+            httpStatus: 500
+            percentage: 100
+          delay:
+            fixedDelay: 5.4s
+            percentage: 80
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:

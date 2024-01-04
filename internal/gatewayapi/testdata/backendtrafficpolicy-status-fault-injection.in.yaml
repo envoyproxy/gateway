@@ -62,9 +62,28 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
-securityPolicies:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/route2"
+      backendRefs:
+      - name: service-1
+        port: 8080
+backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
+  kind: BackendTrafficPolicy
   metadata:
     namespace: envoy-gateway
     name: policy-for-gateway
@@ -72,24 +91,14 @@ securityPolicies:
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
-      name: gateway-1
+      name: gateway-2
       namespace: envoy-gateway
-    cors:
-      allowOrigins:
-      - "http://*.example.com"
-      - "http://foo.bar.com"
-      allowMethods:
-      - GET
-      - POST
-      allowHeaders:
-      - "x-header-1"
-      - "x-header-2"
-      exposeHeaders:
-      - "x-header-3"
-      - "x-header-4"
-      maxAge: 1000s
+    faultInjection:
+      abort:
+        httpStatus: 14
+        percentage: 0.01
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
+  kind: BackendTrafficPolicy
   metadata:
     namespace: default
     name: policy-for-route
@@ -99,17 +108,28 @@ securityPolicies:
       kind: HTTPRoute
       name: httproute-1
       namespace: default
-    cors:
-      allowOrigins:
-      - "https://*.test.com:8080"
-      - "https://www.test.org:8080"
-      allowMethods:
-      - GET
-      - POST
-      allowHeaders:
-      - "x-header-5"
-      - "x-header-6"
-      exposeHeaders:
-      - "x-header-7"
-      - "x-header-8"
-      maxAge: 2000s
+    faultInjection:
+      abort:
+        httpStatus: 500
+        percentage: 100
+      delay:
+        fixedDelay: 5.4s
+        percentage: 80
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-grpcroute
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+      namespace: default
+    faultInjection:
+      abort:
+        grpcStatus: 14
+        percentage: 100
+      delay:
+        fixedDelay: 5.4s
+        percentage: 80

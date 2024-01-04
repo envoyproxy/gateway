@@ -166,10 +166,8 @@ func (in *CORS) DeepCopyInto(out *CORS) {
 	*out = *in
 	if in.AllowOrigins != nil {
 		in, out := &in.AllowOrigins, &out.AllowOrigins
-		*out = make([]StringMatch, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+		*out = make([]Origin, len(*in))
+		copy(*out, *in)
 	}
 	if in.AllowMethods != nil {
 		in, out := &in.AllowMethods, &out.AllowMethods
