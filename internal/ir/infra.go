@@ -234,18 +234,18 @@ func (p *ProxyInfra) ObjectName() string {
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
-func (x *ProxyInfra) Equal(y *ProxyInfra) bool {
+func (p *ProxyInfra) Equal(y *ProxyInfra) bool {
 	// Deep copy to avoid modifying the original ordering.
-	x = x.DeepCopy()
-	x.sort()
+	p = p.DeepCopy()
+	p.sort()
 	y = y.DeepCopy()
 	y.sort()
-	return reflect.DeepEqual(x, y)
+	return reflect.DeepEqual(p, y)
 }
 
 // sort ensures the listeners are in a consistent order.
-func (x *ProxyInfra) sort() {
-	slices.SortFunc(x.Listeners, func(l1, l2 *ProxyListener) int {
+func (p *ProxyInfra) sort() {
+	slices.SortFunc(p.Listeners, func(l1, l2 *ProxyListener) int {
 		return cmp.Compare(l1.Name, l2.Name)
 	})
 }
