@@ -224,6 +224,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "suppress-envoy-headers",
 		},
+		{
+			name: "fault-injection",
+		},
 	}
 
 	for _, tc := range testCases {
