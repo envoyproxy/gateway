@@ -157,11 +157,11 @@ spec:
           imagePullPolicy: IfNotPresent
           name: envoy
           ports:
-            - containerPort: 8443
-              name: EnvoyH-6658f727
-              protocol: TCP
             - containerPort: 8080
               name: EnvoyH-d76a15e2
+              protocol: TCP
+            - containerPort: 8443
+              name: EnvoyH-6658f727
               protocol: TCP
           resources:
             limits:

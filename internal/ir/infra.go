@@ -6,9 +6,12 @@
 package ir
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"reflect"
 
+	"golang.org/x/exp/slices"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -228,4 +231,21 @@ func (p *ProxyInfra) ObjectName() string {
 		return fmt.Sprintf("envoy-%s", DefaultProxyName)
 	}
 	return "envoy-" + p.Name
+}
+
+// Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
+func (x *ProxyInfra) Equal(y *ProxyInfra) bool {
+	// Deep copy to avoid modifying the original ordering.
+	x = x.DeepCopy()
+	x.sort()
+	y = y.DeepCopy()
+	y.sort()
+	return reflect.DeepEqual(x, y)
+}
+
+// sort ensures the listeners are in a consistent order.
+func (x *ProxyInfra) sort() {
+	slices.SortFunc(x.Listeners, func(l1, l2 *ProxyListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
+	})
 }

@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -172,12 +171,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 
 	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
-	}
-
-	if len(ports) > 0 {
-		sort.Slice(ports, func(i, j int) bool {
-			return ports[i].Name < ports[j].Name
-		})
 	}
 
 	containers := []corev1.Container{
