@@ -31,8 +31,8 @@ spec:
     name: backend
   cors:
     allowOrigins:
-    - type: RegularExpression
-      value: .*\.foo\.com
+    - "http://*.foo.com"
+    - "http://*.foo.com:80"
     allowMethods:
     - GET
     - POST
@@ -93,6 +93,19 @@ curl -H "Origin: http://www.bar.com" \
 ```
 
 You won't see any CORS headers in the response, indicating that the request from `http://www.bar.com` was not allowed.
+
+If you try to send a request from `http://www.foo.com:8080`, you should also see similar response because the port number 
+`8080` is not included in the allowed origins.
+
+```shell
+```shell
+curl -H "Origin: http://www.foo.com:8080" \
+  -H "Host: www.example.com" \
+  -H "Access-Control-Request-Method: GET" \
+  -X OPTIONS -v -s \
+  http://$GATEWAY_HOST \
+  1> /dev/null
+```
 
 Note: CORS specification requires that the browsers to send a preflight request to the server to ask if it's allowed
 to access the limited resource in another domains. The browsers are supposed to follow the response from the server to

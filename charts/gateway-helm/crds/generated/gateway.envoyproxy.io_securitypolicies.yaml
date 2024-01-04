@@ -123,28 +123,17 @@ spec:
                     description: AllowOrigins defines the origins that are allowed
                       to make requests.
                     items:
-                      description: StringMatch defines how to match any strings. This
-                        is a general purpose match condition that can be used by other
-                        EG APIs that need to match against a string.
-                      properties:
-                        type:
-                          default: Exact
-                          description: Type specifies how to match against a string.
-                          enum:
-                          - Exact
-                          - Prefix
-                          - Suffix
-                          - RegularExpression
-                          type: string
-                        value:
-                          description: Value specifies the string value that the match
-                            must have.
-                          maxLength: 1024
-                          minLength: 1
-                          type: string
-                      required:
-                      - value
-                      type: object
+                      description: "Origin is defined by the scheme (protocol), hostname
+                        (domain), and port of the URL used to access it. The hostname
+                        can be “precise” which is just the domain name or “wildcard”
+                        which is a domain name prefixed with a single wildcard label
+                        such as “*.example.com”. \n For example, the following are
+                        valid origins: - https://foo.example.com - https://*.example.com
+                        - http://foo.example.com:8080 - http://*.example.com:8080"
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^https?:\/\/(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(:[0-9]+)?$
+                      type: string
                     minItems: 1
                     type: array
                   exposeHeaders:
