@@ -1,4 +1,4 @@
-name: Return Action on PR Comment
+name: Retest Action on PR Comment
 
 on:
   issue_comment:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  command:
+  retest:
     if: |
       ${{
          github.event.issue.pull_request
@@ -22,20 +22,6 @@ jobs:
       pull-requests: write
       actions: write
     steps:
-    - uses: envoyproxy/toolshed/gh-actions/github/command@0c093e23192533019cf131e0016adb0ac73adc97  # actions-v0.2.18
-      name: Parse command from comment
-      id: command
-      with:
-        text: ${{ github.event.comment.body }}
-        matching: >-
-          ^/(retest)
-
-    # retest
-    - uses: envoyproxy/toolshed/gh-actions/retest@6b3ddd1e42c252d68fb98973760c0ee1943c9c21  # actions-v0.2.20
-      if: ${{ steps.command.outputs.command == 'retest' }}
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        comment-id: ${{ github.event.comment.id }}
-        pr-url: ${{ github.event.issue.pull_request.url }}
-        app-owner: "github-actions"
-        args: ${{ steps.command.outputs.args }}
+      - uses: envoyproxy/toolshed/gh-actions/retest@effeefe9b275dc8056f77c0e7b1010c252167d3e # actions-v0.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
