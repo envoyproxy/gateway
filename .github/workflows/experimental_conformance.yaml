@@ -10,6 +10,9 @@ on:
   # Add workflow_dispatch to trigger this workflow manually by maintainers.
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   experimental-conformance-test:
     runs-on: ubuntu-latest

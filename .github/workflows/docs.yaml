@@ -13,6 +13,9 @@ on:
     paths:
     - 'site/**'
 
+permissions:
+  contents: read
+
 jobs:
   docs-lint:
     runs-on: ubuntu-22.04
