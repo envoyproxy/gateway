@@ -372,15 +372,16 @@ func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HT
 	}
 	// Make sure that the negotiated TLS protocol version is as expected if TLS is used,
 	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
-	httpIR.TLS.MinVersion = ptr.To(egv1a1.TLSv12)
-	httpIR.TLS.MaxVersion = ptr.To(egv1a1.TLSv13)
+	httpIR.TLS.MinVersion = ptr.To(ir.TLSv12)
+	httpIR.TLS.MaxVersion = ptr.To(ir.TLSv13)
 	// If HTTP3 is enabled, the ALPN protocols array should be hardcoded
 	// for HTTP3
 	if httpIR.HTTP3 != nil {
-		httpIR.TLS.ALPNProtocols = []egv1a1.ALPNProtocol{egv1a1.ALPNProtocol("h3")}
+		httpIR.TLS.ALPNProtocols = []string{"h3"}
 	} else if tlsParams != nil {
-		if len(tlsParams.ALPNProtocols) > 0 {
-			httpIR.TLS.ALPNProtocols = tlsParams.ALPNProtocols
+		httpIR.TLS.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
+		for i := range tlsParams.ALPNProtocols {
+			httpIR.TLS.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
 		}
 	}
 	// Return early if not set
@@ -388,10 +389,10 @@ func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HT
 		return
 	}
 	if tlsParams.MinVersion != nil {
-		httpIR.TLS.MinVersion = tlsParams.MinVersion
+		httpIR.TLS.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
 	}
 	if tlsParams.MaxVersion != nil {
-		httpIR.TLS.MaxVersion = tlsParams.MaxVersion
+		httpIR.TLS.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
 	}
 	if len(tlsParams.Ciphers) > 0 {
 		httpIR.TLS.Ciphers = tlsParams.Ciphers

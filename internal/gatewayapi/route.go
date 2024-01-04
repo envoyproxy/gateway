@@ -996,8 +996,14 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				},
 				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
 			}
+			// Enable ALPN protocol negotiation for HTTP/2 and HTTP/1.1 by default.
+			// Once ClientTrafficPolicy is used for TCP routes this might be overridden by
+			// the policy.
 			if irListener.TLS.Terminate != nil {
-				irListener.TLS.Terminate.ALPNProtocols = []egv1a1.ALPNProtocol{egv1a1.HTTPProtocolVersion2, egv1a1.HTTPProtocolVersion1_1}
+				irListener.TLS.Terminate.ALPNProtocols = []string{
+					string(egv1a1.HTTPProtocolVersion2),
+					string(egv1a1.HTTPProtocolVersion1_1),
+				}
 			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)

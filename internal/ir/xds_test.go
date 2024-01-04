@@ -30,7 +30,7 @@ var (
 		Address:   "0.0.0.0",
 		Port:      80,
 		Hostnames: []string{"example.com"},
-		TLS: &TLSListenerConfig{
+		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
 
 				Name:              "happy",
@@ -74,7 +74,7 @@ var (
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
-		TLS: &TLS{Terminate: &TLSListenerConfig{
+		TLS: &TLS{Terminate: &TLSConfig{
 			Certificates: []TLSCertificate{{
 				Name:              "happy",
 				ServerCertificate: []byte("server-cert"),
@@ -630,12 +630,12 @@ func TestValidateTCPListener(t *testing.T) {
 func TestValidateTLSListenerConfig(t *testing.T) {
 	tests := []struct {
 		name  string
-		input TLSListenerConfig
+		input TLSConfig
 		want  error
 	}{
 		{
 			name: "happy",
-			input: TLSListenerConfig{
+			input: TLSConfig{
 				Certificates: []TLSCertificate{{
 					ServerCertificate: []byte("server-cert"),
 					PrivateKey:        []byte("priv-key"),
@@ -644,7 +644,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 		},
 		{
 			name: "invalid server cert",
-			input: TLSListenerConfig{
+			input: TLSConfig{
 				Certificates: []TLSCertificate{{
 					PrivateKey: []byte("priv-key"),
 				}}},
@@ -652,7 +652,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 		},
 		{
 			name: "invalid private key",
-			input: TLSListenerConfig{
+			input: TLSConfig{
 				Certificates: []TLSCertificate{{
 					ServerCertificate: []byte("server-cert"),
 				}}},

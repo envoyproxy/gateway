@@ -24,7 +24,6 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	gwv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -341,12 +340,12 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	return nil
 }
 
-func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &quicv3.QuicDownstreamTransport{
 		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
 				TlsParams:     buildTLSParams(tlsConfig),
-				AlpnProtocols: buildALPNProtocols(tlsConfig.ALPNProtocols),
+				AlpnProtocols: tlsConfig.ALPNProtocols,
 			},
 			RequireClientCertificate: &wrappers.BoolValue{Value: false},
 		},
@@ -373,11 +372,11 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSListenerConfig) (*corev
 	}, nil
 }
 
-func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsParams:                      buildTLSParams(tlsConfig),
-			AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols),
+			AlpnProtocols:                  tlsConfig.ALPNProtocols,
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
 	}
@@ -404,7 +403,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSListenerConfig) (*corev3.Trans
 	}, nil
 }
 
-func buildTLSParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
+func buildTLSParams(tlsConfig *ir.TLSConfig) *tlsv3.TlsParameters {
 	p := &tlsv3.TlsParameters{}
 	isEmpty := true
 	if tlsConfig.MinVersion != nil {
@@ -433,25 +432,17 @@ func buildTLSParams(tlsConfig *ir.TLSListenerConfig) *tlsv3.TlsParameters {
 	return p
 }
 
-func buildTLSVersion(version *gwv1a1.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
-	lookup := map[gwv1a1.TLSVersion]tlsv3.TlsParameters_TlsProtocol{
-		gwv1a1.TLSv10: tlsv3.TlsParameters_TLSv1_0,
-		gwv1a1.TLSv11: tlsv3.TlsParameters_TLSv1_1,
-		gwv1a1.TLSv12: tlsv3.TlsParameters_TLSv1_2,
-		gwv1a1.TLSv13: tlsv3.TlsParameters_TLSv1_3,
+func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
+	lookup := map[ir.TLSVersion]tlsv3.TlsParameters_TlsProtocol{
+		ir.TLSv10: tlsv3.TlsParameters_TLSv1_0,
+		ir.TLSv11: tlsv3.TlsParameters_TLSv1_1,
+		ir.TLSv12: tlsv3.TlsParameters_TLSv1_2,
+		ir.TLSv13: tlsv3.TlsParameters_TLSv1_3,
 	}
 	if r, found := lookup[*version]; found {
 		return r
 	}
 	return tlsv3.TlsParameters_TLS_AUTO
-}
-
-func buildALPNProtocols(in []gwv1a1.ALPNProtocol) []string {
-	r := make([]string, len(in))
-	for i, v := range in {
-		r[i] = string(v)
-	}
-	return r
 }
 
 func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {

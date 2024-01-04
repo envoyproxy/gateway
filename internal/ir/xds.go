@@ -180,7 +180,7 @@ type HTTPListener struct {
 	// for more info.
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
-	TLS *TLSListenerConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
@@ -226,15 +226,30 @@ func (h HTTPListener) Validate() error {
 	return errs
 }
 
-// TLSListenerConfig holds the configuration for downstream TLS context.
+type TLSVersion egv1a1.TLSVersion
+
+const (
+	// TLSAuto allows Envoy to choose the optimal TLS Version
+	TLSAuto = TLSVersion(egv1a1.TLSAuto)
+	// TLSv10 specifies TLS version 1.0
+	TLSv10 = TLSVersion(egv1a1.TLSv10)
+	// TLSv11 specifies TLS version 1.1
+	TLSv11 = TLSVersion(egv1a1.TLSv11)
+	// TLSv12 specifies TLS version 1.2
+	TLSv12 = TLSVersion(egv1a1.TLSv12)
+	// TLSv13 specifies TLS version 1.3
+	TLSv13 = TLSVersion(egv1a1.TLSv13)
+)
+
+// TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
-type TLSListenerConfig struct {
+type TLSConfig struct {
 	// Certificates contains the set of certificates associated with this listener
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
-	MinVersion *egv1a1.TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
+	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
 	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
-	MaxVersion *egv1a1.TLSVersion `json:"maxVersion,omitempty" yaml:"version,omitempty"`
+	MaxVersion *TLSVersion `json:"maxVersion,omitempty" yaml:"version,omitempty"`
 	// CipherSuites supported by this listener
 	Ciphers []string `json:"ciphers,omitempty" yaml:"ciphers,omitempty"`
 	// EDCHCurves supported by this listener
@@ -242,7 +257,7 @@ type TLSListenerConfig struct {
 	// SignatureAlgorithms supported by this listener
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
-	ALPNProtocols []egv1a1.ALPNProtocol `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -268,7 +283,7 @@ func (t TLSCertificate) Validate() error {
 }
 
 // Validate the fields within the TLSListenerConfig structure
-func (t TLSListenerConfig) Validate() error {
+func (t TLSConfig) Validate() error {
 	var errs error
 	for _, cert := range t.Certificates {
 		if err := cert.Validate(); err != nil {
@@ -871,7 +886,7 @@ type TLS struct {
 	// connections' server names are inspected and routed to backends accordingly.
 	Passthrough *TLSInspectorConfig `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
 	// TLS information required for TLS Termination
-	Terminate *TLSListenerConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
+	Terminate *TLSConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
 }
 
 // Validate the fields within the TCPListener structure
