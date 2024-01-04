@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.11.2-0.20231116045842-b54b6db2c2a8
+	github.com/envoyproxy/go-control-plane v0.12.0
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.7.0
 	github.com/go-logfmt/logfmt v0.6.0
