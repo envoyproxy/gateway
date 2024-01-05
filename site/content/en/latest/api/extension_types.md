@@ -862,7 +862,7 @@ _Appears in:_
 GRPCHealthChecker defines the settings of grpc health check.
 
 _Appears in:_
-- [HealthChecker](#healthchecker)
+- [HealthCheck](#healthcheck)
 
 | Field | Description |
 | --- | --- |
@@ -934,7 +934,7 @@ _Appears in:_
 HTTPHealthChecker defines the settings of http health check.
 
 _Appears in:_
-- [HealthChecker](#healthchecker)
+- [HealthCheck](#healthcheck)
 
 | Field | Description |
 | --- | --- |
@@ -970,7 +970,7 @@ _Appears in:_
 
 
 
-HealthCheck defines the health check configuration.
+HealthCheck defines the health check configuration. EG supports various types of health checking including HTTP, GRPC, TCP.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
@@ -981,7 +981,10 @@ _Appears in:_
 | `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Interval defines the time between health checks. |
 | `unhealthyThreshold` _integer_ | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
 | `healthyThreshold` _integer_ | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
-| `healthChecker` _[HealthChecker](#healthchecker)_ | HealthChecker defines the concrete health checker to do health checking. |
+| `type` _[HealthCheckerType](#healthcheckertype)_ | Type defines the type of health checker. |
+| `http` _[HTTPHealthChecker](#httphealthchecker)_ | HTTP defines the configuration of http health checker. It's required while the health checker type is HTTP. |
+| `grpc` _[GRPCHealthChecker](#grpchealthchecker)_ | GRPC defines the configuration of grpc health checker. It's required while the health checker type is GRPC. |
+| `tcp` _[TCPHealthChecker](#tcphealthchecker)_ | TCP defines the configuration of tcp health checker. It's required while the health checker type is TCP. |
 
 
 #### HealthCheckPayload
@@ -1012,23 +1015,6 @@ _Appears in:_
 
 
 
-#### HealthChecker
-
-
-
-HealthChecker defines the configuration of concrete health checker. EG supports various types of health checking including HTTP, GRPC, TCP.
-
-_Appears in:_
-- [HealthCheck](#healthcheck)
-
-| Field | Description |
-| --- | --- |
-| `type` _[HealthCheckerType](#healthcheckertype)_ | Type defines the type of health checker. |
-| `http` _[HTTPHealthChecker](#httphealthchecker)_ | HTTP defines the configuration of http health checker. It's required while the health checker type is HTTP. |
-| `grpc` _[GRPCHealthChecker](#grpchealthchecker)_ | GRPC defines the configuration of grpc health checker. It's required while the health checker type is GRPC. |
-| `tcp` _[TCPHealthChecker](#tcphealthchecker)_ | TCP defines the configuration of tcp health checker. It's required while the health checker type is TCP. |
-
-
 #### HealthCheckerType
 
 _Underlying type:_ `string`
@@ -1036,7 +1022,7 @@ _Underlying type:_ `string`
 HealthCheckerType is the type of health checker.
 
 _Appears in:_
-- [HealthChecker](#healthchecker)
+- [HealthCheck](#healthcheck)
 
 
 
@@ -1964,7 +1950,7 @@ _Appears in:_
 TCPHealthChecker defines the settings of tcp health check.
 
 _Appears in:_
-- [HealthChecker](#healthchecker)
+- [HealthCheck](#healthcheck)
 
 | Field | Description |
 | --- | --- |

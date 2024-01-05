@@ -665,13 +665,13 @@ func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.H
 		UnhealthyThreshold: hc.UnhealthyThreshold,
 		HealthyThreshold:   hc.HealthyThreshold,
 	}
-	switch hc.HealthChecker.Type {
+	switch hc.Type {
 	case egv1a1.HealthCheckerTypeHTTP:
-		irHC.HTTP = t.buildHTTPHealthChecker(hc.HealthChecker.HTTP)
+		irHC.HTTP = t.buildHTTPHealthChecker(hc.HTTP)
 	case egv1a1.HealthCheckerTypeGRPC:
-		irHC.GRPC = t.buildGRPCHealthChecker(hc.HealthChecker.GRPC)
+		irHC.GRPC = t.buildGRPCHealthChecker(hc.GRPC)
 	case egv1a1.HealthCheckerTypeTCP:
-		irHC.TCP = t.buildTCPHealthChecker(hc.HealthChecker.TCP)
+		irHC.TCP = t.buildTCPHealthChecker(hc.TCP)
 	}
 
 	return irHC

@@ -117,17 +117,16 @@ backendTrafficPolicies:
       interval: "3s"
       unhealthyThreshold: 3
       healthyThreshold: 1
-      healthChecker:
-        type: HTTP
-        http:
-          path: "/healthz"
-          method: "GET"
-          expectedStatuses:
-          - 200
-          - 300
-          expectedResponse:
-            type: Binary
-            binary: RXZlcnl0aGluZyBPSw==
+      type: HTTP
+      http:
+        path: "/healthz"
+        method: "GET"
+        expectedStatuses:
+        - 200
+        - 300
+        expectedResponse:
+          type: Binary
+          binary: RXZlcnl0aGluZyBPSw==
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -144,13 +143,12 @@ backendTrafficPolicies:
       interval: "5s"
       unhealthyThreshold: 3
       healthyThreshold: 3
-      healthChecker:
-        type: GRPC
-        grpc:
-          serviceName: service
-          Authority: foo
-          metadata:
-            x-source: gateway
+      type: GRPC
+      grpc:
+        serviceName: service
+        Authority: foo
+        metadata:
+          x-source: gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -167,15 +165,14 @@ backendTrafficPolicies:
       interval: "5s"
       unhealthyThreshold: 3
       healthyThreshold: 3
-      healthChecker:
-        type: TCP
-        tcp:
-          send:
-            type: Text
-            text: ping
-          receive:
-            type: Text
-            text: pong
+      type: TCP
+      tcp:
+        send:
+          type: Text
+          text: ping
+        receive:
+          type: Text
+          text: pong
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -192,12 +189,11 @@ backendTrafficPolicies:
       interval: 3s
       unhealthyThreshold: 3
       healthyThreshold: 1
-      healthChecker:
-        type: TCP
-        tcp:
-          send:
-            type: Binary
-            binary: cGluZw==
-          receive:
-            type: Binary
-            binary: RXZlcnl0aGluZyBPSw==
+      type: TCP
+      tcp:
+        send:
+          type: Binary
+          binary: cGluZw==
+        receive:
+          type: Binary
+          binary: RXZlcnl0aGluZyBPSw==

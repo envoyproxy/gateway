@@ -491,17 +491,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path: "",
-							},
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "",
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.healthChecker.http.path: Invalid value: "": spec.healthCheck.healthChecker.http.path in body should be at least 1 chars long`,
+				`spec.healthCheck.http.path: Invalid value: "": spec.healthCheck.http.path in body should be at least 1 chars long`,
 			},
 		},
 		{
@@ -517,11 +515,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					HealthCheck: &egv1a1.HealthCheck{
 						UnhealthyThreshold: ptr.To[uint32](0),
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path: "/healthz",
-							},
+						Type:               egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
 						},
 					},
 				}
@@ -543,11 +539,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					HealthCheck: &egv1a1.HealthCheck{
 						HealthyThreshold: ptr.To[uint32](0),
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path: "/healthz",
-							},
+						Type:             egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
 						},
 					},
 				}
@@ -568,15 +562,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							TCP:  &egv1a1.TCPHealthChecker{},
-						},
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						TCP:  &egv1a1.TCPHealthChecker{},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.healthChecker: Invalid value: "object": If Health Checker type is HTTP, http field needs to be set., spec.healthCheck.healthChecker: Invalid value: "object": If Health Checker type is TCP, tcp field needs to be set`,
+				`spec.healthCheck: Invalid value: "object": If Health Checker type is HTTP, http field needs to be set., spec.healthCheck: Invalid value: "object": If Health Checker type is TCP, tcp field needs to be set`,
 			},
 		},
 		{
@@ -591,18 +583,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path:             "/healthz",
-								ExpectedStatuses: []egv1a1.HTTPStatus{99, 200},
-							},
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path:             "/healthz",
+							ExpectedStatuses: []egv1a1.HTTPStatus{99, 200},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.healthChecker.http.expectedStatuses[0]: Invalid value: 99: spec.healthCheck.healthChecker.http.expectedStatuses[0] in body should be greater than or equal to 100`,
+				`spec.healthCheck.http.expectedStatuses[0]: Invalid value: 99: spec.healthCheck.http.expectedStatuses[0] in body should be greater than or equal to 100`,
 			},
 		},
 		{
@@ -617,12 +607,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path:             "/healthz",
-								ExpectedStatuses: []egv1a1.HTTPStatus{100, 200, 201},
-							},
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path:             "/healthz",
+							ExpectedStatuses: []egv1a1.HTTPStatus{100, 200, 201},
 						},
 					},
 				}
@@ -641,18 +629,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path:             "/healthz",
-								ExpectedStatuses: []egv1a1.HTTPStatus{200, 300, 601},
-							},
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path:             "/healthz",
+							ExpectedStatuses: []egv1a1.HTTPStatus{200, 300, 601},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.healthChecker.http.expectedStatuses[2]: Invalid value: 601: spec.healthCheck.healthChecker.http.expectedStatuses[2] in body should be less than 600`,
+				`spec.healthCheck.http.expectedStatuses[2]: Invalid value: 601: spec.healthCheck.http.expectedStatuses[2] in body should be less than 600`,
 			},
 		},
 		{
@@ -667,21 +653,19 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path: "/healthz",
-								ExpectedResponse: &egv1a1.HealthCheckPayload{
-									Type:   egv1a1.HealthCheckPayloadTypeText,
-									Binary: []byte{'f', 'o', 'o'},
-								},
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
+							ExpectedResponse: &egv1a1.HealthCheckPayload{
+								Type:   egv1a1.HealthCheckPayloadTypeText,
+								Binary: []byte{'f', 'o', 'o'},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`[spec.healthCheck.healthChecker.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.healthChecker.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				`[spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
 		{
@@ -696,21 +680,19 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeHTTP,
-							HTTP: &egv1a1.HTTPHealthChecker{
-								Path: "/healthz",
-								ExpectedResponse: &egv1a1.HealthCheckPayload{
-									Type: egv1a1.HealthCheckPayloadTypeBinary,
-									Text: ptr.To("foo"),
-								},
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
+							ExpectedResponse: &egv1a1.HealthCheckPayload{
+								Type: egv1a1.HealthCheckPayloadTypeBinary,
+								Text: ptr.To("foo"),
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`[spec.healthCheck.healthChecker.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.healthChecker.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				`[spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
 		{
@@ -725,24 +707,22 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeTCP,
-							TCP: &egv1a1.TCPHealthChecker{
-								Send: &egv1a1.HealthCheckPayload{
-									Type:   egv1a1.HealthCheckPayloadTypeText,
-									Binary: []byte{'f', 'o', 'o'},
-								},
-								Receive: &egv1a1.HealthCheckPayload{
-									Type: egv1a1.HealthCheckPayloadTypeText,
-									Text: ptr.To("foo"),
-								},
+						Type: egv1a1.HealthCheckerTypeTCP,
+						TCP: &egv1a1.TCPHealthChecker{
+							Send: &egv1a1.HealthCheckPayload{
+								Type:   egv1a1.HealthCheckPayloadTypeText,
+								Binary: []byte{'f', 'o', 'o'},
+							},
+							Receive: &egv1a1.HealthCheckPayload{
+								Type: egv1a1.HealthCheckPayloadTypeText,
+								Text: ptr.To("foo"),
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.healthChecker.tcp.send: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.healthChecker.tcp.send: Invalid value: "object": If payload type is Binary, binary field needs to be set.`,
+				`spec.healthCheck.tcp.send: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.send: Invalid value: "object": If payload type is Binary, binary field needs to be set.`,
 			},
 		},
 		{
@@ -757,24 +737,22 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthChecker: egv1a1.HealthChecker{
-							Type: egv1a1.HealthCheckerTypeTCP,
-							TCP: &egv1a1.TCPHealthChecker{
-								Send: &egv1a1.HealthCheckPayload{
-									Type: egv1a1.HealthCheckPayloadTypeText,
-									Text: ptr.To("foo"),
-								},
-								Receive: &egv1a1.HealthCheckPayload{
-									Type:   egv1a1.HealthCheckPayloadTypeText,
-									Binary: []byte{'f', 'o', 'o'},
-								},
+						Type: egv1a1.HealthCheckerTypeTCP,
+						TCP: &egv1a1.TCPHealthChecker{
+							Send: &egv1a1.HealthCheckPayload{
+								Type: egv1a1.HealthCheckPayloadTypeText,
+								Text: ptr.To("foo"),
+							},
+							Receive: &egv1a1.HealthCheckPayload{
+								Type:   egv1a1.HealthCheckPayloadTypeText,
+								Binary: []byte{'f', 'o', 'o'},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`[spec.healthCheck.healthChecker.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.healthChecker.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				`[spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
 	}

@@ -8,6 +8,12 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // HealthCheck defines the health check configuration.
+// EG supports various types of health checking including HTTP, GRPC, TCP.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If Health Checker type is HTTP, http field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'GRPC' ? has(self.grpc) : !has(self.grpc)",message="If Health Checker type is GRPC, grpc field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'TCP' ? has(self.tcp) : !has(self.tcp)",message="If Health Checker type is TCP, tcp field needs to be set."
 type HealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	//
@@ -37,8 +43,25 @@ type HealthCheck struct {
 	// +optional
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
 
-	// HealthChecker defines the concrete health checker to do health checking.
-	HealthChecker HealthChecker `json:"healthChecker"`
+	// Type defines the type of health checker.
+	// +kubebuilder:validation:Enum=HTTP;GRPC;TCP
+	// +unionDiscriminator
+	Type HealthCheckerType `json:"type" yaml:"type"`
+
+	// HTTP defines the configuration of http health checker.
+	// It's required while the health checker type is HTTP.
+	// +optional
+	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
+
+	// GRPC defines the configuration of grpc health checker.
+	// It's required while the health checker type is GRPC.
+	// +optional
+	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+
+	// TCP defines the configuration of tcp health checker.
+	// It's required while the health checker type is TCP.
+	// +optional
+	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 }
 
 // HealthCheckerType is the type of health checker.
@@ -53,32 +76,6 @@ const (
 	// HealthCheckerTypeTCP defines the TCP type of health checking.
 	HealthCheckerTypeTCP HealthCheckerType = "TCP"
 )
-
-// HealthChecker defines the configuration of concrete health checker.
-// EG supports various types of health checking including HTTP, GRPC, TCP.
-// +union
-//
-// +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If Health Checker type is HTTP, http field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'GRPC' ? has(self.grpc) : !has(self.grpc)",message="If Health Checker type is GRPC, grpc field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'TCP' ? has(self.tcp) : !has(self.tcp)",message="If Health Checker type is TCP, tcp field needs to be set."
-type HealthChecker struct {
-	// Type defines the type of health checker.
-	// +kubebuilder:validation:Enum=HTTP;GRPC;TCP
-	// +unionDiscriminator
-	Type HealthCheckerType `json:"type" yaml:"type"`
-	// HTTP defines the configuration of http health checker.
-	// It's required while the health checker type is HTTP.
-	// +optional
-	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
-	// GRPC defines the configuration of grpc health checker.
-	// It's required while the health checker type is GRPC.
-	// +optional
-	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
-	// TCP defines the configuration of tcp health checker.
-	// It's required while the health checker type is TCP.
-	// +optional
-	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
-}
 
 // HTTPHealthChecker defines the settings of http health check.
 type HTTPHealthChecker struct {
