@@ -1466,7 +1466,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[MergeType](#mergetype)_ | Type is the type of merge operation to perform |
-| `object` _[RawExtension](#rawextension)_ | Object contains the raw configuration for merged object |
+| `object` _[JSON](#json)_ | Object contains the raw configuration for merged object |
 
 
 #### KubernetesPodSpec

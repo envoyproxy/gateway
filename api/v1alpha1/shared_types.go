@@ -9,7 +9,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 const (
@@ -393,5 +393,5 @@ type KubernetesPatchSpec struct {
 	Type MergeType `json:"type"`
 
 	// Object contains the raw configuration for merged object
-	Object runtime.RawExtension `json:"object"`
+	Object apiextensionsv1.JSON `json:"object"`
 }

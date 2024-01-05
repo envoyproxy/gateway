@@ -2019,7 +2019,6 @@ spec:
                               object:
                                 description: Object contains the raw configuration
                                   for merged object
-                                type: object
                                 x-kubernetes-preserve-unknown-fields: true
                               type:
                                 description: Type is the type of merge operation to
