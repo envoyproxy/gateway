@@ -149,9 +149,9 @@ backendTrafficPolicies:
         method: "GET"
         expectedStatuses:
         - 200
-        - 201 
+        - 201
         expectedResponse:
-          type: Text 
+          type: Text
           text: pong
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
