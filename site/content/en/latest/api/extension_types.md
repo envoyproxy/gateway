@@ -855,22 +855,6 @@ _Appears in:_
 | `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
-#### GRPCHealthChecker
-
-
-
-GRPCHealthChecker defines the settings of grpc health check.
-
-_Appears in:_
-- [HealthCheck](#healthcheck)
-
-| Field | Description |
-| --- | --- |
-| `serviceName` _string_ | ServiceName defines the value of parameter service in the gRPC health check request. |
-| `authority` _string_ | Authority defines the value of :authority header in the gRPC health check request. |
-| `metadata` _object (keys:string, values:string)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-
-
 #### Gateway
 
 
@@ -970,7 +954,7 @@ _Appears in:_
 
 
 
-HealthCheck defines the health check configuration. EG supports various types of health checking including HTTP, GRPC, TCP.
+HealthCheck defines the health check configuration. EG supports various types of health checking including HTTP, TCP.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
@@ -983,7 +967,6 @@ _Appears in:_
 | `healthyThreshold` _integer_ | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
 | `type` _[HealthCheckerType](#healthcheckertype)_ | Type defines the type of health checker. |
 | `http` _[HTTPHealthChecker](#httphealthchecker)_ | HTTP defines the configuration of http health checker. It's required while the health checker type is HTTP. |
-| `grpc` _[GRPCHealthChecker](#grpchealthchecker)_ | GRPC defines the configuration of grpc health checker. It's required while the health checker type is GRPC. |
 | `tcp` _[TCPHealthChecker](#tcphealthchecker)_ | TCP defines the configuration of tcp health checker. It's required while the health checker type is TCP. |
 
 

@@ -7,15 +7,19 @@ backendTrafficPolicies:
     namespace: default
   spec:
     healthCheck:
-      grpc:
-        authority: foo
-        metadata:
-          x-source: gateway
-        serviceName: service
       healthyThreshold: 3
+      http:
+        expectedResponse:
+          text: pong
+          type: Text
+        expectedStatuses:
+        - 200
+        - 201
+        method: GET
+        path: /healthz
       interval: 5s
       timeout: 1s
-      type: GRPC
+      type: HTTP
       unhealthyThreshold: 3
     targetRef:
       group: gateway.networking.k8s.io
@@ -509,12 +513,15 @@ xdsIR:
             protocol: HTTP
             weight: 1
         healthCheck:
-          grpc:
-            authority: foo
-            metadata:
-              x-source: gateway
-            serviceName: service
           healthyThreshold: 3
+          http:
+            expectedResponse:
+              text: pong
+            expectedStatuses:
+            - 200
+            - 201
+            method: GET
+            path: /healthz
           interval: 5s
           timeout: 1s
           unhealthyThreshold: 3

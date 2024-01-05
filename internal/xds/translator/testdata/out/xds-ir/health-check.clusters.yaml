@@ -36,14 +36,14 @@
       resourceApiVersion: V3
     serviceName: second-route-dest
   healthChecks:
-  - grpcHealthCheck:
-      authority: foo
-      initialMetadata:
-      - header:
-          key: x-source
-          value: gateway
-      serviceName: service
-    healthyThreshold: 3
+  - healthyThreshold: 3
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "202"
+        start: "200"
+      path: /healthz
+      receive:
+      - binary: cG9uZw==
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3

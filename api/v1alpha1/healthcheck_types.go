@@ -8,11 +8,10 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // HealthCheck defines the health check configuration.
-// EG supports various types of health checking including HTTP, GRPC, TCP.
+// EG supports various types of health checking including HTTP, TCP.
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If Health Checker type is HTTP, http field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'GRPC' ? has(self.grpc) : !has(self.grpc)",message="If Health Checker type is GRPC, grpc field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'TCP' ? has(self.tcp) : !has(self.tcp)",message="If Health Checker type is TCP, tcp field needs to be set."
 type HealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
@@ -44,7 +43,7 @@ type HealthCheck struct {
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
 
 	// Type defines the type of health checker.
-	// +kubebuilder:validation:Enum=HTTP;GRPC;TCP
+	// +kubebuilder:validation:Enum=HTTP;TCP
 	// +unionDiscriminator
 	Type HealthCheckerType `json:"type" yaml:"type"`
 
@@ -53,11 +52,6 @@ type HealthCheck struct {
 	// +optional
 	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
 
-	// GRPC defines the configuration of grpc health checker.
-	// It's required while the health checker type is GRPC.
-	// +optional
-	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
-
 	// TCP defines the configuration of tcp health checker.
 	// It's required while the health checker type is TCP.
 	// +optional
@@ -65,14 +59,12 @@ type HealthCheck struct {
 }
 
 // HealthCheckerType is the type of health checker.
-// +kubebuilder:validation:Enum=HTTP;GRPC;TCP
+// +kubebuilder:validation:Enum=HTTP;TCP
 type HealthCheckerType string
 
 const (
 	// HealthCheckerTypeHTTP defines the HTTP type of health checking.
 	HealthCheckerTypeHTTP HealthCheckerType = "HTTP"
-	// HealthCheckerTypeGRPC defines the GRPC type of health checking.
-	HealthCheckerTypeGRPC HealthCheckerType = "GRPC"
 	// HealthCheckerTypeTCP defines the TCP type of health checking.
 	HealthCheckerTypeTCP HealthCheckerType = "TCP"
 )
@@ -94,18 +86,6 @@ type HTTPHealthChecker struct {
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponse,omitempty"`
-}
-
-// GRPCHealthChecker defines the settings of grpc health check.
-type GRPCHealthChecker struct {
-	// ServiceName defines the value of parameter service in the gRPC health check request.
-	// +optional
-	ServiceName *string `json:"serviceName,omitempty" yaml:"omitempty"`
-	// Authority defines the value of :authority header in the gRPC health check request.
-	// +optional
-	Authority *string `json:"authority,omitempty" yaml:"authority,omitempty"`
-	// +optional
-	Metadata map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.

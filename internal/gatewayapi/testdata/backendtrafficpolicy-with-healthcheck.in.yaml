@@ -143,12 +143,16 @@ backendTrafficPolicies:
       interval: "5s"
       unhealthyThreshold: 3
       healthyThreshold: 3
-      type: GRPC
-      grpc:
-        serviceName: service
-        Authority: foo
-        metadata:
-          x-source: gateway
+      type: HTTP
+      http:
+        path: "/healthz"
+        method: "GET"
+        expectedStatuses:
+        - 200
+        - 201 
+        expectedResponse:
+          type: Text 
+          text: pong
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

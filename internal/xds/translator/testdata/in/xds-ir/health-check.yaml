@@ -32,11 +32,13 @@ http:
       interval: "5s"
       unhealthyThreshold: 3
       healthyThreshold: 3
-      grpc:
-        serviceName: "service"
-        authority: "foo"
-        metadata:
-          x-source: "gateway"
+      http:
+        path: "/healthz"
+        expectedResponse:
+          binary: "cG9uZw=="
+        expectedStatuses:
+        - 200
+        - 201
     destination:
       name: "second-route-dest"
       settings:

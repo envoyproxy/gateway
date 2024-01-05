@@ -668,8 +668,6 @@ func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.H
 	switch hc.Type {
 	case egv1a1.HealthCheckerTypeHTTP:
 		irHC.HTTP = t.buildHTTPHealthChecker(hc.HTTP)
-	case egv1a1.HealthCheckerTypeGRPC:
-		irHC.GRPC = t.buildGRPCHealthChecker(hc.GRPC)
 	case egv1a1.HealthCheckerTypeTCP:
 		irHC.TCP = t.buildTCPHealthChecker(hc.TCP)
 	}
@@ -703,20 +701,6 @@ func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTT
 
 	irHTTP.ExpectedResponse = translateHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
-}
-
-func (t *Translator) buildGRPCHealthChecker(h *egv1a1.GRPCHealthChecker) *ir.GRPCHealthChecker {
-	if h == nil {
-		return nil
-	}
-
-	irGRPC := &ir.GRPCHealthChecker{
-		ServiceName: h.ServiceName,
-		Authority:   h.Authority,
-		Metadata:    h.Metadata,
-	}
-
-	return irGRPC
 }
 
 func (t *Translator) buildTCPHealthChecker(h *egv1a1.TCPHealthChecker) *ir.TCPHealthChecker {

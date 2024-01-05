@@ -134,23 +134,6 @@ spec:
                 description: HealthCheck allows gateway to perform active health checking
                   on backends.
                 properties:
-                  grpc:
-                    description: GRPC defines the configuration of grpc health checker.
-                      It's required while the health checker type is GRPC.
-                    properties:
-                      authority:
-                        description: Authority defines the value of :authority header
-                          in the gRPC health check request.
-                        type: string
-                      metadata:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      serviceName:
-                        description: ServiceName defines the value of parameter service
-                          in the gRPC health check request.
-                        type: string
-                    type: object
                   healthyThreshold:
                     default: 1
                     description: HealthyThreshold defines the number of healthy health
@@ -296,11 +279,9 @@ spec:
                     allOf:
                     - enum:
                       - HTTP
-                      - GRPC
                       - TCP
                     - enum:
                       - HTTP
-                      - GRPC
                       - TCP
                     description: Type defines the type of health checker.
                     type: string
@@ -318,9 +299,6 @@ spec:
                 - message: If Health Checker type is HTTP, http field needs to be
                     set.
                   rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
-                - message: If Health Checker type is GRPC, grpc field needs to be
-                    set.
-                  rule: 'self.type == ''GRPC'' ? has(self.grpc) : !has(self.grpc)'
                 - message: If Health Checker type is TCP, tcp field needs to be set.
                   rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
               loadBalancer:
