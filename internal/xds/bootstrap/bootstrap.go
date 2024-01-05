@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 const (
@@ -113,7 +114,7 @@ type StatsMatcherParameters struct {
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
 	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
-		return fmt.Errorf("failed to render bootstrap config: %v", err)
+		return fmt.Errorf("failed to render bootstrap config: %w", err)
 	}
 	b.rendered = buf.String()
 
@@ -168,6 +169,9 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 				case egv1a1.StringMatchSuffix:
 					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
 				case egv1a1.StringMatchRegularExpression:
+					if err := regex.Validate(match.Value); err != nil {
+						return "", err
+					}
 					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
 				}
 			}

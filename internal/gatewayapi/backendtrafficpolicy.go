@@ -22,6 +22,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 type policyTargetRouteKey struct {
@@ -246,6 +247,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		pp *ir.ProxyProtocol
 		hc *ir.HealthCheck
 		cb *ir.CircuitBreaker
+		fi *ir.FaultInjection
 	)
 
 	// Build IR
@@ -265,6 +267,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		cb = t.buildCircuitBreaker(policy)
 	}
 
+	if policy.Spec.FaultInjection != nil {
+		fi = t.buildFaultInjection(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -277,6 +282,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.ProxyProtocol = pp
 					r.HealthCheck = hc
 					r.CircuitBreaker = cb
+					r.FaultInjection = fi
 				}
 			}
 		}
@@ -291,6 +297,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		pp *ir.ProxyProtocol
 		hc *ir.HealthCheck
 		cb *ir.CircuitBreaker
+		fi *ir.FaultInjection
 	)
 
 	// Build IR
@@ -309,6 +316,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.CircuitBreaker != nil {
 		cb = t.buildCircuitBreaker(policy)
 	}
+	if policy.Spec.FaultInjection != nil {
+		fi = t.buildFaultInjection(policy)
+	}
+
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
 	// set by a policy attaching to the route
@@ -334,9 +345,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			if r.CircuitBreaker == nil {
 				r.CircuitBreaker = cb
 			}
+			if r.FaultInjection == nil {
+				r.FaultInjection = fi
+			}
 		}
-	}
 
+	}
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
@@ -547,6 +561,9 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				}
 				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
 			case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
+				if err := regex.Validate(*header.Value); err != nil {
+					return nil, err
+				}
 				m := &ir.StringMatch{
 					Name:      header.Name,
 					SafeRegex: header.Value,
@@ -801,4 +818,31 @@ func int64ToUint32(in int64) (uint32, bool) {
 		return uint32(in), true
 	}
 	return 0, false
+}
+
+func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {
+	var fi *ir.FaultInjection
+	if policy.Spec.FaultInjection != nil {
+		fi = &ir.FaultInjection{}
+
+		if policy.Spec.FaultInjection.Delay != nil {
+			fi.Delay = &ir.FaultInjectionDelay{
+				Percentage: policy.Spec.FaultInjection.Delay.Percentage,
+				FixedDelay: policy.Spec.FaultInjection.Delay.FixedDelay,
+			}
+		}
+		if policy.Spec.FaultInjection.Abort != nil {
+			fi.Abort = &ir.FaultInjectionAbort{
+				Percentage: policy.Spec.FaultInjection.Abort.Percentage,
+			}
+
+			if policy.Spec.FaultInjection.Abort.GrpcStatus != nil {
+				fi.Abort.GrpcStatus = policy.Spec.FaultInjection.Abort.GrpcStatus
+			}
+			if policy.Spec.FaultInjection.Abort.HTTPStatus != nil {
+				fi.Abort.HTTPStatus = policy.Spec.FaultInjection.Abort.HTTPStatus
+			}
+		}
+	}
+	return fi
 }

@@ -199,6 +199,9 @@ type HTTPListener struct {
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// SuppressEnvoyHeaders controls if "x-envoy-" headers are suppressed by the HTTP Router filter
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
+	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
@@ -317,6 +320,8 @@ type HTTPRoute struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// HealthCheck defines the configuration for active health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
+	// FaultInjection defines the schema for injecting faults into HTTP requests.
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
@@ -397,6 +402,38 @@ type OIDCProvider struct {
 
 	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
 	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+}
+
+// FaultInjection defines the schema for injecting faults into requests.
+//
+// +k8s:deepcopy-gen=true
+type FaultInjection struct {
+	// Delay defines the fault injection delay.
+	Delay *FaultInjectionDelay `json:"delay,omitempty" yaml:"delay,omitempty"`
+	// Abort defines the fault injection abort.
+	Abort *FaultInjectionAbort `json:"abort,omitempty" yaml:"abort,omitempty"`
+}
+
+// FaultInjectionDelay defines the schema for injecting delay into requests.
+//
+// +k8s:deepcopy-gen=true
+type FaultInjectionDelay struct {
+	// FixedDelay defines the fixed delay duration.
+	FixedDelay *metav1.Duration `json:"fixedDelay,omitempty" yaml:"fixedDelay,omitempty"`
+	// Percentage defines the percentage of requests to be delayed.
+	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+}
+
+// FaultInjectionAbort defines the schema for injecting abort into requests.
+//
+// +k8s:deepcopy-gen=true
+type FaultInjectionAbort struct {
+	// HTTPStatus defines the HTTP status code to be returned.
+	HTTPStatus *int32 `json:"httpStatus,omitempty" yaml:"httpStatus,omitempty"`
+	// GrpcStatus defines the gRPC status code to be returned.
+	GrpcStatus *int32 `json:"grpcStatus,omitempty" yaml:"grpcStatus,omitempty"`
+	// Percentage defines the percentage of requests to be aborted.
+	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -1193,8 +1230,6 @@ type HealthCheck struct {
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
 	// HTTP defines the configuration of http health checker.
 	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
-	// GRPC defines the configuration of grpc health checker.
-	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 	// TCP defines the configuration of tcp health checker.
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 }
@@ -1218,9 +1253,6 @@ func (h *HealthCheck) Validate() error {
 
 	matchCount := 0
 	if h.HTTP != nil {
-		matchCount++
-	}
-	if h.GRPC != nil {
 		matchCount++
 	}
 	if h.TCP != nil {
@@ -1302,14 +1334,6 @@ func (h HTTPStatus) Validate() error {
 		return ErrHTTPStatusInvalid
 	}
 	return nil
-}
-
-// GRPCHealthChecker defines the settings of grpc health check.
-// +k8s:deepcopy-gen=true
-type GRPCHealthChecker struct {
-	ServiceName *string           `json:"serviceName,omitempty" yaml:"serviceName,omitempty"`
-	Authority   *string           `json:"authority,omitempty" yaml:"authority,omitempty"`
-	Metadata    map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.

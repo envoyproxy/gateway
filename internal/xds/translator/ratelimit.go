@@ -461,7 +461,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
 		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port)},
 	}
 
 	tSocket, err := buildRateLimitTLSocket()
@@ -498,14 +498,14 @@ func getRateLimitDomain(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
-func (t *Translator) getRateLimitServiceGrpcHostPort() (string, int) {
+func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
 	u, err := url.Parse(t.GlobalRateLimit.ServiceURL)
 	if err != nil {
 		panic(err)
 	}
-	p, err := strconv.Atoi(u.Port())
+	p, err := strconv.ParseUint(u.Port(), 10, 32)
 	if err != nil {
 		panic(err)
 	}
-	return u.Hostname(), p
+	return u.Hostname(), uint32(p)
 }

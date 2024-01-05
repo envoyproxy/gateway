@@ -1,4 +1,4 @@
-name: Return Action on PR Comment
+name: Retest Action on PR Comment
 
 on:
   issue_comment:
@@ -22,6 +22,6 @@ jobs:
       pull-requests: write
       actions: write
     steps:
-    - uses: envoyproxy/toolshed/gh-actions/retest@actions-v0.2.17
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: envoyproxy/toolshed/gh-actions/retest@effeefe9b275dc8056f77c0e7b1010c252167d3e # actions-v0.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

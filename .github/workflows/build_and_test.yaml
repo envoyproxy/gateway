@@ -12,11 +12,15 @@ on:
     - "release/v*"
     paths-ignore:
     - "**/*.png"
+
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
     # Generate the install manifests first so it can checked
     # for errors while running `make -k lint`
@@ -27,28 +31,28 @@ jobs:
   gen-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
   coverage-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
 
     # test
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d  # v3.1.4
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
@@ -59,14 +63,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, gen-check, license-check, coverage-test]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392  # v4.0.0
       with:
         name: envoy-gateway
         path: bin/
@@ -78,11 +82,11 @@ jobs:
       matrix:
         version: [ v1.27.3, v1.28.0, v1.29.0 ]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110  # v4.1.0
       with:
         name: envoy-gateway
         path: bin/
@@ -106,11 +110,11 @@ jobs:
       matrix:
         version: [ v1.27.3, v1.28.0, v1.29.0 ]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110  # v4.1.0
       with:
         name: envoy-gateway
         path: bin/
@@ -131,11 +135,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110  # v4.1.0
       with:
         name: envoy-gateway
         path: bin/
@@ -148,7 +152,7 @@ jobs:
     # build and push image
     - name: Login to DockerHub
       if: github.event_name == 'push'
-      uses: docker/login-action@v3
+      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d  # v3.0.0
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}

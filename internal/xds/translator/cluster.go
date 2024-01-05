@@ -161,29 +161,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				HttpHealthCheck: httpChecker,
 			}
 		}
-		if args.healthCheck.GRPC != nil {
-			grpcChecker := &corev3.HealthCheck_GrpcHealthCheck{}
-			if args.healthCheck.GRPC.ServiceName != nil {
-				grpcChecker.ServiceName = *args.healthCheck.GRPC.ServiceName
-			}
-			if args.healthCheck.GRPC.Authority != nil {
-				grpcChecker.Authority = *args.healthCheck.GRPC.Authority
-			}
-			var headerValues []*corev3.HeaderValueOption
-			for key, value := range args.healthCheck.GRPC.Metadata {
-				headerValues = append(headerValues, &corev3.HeaderValueOption{
-					Header: &corev3.HeaderValue{
-						Key:   key,
-						Value: value,
-					},
-					AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
-				})
-			}
-			grpcChecker.InitialMetadata = headerValues
-			hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
-				GrpcHealthCheck: grpcChecker,
-			}
-		}
 		if args.healthCheck.TCP != nil {
 			tcpChecker := &corev3.HealthCheck_TcpHealthCheck{
 				Send: buildHealthCheckPayload(args.healthCheck.TCP.Send),

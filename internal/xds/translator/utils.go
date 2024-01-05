@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	defaultHTTPSPort = 443
-	defaultHTTPPort  = 80
+	defaultHTTPSPort uint64 = 443
+	defaultHTTPPort  uint64 = 80
 )
 
 // urlCluster is a cluster that is created from a URL.
@@ -47,7 +47,7 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 
-	var port int
+	var port uint64
 	if u.Scheme == "https" {
 		port = defaultHTTPSPort
 	} else {
@@ -55,7 +55,7 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 	}
 
 	if u.Port() != "" {
-		port, err = strconv.Atoi(u.Port())
+		port, err = strconv.ParseUint(u.Port(), 10, 32)
 		if err != nil {
 			return nil, err
 		}

@@ -167,7 +167,7 @@ securityPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Secret default/client2-secret does not exist.
+      message: Secret default/client2-secret does not exist
       reason: Invalid
       status: "False"
       type: Accepted
@@ -205,7 +205,7 @@ securityPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Secret envoy-gateway/client1-secret does not exist.
+      message: Secret envoy-gateway/client1-secret does not exist
       reason: Invalid
       status: "False"
       type: Accepted

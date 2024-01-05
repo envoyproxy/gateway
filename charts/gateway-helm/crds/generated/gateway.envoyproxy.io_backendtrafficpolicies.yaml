@@ -100,6 +100,7 @@ spec:
                         minimum: 200
                         type: integer
                       percentage:
+                        default: 100
                         description: Percentage specifies the percentage of requests
                           to be aborted. Default 100%, if set 0, no requests will
                           be aborted. Accuracy to 0.0001%.
