@@ -69,6 +69,9 @@ type bootstrapParameters struct {
 	// StatsMatcher is to control creation of custom Envoy stats with prefix,
 	// suffix, and regex expressions match on the name of the stats.
 	StatsMatcher *StatsMatcherParameters
+
+	// OverloadManager defines the configuration of the Envoy overload manager.
+	OverloadManager *OverloadManager
 }
 
 type xdsServerParameters struct {
@@ -110,6 +113,11 @@ type StatsMatcherParameters struct {
 	RegularExpressions []string
 }
 
+type OverloadManager struct {
+	// MaxHeapSizeBytes is the maximum heap size in bytes that the Envoy proxy can use.
+	MaxHeapSizeBytes int64
+}
+
 // render the stringified bootstrap config in yaml format.
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
@@ -122,7 +130,7 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, error) {
+func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics, overloadManager *egv1a1.OverloadManager) (string, error) {
 	var (
 		enablePrometheus = true
 		metricSinks      []metricSink
@@ -197,6 +205,12 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 			EnablePrometheus: enablePrometheus,
 			OtelMetricSinks:  metricSinks,
 		},
+	}
+
+	if overloadManager != nil {
+		cfg.parameters.OverloadManager = &OverloadManager{
+			MaxHeapSizeBytes: overloadManager.MaxHeapSizeBytes,
+		}
 	}
 	if proxyMetrics != nil && proxyMetrics.Matches != nil {
 		cfg.parameters.StatsMatcher = &StatsMatcher

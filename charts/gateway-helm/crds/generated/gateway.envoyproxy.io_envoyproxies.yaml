@@ -103,6 +103,23 @@ spec:
                   the newer listener (based on timestamp) will be rejected and its
                   status will be updated with a "Accepted=False" condition.
                 type: boolean
+              overloadManager:
+                description: 'OverloadManager defines the configuration for the Overload
+                  Manager in envoy. Visit https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/overload_manager/overload_manager#config-overload-manager
+                  to learn more about the syntax. Overload manager is disabled by
+                  default. After the feature is enabled, following two overload actions
+                  are configured to Envoy: 1.Shrink heap action is executed when 95%
+                  of the maximum heap size is reached. 2.Envoy will stop accepting
+                  requests when 98% of the maximum heap size is reached.'
+                properties:
+                  maxHeapSizeBytes:
+                    description: The appropriate number of bytes can be different
+                      from system to system. Use this value to set the approximate
+                      fixed heap value of your system, you can find that out by running
+                      this command "TODO"
+                    format: int64
+                    type: integer
+                type: object
               provider:
                 description: Provider defines the desired resource provider and provider-specific
                   configuration. If unspecified, the "Kubernetes" resource provider
