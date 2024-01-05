@@ -17,6 +17,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # skip to update retest, because it won't work with the latest version
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
   - package-ecosystem: github-actions
     directory: /tools/github-actions/setup-deps
     schedule:
