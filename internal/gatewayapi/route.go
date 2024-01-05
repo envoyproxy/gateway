@@ -18,7 +18,6 @@ import (
 	gwapiv1a1 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
@@ -995,15 +994,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Settings: destSettings,
 				},
 				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
-			}
-			// Enable ALPN protocol negotiation for HTTP/2 and HTTP/1.1 by default.
-			// Once ClientTrafficPolicy is used for TCP routes this might be overridden by
-			// the policy.
-			if irListener.TLS.Terminate != nil {
-				irListener.TLS.Terminate.ALPNProtocols = []string{
-					string(egv1a1.HTTPProtocolVersion2),
-					string(egv1a1.HTTPProtocolVersion1_1),
-				}
 			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)

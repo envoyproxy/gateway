@@ -378,10 +378,10 @@ func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HT
 	// for HTTP3
 	if httpIR.HTTP3 != nil {
 		httpIR.TLS.ALPNProtocols = []string{"h3"}
-	} else if tlsParams != nil {
+	} else if tlsParams != nil && len(tlsParams.ALPNProtocols) > 0 {
 		httpIR.TLS.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
 		for i := range tlsParams.ALPNProtocols {
-			httpIR.TLS.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
+			httpIR.TLS.ALPNProtocols[i] = lookupALPNValues(tlsParams.ALPNProtocols[i])
 		}
 	}
 	// Return early if not set
@@ -403,4 +403,17 @@ func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HT
 	if len(tlsParams.SignatureAlgorithms) > 0 {
 		httpIR.TLS.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
+}
+
+func lookupALPNValues(in egv1a1.ALPNProtocol) string {
+	lookup := map[egv1a1.ALPNProtocol]string{
+		egv1a1.HTTPProtocolVersion1_0: "http/1.0",
+		egv1a1.HTTPProtocolVersion1_1: "http/1.1",
+		egv1a1.HTTPProtocolVersion2:   "h2",
+	}
+	if r, found := lookup[in]; found {
+		return r
+	}
+	// Unreachable code, the CEL validation mandates one of the supported values only
+	return ""
 }
