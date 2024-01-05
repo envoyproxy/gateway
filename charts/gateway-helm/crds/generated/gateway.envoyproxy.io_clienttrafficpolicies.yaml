@@ -66,12 +66,12 @@ spec:
                   escapedSlashesAction:
                     description: EscapedSlashesAction determines how %2f, %2F, %5c,
                       or %5C sequences in the path URI should be handled. The default
-                      is UnescapeRedirect.
+                      is UnescapeAndRedirect.
                     enum:
                     - KeepUnchanged
                     - RejectRequest
-                    - UnescapeForward
-                    - UnescapeRedirect
+                    - UnescapeAndForward
+                    - UnescapeAndRedirect
                     type: string
                 type: object
               suppressEnvoyHeaders:

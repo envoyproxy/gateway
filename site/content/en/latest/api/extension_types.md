@@ -1308,7 +1308,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `escapedSlashesAction` _[PathEscapedSlashAction](#pathescapedslashaction)_ | EscapedSlashesAction determines how %2f, %2F, %5c, or %5C sequences in the path URI should be handled. The default is UnescapeRedirect. |
+| `escapedSlashesAction` _[PathEscapedSlashAction](#pathescapedslashaction)_ | EscapedSlashesAction determines how %2f, %2F, %5c, or %5C sequences in the path URI should be handled. The default is UnescapeAndRedirect. |
 | `disableMergeSlashes` _boolean_ | DisableMergeSlashes allows disabling the default configuration of merging adjacent slashes in the path. Note that slash merging is not part of the HTTP spec and is provided for convenience. |
 
 
