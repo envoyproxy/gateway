@@ -2012,8 +2012,8 @@ spec:
                               - name
                               type: object
                             type: array
-                          merge:
-                            description: Merge defines how to perform the merge operation
+                          patch:
+                            description: Patch defines how to perform the patch operation
                               to deployment
                             properties:
                               object:

@@ -53,10 +53,10 @@ const (
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
-	// Merge defines how to perform the merge operation to deployment
+	// Patch defines how to perform the patch operation to deployment
 	//
 	// +optional
-	Merge *KubernetesMergeSpec `json:"merge,omitempty"`
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 
 	// Replicas is the number of desired pods. Defaults to 1.
 	//
@@ -387,8 +387,8 @@ const (
 	JSONMerge MergeType = "JSONMerge"
 )
 
-// KubernetesMergeSpec defines how to perform the merge operation
-type KubernetesMergeSpec struct {
+// KubernetesPatchSpec defines how to perform the patch operation
+type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
 	Type MergeType `json:"type"`
 

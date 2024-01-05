@@ -1428,7 +1428,7 @@ _Appears in:_
 =======
 | Field | Description |
 | --- | --- |
-| `merge` _[KubernetesMergeSpec](#kubernetesmergespec)_ | Merge defines how to perform the merge operation to deployment |
+| `patch` _[KubernetesPatchSpec](#kubernetespatchspec)_ | Patch defines how to perform the patch operation to deployment |
 | `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
 | `strategy` _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired specification of pod. |
@@ -1454,11 +1454,11 @@ _Appears in:_
 | `behavior` | _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#horizontalpodautoscalerbehavior-v2-autoscaling)_ |  false  | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
 
 
-#### KubernetesMergeSpec
+#### KubernetesPatchSpec
 
 
 
-KubernetesMergeSpec defines how to perform the merge operation
+KubernetesPatchSpec defines how to perform the patch operation
 
 _Appears in:_
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
@@ -1612,7 +1612,7 @@ _Underlying type:_ `string`
 MergeType defines the type of merge operation
 
 _Appears in:_
-- [KubernetesMergeSpec](#kubernetesmergespec)
+- [KubernetesPatchSpec](#kubernetespatchspec)
 
 
 

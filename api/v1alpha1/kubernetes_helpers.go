@@ -129,7 +129,7 @@ func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 
 // ApplyMergePatch applies a merge patch to a deployment based on the merge type
 func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deployment) (*appv1.Deployment, error) {
-	if deployment.Merge == nil {
+	if deployment.Patch == nil {
 		return old, nil
 	}
 
@@ -142,13 +142,13 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 		return nil, fmt.Errorf("error marshaling original deployment: %v", err)
 	}
 
-	switch deployment.Merge.Type {
+	switch deployment.Patch.Type {
 	case StrategicMerge:
-		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Merge.Object.Raw, appv1.Deployment{})
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Patch.Object.Raw, appv1.Deployment{})
 	case JSONMerge:
-		patchedJSON, err = jsonpatch.MergePatch(originalJSON, deployment.Merge.Object.Raw)
+		patchedJSON, err = jsonpatch.MergePatch(originalJSON, deployment.Patch.Object.Raw)
 	default:
-		return nil, fmt.Errorf("unsupported merge type: %s", deployment.Merge.Type)
+		return nil, fmt.Errorf("unsupported merge type: %s", deployment.Patch.Type)
 	}
 
 	if err != nil {
