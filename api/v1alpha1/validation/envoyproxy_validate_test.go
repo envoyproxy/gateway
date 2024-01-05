@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -439,6 +440,74 @@ func TestValidateEnvoyProxy(t *testing.T) {
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
 										Host: "0.0.0.0",
 										Port: 3217,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		}, {
+			name: "should invalid when patch type is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Object: v1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		}, {
+			name: "should invalid when patch object is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: egv1a1.JSONMerge,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		}, {
+			name: "should valid when patch type and object are both not empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: egv1a1.JSONMerge,
+									Object: v1.JSON{
+										Raw: []byte("{}"),
 									},
 								},
 							},

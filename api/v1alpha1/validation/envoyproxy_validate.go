@@ -73,9 +73,31 @@ func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 		if spec.Provider.Type != egv1a1.ProviderTypeKubernetes {
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
 		}
+		validateDeploymentErrs := validateDeployment(spec)
+		if len(validateDeploymentErrs) != 0 {
+			errs = append(errs, validateDeploymentErrs...)
+		}
 		validateServiceErrs := validateService(spec)
 		if len(validateServiceErrs) != 0 {
 			errs = append(errs, validateServiceErrs...)
+		}
+	}
+	return errs
+}
+
+func validateDeployment(spec *egv1a1.EnvoyProxySpec) []error {
+	var errs []error
+	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyDeployment != nil {
+		if patch := spec.Provider.Kubernetes.EnvoyDeployment.Patch; patch != nil {
+			if patch.Type == "" {
+				errs = append(errs, fmt.Errorf("envoy deployment patch type cannot be empty"))
+			}
+			if patch.Object.Raw == nil {
+				errs = append(errs, fmt.Errorf("envoy deployment patch object cannot be empty"))
+			}
+			if patch.Type != egv1a1.JSONMerge && patch.Type != egv1a1.StrategicMerge {
+				errs = append(errs, fmt.Errorf("unsupported envoy deployment patch type %s", patch.Type))
+			}
 		}
 	}
 	return errs
