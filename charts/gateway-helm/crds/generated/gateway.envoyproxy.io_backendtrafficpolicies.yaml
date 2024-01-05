@@ -734,6 +734,25 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              timeouts:
+                description: Timeout settings for the backend connections.
+                properties:
+                  connectTimeout:
+                    description: The timeout for new network connection establishment,
+                      including TCP and TLS handshakes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  httpIdleTimeout:
+                    description: The idle timeout for connections. The idle time is
+                      defined as a period in which there are no active requests in
+                      the connection.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  httpMaxConnectionDuration:
+                    description: The maximum duration of a connection.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                type: object
             required:
             - targetRef
             type: object

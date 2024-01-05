@@ -11,6 +11,7 @@ package celvalidation
 import (
 	"context"
 	"fmt"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"strings"
 	"testing"
 	"time"
@@ -755,6 +756,29 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				`[spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
+		{
+			desc: " valid connection timeouts",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				d := gwapiv1.Duration("3s")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					ConnectionTimeouts: &egv1a1.ConnectionTimeouts{
+						ConnectTimeout: &d,
+						HTTPIdleTimeout: &d,
+						HTTPMaxConnectionDuration: &d,
+					},
+				}
+			},
+			wantErrors: []string{
+			},
+		},
+
 	}
 
 	for _, tc := range cases {

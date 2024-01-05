@@ -81,6 +81,11 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
+
+	// Timeout settings for the backend connections.
+	//
+	// +optional
+	ConnectionTimeouts *ConnectionTimeouts `json:"timeouts,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy

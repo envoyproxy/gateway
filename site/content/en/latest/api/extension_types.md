@@ -90,6 +90,7 @@ _Appears in:_
 | `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `timeouts` _[ConnectionTimeouts](#connectiontimeouts)_ | Timeout settings for the backend connections. |
 
 
 
@@ -224,6 +225,22 @@ _Appears in:_
 | `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
 
 
+
+
+#### ConnectionTimeouts
+
+
+
+ConnectionTimeouts defines configuration for timeouts related to connections.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _Duration_ | The timeout for new network connection establishment, including TCP and TLS handshakes. |
+| `httpIdleTimeout` _Duration_ | The idle timeout for connections. The idle time is defined as a period in which there are no active requests in the connection. |
+| `httpMaxConnectionDuration` _Duration_ | The maximum duration of a connection. |
 
 
 #### ConsistentHash
