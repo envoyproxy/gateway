@@ -215,8 +215,10 @@ func (p *ProxyInfra) Validate() error {
 				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > 65353 {
 					errs = append(errs, errors.New("listener service port must be a valid port number"))
 				}
-				if listener.Ports[j].ContainerPort < 1024 || listener.Ports[j].ContainerPort > 65353 {
-					errs = append(errs, errors.New("listener container port must be a valid ephemeral port number"))
+				if !p.GetProxyConfig().UseListenerPortAsContainerPort() {
+					if listener.Ports[j].ContainerPort < 1024 || listener.Ports[j].ContainerPort > 65353 {
+						errs = append(errs, errors.New("listener container port must be a valid ephemeral port number"))
+					}
 				}
 			}
 		}

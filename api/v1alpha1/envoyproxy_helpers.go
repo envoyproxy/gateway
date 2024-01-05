@@ -33,6 +33,18 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 	return e.Spec.Provider
 }
 
+// UseListenerPortAsContainerPort returns if use listener port as containerport
+func (e *EnvoyProxy) UseListenerPortAsContainerPort() bool {
+	if e.Spec.Provider != nil &&
+		e.Spec.Provider.Kubernetes != nil &&
+		e.Spec.Provider.Kubernetes.EnvoyService != nil &&
+		e.Spec.Provider.Kubernetes.EnvoyService.UseListenerPortAsContainerPort != nil {
+		return *e.Spec.Provider.Kubernetes.EnvoyService.UseListenerPortAsContainerPort
+	}
+
+	return false
+}
+
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
 func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	return &EnvoyProxyKubernetesProvider{

@@ -214,6 +214,11 @@ type KubernetesServiceSpec struct {
 	// +optional
 	LoadBalancerClass *string `json:"loadBalancerClass,omitempty"`
 
+	// UseListenerPortAsContainerPort defines if use listenr ports as container ports
+	// default is false.
+	//  +optional
+	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
+
 	// AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for
 	// services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster
 	// load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a

@@ -1716,6 +1716,11 @@ func (in *KubernetesServiceSpec) DeepCopyInto(out *KubernetesServiceSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.UseListenerPortAsContainerPort != nil {
+		in, out := &in.UseListenerPortAsContainerPort, &out.UseListenerPortAsContainerPort
+		*out = new(bool)
+		**out = **in
+	}
 	if in.AllocateLoadBalancerNodePorts != nil {
 		in, out := &in.AllocateLoadBalancerNodePorts, &out.AllocateLoadBalancerNodePorts
 		*out = new(bool)

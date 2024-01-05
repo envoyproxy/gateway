@@ -719,6 +719,12 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			irKey := t.getIRKey(listener.gateway)
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
+			if ep := resources.EnvoyProxy; ep != nil {
+				if ep.UseListenerPortAsContainerPort() {
+					containerPort = int32(listener.Port)
+				}
+			}
+
 			// Create the TCP Listener while parsing the TLSRoute since
 			// the listener directly links to a routeDestination.
 			irListener := &ir.TCPListener{
@@ -853,6 +859,12 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			irKey := t.getIRKey(listener.gateway)
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
+			if ep := resources.EnvoyProxy; ep != nil {
+				if ep.UseListenerPortAsContainerPort() {
+					containerPort = int32(listener.Port)
+				}
+			}
+
 			// Create the UDP Listener while parsing the UDPRoute since
 			// the listener directly links to a routeDestination.
 			irListener := &ir.UDPListener{
@@ -983,6 +995,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			irKey := t.getIRKey(listener.gateway)
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
+			if ep := resources.EnvoyProxy; ep != nil {
+				if ep.UseListenerPortAsContainerPort() {
+					containerPort = int32(listener.Port)
+				}
+			}
+
 			// Create the TCP Listener while parsing the TCPRoute since
 			// the listener directly links to a routeDestination.
 			irListener := &ir.TCPListener{

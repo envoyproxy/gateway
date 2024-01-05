@@ -6569,6 +6569,10 @@ spec:
                             - LoadBalancer
                             - NodePort
                             type: string
+                          useListenerPortAsContainerPort:
+                            description: UseListenerPortAsContainerPort defines if
+                              use listenr ports as container ports default is false.
+                            type: boolean
                         type: object
                         x-kubernetes-validations:
                         - message: allocateLoadBalancerNodePorts can only be set for
