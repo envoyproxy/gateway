@@ -67,6 +67,8 @@
             - rsa_pss_rsae_sha512
             - rsa_pkcs1_sha512
             - rsa_pkcs1_sha1
+            tlsMaximumProtocolVersion: TLSv1_2
+            tlsMinimumProtocolVersion: TLSv1_0
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:

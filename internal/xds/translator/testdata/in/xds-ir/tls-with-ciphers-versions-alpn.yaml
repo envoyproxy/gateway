@@ -23,9 +23,8 @@ http:
     - rsa_pss_rsae_sha512
     - rsa_pkcs1_sha512
     - rsa_pkcs1_sha1
-    versions:
-      min: TLSv1_0
-      max: TLSv1_2
+    maxVersion: "1.2"
+    minVersion: "1.0"
     alpnProtocols:
     - some-other-protocol
     certificates:
