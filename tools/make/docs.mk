@@ -11,7 +11,7 @@ docs: docs.clean helm-readme-gen docs-api docs-api-headings ## Generate Envoy Ga
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs-release
-docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gateway Release Docs
+docs-release: docs-release-prepare release-notes-docs docs-release-gen docs  ## Generate Envoy Gateway Release Docs
 
 .PHONY: docs-serve
 docs-serve: ## Start Envoy Gateway Site Locally
@@ -79,3 +79,8 @@ docs-release-gen:
 	@echo '[[params.versions]]' >> site/hugo.toml
 	@echo '  version = "$(TAG)"' >> site/hugo.toml
 	@echo '  url = "/$(TAG)"' >> site/hugo.toml
+
+.PHONY: release-notes-docs
+release-notes-docs: $(tools/release-notes-docs)
+	@$(LOG_TARGET)
+	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \
