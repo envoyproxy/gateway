@@ -139,7 +139,7 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 	// Serialize the current deployment to JSON
 	originalJSON, err := json.Marshal(old)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling original deployment: %v", err)
+		return nil, fmt.Errorf("error marshaling original deployment: %w", err)
 	}
 
 	switch deployment.Patch.Type {
@@ -152,13 +152,13 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error applying merge patch: %v", err)
+		return nil, fmt.Errorf("error applying merge patch: %w", err)
 	}
 
 	// Deserialize the patched JSON into a new deployment object
 	var patchedDeployment appv1.Deployment
 	if err := json.Unmarshal(patchedJSON, &patchedDeployment); err != nil {
-		return nil, fmt.Errorf("error unmarshaling patched deployment: %v", err)
+		return nil, fmt.Errorf("error unmarshaling patched deployment: %w", err)
 	}
 
 	return &patchedDeployment, nil
