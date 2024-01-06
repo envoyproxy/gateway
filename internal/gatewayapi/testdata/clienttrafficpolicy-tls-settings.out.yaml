@@ -13,7 +13,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       alpnProtocols:
-      - http/2
+      - h2
       ciphers:
       - cipher1
       - cipher2

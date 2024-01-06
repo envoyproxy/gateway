@@ -142,16 +142,16 @@ spec:
                 properties:
                   alpnProtocols:
                     description: "ALPNProtocols supplies the list of ALPN protocols
-                      that should be exposed by the listener. By default http/2 and
-                      http/1.1 are enabled. \n Supported values are: - http/1.0 -
-                      http/1.1 - http/2"
+                      that should be exposed by the listener. By default h2 and http/1.1
+                      are enabled. \n Supported values are: - http/1.0 - http/1.1
+                      - h2"
                     items:
                       description: ALPNProtocol specifies the protocol to be negotiated
                         using ALPN
                       enum:
                       - http/1.0
                       - http/1.1
-                      - http/2
+                      - h2
                       type: string
                     type: array
                   ciphers:
