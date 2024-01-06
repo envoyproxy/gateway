@@ -245,6 +245,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
 		pp *ir.ProxyProtocol
+		hc *ir.HealthCheck
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
 	)
@@ -258,6 +259,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.HealthCheck != nil {
+		hc = t.buildHealthCheck(policy)
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		cb = t.buildCircuitBreaker(policy)
@@ -276,6 +280,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.RateLimit = rl
 					r.LoadBalancer = lb
 					r.ProxyProtocol = pp
+					r.HealthCheck = hc
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
 				}
@@ -290,6 +295,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
 		pp *ir.ProxyProtocol
+		hc *ir.HealthCheck
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
 	)
@@ -303,6 +309,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.HealthCheck != nil {
+		hc = t.buildHealthCheck(policy)
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		cb = t.buildCircuitBreaker(policy)
@@ -329,6 +338,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.ProxyProtocol == nil {
 				r.ProxyProtocol = pp
+			}
+			if r.HealthCheck == nil {
+				r.HealthCheck = hc
 			}
 			if r.CircuitBreaker == nil {
 				r.CircuitBreaker = cb
@@ -656,6 +668,85 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 	}
 
 	return pp
+}
+
+func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
+	if policy.Spec.HealthCheck == nil {
+		return nil
+	}
+
+	hc := policy.Spec.HealthCheck
+	irHC := &ir.HealthCheck{
+		Timeout:            hc.Timeout,
+		Interval:           hc.Interval,
+		UnhealthyThreshold: hc.UnhealthyThreshold,
+		HealthyThreshold:   hc.HealthyThreshold,
+	}
+	switch hc.Type {
+	case egv1a1.HealthCheckerTypeHTTP:
+		irHC.HTTP = t.buildHTTPHealthChecker(hc.HTTP)
+	case egv1a1.HealthCheckerTypeTCP:
+		irHC.TCP = t.buildTCPHealthChecker(hc.TCP)
+	}
+
+	return irHC
+}
+
+func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTTPHealthChecker {
+	if h == nil {
+		return nil
+	}
+
+	irHTTP := &ir.HTTPHealthChecker{
+		Path:   h.Path,
+		Method: h.Method,
+	}
+	if irHTTP.Method != nil {
+		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
+	}
+
+	var irStatuses []ir.HTTPStatus
+	// deduplicate http statuses
+	statusSet := make(map[egv1a1.HTTPStatus]bool, len(h.ExpectedStatuses))
+	for _, r := range h.ExpectedStatuses {
+		if _, ok := statusSet[r]; !ok {
+			statusSet[r] = true
+			irStatuses = append(irStatuses, ir.HTTPStatus(r))
+		}
+	}
+	irHTTP.ExpectedStatuses = irStatuses
+
+	irHTTP.ExpectedResponse = translateHealthCheckPayload(h.ExpectedResponse)
+	return irHTTP
+}
+
+func (t *Translator) buildTCPHealthChecker(h *egv1a1.TCPHealthChecker) *ir.TCPHealthChecker {
+	if h == nil {
+		return nil
+	}
+
+	irTCP := &ir.TCPHealthChecker{
+		Send:    translateHealthCheckPayload(h.Send),
+		Receive: translateHealthCheckPayload(h.Receive),
+	}
+	return irTCP
+}
+
+func translateHealthCheckPayload(p *egv1a1.HealthCheckPayload) *ir.HealthCheckPayload {
+	if p == nil {
+		return nil
+	}
+
+	irPayload := &ir.HealthCheckPayload{}
+	switch p.Type {
+	case egv1a1.HealthCheckPayloadTypeText:
+		irPayload.Text = p.Text
+	case egv1a1.HealthCheckPayloadTypeBinary:
+		irPayload.Binary = make([]byte, len(p.Binary))
+		copy(irPayload.Binary, p.Binary)
+	}
+
+	return irPayload
 }
 
 func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {

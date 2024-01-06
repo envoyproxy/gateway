@@ -505,6 +505,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
 		circuitBreaker: httpRoute.CircuitBreaker,
+		healthCheck:    httpRoute.HealthCheck,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
