@@ -1,16 +1,19 @@
 name: Release
 
+permissions:
+  contents: read
+
 on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v*.*.*"
-permissions:
-  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
