@@ -74,6 +74,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TLS *TLSSettings `json:"tls,omitempty"`
+	// Path enables managing how the incoming path set by clients can be normalized.
+	//
+	// +optional
+	Path *PathSettings `json:"path,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.

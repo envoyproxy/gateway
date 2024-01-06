@@ -220,6 +220,7 @@ _Appears in:_
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
+| `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
 
 
 
@@ -1283,6 +1284,32 @@ _Appears in:_
 | `host` _string_ | Host define the extension service hostname. |
 | `port` _integer_ | Port defines the port the extension service is exposed on. |
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
+#### PathEscapedSlashAction
+
+_Underlying type:_ `string`
+
+PathEscapedSlashAction determines the action for requests that contain %2F, %2f, %5C, or %5c sequences in the URI path.
+
+_Appears in:_
+- [PathSettings](#pathsettings)
+
+
+
+#### PathSettings
+
+
+
+PathSettings provides settings that managing how the incoming path set by clients is handled.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `escapedSlashesAction` _[PathEscapedSlashAction](#pathescapedslashaction)_ | EscapedSlashesAction determines how %2f, %2F, %5c, or %5C sequences in the path URI should be handled. The default is UnescapeAndRedirect. |
+| `disableMergeSlashes` _boolean_ | DisableMergeSlashes allows disabling the default configuration of merging adjacent slashes in the path. Note that slash merging is not part of the HTTP spec and is provided for convenience. |
 
 
 #### ProviderType
