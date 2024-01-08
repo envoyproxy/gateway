@@ -734,24 +734,33 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              timeouts:
+              timeout:
                 description: Timeout settings for the backend connections.
                 properties:
-                  connectTimeout:
-                    description: The timeout for new network connection establishment,
-                      including TCP and TLS handshakes.
-                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                    type: string
-                  httpIdleTimeout:
-                    description: The idle timeout for connections. The idle time is
-                      defined as a period in which there are no active requests in
-                      the connection.
-                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                    type: string
-                  httpMaxConnectionDuration:
-                    description: The maximum duration of a connection.
-                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                    type: string
+                  http:
+                    description: // Timeout settings for HTTP.
+                    properties:
+                      connectionDuration:
+                        description: 'The maximum duration of an persistent HTTPTimeout
+                          connections. Default: unlimited.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      connectionIdleTimeout:
+                        description: 'The idle timeout for persistent HTTPTimeout
+                          connections. Idle time is defined as a period in which there
+                          are no active requests in the connection. Default: 1 hour.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                  tcp:
+                    description: Timeout settings for TCP.
+                    properties:
+                      connectTimeout:
+                        description: 'The timeout for new network connection establishment,
+                          including TCPTimeout and TLS handshakes. Default: 10 seconds.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                 type: object
             required:
             - targetRef

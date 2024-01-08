@@ -85,7 +85,7 @@ type BackendTrafficPolicySpec struct {
 	// Timeout settings for the backend connections.
 	//
 	// +optional
-	ConnectionTimeouts *ConnectionTimeouts `json:"timeouts,omitempty"`
+	Timeout *Timeout `json:"timeout,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
