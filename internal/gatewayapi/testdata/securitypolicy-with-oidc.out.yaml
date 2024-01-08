@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 3
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -39,40 +39,6 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-grpcRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    creationTimestamp: null
-    name: grpcroute-1
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -82,7 +48,7 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - www.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -120,7 +86,7 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - www.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -184,44 +150,17 @@ securityPolicies:
         authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
         issuer: https://oauth.foo.com
         tokenEndpoint: https://oauth.foo.com/token
+      redirectURL: https://www.example.com/foo/oauth2/callback
       scopes:
       - openid
       - email
       - profile
+      signoutPath: /foo/signout
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       namespace: default
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-cross-namespace-secretRef
-    namespace: default
-  spec:
-    oidc:
-      clientID: client3.bar.foo.com
-      clientSecret:
-        group: null
-        kind: null
-        name: client3-secret
-        namespace: default
-      provider:
-        authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
-        issuer: https://oauth.bar.com
-        tokenEndpoint: https://oauth.bar.com/token
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-1
   status:
     conditions:
     - lastTransitionTime: null
@@ -244,6 +183,8 @@ securityPolicies:
         name: client1-secret
       provider:
         issuer: https://accounts.google.com
+      redirectURL: https://www.example.com/bar/oauth2/callback
+      signoutPath: /bar/signout
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -265,7 +206,7 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
-      isHTTP2: true
+      isHTTP2: false
       name: envoy-gateway/gateway-1/http
       port: 10080
       routes:
@@ -281,18 +222,21 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: gateway.envoyproxy.io
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        hostname: www.example.com
+        name: httproute/default/httproute-1/rule/0/match/0/www_example_com
         oidc:
           clientID: client2.oauth.foo.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
             tokenEndpoint: https://oauth.foo.com/token
+          redirectPath: /foo/oauth2/callback
+          redirectURL: https://www.example.com/foo/oauth2/callback
           scopes:
           - openid
           - email
           - profile
+          signoutPath: /foo/signout
         pathMatch:
           distinct: false
           name: ""
@@ -309,39 +253,20 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: gateway.envoyproxy.io
-        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        hostname: www.example.com
+        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
         oidc:
           clientID: client1.apps.googleusercontent.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
             tokenEndpoint: https://oauth2.googleapis.com/token
+          redirectPath: /bar/oauth2/callback
+          redirectURL: https://www.example.com/bar/oauth2/callback
           scopes:
           - openid
+          signoutPath: /bar/signout
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: GRPC
-            weight: 1
-        hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-        oidc:
-          clientID: client3.bar.foo.com
-          clientSecret: Y2xpZW50MTpzZWNyZXQK
-          provider:
-            authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
-            tokenEndpoint: https://oauth.bar.com/token
-          scopes:
-          - openid

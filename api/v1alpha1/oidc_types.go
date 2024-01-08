@@ -45,9 +45,6 @@ type OIDC struct {
 	// The path to sign a user out, clearing their credential cookies.
 	// If not specified, uses a default signout path "/signout"
 	SignoutPath *string `json:"signoutPath,omitempty"`
-
-	// The paths that don't need authentication
-	PassThrough []string `json:"passThrough,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.

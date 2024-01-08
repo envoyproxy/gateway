@@ -376,10 +376,13 @@ type OIDC struct {
 
 	// The redirect URL to be used in the OIDC
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	RedirectURL *string `json:"redirectURL,omitempty"`
+	RedirectURL string `json:"redirectURL,omitempty"`
+
+	// The path part of the redirect URL
+	RedirectPath string `json:"redirectPath,omitempty"`
 
 	// The path to sign a user out, clearing their credential cookies.
-	SignoutPath *string `json:"signoutPath,omitempty"`
+	SignoutPath string `json:"signoutPath,omitempty"`
 }
 
 // BasicAuth defines the schema for the HTTP Basic Authentication.

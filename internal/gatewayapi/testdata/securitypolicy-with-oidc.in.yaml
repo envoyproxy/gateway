@@ -43,7 +43,7 @@ httpRoutes:
     name: httproute-1
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - www.example.com
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
@@ -62,7 +62,7 @@ httpRoutes:
     name: httproute-2
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - www.example.com
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
@@ -72,21 +72,6 @@ httpRoutes:
       - path:
           value: "/bar"
       backendRefs:
-      - name: service-1
-        port: 8080
-grpcRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    namespace: default
-    name: grpcroute-1
-  spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - backendRefs:
       - name: service-1
         port: 8080
 securityPolicies:
@@ -107,6 +92,8 @@ securityPolicies:
       clientID: "client1.apps.googleusercontent.com"
       clientSecret:
         name: "client1-secret"
+      redirectURL: "https://www.example.com/bar/oauth2/callback"
+      signoutPath: "/bar/signout"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -127,22 +114,5 @@ securityPolicies:
       clientSecret:
         name: "client2-secret"
       scopes: ["openid", "email", "profile"]
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    namespace: default
-    name: policy-cross-namespace-secretRef  # This policy should attach grpcroute-1
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-1
-    oidc:
-      provider:
-        issuer: "https://oauth.bar.com"
-        authorizationEndpoint: "https://oauth.bar.com/oauth2/v2/auth"
-        tokenEndpoint: "https://oauth.bar.com/token"
-      clientID: "client3.bar.foo.com"
-      clientSecret:
-        namespace: default
-        name: "client3-secret"
+      redirectURL: "https://www.example.com/foo/oauth2/callback"
+      signoutPath: "/foo/signout"

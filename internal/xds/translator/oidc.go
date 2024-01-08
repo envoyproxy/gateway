@@ -28,9 +28,6 @@ import (
 const (
 	oauth2Filter                = "envoy.filters.http.oauth2"
 	defaultTokenEndpointTimeout = 10
-	defaultRedirectURL          = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
-	defaultRedirectPathMatcher  = "/oauth2/callback"
-	defaultSignoutPath          = "/signout"
 )
 
 func init() {
@@ -119,20 +116,6 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 			route.OIDC.Provider.TokenEndpoint)
 	}
 
-	var (
-		redirectURL         = defaultRedirectURL
-		redirectPathMatcher = defaultRedirectPathMatcher
-		signoutPath         = defaultSignoutPath
-	)
-
-	if route.OIDC.RedirectURL != nil {
-		redirectURL = *route.OIDC.RedirectURL
-		//TODO redirectURLMatcher
-	}
-	if route.OIDC.SignoutPath != nil {
-		redirectURL = *route.OIDC.RedirectURL
-	}
-
 	oauth2 := &oauth2v3.OAuth2{
 		Config: &oauth2v3.OAuth2Config{
 			TokenEndpoint: &corev3.HttpUri{
@@ -145,12 +128,12 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 				},
 			},
 			AuthorizationEndpoint: route.OIDC.Provider.AuthorizationEndpoint,
-			RedirectUri:           redirectURL,
+			RedirectUri:           route.OIDC.RedirectURL,
 			RedirectPathMatcher: &matcherv3.PathMatcher{
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
 						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: redirectPathMatcher,
+							Exact: route.OIDC.RedirectPath,
 						},
 					},
 				},
@@ -159,7 +142,7 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
 						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: signoutPath,
+							Exact: route.OIDC.SignoutPath,
 						},
 					},
 				},

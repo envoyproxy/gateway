@@ -323,6 +323,11 @@ spec:
                     required:
                     - issuer
                     type: object
+                  redirectURL:
+                    description: The redirect URL to be used in the OIDC [Authentication
+                      Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+                    type: string
                   scopes:
                     description: The OIDC scopes to be used in the [Authentication
                       Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -331,6 +336,10 @@ spec:
                     items:
                       type: string
                     type: array
+                  signoutPath:
+                    description: The path to sign a user out, clearing their credential
+                      cookies. If not specified, uses a default signout path "/signout"
+                    type: string
                 required:
                 - clientID
                 - clientSecret
