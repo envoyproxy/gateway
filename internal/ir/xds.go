@@ -9,6 +9,7 @@ import (
 	"cmp"
 	"errors"
 	"net"
+	"net/http"
 	"reflect"
 
 	"github.com/tetratelabs/multierror"
@@ -24,29 +25,39 @@ import (
 )
 
 var (
-	ErrListenerNameEmpty             = errors.New("field Name must be specified")
-	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
-	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
-	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPListenerSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
-	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
-	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
-	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
-	ErrDestinationNameEmpty          = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP or FQDN address")
-	ErrDestEndpointPortInvalid       = errors.New("field Port specified is invalid")
-	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
-	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
-	ErrDirectResponseStatusInvalid   = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus     = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
-	ErrRedirectUnsupportedScheme     = errors.New("only http and https are supported for the scheme in redirect filters")
-	ErrHTTPPathModifierDoubleReplace = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
-	ErrHTTPPathModifierNoReplace     = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
-	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
-	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
-	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrLoadBalancerInvalid           = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrListenerNameEmpty                    = errors.New("field Name must be specified")
+	ErrListenerAddressInvalid               = errors.New("field Address must be a valid IP address")
+	ErrListenerPortInvalid                  = errors.New("field Port specified is invalid")
+	ErrHTTPListenerHostnamesEmpty           = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTCPListenerSNIsEmpty                 = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTLSServerCertEmpty                   = errors.New("field ServerCertificate must be specified")
+	ErrTLSPrivateKey                        = errors.New("field PrivateKey must be specified")
+	ErrHTTPRouteNameEmpty                   = errors.New("field Name must be specified")
+	ErrHTTPRouteHostnameEmpty               = errors.New("field Hostname must be specified")
+	ErrDestinationNameEmpty                 = errors.New("field Name must be specified")
+	ErrDestEndpointHostInvalid              = errors.New("field Address must be a valid IP or FQDN address")
+	ErrDestEndpointPortInvalid              = errors.New("field Port specified is invalid")
+	ErrStringMatchConditionInvalid          = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchNameIsEmpty               = errors.New("field Name must be specified")
+	ErrDirectResponseStatusInvalid          = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
+	ErrRedirectUnsupportedStatus            = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedScheme            = errors.New("only http and https are supported for the scheme in redirect filters")
+	ErrHTTPPathModifierDoubleReplace        = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
+	ErrHTTPPathModifierNoReplace            = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
+	ErrAddHeaderEmptyName                   = errors.New("header modifier filter cannot configure a header without a name to be added")
+	ErrAddHeaderDuplicate                   = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
+	ErrRemoveHeaderDuplicate                = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrLoadBalancerInvalid                  = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrHealthCheckTimeoutInvalid            = errors.New("field HealthCheck.Timeout must be specified")
+	ErrHealthCheckIntervalInvalid           = errors.New("field HealthCheck.Interval must be specified")
+	ErrHealthCheckUnhealthyThresholdInvalid = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
+	ErrHealthCheckHealthyThresholdInvalid   = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
+	ErrHealthCheckerInvalid                 = errors.New("health checker setting is invalid, only one health checker can be set")
+	ErrHCHTTPPathInvalid                    = errors.New("field HTTPHealthChecker.Path should be specified")
+	ErrHCHTTPMethodInvalid                  = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
+	ErrHCHTTPExpectedStatusesInvalid        = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHealthCheckPayloadInvalid            = errors.New("one of Text, Binary fields must be set in payload")
+	ErrHTTPStatusInvalid                    = errors.New("HTTPStatus should be in [200,600)")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -307,6 +318,8 @@ type HTTPRoute struct {
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// BasicAuth defines the schema for the HTTP Basic Authentication.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	// HealthCheck defines the configuration for active health checking on the upstream.
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
@@ -541,6 +554,11 @@ func (h HTTPRoute) Validate() error {
 	}
 	if h.JWT != nil {
 		if err := h.JWT.validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if h.HealthCheck != nil {
+		if err := h.HealthCheck.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -1207,4 +1225,171 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel requests that Envoy will make.
 	MaxParallelRequests *uint32 `json:"maxParallelRequests,omitempty" yaml:"maxParallelRequests,omitempty"`
+}
+
+// HealthCheck defines health check settings
+// +k8s:deepcopy-gen=true
+type HealthCheck struct {
+	// Timeout defines the time to wait for a health check response.
+	Timeout *metav1.Duration `json:"timeout"`
+	// Interval defines the time between health checks.
+	Interval *metav1.Duration `json:"interval"`
+	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+	UnhealthyThreshold *uint32 `json:"unhealthyThreshold"`
+	// HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy.
+	HealthyThreshold *uint32 `json:"healthyThreshold"`
+	// HTTP defines the configuration of http health checker.
+	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
+	// TCP defines the configuration of tcp health checker.
+	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+}
+
+// Validate the fields within the HealthCheck structure.
+func (h *HealthCheck) Validate() error {
+	var errs error
+
+	if h.Timeout != nil && h.Timeout.Duration == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckTimeoutInvalid)
+	}
+	if h.Interval != nil && h.Interval.Duration == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckIntervalInvalid)
+	}
+	if h.UnhealthyThreshold != nil && *h.UnhealthyThreshold == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckUnhealthyThresholdInvalid)
+	}
+	if h.HealthyThreshold != nil && *h.HealthyThreshold == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckHealthyThresholdInvalid)
+	}
+
+	matchCount := 0
+	if h.HTTP != nil {
+		matchCount++
+	}
+	if h.TCP != nil {
+		matchCount++
+	}
+	if matchCount != 1 {
+		errs = multierror.Append(errs, ErrHealthCheckerInvalid)
+	}
+
+	if h.HTTP != nil {
+		if err := h.HTTP.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if h.TCP != nil {
+		if err := h.TCP.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	return errs
+}
+
+// HTTPHealthChecker defines the settings of http health check.
+// +k8s:deepcopy-gen=true
+type HTTPHealthChecker struct {
+	// Path defines the HTTP path that will be requested during health checking.
+	Path string `json:"path" yaml:"path"`
+	// Method defines the HTTP method used for health checking.
+	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
+	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
+	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// ExpectedResponse defines a list of HTTP expected responses to match.
+	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
+}
+
+// Validate the fields within the HTTPHealthChecker structure.
+func (c *HTTPHealthChecker) Validate() error {
+	var errs error
+	if c.Path == "" {
+		errs = multierror.Append(errs, ErrHCHTTPPathInvalid)
+	}
+	if c.Method != nil {
+		switch *c.Method {
+		case http.MethodGet:
+		case http.MethodHead:
+		case http.MethodPost:
+		case http.MethodPut:
+		case http.MethodDelete:
+		case http.MethodOptions:
+		case http.MethodTrace:
+		case http.MethodPatch:
+		case "":
+		default:
+			errs = multierror.Append(errs, ErrHCHTTPMethodInvalid)
+		}
+	}
+	if len(c.ExpectedStatuses) == 0 {
+		errs = multierror.Append(errs, ErrHCHTTPExpectedStatusesInvalid)
+	}
+	for _, r := range c.ExpectedStatuses {
+		if err := r.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if c.ExpectedResponse != nil {
+		if err := c.ExpectedResponse.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// HTTPStatus represents http status code.
+type HTTPStatus int
+
+func (h HTTPStatus) Validate() error {
+	if h < 100 || h >= 600 {
+		return ErrHTTPStatusInvalid
+	}
+	return nil
+}
+
+// TCPHealthChecker defines the settings of tcp health check.
+// +k8s:deepcopy-gen=true
+type TCPHealthChecker struct {
+	Send    *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
+	Receive *HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
+}
+
+// Validate the fields within the TCPHealthChecker structure.
+func (c *TCPHealthChecker) Validate() error {
+	var errs error
+	if c.Send != nil {
+		if err := c.Send.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if c.Receive != nil {
+		if err := c.Receive.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// HealthCheckPayload defines the encoding of the payload bytes in the payload.
+// +k8s:deepcopy-gen=true
+type HealthCheckPayload struct {
+	// Text payload in plain text.
+	Text *string `json:"text,omitempty" yaml:"text,omitempty"`
+	// Binary payload base64 encoded
+	Binary []byte `json:"binary,omitempty" yaml:"binary,omitempty"`
+}
+
+// Validate the fields in the HealthCheckPayload.
+func (p *HealthCheckPayload) Validate() error {
+	var errs error
+	matchCount := 0
+	if p.Text != nil && *p.Text != "" {
+		matchCount++
+	}
+	if len(p.Binary) > 0 {
+		matchCount++
+	}
+	if matchCount != 1 {
+		errs = multierror.Append(errs, ErrHealthCheckPayloadInvalid)
+	}
+	return errs
 }

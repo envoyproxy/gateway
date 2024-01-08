@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestBackendTrafficPolicyTarget(t *testing.T) {
@@ -477,6 +477,282 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"spec.circuitBreaker.maxParallelRequests: Invalid value: 4294967296: spec.circuitBreaker.maxParallelRequests in body should be less than or equal to 4294967295",
 				"spec.circuitBreaker.maxPendingRequests: Invalid value: -1: spec.circuitBreaker.maxPendingRequests in body should be greater than or equal to 0",
 				"spec.circuitBreaker.maxConnections: Invalid value: 4294967296: spec.circuitBreaker.maxConnections in body should be less than or equal to 4294967295",
+			},
+		},
+		{
+			desc: "invalid path of http health checker",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.healthCheck.http.path: Invalid value: "": spec.healthCheck.http.path in body should be at least 1 chars long`,
+			},
+		},
+		{
+			desc: "invalid unhealthy threshold",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						UnhealthyThreshold: ptr.To[uint32](0),
+						Type:               egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.healthCheck.unhealthyThreshold: Invalid value: 0: spec.healthCheck.unhealthyThreshold in body should be greater than or equal to 1`,
+			},
+		},
+		{
+			desc: "invalid healthy threshold",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						HealthyThreshold: ptr.To[uint32](0),
+						Type:             egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.healthCheck.healthyThreshold: Invalid value: 0: spec.healthCheck.healthyThreshold in body should be greater than or equal to 1`,
+			},
+		},
+		{
+			desc: "invalid health checker type",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						TCP:  &egv1a1.TCPHealthChecker{},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.healthCheck: Invalid value: "object": If Health Checker type is HTTP, http field needs to be set., spec.healthCheck: Invalid value: "object": If Health Checker type is TCP, tcp field needs to be set`,
+			},
+		},
+		{
+			desc: "invalid http expected statuses",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path:             "/healthz",
+							ExpectedStatuses: []egv1a1.HTTPStatus{99, 200},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.healthCheck.http.expectedStatuses[0]: Invalid value: 99: spec.healthCheck.http.expectedStatuses[0] in body should be greater than or equal to 100`,
+			},
+		},
+		{
+			desc: "valid http expected statuses",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path:             "/healthz",
+							ExpectedStatuses: []egv1a1.HTTPStatus{100, 200, 201},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid http expected statuses - out of range",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path:             "/healthz",
+							ExpectedStatuses: []egv1a1.HTTPStatus{200, 300, 601},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.healthCheck.http.expectedStatuses[2]: Invalid value: 601: spec.healthCheck.http.expectedStatuses[2] in body should be less than 600`,
+			},
+		},
+		{
+			desc: "http expected responses - invalid text payload",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
+							ExpectedResponse: &egv1a1.HealthCheckPayload{
+								Type:   egv1a1.HealthCheckPayloadTypeText,
+								Binary: []byte{'f', 'o', 'o'},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`[spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+			},
+		},
+		{
+			desc: "http expected responses - invalid binary payload",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPHealthChecker{
+							Path: "/healthz",
+							ExpectedResponse: &egv1a1.HealthCheckPayload{
+								Type: egv1a1.HealthCheckPayloadTypeBinary,
+								Text: ptr.To("foo"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`[spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+			},
+		},
+		{
+			desc: "invalid tcp send",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeTCP,
+						TCP: &egv1a1.TCPHealthChecker{
+							Send: &egv1a1.HealthCheckPayload{
+								Type:   egv1a1.HealthCheckPayloadTypeText,
+								Binary: []byte{'f', 'o', 'o'},
+							},
+							Receive: &egv1a1.HealthCheckPayload{
+								Type: egv1a1.HealthCheckPayloadTypeText,
+								Text: ptr.To("foo"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.healthCheck.tcp.send: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.send: Invalid value: "object": If payload type is Binary, binary field needs to be set.`,
+			},
+		},
+		{
+			desc: "invalid tcp receive",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HealthCheck: &egv1a1.HealthCheck{
+						Type: egv1a1.HealthCheckerTypeTCP,
+						TCP: &egv1a1.TCPHealthChecker{
+							Send: &egv1a1.HealthCheckPayload{
+								Type: egv1a1.HealthCheckPayloadTypeText,
+								Text: ptr.To("foo"),
+							},
+							Receive: &egv1a1.HealthCheckPayload{
+								Type:   egv1a1.HealthCheckPayloadTypeText,
+								Binary: []byte{'f', 'o', 'o'},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`[spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
 	}

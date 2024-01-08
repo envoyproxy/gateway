@@ -216,6 +216,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "basic-auth",
 		},
 		{
+			name: "health-check",
+		},
+		{
 			name: "local-ratelimit",
 		},
 		{

@@ -6,7 +6,9 @@
 package translator
 
 import (
+	"encoding/hex"
 	"fmt"
+	"sort"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -15,6 +17,7 @@ import (
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -38,6 +41,7 @@ type xdsClusterArgs struct {
 	loadBalancer   *ir.LoadBalancer
 	proxyProtocol  *ir.ProxyProtocol
 	circuitBreaker *ir.CircuitBreaker
+	healthCheck    *ir.HealthCheck
 }
 
 type EndpointType int
@@ -131,11 +135,100 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 	}
 
+	if args.healthCheck != nil {
+		hc := &corev3.HealthCheck{
+			Timeout:  durationpb.New(args.healthCheck.Timeout.Duration),
+			Interval: durationpb.New(args.healthCheck.Interval.Duration),
+		}
+		if args.healthCheck.UnhealthyThreshold != nil {
+			hc.UnhealthyThreshold = wrapperspb.UInt32(*args.healthCheck.UnhealthyThreshold)
+		}
+		if args.healthCheck.HealthyThreshold != nil {
+			hc.HealthyThreshold = wrapperspb.UInt32(*args.healthCheck.HealthyThreshold)
+		}
+		if args.healthCheck.HTTP != nil {
+			httpChecker := &corev3.HealthCheck_HttpHealthCheck{
+				Path: args.healthCheck.HTTP.Path,
+			}
+			if args.healthCheck.HTTP.Method != nil {
+				httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*args.healthCheck.HTTP.Method])
+			}
+			httpChecker.ExpectedStatuses = buildHTTPStatusRange(args.healthCheck.HTTP.ExpectedStatuses)
+			if receive := buildHealthCheckPayload(args.healthCheck.HTTP.ExpectedResponse); receive != nil {
+				httpChecker.Receive = append(httpChecker.Receive, receive)
+			}
+			hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
+				HttpHealthCheck: httpChecker,
+			}
+		}
+		if args.healthCheck.TCP != nil {
+			tcpChecker := &corev3.HealthCheck_TcpHealthCheck{
+				Send: buildHealthCheckPayload(args.healthCheck.TCP.Send),
+			}
+			if receive := buildHealthCheckPayload(args.healthCheck.TCP.Receive); receive != nil {
+				tcpChecker.Receive = append(tcpChecker.Receive, receive)
+			}
+			hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
+				TcpHealthCheck: tcpChecker,
+			}
+		}
+		cluster.HealthChecks = []*corev3.HealthCheck{hc}
+	}
 	if args.circuitBreaker != nil {
 		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
 	}
 
 	return cluster
+}
+
+// buildHTTPStatusRange converts an array of http status to an array of the range of http status.
+func buildHTTPStatusRange(irStatuses []ir.HTTPStatus) []*xdstype.Int64Range {
+	if len(irStatuses) == 0 {
+		return nil
+	}
+	ranges := []*xdstype.Int64Range{}
+	sort.Slice(irStatuses, func(i int, j int) bool {
+		return irStatuses[i] < irStatuses[j]
+	})
+	var start, end int64
+	for i := 0; i < len(irStatuses); i++ {
+		switch {
+		case start == 0:
+			start = int64(irStatuses[i])
+			end = int64(irStatuses[i] + 1)
+		case int64(irStatuses[i]) == end:
+			end++
+		default:
+			ranges = append(ranges, &xdstype.Int64Range{Start: start, End: end})
+			start = int64(irStatuses[i])
+			end = int64(irStatuses[i] + 1)
+		}
+	}
+	if start != 0 {
+		ranges = append(ranges, &xdstype.Int64Range{Start: start, End: end})
+	}
+	return ranges
+}
+
+func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_Payload {
+	if irLoad == nil {
+		return nil
+	}
+
+	var hcp corev3.HealthCheck_Payload
+	if irLoad.Text != nil && *irLoad.Text != "" {
+		hcp.Payload = &corev3.HealthCheck_Payload_Text{
+			Text: hex.EncodeToString([]byte(*irLoad.Text)),
+		}
+	}
+	if len(irLoad.Binary) > 0 {
+		binPayload := &corev3.HealthCheck_Payload_Binary{
+			Binary: make([]byte, len(irLoad.Binary)),
+		}
+		copy(binPayload.Binary, irLoad.Binary)
+		hcp.Payload = binPayload
+	}
+	return &hcp
 }
 
 func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
