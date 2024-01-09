@@ -142,7 +142,7 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
 						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: route.OIDC.SignoutPath,
+							Exact: route.OIDC.LogoutPath,
 						},
 					},
 				},

@@ -42,9 +42,9 @@ type OIDC struct {
 	// If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	RedirectURL *string `json:"redirectURL,omitempty"`
 
-	// The path to sign a user out, clearing their credential cookies.
-	// If not specified, uses a default signout path "/signout"
-	SignoutPath *string `json:"signoutPath,omitempty"`
+	// The path to log a user out, clearing their credential cookies.
+	// If not specified, uses a default logout path "/logout"
+	LogoutPath *string `json:"logoutPath,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.

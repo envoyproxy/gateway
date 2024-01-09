@@ -1950,8 +1950,8 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.SignoutPath != nil {
-		in, out := &in.SignoutPath, &out.SignoutPath
+	if in.LogoutPath != nil {
+		in, out := &in.LogoutPath, &out.LogoutPath
 		*out = new(string)
 		**out = **in
 	}

@@ -93,7 +93,7 @@ securityPolicies:
       clientSecret:
         name: "client1-secret"
       redirectURL: "https://www.example.com/bar/oauth2/callback"
-      signoutPath: "/bar/signout"
+      logoutPath: "/bar/logout"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -115,4 +115,4 @@ securityPolicies:
         name: "client2-secret"
       scopes: ["openid", "email", "profile"]
       redirectURL: "https://www.example.com/foo/oauth2/callback"
-      signoutPath: "/foo/signout"
+      logoutPath: "/foo/logout"

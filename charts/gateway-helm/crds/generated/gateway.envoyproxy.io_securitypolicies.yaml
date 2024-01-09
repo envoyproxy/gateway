@@ -336,7 +336,7 @@ spec:
                     items:
                       type: string
                     type: array
-                  signoutPath:
+                  logoutPath:
                     description: The path to sign a user out, clearing their credential
                       cookies. If not specified, uses a default signout path "/signout"
                     type: string

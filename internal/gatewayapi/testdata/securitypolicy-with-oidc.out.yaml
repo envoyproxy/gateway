@@ -146,6 +146,7 @@ securityPolicies:
         group: null
         kind: null
         name: client2-secret
+      logoutPath: /foo/logout
       provider:
         authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
         issuer: https://oauth.foo.com
@@ -155,7 +156,6 @@ securityPolicies:
       - openid
       - email
       - profile
-      signoutPath: /foo/signout
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -181,10 +181,10 @@ securityPolicies:
         group: null
         kind: null
         name: client1-secret
+      logoutPath: /bar/logout
       provider:
         issuer: https://accounts.google.com
       redirectURL: https://www.example.com/bar/oauth2/callback
-      signoutPath: /bar/signout
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -227,6 +227,7 @@ xdsIR:
         oidc:
           clientID: client2.oauth.foo.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
+          logoutPath: /foo/logout
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
             tokenEndpoint: https://oauth.foo.com/token
@@ -236,7 +237,6 @@ xdsIR:
           - openid
           - email
           - profile
-          signoutPath: /foo/signout
         pathMatch:
           distinct: false
           name: ""
@@ -258,6 +258,7 @@ xdsIR:
         oidc:
           clientID: client1.apps.googleusercontent.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
+          logoutPath: /bar/logout
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
             tokenEndpoint: https://oauth2.googleapis.com/token
@@ -265,7 +266,6 @@ xdsIR:
           redirectURL: https://www.example.com/bar/oauth2/callback
           scopes:
           - openid
-          signoutPath: /bar/signout
         pathMatch:
           distinct: false
           name: ""

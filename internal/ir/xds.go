@@ -441,8 +441,8 @@ type OIDC struct {
 	// The path part of the redirect URL
 	RedirectPath string `json:"redirectPath,omitempty"`
 
-	// The path to sign a user out, clearing their credential cookies.
-	SignoutPath string `json:"signoutPath,omitempty"`
+	// The path to log a user out, clearing their credential cookies.
+	LogoutPath string `json:"logoutPath,omitempty"`
 }
 
 // BasicAuth defines the schema for the HTTP Basic Authentication.

@@ -43,7 +43,7 @@
               redirectUri: https://www.example.com/foo/oauth2/callback
               signoutPath:
                 path:
-                  exact: /foo/signout
+                  exact: /foo/logout
               tokenEndpoint:
                 cluster: oauth_foo_com_443
                 timeout: 10s
@@ -77,7 +77,7 @@
               redirectUri: https://www.example.com/bar/oauth2/callback
               signoutPath:
                 path:
-                  exact: /bar/signout
+                  exact: /bar/logout
               tokenEndpoint:
                 cluster: oauth_bar_com_443
                 timeout: 10s

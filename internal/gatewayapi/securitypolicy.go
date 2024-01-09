@@ -32,7 +32,7 @@ import (
 const (
 	defaultRedirectURL  = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	defaultRedirectPath = "/oauth2/callback"
-	defaultSignoutPath  = "/signout"
+	defaultLogoutPath   = "/logout"
 )
 
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
@@ -461,7 +461,7 @@ func (t *Translator) buildOIDC(
 	var (
 		redirectURL  = defaultRedirectURL
 		redirectPath = defaultRedirectPath
-		signoutPath  = defaultSignoutPath
+		logoutPath   = defaultLogoutPath
 	)
 
 	if oidc.RedirectURL != nil {
@@ -471,7 +471,7 @@ func (t *Translator) buildOIDC(
 		}
 		redirectURL = *oidc.RedirectURL
 		redirectPath = path
-		signoutPath = *oidc.SignoutPath
+		logoutPath = *oidc.LogoutPath
 	}
 
 	return &ir.OIDC{
@@ -481,7 +481,7 @@ func (t *Translator) buildOIDC(
 		Scopes:       scopes,
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
-		SignoutPath:  signoutPath,
+		LogoutPath:   logoutPath,
 	}, nil
 }
 
