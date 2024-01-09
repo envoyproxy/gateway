@@ -300,6 +300,10 @@ spec:
                     required:
                     - name
                     type: object
+                  logoutPath:
+                    description: The path to log a user out, clearing their credential
+                      cookies. If not specified, uses a default logout path "/logout"
+                    type: string
                   provider:
                     description: The OIDC Provider configuration.
                     properties:
@@ -336,10 +340,6 @@ spec:
                     items:
                       type: string
                     type: array
-                  logoutPath:
-                    description: The path to sign a user out, clearing their credential
-                      cookies. If not specified, uses a default signout path "/signout"
-                    type: string
                 required:
                 - clientID
                 - clientSecret
