@@ -14,14 +14,14 @@ type Timeout struct {
 	// +optional
 	TCP *TCPTimeout `json:"tcp,omitempty"`
 
-	// // Timeout settings for HTTP.
+	// Timeout settings for HTTP.
 	//
 	// +optional
 	HTTP *HTTPTimeout `json:"http,omitempty"`
 }
 
 type TCPTimeout struct {
-	// The timeout for new network connection establishment, including TCPTimeout and TLS handshakes.
+	// The timeout for network connection establishment, including TCP and TLS handshakes.
 	// Default: 10 seconds.
 	//
 	// +optional
@@ -29,15 +29,15 @@ type TCPTimeout struct {
 }
 
 type HTTPTimeout struct {
-	// The idle timeout for persistent HTTPTimeout connections. Idle time is defined as a period in which there are no active requests in the connection.
+	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	// Default: 1 hour.
 	//
 	// +optional
 	ConnectionIdleTimeout *gwapiv1.Duration `json:"connectionIdleTimeout,omitempty"`
 
-	// The maximum duration of an persistent HTTPTimeout connections.
+	// The maximum duration of an HTTP connection.
 	// Default: unlimited.
 	//
 	// +optional
-	ConnectionDuration *gwapiv1.Duration `json:"connectionDuration,omitempty"`
+	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
 }

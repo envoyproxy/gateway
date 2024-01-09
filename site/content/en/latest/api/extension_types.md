@@ -965,8 +965,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `connectionIdleTimeout` _Duration_ | The idle timeout for persistent HTTPTimeout connections. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
-| `connectionDuration` _Duration_ | The maximum duration of an persistent HTTPTimeout connections. Default: unlimited. |
+| `connectionIdleTimeout` _Duration_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `maxConnectionDuration` _Duration_ | The maximum duration of an HTTP connection. Default: unlimited. |
 
 
 #### HeaderMatch
@@ -2026,7 +2026,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `connectTimeout` _Duration_ | The timeout for new network connection establishment, including TCPTimeout and TLS handshakes. Default: 10 seconds. |
+| `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
 
 
 #### TLSSettings
@@ -2077,7 +2077,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `tcp` _[TCPTimeout](#tcptimeout)_ | Timeout settings for TCP. |
-| `http` _[HTTPTimeout](#httptimeout)_ | // Timeout settings for HTTP. |
+| `http` _[HTTPTimeout](#httptimeout)_ | Timeout settings for HTTP. |
 
 
 #### TracingProvider

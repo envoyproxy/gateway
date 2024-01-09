@@ -1425,8 +1425,8 @@ func (in *HTTPTimeout) DeepCopyInto(out *HTTPTimeout) {
 		*out = new(apisv1.Duration)
 		**out = **in
 	}
-	if in.ConnectionDuration != nil {
-		in, out := &in.ConnectionDuration, &out.ConnectionDuration
+	if in.MaxConnectionDuration != nil {
+		in, out := &in.MaxConnectionDuration, &out.MaxConnectionDuration
 		*out = new(apisv1.Duration)
 		**out = **in
 	}

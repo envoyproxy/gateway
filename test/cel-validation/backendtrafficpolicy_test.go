@@ -775,7 +775,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 						HTTP: &egv1a1.HTTPTimeout{
 							ConnectionIdleTimeout: &d,
-							ConnectionDuration:    &d,
+							MaxConnectionDuration: &d,
 						},
 					},
 				}

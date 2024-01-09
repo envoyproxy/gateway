@@ -738,17 +738,17 @@ spec:
                 description: Timeout settings for the backend connections.
                 properties:
                   http:
-                    description: // Timeout settings for HTTP.
+                    description: Timeout settings for HTTP.
                     properties:
-                      connectionDuration:
-                        description: 'The maximum duration of an persistent HTTPTimeout
-                          connections. Default: unlimited.'
+                      connectionIdleTimeout:
+                        description: 'The idle timeout for an HTTP connection. Idle
+                          time is defined as a period in which there are no active
+                          requests in the connection. Default: 1 hour.'
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
-                      connectionIdleTimeout:
-                        description: 'The idle timeout for persistent HTTPTimeout
-                          connections. Idle time is defined as a period in which there
-                          are no active requests in the connection. Default: 1 hour.'
+                      maxConnectionDuration:
+                        description: 'The maximum duration of an HTTP connection.
+                          Default: unlimited.'
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
@@ -756,8 +756,8 @@ spec:
                     description: Timeout settings for TCP.
                     properties:
                       connectTimeout:
-                        description: 'The timeout for new network connection establishment,
-                          including TCPTimeout and TLS handshakes. Default: 10 seconds.'
+                        description: 'The timeout for network connection establishment,
+                          including TCP and TLS handshakes. Default: 10 seconds.'
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
