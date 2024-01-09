@@ -190,8 +190,8 @@ type HTTPListener struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
 	// for more info.
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
-	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	TLS []*TLSListenerConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
@@ -225,10 +225,8 @@ func (h HTTPListener) Validate() error {
 		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
-		for t := range h.TLS {
-			if err := h.TLS[t].Validate(); err != nil {
-				errs = multierror.Append(errs, err)
-			}
+		if err := h.TLS.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
 	for _, route := range h.Routes {
@@ -239,9 +237,43 @@ func (h HTTPListener) Validate() error {
 	return errs
 }
 
-// TLSListenerConfig holds the configuration for downstream TLS context.
+type TLSVersion egv1a1.TLSVersion
+
+const (
+	// TLSAuto allows Envoy to choose the optimal TLS Version
+	TLSAuto = TLSVersion(egv1a1.TLSAuto)
+	// TLSv10 specifies TLS version 1.0
+	TLSv10 = TLSVersion(egv1a1.TLSv10)
+	// TLSv11 specifies TLS version 1.1
+	TLSv11 = TLSVersion(egv1a1.TLSv11)
+	// TLSv12 specifies TLS version 1.2
+	TLSv12 = TLSVersion(egv1a1.TLSv12)
+	// TLSv13 specifies TLS version 1.3
+	TLSv13 = TLSVersion(egv1a1.TLSv13)
+)
+
+// TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
-type TLSListenerConfig struct {
+type TLSConfig struct {
+	// Certificates contains the set of certificates associated with this listener
+	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
+	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
+	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
+	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
+	MaxVersion *TLSVersion `json:"maxVersion,omitempty" yaml:"version,omitempty"`
+	// CipherSuites supported by this listener
+	Ciphers []string `json:"ciphers,omitempty" yaml:"ciphers,omitempty"`
+	// EDCHCurves supported by this listener
+	ECDHCurves []string `json:"ecdhCurves,omitempty" yaml:"ecdhCurves,omitempty"`
+	// SignatureAlgorithms supported by this listener
+	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
+	// ALPNProtocols exposed by this listener
+	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+}
+
+// TLSCertificate holds a single certificate's details
+// +k8s:deepcopy-gen=true
+type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
 	// ServerCertificate of the server.
@@ -250,8 +282,7 @@ type TLSListenerConfig struct {
 	PrivateKey []byte `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
 
-// Validate the fields within the TLSListenerConfig structure
-func (t TLSListenerConfig) Validate() error {
+func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.ServerCertificate) == 0 {
 		errs = multierror.Append(errs, ErrTLSServerCertEmpty)
@@ -259,6 +290,22 @@ func (t TLSListenerConfig) Validate() error {
 	if len(t.PrivateKey) == 0 {
 		errs = multierror.Append(errs, ErrTLSPrivateKey)
 	}
+	return errs
+}
+
+// Validate the fields within the TLSListenerConfig structure
+func (t TLSConfig) Validate() error {
+	var errs error
+	for _, cert := range t.Certificates {
+		if err := cert.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	// Correct values for cipher suites, ECDH curves, and signature algorithms are
+	// dependent on the version of EnvoyProxy being used - different values are valid
+	// depending if Envoy was compiled against BoringSSL or OpenSSL, or even the exact version
+	// of each of these libraries.
+	// Validation for TLS versions was done with CEL
 	return errs
 }
 
@@ -857,7 +904,7 @@ type TLS struct {
 	// connections' server names are inspected and routed to backends accordingly.
 	Passthrough *TLSInspectorConfig `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
 	// TLS information required for TLS Termination
-	Terminate []*TLSListenerConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
+	Terminate *TLSConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
 }
 
 // Validate the fields within the TCPListener structure
@@ -879,10 +926,8 @@ func (h TCPListener) Validate() error {
 	}
 
 	if h.TLS != nil && h.TLS.Terminate != nil {
-		for t := range h.TLS.Terminate {
-			if err := h.TLS.Terminate[t].Validate(); err != nil {
-				errs = multierror.Append(errs, err)
-			}
+		if err := h.TLS.Terminate.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
 
