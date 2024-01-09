@@ -136,10 +136,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress: &wrappers.BoolValue{Value: true},
 		// normalize paths according to RFC 3986
-		NormalizePath: &wrapperspb.BoolValue{Value: true},
-		// merge adjacent slashes in the path
-		MergeSlashes:                 true,
-		PathWithEscapedSlashesAction: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
+		NormalizePath:                &wrapperspb.BoolValue{Value: true},
+		MergeSlashes:                 irListener.Path.MergeSlashes,
+		PathWithEscapedSlashesAction: translateEscapePath(irListener.Path.EscapedSlashesAction),
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
 		},
@@ -538,4 +537,18 @@ func makeConfigSource() *corev3.ConfigSource {
 		Ads: &corev3.AggregatedConfigSource{},
 	}
 	return source
+}
+
+func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction {
+
+	lookup := map[ir.PathEscapedSlashAction]hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction{
+		ir.KeepUnchangedAction: hcmv3.HttpConnectionManager_KEEP_UNCHANGED,
+		ir.RejectRequestAction: hcmv3.HttpConnectionManager_REJECT_REQUEST,
+		ir.UnescapeAndRedirect: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
+		ir.UnescapeAndForward:  hcmv3.HttpConnectionManager_UNESCAPE_AND_FORWARD,
+	}
+	if r, found := lookup[in]; found {
+		return r
+	}
+	return hcmv3.HttpConnectionManager_IMPLEMENTATION_SPECIFIC_DEFAULT
 }

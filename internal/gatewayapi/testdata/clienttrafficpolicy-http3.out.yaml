@@ -130,6 +130,9 @@ xdsIR:
       http3: {}
       isHTTP2: false
       name: envoy-gateway/gateway-1/tls
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10443
       routes:
       - backendWeights:
