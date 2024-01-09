@@ -5,8 +5,8 @@
 
 package v1alpha1
 
-// +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == 'v1_3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
-// +kubebuilder:validation:XValidation:rule="has(self.minVersion) && has(self.maxVersion) ? {\"Auto\":0,\"v1_1\":1,\"v1_2\":2,\"v1_3\":3}[self.minVersion] <= {\"v1_1\":1,\"v1_2\":2,\"v1_3\":3,\"Auto\":4}[self.maxVersion] : !has(self.minVersion) && has(self.maxVersion) ? 2 <= {\"v1_1\":1,\"v1_2\":2,\"v1_3\":3,\"Auto\":4}[self.maxVersion] : true", message="minVersion must be smaller or equal to maxVersion"
+// +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
+// +kubebuilder:validation:XValidation:rule="has(self.minVersion) && has(self.maxVersion) ? {\"Auto\":0,\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4}[self.minVersion] <= {\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4,\"Auto\":5}[self.maxVersion] : !has(self.minVersion) && has(self.maxVersion) ? 3 <= {\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4,\"Auto\":5}[self.maxVersion] : true", message="minVersion must be smaller or equal to maxVersion"
 type TLSSettings struct {
 
 	// Min specifies the minimal TLS protocol version to allow.
@@ -57,43 +57,46 @@ type TLSSettings struct {
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty"`
 
 	// ALPNProtocols supplies the list of ALPN protocols that should be
-	// exposed by the listener. By default http/2 and http/1.1 are enabled.
+	// exposed by the listener. By default h2 and http/1.1 are enabled.
 	//
 	// Supported values are:
 	// - http/1.0
 	// - http/1.1
-	// - http/2
+	// - h2
 	//
 	// +optional
 	ALPNProtocols []ALPNProtocol `json:"alpnProtocols,omitempty"`
 }
 
 // ALPNProtocol specifies the protocol to be negotiated using ALPN
-// +kubebuilder:validation:Enum=http/1.0;http/1.1;http/2
+// +kubebuilder:validation:Enum=http/1.0;http/1.1;h2
 type ALPNProtocol string
 
+// When adding ALPN constants, they must be values that are defined
+// in the IANA registry for ALPN identification sequences
+// https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
 const (
 	// HTTPProtocolVersion1_0 specifies that HTTP/1.0 should be negotiable with ALPN
 	HTTPProtocolVersion1_0 ALPNProtocol = "http/1.0"
 	// HTTPProtocolVersion1_1 specifies that HTTP/1.1 should be negotiable with ALPN
 	HTTPProtocolVersion1_1 ALPNProtocol = "http/1.1"
 	// HTTPProtocolVersion2 specifies that HTTP/2 should be negotiable with ALPN
-	HTTPProtocolVersion2 ALPNProtocol = "http/2"
+	HTTPProtocolVersion2 ALPNProtocol = "h2"
 )
 
 // TLSVersion specifies the TLS version
-// +kubebuilder:validation:Enum=Auto;v1_0;v1_1;v1_2;v1_3
+// +kubebuilder:validation:Enum=Auto;"1.0";"1.1";"1.2";"1.3"
 type TLSVersion string
 
 const (
 	// TLSAuto allows Envoy to choose the optimal TLS Version
 	TLSAuto TLSVersion = "Auto"
-	// TLSv1_0 specifies TLS version 1.0
-	TLSv10 TLSVersion = "v1_0"
-	// TLSv1_1 specifies TLS version 1.1
-	TLSv11 TLSVersion = "v1_1"
+	// TLS1.0 specifies TLS version 1.0
+	TLSv10 TLSVersion = "1.0"
+	// TLS1.1 specifies TLS version 1.1
+	TLSv11 TLSVersion = "1.1"
 	// TLSv1.2 specifies TLS version 1.2
-	TLSv12 TLSVersion = "v1_2"
+	TLSv12 TLSVersion = "1.2"
 	// TLSv1.3 specifies TLS version 1.3
-	TLSv13 TLSVersion = "v1_3"
+	TLSv13 TLSVersion = "1.3"
 )

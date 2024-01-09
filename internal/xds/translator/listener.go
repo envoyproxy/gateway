@@ -340,17 +340,18 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	return nil
 }
 
-func buildDownstreamQUICTransportSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &quicv3.QuicDownstreamTransport{
 		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
-				AlpnProtocols: []string{"h3"},
+				TlsParams:     buildTLSParams(tlsConfig),
+				AlpnProtocols: buildALPNProtocols(tlsConfig.ALPNProtocols),
 			},
 			RequireClientCertificate: &wrappers.BoolValue{Value: false},
 		},
 	}
 
-	for _, tlsConfig := range tlsConfigs {
+	for _, tlsConfig := range tlsConfig.Certificates {
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
 			tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs,
 			&tlsv3.SdsSecretConfig{
@@ -371,15 +372,16 @@ func buildDownstreamQUICTransportSocket(tlsConfigs []*ir.TLSListenerConfig) (*co
 	}, nil
 }
 
-func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
-			AlpnProtocols:                  []string{"h2", "http/1.1"},
+			TlsParams:                      buildTLSParams(tlsConfig),
+			AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols),
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
 	}
 
-	for _, tlsConfig := range tlsConfigs {
+	for _, tlsConfig := range tlsConfig.Certificates {
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
 			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
 			&tlsv3.SdsSecretConfig{
@@ -401,7 +403,56 @@ func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.Tr
 	}, nil
 }
 
-func buildXdsDownstreamTLSSecret(tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret {
+func buildTLSParams(tlsConfig *ir.TLSConfig) *tlsv3.TlsParameters {
+	p := &tlsv3.TlsParameters{}
+	isEmpty := true
+	if tlsConfig.MinVersion != nil {
+		p.TlsMinimumProtocolVersion = buildTLSVersion(tlsConfig.MinVersion)
+		isEmpty = false
+	}
+	if tlsConfig.MaxVersion != nil {
+		p.TlsMaximumProtocolVersion = buildTLSVersion(tlsConfig.MaxVersion)
+		isEmpty = false
+	}
+	if len(tlsConfig.Ciphers) > 0 {
+		p.CipherSuites = tlsConfig.Ciphers
+		isEmpty = false
+	}
+	if len(tlsConfig.ECDHCurves) > 0 {
+		p.EcdhCurves = tlsConfig.ECDHCurves
+		isEmpty = false
+	}
+	if len(tlsConfig.SignatureAlgorithms) > 0 {
+		p.SignatureAlgorithms = tlsConfig.SignatureAlgorithms
+		isEmpty = false
+	}
+	if isEmpty {
+		return nil
+	}
+	return p
+}
+
+func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
+	lookup := map[ir.TLSVersion]tlsv3.TlsParameters_TlsProtocol{
+		ir.TLSv10: tlsv3.TlsParameters_TLSv1_0,
+		ir.TLSv11: tlsv3.TlsParameters_TLSv1_1,
+		ir.TLSv12: tlsv3.TlsParameters_TLSv1_2,
+		ir.TLSv13: tlsv3.TlsParameters_TLSv1_3,
+	}
+	if r, found := lookup[*version]; found {
+		return r
+	}
+	return tlsv3.TlsParameters_TLS_AUTO
+}
+
+func buildALPNProtocols(alpn []string) []string {
+	if len(alpn) == 0 {
+		return []string{"h2", "http/1.1"}
+	}
+	return alpn
+}
+
+func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 	// Build the tls secret
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,

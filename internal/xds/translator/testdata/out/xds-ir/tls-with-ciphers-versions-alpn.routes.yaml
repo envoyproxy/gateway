@@ -6,10 +6,6 @@
     name: first-listener/*
     routes:
     - match:
-        headers:
-        - name: user
-          stringMatch:
-            exact: jason
         prefix: /
       name: first-route
       route:
