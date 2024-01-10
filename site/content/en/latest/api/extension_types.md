@@ -2010,18 +2010,12 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. 
- The default is TLS 1.2 if this is not specified. |
-| `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow 
- The default is TLS 1.3 if this is not specified. |
-| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. 
- In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 
- In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
-| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 
- In builds using BoringSSL FIPS the default curve is: - P-256 |
+| `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. The default is TLS 1.2 if this is not specified. |
+| `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow The default is TLS 1.3 if this is not specified. |
+| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
+| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 In builds using BoringSSL FIPS the default curve is: - P-256 |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
-| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. 
- Supported values are: - http/1.0 - http/1.1 - h2 |
+| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. Supported values are: - http/1.0 - http/1.1 - h2 |
 
 
 #### TLSVersion
