@@ -237,6 +237,27 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "setting ciphers with minimum TLS version set to 1.3",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					TLS: &egv1a1.TLSSettings{
+						MinVersion: ptr.To(egv1a1.TLSv13),
+						Ciphers:    []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]"},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.tls: Invalid value: \"object\": setting ciphers has no effect if the minimum possible TLS version is 1.3",
+			},
+		},
 	}
 
 	for _, tc := range cases {
