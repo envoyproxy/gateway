@@ -4,6 +4,9 @@ http:
   port: 10080
   hostnames:
   - "foo.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   tls:
     alpnProtocols:
     - h2

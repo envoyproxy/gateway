@@ -5,6 +5,9 @@ http:
   hostnames:
   - "foo.com"
   tcpKeepalive: {}
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "first-route"
     hostname: "*"
@@ -23,6 +26,9 @@ http:
     probes: 7
     interval: 200
     idleTime: 50
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "second-route"
     hostname: "*"

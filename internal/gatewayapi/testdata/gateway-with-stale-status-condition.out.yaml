@@ -107,6 +107,9 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: default/gateway-1/https
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10443
       routes:
       - backendWeights:

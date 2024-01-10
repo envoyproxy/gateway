@@ -233,6 +233,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "tls-with-ciphers-versions-alpn",
 		},
+		{
+			name: "path-settings",
+		},
 	}
 
 	for _, tc := range testCases {
