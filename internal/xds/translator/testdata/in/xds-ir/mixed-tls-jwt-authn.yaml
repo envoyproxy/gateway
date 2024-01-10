@@ -4,6 +4,9 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   tls:
   - name: first-listener
     # byte slice representation of "cert-data"

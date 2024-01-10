@@ -1,0 +1,18 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: false
+    escapedSlashesAction: UnescapeAndForward
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

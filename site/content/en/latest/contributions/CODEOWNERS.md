@@ -7,13 +7,15 @@ description: "This section includes Maintainers of Envoy Gateway."
 
 - @AliceProxy
 - @arkodg
+- @qicz
 - @Xunzhuo
 - @zirain
-- @qicz
+- @zhaohuabing
 
 ## Emeritus Maintainers
 
-- @danehans
 - @alexgervais
+- @danehans
+- @LukeShu
 - @skriss
 - @youngnick

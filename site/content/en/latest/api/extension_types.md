@@ -2050,8 +2050,8 @@ _Appears in:_
 | `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 
  In builds using BoringSSL FIPS the default curve is: - P-256 |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
-| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default http/2 and http/1.1 are enabled. 
- Supported values are: - http/1.0 - http/1.1 - http/2 |
+| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. 
+ Supported values are: - http/1.0 - http/1.1 - h2 |
 
 
 #### TLSVersion

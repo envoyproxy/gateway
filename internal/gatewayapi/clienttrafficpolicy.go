@@ -295,6 +295,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		// Translate Suppress Envoy Headers
 		translateListenerSuppressEnvoyHeaders(policySpec.SuppressEnvoyHeaders, httpIR)
 
+		// Translate Path Settings
+		translatePathSettings(policySpec.Path, httpIR)
+
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policySpec.HTTP3 != nil {
 			httpIR.HTTP3 = &ir.HTTP3Settings{}
@@ -309,6 +312,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 				proxyListenerIR.HTTP3 = &ir.HTTP3Settings{}
 			}
 		}
+
+		// Translate TLS parameters
+		translateListenerTLSParameters(policySpec.TLS, httpIR)
 	}
 }
 
@@ -343,6 +349,18 @@ func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir
 	httpIR.TCPKeepalive = irTCPKeepalive
 }
 
+func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPListener) {
+	if pathSettings == nil {
+		return
+	}
+	if pathSettings.DisableMergeSlashes != nil {
+		httpIR.Path.MergeSlashes = !*pathSettings.DisableMergeSlashes
+	}
+	if pathSettings.EscapedSlashesAction != nil {
+		httpIR.Path.EscapedSlashesAction = ir.PathEscapedSlashAction(*pathSettings.EscapedSlashesAction)
+	}
+}
+
 func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {
 	// Return early if not set
 	if enableProxyProtocol == nil {
@@ -357,5 +375,47 @@ func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPLi
 func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *ir.HTTPListener) {
 	if suppressEnvoyHeaders != nil {
 		httpIR.SuppressEnvoyHeaders = *suppressEnvoyHeaders
+	}
+}
+
+func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HTTPListener) {
+	// Return if this listener isn't a TLS listener. There has to be
+	// at least one certificate defined, which would cause httpIR to
+	// have a TLS structure.
+	if httpIR.TLS == nil {
+		return
+	}
+	// Make sure that the negotiated TLS protocol version is as expected if TLS is used,
+	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
+	httpIR.TLS.MinVersion = ptr.To(ir.TLSv12)
+	httpIR.TLS.MaxVersion = ptr.To(ir.TLSv13)
+	// If HTTP3 is enabled, the ALPN protocols array should be hardcoded
+	// for HTTP3
+	if httpIR.HTTP3 != nil {
+		httpIR.TLS.ALPNProtocols = []string{"h3"}
+	} else if tlsParams != nil && len(tlsParams.ALPNProtocols) > 0 {
+		httpIR.TLS.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
+		for i := range tlsParams.ALPNProtocols {
+			httpIR.TLS.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
+		}
+	}
+	// Return early if not set
+	if tlsParams == nil {
+		return
+	}
+	if tlsParams.MinVersion != nil {
+		httpIR.TLS.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
+	}
+	if tlsParams.MaxVersion != nil {
+		httpIR.TLS.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
+	}
+	if len(tlsParams.Ciphers) > 0 {
+		httpIR.TLS.Ciphers = tlsParams.Ciphers
+	}
+	if len(tlsParams.ECDHCurves) > 0 {
+		httpIR.TLS.ECDHCurves = tlsParams.ECDHCurves
+	}
+	if len(tlsParams.SignatureAlgorithms) > 0 {
+		httpIR.TLS.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
 }

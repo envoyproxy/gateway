@@ -230,6 +230,12 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "fault-injection",
 		},
+		{
+			name: "tls-with-ciphers-versions-alpn",
+		},
+		{
+			name: "path-settings",
+		},
 	}
 
 	for _, tc := range testCases {
