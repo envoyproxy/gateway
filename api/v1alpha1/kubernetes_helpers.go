@@ -66,7 +66,8 @@ func DefaultResourceRequirements() *corev1.ResourceRequirements {
 // DefaultKubernetesService returns a new KubernetesServiceSpec with default settings.
 func DefaultKubernetesService() *KubernetesServiceSpec {
 	return &KubernetesServiceSpec{
-		Type: DefaultKubernetesServiceType(),
+		Type:                  DefaultKubernetesServiceType(),
+		ExternalTrafficPolicy: DefaultKubernetesServiceExternalTrafficPolicy(),
 	}
 }
 
@@ -78,6 +79,14 @@ func DefaultKubernetesServiceType() *ServiceType {
 // GetKubernetesServiceType returns the KubernetesServiceType pointer.
 func GetKubernetesServiceType(serviceType ServiceType) *ServiceType {
 	return &serviceType
+}
+
+func DefaultKubernetesServiceExternalTrafficPolicy() *ServiceExternalTrafficPolicy {
+	return GetKubernetesServiceExternalTrafficPolicy(ServiceExternalTrafficPolicyLocal)
+}
+
+func GetKubernetesServiceExternalTrafficPolicy(serviceExternalTrafficPolicy ServiceExternalTrafficPolicy) *ServiceExternalTrafficPolicy {
+	return &serviceExternalTrafficPolicy
 }
 
 // defaultKubernetesDeploymentSpec fill a default KubernetesDeploymentSpec if unspecified.
