@@ -38,6 +38,21 @@ _Appears in:_
 
 
 
+#### BackOffPolicy
+
+
+
+
+
+_Appears in:_
+- [PerRetryPolicy](#perretrypolicy)
+
+| Field | Description |
+| --- | --- |
+| `baseInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | BaseInterval is the base interval between retries. |
+| `maxInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set. The default is 10 times the base_interval |
+
+
 #### BackendTrafficPolicy
 
 
@@ -90,6 +105,8 @@ _Appears in:_
 | `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `isRetryAble` _boolean_ | IsRetryAble indicates whether to enable budget retries with a 20% retry budget. |
+| `retryStrategy` _[RetryStrategy](#retrystrategy)_ | RetryStrategy provides more advanced retry usage, which allows users to customize the retry method (number of retries、retry budget and concurrency max retries), retry fallback strategy, and retry triggering conditions |
 
 
 
@@ -1400,6 +1417,22 @@ _Appears in:_
 | `disableMergeSlashes` _boolean_ | DisableMergeSlashes allows disabling the default configuration of merging adjacent slashes in the path. Note that slash merging is not part of the HTTP spec and is provided for convenience. |
 
 
+#### PerRetryPolicy
+
+
+
+
+
+_Appears in:_
+- [RetryStrategy](#retrystrategy)
+
+| Field | Description |
+| --- | --- |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Timeout is the timeout per retry attempt. |
+| `idleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | IdleTimeout is the upstream idle timeout per retry attempt.This parameter is optional and if absent there is no per try idle timeout. |
+| `backOff` _[BackOffPolicy](#backoffpolicy)_ | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential back-off algorithm for retries. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
+
+
 #### ProviderType
 
 _Underlying type:_ `string`
@@ -1852,6 +1885,40 @@ _Appears in:_
 
 
 
+#### RetryOn
+
+
+
+
+
+_Appears in:_
+- [RetryStrategy](#retrystrategy)
+
+| Field | Description |
+| --- | --- |
+| `triggers` _[TriggerEnum](#triggerenum) array_ | Triggers specifies the retry trigger condition(Http/Grpc). |
+| `httpStatusCodes` _integer array_ | HttpStatusCodes specifies the http status codes to be retried. |
+
+
+#### RetryStrategy
+
+
+
+RetryStrategy defines the retry strategy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `maxRetries` _integer_ | NumRetries is the number of retries to be attempted. Defaults to 0. If nonzero, maxBudget is ignored. |
+| `maxBudget` _integer_ | MaxBudget is specifies the limit on concurrent retries as a percentage of the sum of active requests and active pending requests. For example, if there are 100 active requests and the MaxBudget is set to 25, there may be 25 active retries. This parameter is optional. Defaults to 20%. |
+| `minConcurrent` _integer_ | Minconcurrent specifies the minimum retry concurrency allowed for the retry budget. The limit on the number of active retries may never go below this number. This parameter is optional. Defaults to 3. |
+| `maxParallel` _integer_ | MaxParallel is the maximum number of parallel retries. If not specified, the default is 3. Priority lower than retry budget. |
+| `retryOn` _[RetryOn](#retryon)_ | RetryOn specifies the retry trigger condition. |
+| `perRetry` _[PerRetryPolicy](#perretrypolicy)_ | PerRetry is the retry policy to be applied per retry attempt. |
+
+
 #### SecurityPolicy
 
 
@@ -2053,6 +2120,17 @@ _Underlying type:_ `string`
 
 _Appears in:_
 - [TracingProvider](#tracingprovider)
+
+
+
+#### TriggerEnum
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [RetryOn](#retryon)
 
 
 

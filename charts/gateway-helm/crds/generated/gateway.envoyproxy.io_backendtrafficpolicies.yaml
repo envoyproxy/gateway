@@ -302,6 +302,10 @@ spec:
                   rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
                 - message: If Health Checker type is TCP, tcp field needs to be set.
                   rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
+              isRetryAble:
+                description: IsRetryAble indicates whether to enable budget retries
+                  with a 20% retry budget.
+                type: boolean
               loadBalancer:
                 description: LoadBalancer policy to apply when routing traffic from
                   the gateway to the backend endpoints
@@ -655,6 +659,84 @@ spec:
                     type: string
                 required:
                 - type
+                type: object
+              retryStrategy:
+                description: RetryStrategy provides more advanced retry usage, which
+                  allows users to customize the retry method (number of retries、retry
+                  budget and concurrency max retries), retry fallback strategy, and
+                  retry triggering conditions
+                properties:
+                  maxBudget:
+                    description: MaxBudget is specifies the limit on concurrent retries
+                      as a percentage of the sum of active requests and active pending
+                      requests. For example, if there are 100 active requests and
+                      the MaxBudget is set to 25, there may be 25 active retries.
+                      This parameter is optional. Defaults to 20%.
+                    type: integer
+                  maxParallel:
+                    description: MaxParallel is the maximum number of parallel retries.
+                      If not specified, the default is 3. Priority lower than retry
+                      budget.
+                    type: integer
+                  maxRetries:
+                    description: NumRetries is the number of retries to be attempted.
+                      Defaults to 0. If nonzero, maxBudget is ignored.
+                    type: integer
+                  minConcurrent:
+                    description: Minconcurrent specifies the minimum retry concurrency
+                      allowed for the retry budget. The limit on the number of active
+                      retries may never go below this number. This parameter is optional.
+                      Defaults to 3.
+                    type: integer
+                  perRetry:
+                    description: PerRetry is the retry policy to be applied per retry
+                      attempt.
+                    properties:
+                      backOff:
+                        description: Backoff is the backoff policy to be applied per
+                          retry attempt. gateway uses a fully jittered exponential
+                          back-off algorithm for retries. For additional details,
+                          see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries
+                        properties:
+                          baseInterval:
+                            description: BaseInterval is the base interval between
+                              retries.
+                            format: duration
+                            type: string
+                          maxInterval:
+                            description: MaxInterval is the maximum interval between
+                              retries. This parameter is optional, but must be greater
+                              than or equal to the base_interval if set. The default
+                              is 10 times the base_interval
+                            format: duration
+                            type: string
+                        type: object
+                      idleTimeout:
+                        description: IdleTimeout is the upstream idle timeout per
+                          retry attempt.This parameter is optional and if absent there
+                          is no per try idle timeout.
+                        format: duration
+                        type: string
+                      timeout:
+                        description: Timeout is the timeout per retry attempt.
+                        format: duration
+                        type: string
+                    type: object
+                  retryOn:
+                    description: RetryOn specifies the retry trigger condition.
+                    properties:
+                      httpStatusCodes:
+                        description: HttpStatusCodes specifies the http status codes
+                          to be retried.
+                        items:
+                          type: integer
+                        type: array
+                      triggers:
+                        description: Triggers specifies the retry trigger condition(Http/Grpc).
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               targetRef:
                 description: targetRef is the name of the resource this policy is
