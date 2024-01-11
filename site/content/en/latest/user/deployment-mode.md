@@ -16,7 +16,7 @@ in different namespaces, linking a GatewayClass to each of them.
 
 * The default deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
-* Envoy Gateway also supports **Namespaced** deployment mode, you can watch resources in the specific namespaces by assigning
+* Envoy Gateway also supports [Namespaced deployment mode][], you can watch resources in the specific namespaces by assigning
 `EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelectors` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
 * Support for alternate deployment modes is being tracked [here][issue1117].
 
@@ -410,5 +410,6 @@ Handling connection for 8889
 ```
 
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+[Namespaced deployment mode]: ../../api/extension_types#kuberneteswatchmode
 [issue1231]: https://github.com/envoyproxy/gateway/issues/1231
 [issue1117]: https://github.com/envoyproxy/gateway/issues/1117
