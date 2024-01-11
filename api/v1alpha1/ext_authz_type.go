@@ -21,8 +21,8 @@ const (
 	HTTP ExtAuthServiceType = "HTTP"
 )
 
-// ExtAuthz defines the configuration for External Authorization.
-type ExtAuthz struct {
+// ExtAuth defines the configuration for External Authorization.
+type ExtAuth struct {
 	// Type decides the type of External Authorization.
 	// Valid ExtAuthServiceType values are "GRPC" or "HTTP".
 	//
@@ -31,27 +31,24 @@ type ExtAuthz struct {
 
 	// GRPCService defines the gRPC External Authorization service
 	// Only one of GRPCService or HTTPService may be specified.
-	GRPCService *GRPCService `json:"grpcService,omitempty" yaml:"grpcService"`
+	GRPCService *GRPCExtAuthService `json:"grpcService,omitempty" yaml:"grpcService"`
 
 	// HTTPService defines the HTTP External Authorization service
 	// Only one of GRPCService or HTTPService may be specified.
-	HTTPService *HTTPService `json:"httpService,omitempty" yaml:"httpService"`
+	HTTPService *HTTPExtAuthService `json:"httpService,omitempty" yaml:"httpService"`
 }
 
-// GRPCService defines the gRPC External Authorization service
-type GRPCService struct {
+// GRPCExtAuthService defines the gRPC External Authorization service
+type GRPCExtAuthService struct {
 	// Host ist the hostname of the gRPC External Authorization service
 	Host gwapiv1a2.Hostname `json:"host,omitempty" yaml:"host,omitempty"`
 
 	// Port is the network port of the gRPC External Authorization service
 	Port gwapiv1a2.PortNumber `json:"port"`
-
-	// TLS defines the TLS configuration for the gRPC External Authorization service
-	TLS *TLSConfig `json:"tlsSettings,omitempty" yaml:"tlsSettings"`
 }
 
-// HTTPService defines the HTTP External Authorization service
-type HTTPService struct {
+// HTTPExtAuthService defines the HTTP External Authorization service
+type HTTPExtAuthService struct {
 	// URL is the URL of the HTTP External Authorization service.
 	// The URL must be a fully qualified URL with a scheme, hostname, and optional port and path. Parameters are not allowed.
 	// The URL must use either the http or https scheme.
