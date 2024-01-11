@@ -12,6 +12,10 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 # `go get`-able things
 # ====================
 #
+define go_install
+    GOOS= GOARCH= GOBIN=$(ROOT_DIR)/$(tools.bindir) go install $(1)
+endef
+
 tools/controller-gen     = $(tools.bindir)/controller-gen
 tools/golangci-lint      = $(tools.bindir)/golangci-lint
 tools/kustomize          = $(tools.bindir)/kustomize
@@ -22,9 +26,33 @@ tools/buf                = $(tools.bindir)/buf
 tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
 tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
 tools/helm-docs          = $(tools.bindir)/helm-docs
-$(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
-	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
 
+$(tools.bindir)/controller-gen:
+	$(call go_install,sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0)
+
+$(tools.bindir)/golangci-lint:
+	$(call go_install,github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2)
+
+$(tools.bindir)/kind:
+	$(call go_install,sigs.k8s.io/kind@v0.20.0)
+
+$(tools.bindir)/setup-envtest:
+	$(call go_install,sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20220706173534-cd0058ad295c)
+
+$(tools.bindir)/crd-ref-docs:
+	$(call go_install,github.com/elastic/crd-ref-docs@v0.0.9)
+
+$(tools.bindir)/buf:
+	$(call go_install,github.com/bufbuild/buf/cmd/buf@v1.28.1)
+
+$(tools.bindir)/protoc-gen-go:
+	$(call go_install,google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0)
+
+$(tools.bindir)/protoc-gen-go-grpc:
+	$(call go_install,google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0)
+
+$(tools.bindir)/helm-docs:
+	$(call go_install,github.com/norwoodj/helm-docs/cmd/helm-docs@v1.12.0)
 
 # `pip install`-able things
 # =========================

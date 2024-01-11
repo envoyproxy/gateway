@@ -36,26 +36,6 @@ updates:
     directory: /tools/src/codespell
     schedule:
       interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/helm-docs
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/buf
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/golangci-lint
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/kind
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/setup-envtest
-    schedule:
-      interval: weekly
   - package-ecosystem: pip
     directory: /tools/src/sphinx-build
     schedule:
