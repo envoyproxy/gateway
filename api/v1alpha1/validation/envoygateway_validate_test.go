@@ -415,7 +415,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: false,
-		}, {
+		},
+		{
 			name: "valid gateway metrics sink",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
@@ -438,7 +439,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: true,
-		}, {
+		},
+		{
 			name: "invalid gateway metrics sink",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
@@ -450,6 +452,94 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								{
 									Type: v1alpha1.MetricSinkTypeOpenTelemetry,
 								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "invalid gateway watch mode",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: "foobar",
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "happy namespaces must be set when watch mode is Namespaces",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type:       v1alpha1.KubernetesWatchModeTypeNamespaces,
+								Namespaces: []string{"foo"},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "fail namespaces is not be set when watch mode is Namespaces",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type:               v1alpha1.KubernetesWatchModeTypeNamespaces,
+								NamespaceSelectors: []string{"foo"},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "happy namespaceSelectors must be set when watch mode is NamespaceSelectors",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type:               v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
+								NamespaceSelectors: []string{"foo"},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "fail namespaceSelectors is not be set when watch mode is NamespaceSelectors",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
 							},
 						},
 					},
