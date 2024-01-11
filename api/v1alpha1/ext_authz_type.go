@@ -46,7 +46,8 @@ type ExtAuth struct {
 
 	// AllowedHeaders defines the client request headers that will be included
 	// in the request to the external authorization service.
-	// Note: If not specified, all headers will be included in the check request
+	// Note: If not specified, the default behavior of different external authorization
+	// services is different. All headers will be included in the check request
 	// to a gRPC authorization server, whereas no headers will be included in the
 	// check request to an HTTP authorization server.
 	AllowedHeaders []string `json:"allowedHeaders,omitempty" yaml:"allowedHeaders,omitempty"`
@@ -73,7 +74,8 @@ type HTTPExtAuthService struct {
 	// and optional port and path. Parameters are not allowed.
 	// The URL must use either the http or https scheme.
 	// If port is not specified, 80 for http and 443 for https are assumed.
-	// If path is specified, the authorization request will be sent to the path.
+	// If path is specified, the authorization request will be sent to that path,
+	// or else the authorization request will be sent to the root path.
 	URl string `json:"url" yaml:"url"`
 
 	// TLS defines the TLS configuration for the HTTP External Authorization service.
