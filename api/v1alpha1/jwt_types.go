@@ -89,9 +89,35 @@ type ClaimToHeader struct {
 
 // JWTExtractor defines a custom JWT token extraction from HTTP request.
 type JWTExtractor struct {
+	// Headers represents a list of HTTP request headers to extract the JWT token from.
+	//
+	// +optional
+	Headers []JWTHeaderExtractor `json:"headers,omitempty"`
+
 	// Cookies represents a list of cookie names to extract the JWT token from.
 	// If specified, Envoy will extract the JWT token from the listed cookies and validate each of them.
 	// If any cookie is found to be an invalid JWT, a 401 error will be returned.
 	//
+	// +optional
 	Cookies []string `json:"cookies,omitempty"`
+
+	// Params represents a list of query parameters to extract the JWT token from.
+	//
+	// +optional
+	Params []string `json:"params,omitempty"`
+}
+
+// JWTHeaderExtractor defines an HTTP header location to extract JWT token
+type JWTHeaderExtractor struct {
+	// Name is the HTTP header name to retrieve the token
+	//
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// ValuePrefix is the prefix that should be stripped before extracting the token.
+	// The format would be used by Envoy like "{ValuePrefix}<TOKEN>".
+	// For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end.
+	//
+	// +optional
+	ValuePrefix *string `json:"valuePrefix,omitempty"`
 }
