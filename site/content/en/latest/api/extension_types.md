@@ -1212,7 +1212,7 @@ _Appears in:_
 | `loadBalancerClass` _string_ | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` _boolean_ | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` _string_ | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
-| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ | Determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
+| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 
 
 #### KubernetesWatchMode
@@ -1904,14 +1904,17 @@ _Appears in:_
 | `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 
 
+
+
 #### ServiceExternalTrafficPolicy
 
 _Underlying type:_ `string`
 
-ServiceExternalTrafficPolicy string describes external traffic policies for a service
+ServiceExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs.
 
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
+
 
 
 #### ServiceType
