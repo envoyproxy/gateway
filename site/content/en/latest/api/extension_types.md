@@ -260,6 +260,7 @@ _Appears in:_
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds |
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
+| `upstreamHTTPVersion` | _[HTTPVersion](#httpversion)_ |  false  | UpstreamHTTPVersion defines which HTTP version to use for connecting to the attached backend.<br />This option can only be specified on policies attached to HTTPRoute targetRefs.<br />If not specified, the default is "SameAsDownstream". |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 
 
@@ -1531,6 +1532,17 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `connectionIdleTimeout` | _[Duration](#duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](#duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+
+
+#### HTTPVersion
+
+_Underlying type:_ _string_
+
+HTTPVersion defines HTTP version selection options
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
 
 
 #### HTTPWasmCodeSource

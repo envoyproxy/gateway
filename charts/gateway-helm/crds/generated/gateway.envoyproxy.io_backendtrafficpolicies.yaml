@@ -961,9 +961,22 @@ spec:
                         type: string
                     type: object
                 type: object
+              upstreamHTTPVersion:
+                description: |-
+                  UpstreamHTTPVersion defines which HTTP version to use for connecting to the attached backend.
+                  This option can only be specified on policies attached to HTTPRoute targetRefs.
+                  If not specified, the default is "SameAsDownstream".
+                enum:
+                - SameAsDownstream;HTTP1;HTTP2;HTTP3
+                type: string
             required:
             - targetRef
             type: object
+            x-kubernetes-validations:
+            - message: upstreamHTTPVersion can only be set if targetRef.kind is an
+                HTTPRoute
+              rule: 'has(self.upstreamHTTPVersion) ? self.targetRef.kind == ''HTTPRoute''
+                : true'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:

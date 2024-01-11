@@ -34,6 +34,7 @@ type BackendTrafficPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="has(self.upstreamHTTPVersion) ? self.targetRef.kind == 'HTTPRoute' : true", message="upstreamHTTPVersion can only be set if targetRef.kind is an HTTPRoute"
 // spec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -87,6 +88,13 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	Retry *Retry `json:"retry,omitempty"`
 
+	// UpstreamHTTPVersion defines which HTTP version to use for connecting to the attached backend.
+	// This option can only be specified on policies attached to HTTPRoute targetRefs.
+	// If not specified, the default is "SameAsDownstream".
+	//
+	// +optional
+	UpstreamHTTPVersion *HTTPVersion `json:"upstreamHTTPVersion,omitempty"`
+
 	// Timeout settings for the backend connections.
 	//
 	// +optional
@@ -98,6 +106,22 @@ type BackendTrafficPolicySpec struct {
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 }
+
+// HTTPVersion defines HTTP version selection options
+// +kubebuilder:validation:Enum="SameAsDownstream;HTTP1;HTTP2;HTTP3"
+type HTTPVersion string
+
+const (
+	// DownstreamHTTPVersion forces Envoy to use the same protocol version as the one used by
+	// the downstream client
+	DownstreamHTTPVersion HTTPVersion = "SameAsDownstream"
+	// HTTP1Version forces Envoy to use HTTP/1.1 for connecting to the backend
+	HTTP1Version HTTPVersion = "HTTP1"
+	// HTTP2Version forces Envoy to use HTTP/2 for connecting to the backend
+	HTTP2Version HTTPVersion = "HTTP2"
+	// HTTP3Version forces Envoy to use HTTP/3 for connecting to the backend
+	HTTP3Version HTTPVersion = "HTTP3"
+)
 
 // +kubebuilder:object:root=true
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
