@@ -10,16 +10,17 @@ import (
 )
 
 // RetryStrategy defines the retry strategy to be applied.
-type RetryStrategy struct {
+type Retry struct {
 	// NumRetries is the number of retries to be attempted. Defaults to 0. If nonzero, maxBudget is ignored.
 	//
 	// +optional
-	MaxRetries *int `json:"maxRetries,omitempty"`
+	NumRetries *int `json:"numRetries,omitempty"`
 
 	// MaxBudget is specifies the limit on concurrent retries as a percentage of the sum of active requests and active pending requests.
 	// For example, if there are 100 active requests and the MaxBudget is set to 25, there may be 25 active retries.
 	// This parameter is optional. Defaults to 20%.
 	//
+	// +kubebuilder:default=20
 	// +optional
 	MaxBudget *int `json:"maxBudget,omitempty"`
 
@@ -36,6 +37,7 @@ type RetryStrategy struct {
 
 	// RetryOn specifies the retry trigger condition.
 	//
+	// If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503).
 	// +optional
 	RetryOn *RetryOn `json:"retryOn,omitempty"`
 

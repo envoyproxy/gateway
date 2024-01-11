@@ -82,14 +82,11 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
 
-	// IsRetryAble indicates whether to enable budget retries with a 20% retry budget.
+	// Retry provides more advanced retry usage, which allows users to customize the retry method (number of retries、retry budget and concurrency max retries),
+	// retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
 	// +optional
-	IsRetryAble bool `json:"isRetryAble,omitempty"`
-
-	// RetryStrategy provides more advanced retry usage, which allows users to customize the retry method (number of retries、retry budget and concurrency max retries),
-	// retry fallback strategy, and retry triggering conditions
-	// +optional
-	RetryStrategy *RetryStrategy `json:"retryStrategy,omitempty"`
+	Retry *Retry `json:"retry,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
