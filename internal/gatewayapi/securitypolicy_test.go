@@ -68,9 +68,9 @@ func Test_wildcard2regex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			regexStr := wildcard2regex(tt.wildcard)
 			regex, err := regexp.Compile(regexStr)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			finds := regex.FindAllString(tt.origin, -1)
-			assert.Equalf(t, tt.want, len(finds), "wildcard2regex(%v)", tt.wildcard)
+			assert.Lenf(t, finds, tt.want, "wildcard2regex(%v)", tt.wildcard)
 		})
 	}
 }
