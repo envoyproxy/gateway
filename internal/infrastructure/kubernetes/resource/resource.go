@@ -27,6 +27,9 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	serviceSpec := corev1.ServiceSpec{}
 	serviceSpec.Type = corev1.ServiceType(*service.Type)
 	serviceSpec.SessionAffinity = corev1.ServiceAffinityNone
+	if service.ExternalTrafficPolicy == nil {
+		service.ExternalTrafficPolicy = egv1a1.DefaultKubernetesServiceExternalTrafficPolicy()
+	}
 	if *service.Type == egv1a1.ServiceTypeLoadBalancer {
 		if service.LoadBalancerClass != nil {
 			serviceSpec.LoadBalancerClass = service.LoadBalancerClass
@@ -37,9 +40,9 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 		if service.LoadBalancerIP != nil {
 			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP
 		}
-		// Preserve the client source IP and avoid a second hop for LoadBalancer.
-		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
 	}
+
 	return serviceSpec
 }
 
