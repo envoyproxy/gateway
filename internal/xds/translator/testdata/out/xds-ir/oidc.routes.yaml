@@ -7,9 +7,6 @@
     envoy.filters.http.oauth2_second-route:
       '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
       disabled: true
-    envoy.filters.http.oauth2_third-route:
-      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-      disabled: true
   virtualHosts:
   - domains:
     - '*'
@@ -31,14 +28,5 @@
         cluster: second-route-dest
       typedPerFilterConfig:
         envoy.filters.http.oauth2_second-route:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
-    - match:
-        path: test
-      name: third-route
-      route:
-        cluster: third-route-dest
-      typedPerFilterConfig:
-        envoy.filters.http.oauth2_third-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

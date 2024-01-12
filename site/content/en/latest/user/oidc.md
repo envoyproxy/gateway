@@ -32,9 +32,9 @@ providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA,
 
 ### Register an OIDC application
 
-Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please use 
-`https://www.example.com/oauth2/callback` as the redirect URL when registering the application. `oauth2/callback` is the
-default callback path used by Envoy Gateway.
+Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please make sure the
+redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. If you don't
+specify a redirect URL in the SecurityPolicy, the default redirect URL is `https://<gateway-hostname>/oauth2/callback`.
 
 After registering the application, you should have the following information:
 * Client ID: The client ID of the OIDC application.
