@@ -147,6 +147,213 @@ spec:
                       request can be cached.
                     type: string
                 type: object
+              extAuth:
+                description: ExtAuth defines the configuration for External Authorization.
+                properties:
+                  allowWhenFailed:
+                    description: AllowWhenFailed indicates whether the request should
+                      be allowed when the authorization service has failed or has
+                      returned an HTTP 5xx error. When set to true, the request will
+                      be allowed. When set to false, the request will be denied with
+                      an HTTP 403 Forbidden error. Defaults to false.
+                    type: boolean
+                  allowedHeaders:
+                    description: 'AllowedHeaders defines the client request headers
+                      that will be included in the request to the external authorization
+                      service. Note: If not specified, the default behavior of different
+                      external authorization services is different. All headers will
+                      be included in the check request to a gRPC authorization server,
+                      whereas no headers will be included in the check request to
+                      an HTTP authorization server.'
+                    items:
+                      type: string
+                    type: array
+                  grpcService:
+                    description: GRPCService defines the gRPC External Authorization
+                      service Only one of GRPCService or HTTPService may be specified.
+                    properties:
+                      host:
+                        description: Host is the hostname of the gRPC External Authorization
+                          service
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      port:
+                        description: Port is the network port of the gRPC External
+                          Authorization service
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                      tlsSettings:
+                        description: 'TLS defines the TLS configuration for the gRPC
+                          External Authorization service. Note: If not specified,
+                          the proxy will talk to the gRPC External Authorization service
+                          in plaintext.'
+                        properties:
+                          certificateRefs:
+                            description: "CertificateRefs contains a series of references
+                              to Kubernetes objects that contains TLS certificates
+                              and private keys. These certificates are used to establish
+                              a TLS handshake with the external authorization server.
+                              \n If this field is not specified, the proxy will not
+                              present a client certificate and will use the system
+                              default certificate pool to verify the server certificate."
+                            items:
+                              description: "SecretObjectReference identifies an API
+                                object including its namespace, defaulting to Secret.
+                                \n The API object must be valid in the cluster; the
+                                Group and Kind must be registered in the cluster for
+                                this reference to be valid. \n References to objects
+                                with invalid Group and Kind are not valid, and must
+                                be rejected by the implementation, with appropriate
+                                Conditions set on the containing object."
+                              properties:
+                                group:
+                                  default: ""
+                                  description: Group is the group of the referent.
+                                    For example, "gateway.networking.k8s.io". When
+                                    unspecified or empty string, core API group is
+                                    inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  default: Secret
+                                  description: Kind is kind of the referent. For example
+                                    "Secret".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: "Namespace is the namespace of the
+                                    referenced object. When unspecified, the local
+                                    namespace is inferred. \n Note that when a namespace
+                                    different than the local namespace is specified,
+                                    a ReferenceGrant object is required in the referent
+                                    namespace to allow that namespace's owner to accept
+                                    the reference. See the ReferenceGrant documentation
+                                    for details. \n Support: Core"
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            maxItems: 64
+                            type: array
+                        type: object
+                    required:
+                    - port
+                    type: object
+                  httpService:
+                    description: HTTPService defines the HTTP External Authorization
+                      service Only one of GRPCService or HTTPService may be specified.
+                    properties:
+                      allowedUpstreamHeaders:
+                        description: Authorization response headers that will be added
+                          to the original client request before sending it to the
+                          upstream server. Note that coexistent headers will be overridden.
+                        items:
+                          type: string
+                        type: array
+                      tlsSettings:
+                        description: TLS defines the TLS configuration for the HTTP
+                          External Authorization service. TLS is only valid when the
+                          URL scheme is https. If the URL scheme is https, and TLS
+                          is not specified, the proxy will use the system default
+                          certificate pool to verify the server certificate.
+                        properties:
+                          certificateRefs:
+                            description: "CertificateRefs contains a series of references
+                              to Kubernetes objects that contains TLS certificates
+                              and private keys. These certificates are used to establish
+                              a TLS handshake with the external authorization server.
+                              \n If this field is not specified, the proxy will not
+                              present a client certificate and will use the system
+                              default certificate pool to verify the server certificate."
+                            items:
+                              description: "SecretObjectReference identifies an API
+                                object including its namespace, defaulting to Secret.
+                                \n The API object must be valid in the cluster; the
+                                Group and Kind must be registered in the cluster for
+                                this reference to be valid. \n References to objects
+                                with invalid Group and Kind are not valid, and must
+                                be rejected by the implementation, with appropriate
+                                Conditions set on the containing object."
+                              properties:
+                                group:
+                                  default: ""
+                                  description: Group is the group of the referent.
+                                    For example, "gateway.networking.k8s.io". When
+                                    unspecified or empty string, core API group is
+                                    inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  default: Secret
+                                  description: Kind is kind of the referent. For example
+                                    "Secret".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: "Namespace is the namespace of the
+                                    referenced object. When unspecified, the local
+                                    namespace is inferred. \n Note that when a namespace
+                                    different than the local namespace is specified,
+                                    a ReferenceGrant object is required in the referent
+                                    namespace to allow that namespace's owner to accept
+                                    the reference. See the ReferenceGrant documentation
+                                    for details. \n Support: Core"
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            maxItems: 64
+                            type: array
+                        type: object
+                      url:
+                        description: URL is the URL of the HTTP External Authorization
+                          service. The URL must be a fully qualified URL with a scheme,
+                          hostname, and optional port and path. Parameters are not
+                          allowed. The URL must use either the http or https scheme.
+                          If port is not specified, 80 for http and 443 for https
+                          are assumed. If path is specified, the authorization request
+                          will be sent to that path, or else the authorization request
+                          will be sent to the root path.
+                        type: string
+                    required:
+                    - url
+                    type: object
+                  type:
+                    description: Type decides the type of External Authorization.
+                      Valid ExtAuthServiceType values are "GRPC" or "HTTP".
+                    enum:
+                    - GRPC
+                    - HTTP
+                    type: string
+                required:
+                - type
+                type: object
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.

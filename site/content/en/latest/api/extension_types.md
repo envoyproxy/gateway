@@ -38,6 +38,8 @@ _Appears in:_
 
 
 
+
+
 #### BackendTrafficPolicy
 
 
@@ -732,6 +734,24 @@ _Appears in:_
 
 
 
+#### ExtAuth
+
+
+
+ExtAuth defines the configuration for External Authorization.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
+| `grpcService` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPCService defines the gRPC External Authorization service Only one of GRPCService or HTTPService may be specified. |
+| `httpService` _[HTTPExtAuthService](#httpextauthservice)_ | HTTPService defines the HTTP External Authorization service Only one of GRPCService or HTTPService may be specified. |
+| `allowWhenFailed` _boolean_ | AllowWhenFailed indicates whether the request should be allowed when the authorization service has failed or has returned an HTTP 5xx error. When set to true, the request will be allowed. When set to false, the request will be denied with an HTTP 403 Forbidden error. Defaults to false. |
+| `allowedHeaders` _string array_ | AllowedHeaders defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
+
+
 #### ExtensionAPISettings
 
 
@@ -869,6 +889,22 @@ _Appears in:_
 | `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### GRPCExtAuthService
+
+
+
+GRPCExtAuthService defines the gRPC External Authorization service
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Description |
+| --- | --- |
+| `host` _Hostname_ | Host is the hostname of the gRPC External Authorization service |
+| `port` _PortNumber_ | Port is the network port of the gRPC External Authorization service |
+| `tlsSettings` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the gRPC External Authorization service. Note: If not specified, the proxy will talk to the gRPC External Authorization service in plaintext. |
+
+
 #### Gateway
 
 
@@ -923,6 +959,22 @@ HTTP3Settings provides HTTP/3 configuration on the listener.
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
+
+
+#### HTTPExtAuthService
+
+
+
+HTTPExtAuthService defines the HTTP External Authorization service
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Description |
+| --- | --- |
+| `url` _string_ | URL is the URL of the HTTP External Authorization service. The URL must be a fully qualified URL with a scheme, hostname, and optional port and path. Parameters are not allowed. The URL must use either the http or https scheme. If port is not specified, 80 for http and 443 for https are assumed. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
+| `tlsSettings` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. TLS is only valid when the URL scheme is https. If the URL scheme is https, and TLS is not specified, the proxy will use the system default certificate pool to verify the server certificate. |
+| `allowedUpstreamHeaders` _string array_ | Authorization response headers that will be added to the original client request before sending it to the upstream server. Note that coexistent headers will be overridden. |
 
 
 #### HTTPHealthChecker
@@ -1902,6 +1954,7 @@ _Appears in:_
 | `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
+| `extAuth` _[ExtAuth](#extauth)_ | ExtAuth defines the configuration for External Authorization. |
 
 
 
@@ -2009,6 +2062,22 @@ _Appears in:_
 | `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
 | `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
+
+
+#### TLSConfig
+
+
+
+TLSConfig describes a TLS configuration.
+
+_Appears in:_
+- [GRPCExtAuthService](#grpcextauthservice)
+- [HTTPExtAuthService](#httpextauthservice)
+
+| Field | Description |
+| --- | --- |
+| `certificateRefs` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ | CertificateRefs contains a series of references to Kubernetes objects that contains TLS certificates and private keys. These certificates are used to establish a TLS handshake with the external authorization server. 
+ If this field is not specified, the proxy will not present a client certificate and will use the system default certificate pool to verify the server certificate. |
 
 
 #### TLSSettings

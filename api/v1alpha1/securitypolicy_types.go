@@ -66,6 +66,11 @@ type SecurityPolicySpec struct {
 	//
 	// +optional
 	OIDC *OIDC `json:"oidc,omitempty"`
+
+	// ExtAuth defines the configuration for External Authorization.
+	//
+	// +optional
+	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
 }
 
 // SecurityPolicyStatus defines the state of SecurityPolicy
