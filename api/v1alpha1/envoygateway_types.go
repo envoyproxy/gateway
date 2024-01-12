@@ -224,7 +224,7 @@ type KubernetesWatchMode struct {
 
 	// NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched.
 	// Note this doesn't set the informer to watch the namespaces with the given labels. Informer still
-	// watches all namespaces. But the events for objects whois namespace have no given labels
+	// watches all namespaces. But the events for objects whose namespace do not match given labels
 	// will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set.
 	NamespaceSelectors []string `json:"namespaceSelectors,omitempty"`
 }
