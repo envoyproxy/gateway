@@ -88,6 +88,8 @@ type ClaimToHeader struct {
 }
 
 // JWTExtractor defines a custom JWT token extraction from HTTP request.
+// If specified, Envoy will extract the JWT token from the listed extractors (headers, cookies, or params) and validate each of them.
+// If any value extracted is found to be an invalid JWT, a 401 error will be returned.
 type JWTExtractor struct {
 	// Headers represents a list of HTTP request headers to extract the JWT token from.
 	//
@@ -95,8 +97,6 @@ type JWTExtractor struct {
 	Headers []JWTHeaderExtractor `json:"headers,omitempty"`
 
 	// Cookies represents a list of cookie names to extract the JWT token from.
-	// If specified, Envoy will extract the JWT token from the listed cookies and validate each of them.
-	// If any cookie is found to be an invalid JWT, a 401 error will be returned.
 	//
 	// +optional
 	Cookies []string `json:"cookies,omitempty"`
