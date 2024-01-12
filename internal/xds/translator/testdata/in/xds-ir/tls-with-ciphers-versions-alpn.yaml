@@ -1,6 +1,9 @@
 http:
 - name: "first-listener"
   address: "0.0.0.0"
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
   port: 10080
   hostnames:
   - "foo.com"

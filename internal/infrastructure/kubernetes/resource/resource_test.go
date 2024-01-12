@@ -40,6 +40,18 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancerWithExternalTrafficPolicyCluster",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
+			},
+		},
+		{
 			name: "LoadBalancerWithClass",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:              egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),

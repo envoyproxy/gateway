@@ -403,6 +403,9 @@ xdsIR:
       - '*'
       isHTTP2: true
       name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -442,6 +445,9 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-2/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:

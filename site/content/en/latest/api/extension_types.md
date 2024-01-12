@@ -1212,6 +1212,7 @@ _Appears in:_
 | `loadBalancerClass` _string_ | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` _boolean_ | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` _string_ | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
+| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 
 
 #### KubernetesWatchMode
@@ -1903,6 +1904,17 @@ _Appears in:_
 
 
 
+#### ServiceExternalTrafficPolicy
+
+_Underlying type:_ `string`
+
+ServiceExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs.
+
+_Appears in:_
+- [KubernetesServiceSpec](#kubernetesservicespec)
+
+
+
 #### ServiceType
 
 _Underlying type:_ `string`
@@ -2008,18 +2020,12 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. 
- The default is TLS 1.2 if this is not specified. |
-| `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow 
- The default is TLS 1.3 if this is not specified. |
-| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. 
- In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 
- In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
-| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 
- In builds using BoringSSL FIPS the default curve is: - P-256 |
+| `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. The default is TLS 1.2 if this is not specified. |
+| `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow The default is TLS 1.3 if this is not specified. |
+| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
+| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 In builds using BoringSSL FIPS the default curve is: - P-256 |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
-| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. 
- Supported values are: - http/1.0 - http/1.1 - h2 |
+| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. Supported values are: - http/1.0 - http/1.1 - h2 |
 
 
 #### TLSVersion

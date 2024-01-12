@@ -4,6 +4,9 @@ http:
   port: 10080
   hostnames:
   - "foo.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   tls:
     alpnProtocols:
     - h2
@@ -28,6 +31,9 @@ http:
   port: 10080
   hostnames:
   - "foo.net"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   tls:
     alpnProtocols:
     - h2
@@ -52,6 +58,9 @@ http:
   port: 10080
   hostnames:
   - "example.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "third-route"
     hostname: "*"
@@ -66,6 +75,9 @@ http:
   port: 10080
   hostnames:
   - "example.net"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "fourth-route"
     hostname: "*"

@@ -207,6 +207,8 @@ type HTTPListener struct {
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// Path contains settings for path URI manipulations
+	Path PathSettings `json:"path,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -307,6 +309,22 @@ func (t TLSConfig) Validate() error {
 	// of each of these libraries.
 	// Validation for TLS versions was done with CEL
 	return errs
+}
+
+type PathEscapedSlashAction egv1a1.PathEscapedSlashAction
+
+const (
+	KeepUnchangedAction = PathEscapedSlashAction(egv1a1.KeepUnchangedAction)
+	RejectRequestAction = PathEscapedSlashAction(egv1a1.RejectRequestAction)
+	UnescapeAndRedirect = PathEscapedSlashAction(egv1a1.UnescapeAndRedirect)
+	UnescapeAndForward  = PathEscapedSlashAction(egv1a1.UnescapeAndForward)
+)
+
+// PathSettings holds configuration for path URI manipulations
+// +k8s:deepcopy-gen=true
+type PathSettings struct {
+	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
+	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions

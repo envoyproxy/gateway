@@ -295,6 +295,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		// Translate Suppress Envoy Headers
 		translateListenerSuppressEnvoyHeaders(policySpec.SuppressEnvoyHeaders, httpIR)
 
+		// Translate Path Settings
+		translatePathSettings(policySpec.Path, httpIR)
+
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policySpec.HTTP3 != nil {
 			httpIR.HTTP3 = &ir.HTTP3Settings{}
@@ -344,6 +347,18 @@ func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir
 	}
 
 	httpIR.TCPKeepalive = irTCPKeepalive
+}
+
+func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPListener) {
+	if pathSettings == nil {
+		return
+	}
+	if pathSettings.DisableMergeSlashes != nil {
+		httpIR.Path.MergeSlashes = !*pathSettings.DisableMergeSlashes
+	}
+	if pathSettings.EscapedSlashesAction != nil {
+		httpIR.Path.EscapedSlashesAction = ir.PathEscapedSlashAction(*pathSettings.EscapedSlashesAction)
+	}
 }
 
 func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {

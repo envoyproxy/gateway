@@ -124,6 +124,9 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       suppressEnvoyHeaders: true
     - address: 0.0.0.0
@@ -131,4 +134,7 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 8080
