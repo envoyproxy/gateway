@@ -55,8 +55,6 @@ linters-settings:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
     local-prefixes: github.com/envoyproxy/gateway/
-  unparam:
-    check-exported: false
   revive:
     rules:
       # TODO: enable if-return check
@@ -77,6 +75,8 @@ linters-settings:
       - len
       - suite-dont-use-pkg
       - suite-extra-assert-call
+  unparam:
+    check-exported: false
 
 issues:
   exclude-rules:
