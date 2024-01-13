@@ -19,15 +19,15 @@ func TestLookupString(t *testing.T) {
 	defer os.Clearenv()
 
 	got := Lookup("TEST_ENV_KEY", "DEFAULT_ENV_VALUE")
-	require.Equal(t, got, "DEFAULT_ENV_VALUE")
+	require.Equal(t, "DEFAULT_ENV_VALUE", got)
 
 	os.Setenv("TEST_ENV_KEY", "SET_ENV_VALUE")
 	got = Lookup("TEST_ENV_KEY", "DEFAULT_ENV_VALUE")
-	require.Equal(t, got, "SET_ENV_VALUE")
+	require.Equal(t, "SET_ENV_VALUE", got)
 
 	os.Clearenv()
 	got = Lookup("TEST_ENV_KEY", "DEFAULT_ENV_VALUE")
-	require.Equal(t, got, "DEFAULT_ENV_VALUE")
+	require.Equal(t, "DEFAULT_ENV_VALUE", got)
 }
 
 func TestLookupInt(t *testing.T) {
@@ -42,7 +42,7 @@ func TestLookupInt(t *testing.T) {
 
 	os.Setenv("TEST_ENV_KEY", "1000")
 	got = Lookup("TEST_ENV_KEY", i)
-	require.Equal(t, got, 1000)
+	require.Equal(t, 1000, got)
 
 	os.Clearenv()
 	got = Lookup("TEST_ENV_KEY", i)
@@ -63,7 +63,7 @@ func TestLookupDuration(t *testing.T) {
 
 	os.Setenv("TEST_ENV_KEY", "10s")
 	got = Lookup("TEST_ENV_KEY", d)
-	require.Equal(t, got, time.Second*10)
+	require.Equal(t, time.Second*10, got)
 
 	os.Clearenv()
 	got = Lookup("TEST_ENV_KEY", d)

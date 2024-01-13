@@ -524,7 +524,7 @@ func TestIsValidHostname(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := translator.validateHostname(tc.hostname)
 			if tc.err == "" {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 			} else {
 				assert.EqualError(t, err, tc.err)
 			}

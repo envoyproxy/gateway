@@ -321,7 +321,7 @@ func TestDecode(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.out, eg)
 			} else {
-				require.Equal(t, !reflect.DeepEqual(tc.out, eg) || err != nil, true)
+				require.True(t, !reflect.DeepEqual(tc.out, eg) || err != nil)
 			}
 		})
 	}
