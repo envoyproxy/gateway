@@ -8,7 +8,7 @@ package admin
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -21,5 +21,5 @@ func TestInitAdminServer(t *testing.T) {
 		},
 	}
 	err := Init(svrConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

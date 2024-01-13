@@ -126,7 +126,7 @@ func TestTLSConfig(t *testing.T) {
 
 	go func() {
 		err := g.Serve(l)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 	defer g.GracefulStop()
 
@@ -144,7 +144,7 @@ func TestTLSConfig(t *testing.T) {
 			}
 			if err == nil {
 				expectedCert, _ := tc.serverCredentials.X509Certificate()
-				assert.Equal(t, receivedCert, &expectedCert)
+				assert.Equal(t, &expectedCert, receivedCert)
 			}
 		})
 	}
@@ -193,7 +193,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	// Occupy the address to make listening failed
 	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
 	l, err := net.Listen("tcp", addr)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	defer l.Close()
 
 	cfg, _ := config.New()
