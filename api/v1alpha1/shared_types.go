@@ -192,6 +192,23 @@ const (
 	ServiceTypeNodePort ServiceType = "NodePort"
 )
 
+// ServiceExternalTrafficPolicy describes how nodes distribute service traffic they
+// receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs,
+// and LoadBalancer IPs.
+// +enum
+// +kubebuilder:validation:Enum=Local;Cluster
+type ServiceExternalTrafficPolicy string
+
+const (
+	// ServiceExternalTrafficPolicyCluster routes traffic to all endpoints.
+	ServiceExternalTrafficPolicyCluster ServiceExternalTrafficPolicy = "Cluster"
+
+	// ServiceExternalTrafficPolicyLocal preserves the source IP of the traffic by
+	// routing only to endpoints on the same node as the traffic was received on
+	// (dropping the traffic if there are no local endpoints).
+	ServiceExternalTrafficPolicyLocal ServiceExternalTrafficPolicy = "Local"
+)
+
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
@@ -229,6 +246,12 @@ type KubernetesServiceSpec struct {
 	// +optional
 	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
+	// ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options
+	// are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node
+	// receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster.
+	// +kubebuilder:default:="Local"
+	// +optional
+	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 

@@ -1212,6 +1212,7 @@ _Appears in:_
 | `loadBalancerClass` _string_ | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` _boolean_ | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` _string_ | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
+| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 
 
 #### KubernetesWatchMode
@@ -1336,17 +1337,15 @@ _Appears in:_
 | `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
  This is an Opaque secret. The client secret should be stored in the key "client-secret". |
 | `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
+| `redirectURL` _string_ | The redirect URL to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
+| `logoutPath` _string_ | The path to log a user out, clearing their credential cookies. If not specified, uses a default logout path "/logout" |
 
 
 #### OIDCProvider
 
 
 
-OIDCProvider defines the OIDC Provider configuration. To make the EG OIDC config easy to use, some of the low-level ouath2 filter configuration knobs are hidden from the user, and default values will be provided when translating to XDS. For example: 
- * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" 
- * signout_path: uses a default signout path "/signout" 
- * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback" 
- If we get requests to expose these knobs, we can always do so later.
+OIDCProvider defines the OIDC Provider configuration.
 
 _Appears in:_
 - [OIDC](#oidc)
@@ -1902,6 +1901,17 @@ _Appears in:_
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 
+
+
+
+#### ServiceExternalTrafficPolicy
+
+_Underlying type:_ `string`
+
+ServiceExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs.
+
+_Appears in:_
+- [KubernetesServiceSpec](#kubernetesservicespec)
 
 
 
