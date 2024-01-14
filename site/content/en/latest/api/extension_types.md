@@ -90,6 +90,7 @@ _Appears in:_
 | `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `upstreamHTTPVersion` _[HTTPVersion](#httpversion)_ | UpstreamHTTPVersion defines which HTTP version to use for connecting to the attached backend. This option can only be specified on policies attached to HTTPRoute targetRefs. If not specified, the default is "SameAsDownstream". |
 
 
 
@@ -950,6 +951,17 @@ HTTPStatus defines the http status code.
 
 _Appears in:_
 - [HTTPHealthChecker](#httphealthchecker)
+
+
+
+#### HTTPVersion
+
+_Underlying type:_ `string`
+
+HTTPVersion defines HTTP version selection options
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 
 
