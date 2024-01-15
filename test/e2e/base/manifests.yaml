@@ -521,3 +521,129 @@ spec:
     allowedRoutes:
       kinds:
       - kind: UDPRoute
+---
+apiVersion: v1
+Kind: Namespace
+metadata:
+  name: gateway-conformance-http3
+  labels:
+    gateway-conformance: http3
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+Kind: Secret
+metadata:
+  name: http3-secret
+  namespace: gateway-conformance-http3
+type: kubernetes.io/tls
+data:
+  tls.crt: |
+    MIIC2jCCAcICAQAwDQYJKoZIhvcNAQELBQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJ
+    bmMuMRQwEgYDVQQDDAtleGFtcGxlLmNvbTAeFw0yNDAxMTQwOTA1MzZaFw0yNTAx
+    MTMwOTA1MzZaMDkxGDAWBgNVBAMMD3d3dy5leGFtcGxlLmNvbTEdMBsGA1UECgwU
+    ZXhhbXBsZSBvcmdhbml6YXRpb24wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+    AoIBAQC92bKJitdHJdc/RO2q5hWNsHYR+Uz6Pv1dY3DPBPvYt8DL56sngqyJ/gOO
+    cbM9meUsaBOi84tvjcwut703qDa3ZFqJ1wKpuBTzfZEmJifflT6ZxQeEkp/Hv0M1
+    Mm8hREtXIYxLiWWV0QItvTSEtuJRJuWDyA6eJ6X1hrYzLUvKrEsCRDXe6og0hRLs
+    5C91S5SgEI3jZusipGusdrbPblUG4xy+mKu5qnhhF+Y9PMPaIReOKVs4tVclPKwI
+    oaJdbr8unU640BvwWnq0Rfir/ewjZEEHvcf9T1x1i/Nge6H8yPpmuyKnpFUd6Cfu
+    kC3y3/5RntUhv8y1EKt9zPbgRd+3AgMBAAEwDQYJKoZIhvcNAQELBQADggEBAHJx
+    ajB2YAaQAVAOgbotMlO9aHLeGkBaIraL3zG4lMZFe0PKmibMk7vCMb07MJsBrvsg
+    /1Aw3FU5FCSASQKSpbmWfur0iZn1nD0Pj6Vq6pPXInrjm0qSIn0emO1vHDP1YIzs
+    0e2lqWx7PeAfl+rW4mPYCPueEnEhafxKVdXXjjfQFk+8i7HkSaGXHJ+Fnw+obD46
+    c5OlbHQncE1B7ldvVz6xkKx53wbpY7pqtrDpkXnQ6iikgE8pV1Iv4fvkyzRl1htR
+    8lNo7GCKCnhcmC5NXCt+b4kXHb/g6yozQ5nVTxGDxeNKpVjF4mPSgukLwfUM/mJb
+    0lz/HNZP7/u55vQridc=
+  tls.key: |
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC92bKJitdHJdc/
+    RO2q5hWNsHYR+Uz6Pv1dY3DPBPvYt8DL56sngqyJ/gOOcbM9meUsaBOi84tvjcwu
+    t703qDa3ZFqJ1wKpuBTzfZEmJifflT6ZxQeEkp/Hv0M1Mm8hREtXIYxLiWWV0QIt
+    vTSEtuJRJuWDyA6eJ6X1hrYzLUvKrEsCRDXe6og0hRLs5C91S5SgEI3jZusipGus
+    drbPblUG4xy+mKu5qnhhF+Y9PMPaIReOKVs4tVclPKwIoaJdbr8unU640BvwWnq0
+    Rfir/ewjZEEHvcf9T1x1i/Nge6H8yPpmuyKnpFUd6CfukC3y3/5RntUhv8y1EKt9
+    zPbgRd+3AgMBAAECggEAPZHKavzSEErfYa9y/Ied2dOulumo40dmV9EWFq1hF8mQ
+    BxDc2vVwC1iLwrhxDrtILXybUa92OvlbjJMeFFzDUfqDukw2muAOO2Evn5WkPMhk
+    Au55H6+FjfwjSa9PhxRk8p74ps6qWUntUPQZgijlgLgCmxhYVUY6dkP39uTrvZBP
+    RV4GDpGRciGDxtRsL1p2q6AA8Cw4GPudw31zF+GOdohlvWnbF86aOGyJGT4yrxND
+    CgfOMp9pFnmxOGs5H8XnirxscU5MBPzmez6a0SOyVdym7g4M30fDdMzMils7iHP6
+    gQG0P1ShS94JAOXlpcJ6HNuMaeeS/lIjaV6teez64QKBgQDwQeQwEK4bBIrhfQsk
+    HGuPRJRfljlLZWNnx30HSR4bCIFbkHXUxxNPdmV3uIQamw4cDozonpx5p7ZwqEnj
+    a0g4FG+Vizd8UbK4v4Nh1HbsrsM3hWcAHRA44Q4GCs2zfl1GU2ZmfBKLrqlnYinA
+    HjbeW46qzOrUo0/9e4ULeHaN2QKBgQDKSkW5SjrJypjGpMUuqkpBdbXkiXwOcMXi
+    ZYbeHznqWjmeOn+5FKH5yQK6YRPE0ElsajWbQo9wB1TaGexuqttmjK1DdKChHzXY
+    KjnU+NZIc8xRC/NywF5TfMjgsqTTu+1j5L0+oH1gG+EOqOMiXLeUg7zx0uSReRuA
+    LB+bhGYQDwKBgQCsqu5QDOzTxgP54mArZ7F1mZf4yoIKyacTYq9cmRPl4cr1/3Bv
+    p1MdfL2XuShX5q/RQjPKypMya3IWrRvNMcEJbMZ090S9OAn19M17dbKyjzcFo/5O
+    epS6DCSD+yeypFJsxGuHpAvAD5r4DfhrdkuAqtRxtCvg/i3ywt7vS3gIoQKBgAMv
+    eDmauaJD1nQKVDCP7etp9xtKLvHrRLJz9tO4mijektmzAh/f+0z7pVdZ//2xafaT
+    FZUET03sT6G/lsGHXz0WKgRN6dmfrDFjONXptTYe3LDKB2NfNB0Mcf1X0tCivPI9
+    v90kmdTRm5GnhywbWai1ClykfYTs60nxZ+4C/7hxAoGADC6Fqzl9DE2+Sc1Vpqlq
+    RahiMOz7bgWRhXVXaAOtVvLieVdVwNHcGhiUS7pObwQb8u/bXMUScrmrblZ0fpm4
+    HQe9nVbQT7GtAD4UPFouCQZRevXznzZJJ1fmhOjFrc5Uj486q/xkg2fcejpUhDgG
+    N5Czgf9NPX47ZlnnnYSz2KU=
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Gateway
+metadata:
+  name: http3-gateway
+  namespace: gateway-conformance-http3
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: gateway.networking.k8s.io
+            name: http3-secret
+            namespace: gateway-conformance-http3
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+Kind: Service
+metadata:
+  name: http3-service
+  namespace: gateway-conformance-http3
+  labels:
+    service: http3
+spec:
+  ports:
+    - name: http3
+      port: 3000
+      targetPort: 3000
+  selectors:
+    app: http3
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+Kind: Deployment
+metadata:
+  name: http3-deployment
+  namespace: gateway-conformance-http3
+spec:
+  selector:
+    matchLabels:
+      app: http3
+  template:
+    metadata:
+      labels:
+        app: http3
+    spec:
+      serviceAccountName: backend
+      containers:
+        - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+          imagePullPolicy: IfNotPresent
+          name: backend
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+  
