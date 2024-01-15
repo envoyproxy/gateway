@@ -23,6 +23,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
+const (
+	HttpRequestTimeout = "10s"
+)
+
 var (
 	_                RoutesTranslator = (*Translator)(nil)
 	validServiceName                  = `(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*`
@@ -221,16 +225,23 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
 		if rule.Timeouts.Request != nil {
-			// TODO: handle parse errors
-			d, _ := time.ParseDuration(string(*rule.Timeouts.Request))
+			// Need to handle parsing errors because the timeout may be empty according to the
+			// definition of HTTPRouteTimeouts in https://github.com/kubernetes-sigs/gateway-api
+			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
+			if err != nil {
+				d, err = time.ParseDuration(HttpRequestTimeout)
+			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		// Also set the IR Route Timeout to the backend request timeout
 		// until we introduce retries, then set it to per try timeout
 		if rule.Timeouts.BackendRequest != nil {
-			// TODO: handle parse errors
-			d, _ := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			// Need to handle parsing errors and the duration should be less or equal than Timeouts.Request above
+			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			if err != nil {
+				d, err = time.ParseDuration(HttpRequestTimeout)
+			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 	}
