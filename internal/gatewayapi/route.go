@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	HttpRequestTimeout = "10s"
+	HTTPRequestTimeout = "10s"
 )
 
 var (
@@ -230,7 +230,7 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			// Set the default timeout to 10s
 			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
 			if err != nil {
-				d, err = time.ParseDuration(HttpRequestTimeout)
+				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
@@ -242,7 +242,7 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			// Set the default timeout to 10s
 			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 			if err != nil {
-				d, err = time.ParseDuration(HttpRequestTimeout)
+				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
