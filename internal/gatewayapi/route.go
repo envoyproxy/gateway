@@ -227,6 +227,7 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		if rule.Timeouts.Request != nil {
 			// Need to handle parsing errors because the timeout may be empty according to the
 			// definition of HTTPRouteTimeouts in https://github.com/kubernetes-sigs/gateway-api
+			// Set the default timeout to 10s
 			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
 			if err != nil {
 				d, err = time.ParseDuration(HttpRequestTimeout)
@@ -238,6 +239,7 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		// until we introduce retries, then set it to per try timeout
 		if rule.Timeouts.BackendRequest != nil {
 			// Need to handle parsing errors and the duration should be less or equal than Timeouts.Request above
+			// Set the default timeout to 10s
 			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 			if err != nil {
 				d, err = time.ParseDuration(HttpRequestTimeout)
