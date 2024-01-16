@@ -24,7 +24,10 @@ import (
 )
 
 const (
-	HTTPRequestTimeout = "10s"
+	// Following the description in `timeout` section of https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto
+	// Request timeout, which is defined as Duration, specifies the upstream timeout for the route
+	// If not specified, the default is 15s
+	HTTPRequestTimeout = "15s"
 )
 
 var (
