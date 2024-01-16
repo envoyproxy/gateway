@@ -70,7 +70,7 @@ jobs:
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392  # v4.0.0
+      uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595  # v4.1.0
       with:
         name: envoy-gateway
         path: bin/
