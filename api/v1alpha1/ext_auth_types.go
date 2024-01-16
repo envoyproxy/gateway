@@ -25,7 +25,7 @@ const (
 type ExtAuth struct {
 	// Type decides the type of External Authorization.
 	// Valid ExtAuthServiceType values are "GRPC" or "HTTP".
-	//
+	// +kubebuilder:validation:Enum=GRPC;HTTP
 	// +unionDiscriminator
 	Type ExtAuthServiceType `json:"type"`
 

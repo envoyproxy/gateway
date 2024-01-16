@@ -150,13 +150,6 @@ spec:
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:
-                  allowWhenFailed:
-                    description: AllowWhenFailed indicates whether the request should
-                      be allowed when the authorization service has failed or has
-                      returned an HTTP 5xx error. When set to true, the request will
-                      be allowed. When set to false, the request will be denied with
-                      an HTTP 403 Forbidden error. Defaults to false.
-                    type: boolean
                   allowedHeaders:
                     description: 'AllowedHeaders defines the client request headers
                       that will be included in the request to the external authorization
@@ -169,8 +162,8 @@ spec:
                       type: string
                     type: array
                   grpcService:
-                    description: GRPCService defines the gRPC External Authorization
-                      service Only one of GRPCService or HTTPService may be specified.
+                    description: GRPC defines the gRPC External Authorization service
+                      Only one of GRPCService or HTTPService may be specified.
                     properties:
                       host:
                         description: Host is the hostname of the gRPC External Authorization
@@ -252,11 +245,12 @@ spec:
                             type: array
                         type: object
                     required:
+                    - host
                     - port
                     type: object
                   httpService:
-                    description: HTTPService defines the HTTP External Authorization
-                      service Only one of GRPCService or HTTPService may be specified.
+                    description: HTTP defines the HTTP External Authorization service
+                      Only one of GRPCService or HTTPService may be specified.
                     properties:
                       allowedUpstreamHeaders:
                         description: Authorization response headers that will be added
@@ -345,11 +339,15 @@ spec:
                     - url
                     type: object
                   type:
+                    allOf:
+                    - enum:
+                      - GRPC
+                      - HTTP
+                    - enum:
+                      - GRPC
+                      - HTTP
                     description: Type decides the type of External Authorization.
                       Valid ExtAuthServiceType values are "GRPC" or "HTTP".
-                    enum:
-                    - GRPC
-                    - HTTP
                     type: string
                 required:
                 - type
