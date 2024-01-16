@@ -79,7 +79,7 @@ securityPolicies:
     conditions:
     - lastTransitionTime: null
       message: 'Error fetching endpoints from issuer: invalid character ''<'' looking
-        for beginning of value.'
+        for beginning of value'
       reason: Invalid
       status: "False"
       type: Accepted
@@ -94,4 +94,7 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: default/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080

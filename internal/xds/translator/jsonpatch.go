@@ -134,7 +134,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 
 				if resourceJSON, err = m.Marshal(listener); err != nil {
-					err := fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					err := fmt.Errorf("unable to marshal xds resource %s: %s, err: %w", p.Type, p.Name, err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
@@ -147,7 +147,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 
 				if resourceJSON, err = m.Marshal(routeConfig); err != nil {
-					err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					err = fmt.Errorf("unable to marshal xds resource %s: %s, err: %w", p.Type, p.Name, err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
@@ -160,7 +160,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 
 				if resourceJSON, err = m.Marshal(cluster); err != nil {
-					err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					err = fmt.Errorf("unable to marshal xds resource %s: %s, err: %w", p.Type, p.Name, err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
@@ -171,7 +171,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					continue
 				}
 				if resourceJSON, err = m.Marshal(endpoint); err != nil {
-					err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					err = fmt.Errorf("unable to marshal xds resource %s: %s, err: %w", p.Type, p.Name, err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
@@ -226,7 +226,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					continue
 				}
 				if err = deepCopyPtr(temp, listener); err != nil {
-					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+					err := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
@@ -243,7 +243,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					continue
 				}
 				if err = deepCopyPtr(temp, routeConfig); err != nil {
-					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+					err := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
@@ -260,7 +260,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					continue
 				}
 				if err = deepCopyPtr(temp, cluster); err != nil {
-					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+					err := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
@@ -277,7 +277,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					continue
 				}
 				if err = deepCopyPtr(temp, endpoint); err != nil {
-					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+					err := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
 					errs = multierror.Append(errs, err)
 					continue
 				}

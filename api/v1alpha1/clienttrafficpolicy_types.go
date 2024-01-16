@@ -34,6 +34,7 @@ type ClientTrafficPolicy struct {
 	Status ClientTrafficPolicyStatus `json:"status,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="has(self.http3) && has(self.tls) && has(self.tls.alpnProtocols) ? self.tls.alpnProtocols.size() == 0 : true",message="alpn protocols can't be set if HTTP/3 is enabled"
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -52,6 +53,12 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+	// SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-'
+	// headers from both requests and responses.
+	// By default these headers are added to both requests and responses.
+	//
+	// +optional
+	SuppressEnvoyHeaders *bool `json:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
 	// Client Address into the X-Forwarded-For header.
 	// Note Proxy Protocol must be present when this field is set, else the connection
@@ -63,6 +70,14 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// TLS settings configure TLS termination settings with the downstream client.
+	//
+	// +optional
+	TLS *TLSSettings `json:"tls,omitempty"`
+	// Path enables managing how the incoming path set by clients can be normalized.
+	//
+	// +optional
+	Path *PathSettings `json:"path,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.

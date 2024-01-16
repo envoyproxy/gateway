@@ -19,6 +19,11 @@ stats_config:
       - safe_regex:
           google_re2: {}
           regex: virtual.*
+layered_runtime:
+  layers:
+  - name: global_config
+    static_layer:
+      envoy.restart_features.use_eds_cache_for_ads: true
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC

@@ -8,7 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"net"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	defaultHTTPSPort = 443
-	defaultHTTPPort  = 80
+	defaultHTTPSPort uint64 = 443
+	defaultHTTPPort  uint64 = 80
 )
 
 // urlCluster is a cluster that is created from a URL.
@@ -47,7 +47,7 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 
-	var port int
+	var port uint64
 	if u.Scheme == "https" {
 		port = defaultHTTPSPort
 	} else {
@@ -55,7 +55,7 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 	}
 
 	if u.Port() != "" {
-		port, err = strconv.Atoi(u.Port())
+		port, err = strconv.ParseUint(u.Port(), 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -63,8 +63,8 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 
 	name := fmt.Sprintf("%s_%d", strings.ReplaceAll(u.Hostname(), ".", "_"), port)
 
-	if ip := net.ParseIP(u.Hostname()); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
+	if ip, err := netip.ParseAddr(u.Hostname()); err == nil {
+		if ip.Unmap().Is4() {
 			epType = EndpointTypeStatic
 		}
 	}

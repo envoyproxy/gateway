@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
-	"regexp"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -782,11 +781,4 @@ func (t *Translator) validateSecretRef(
 	}
 
 	return secret, nil
-}
-
-func validateRegex(regex string) error {
-	if _, err := regexp.Compile(regex); err != nil {
-		return fmt.Errorf("regex %q is invalid: %v", regex, err)
-	}
-	return nil
 }

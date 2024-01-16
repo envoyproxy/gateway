@@ -96,7 +96,6 @@ resources:
 - grpcroutes
 - httproutes
 - referencegrants
-- referencepolicies
 - tcproutes
 - tlsroutes
 - udproutes

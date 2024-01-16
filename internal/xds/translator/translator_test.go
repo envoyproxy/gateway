@@ -216,10 +216,25 @@ func TestTranslateXds(t *testing.T) {
 			name: "basic-auth",
 		},
 		{
+			name: "health-check",
+		},
+		{
 			name: "local-ratelimit",
 		},
 		{
 			name: "circuit-breaker",
+		},
+		{
+			name: "suppress-envoy-headers",
+		},
+		{
+			name: "fault-injection",
+		},
+		{
+			name: "tls-with-ciphers-versions-alpn",
+		},
+		{
+			name: "path-settings",
 		},
 	}
 

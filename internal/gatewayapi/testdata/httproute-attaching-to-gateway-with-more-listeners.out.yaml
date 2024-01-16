@@ -312,6 +312,9 @@ xdsIR:
       - foo.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -337,6 +340,9 @@ xdsIR:
       - bar.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -362,6 +368,9 @@ xdsIR:
       - foo1.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -387,6 +396,9 @@ xdsIR:
       - bar1.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-4
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -412,6 +424,9 @@ xdsIR:
       - foo2.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-5
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -437,6 +452,9 @@ xdsIR:
       - bar2.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-6
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -462,6 +480,9 @@ xdsIR:
       - foo3.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-7
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -487,6 +508,9 @@ xdsIR:
       - bar3.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-8
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:

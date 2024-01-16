@@ -5,6 +5,9 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "redirect-route"
     hostname: "*"

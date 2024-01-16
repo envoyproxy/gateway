@@ -4,6 +4,7 @@ deployment:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
     imagePullPolicy: Always
+    imagePullSecrets: []
     resources:
       limits:
         cpu: 500m
@@ -20,6 +21,7 @@ deployment:
       targetPort: 18001
   replicas: 1
   pod:
+    affinity: {}
     annotations: {}
     labels: {}
 

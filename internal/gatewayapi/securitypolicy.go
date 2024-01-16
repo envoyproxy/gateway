@@ -8,8 +8,8 @@ package gatewayapi
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"sort"
 	"strconv"
@@ -27,6 +27,12 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+)
+
+const (
+	defaultRedirectURL  = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+	defaultRedirectPath = "/oauth2/callback"
+	defaultLogoutPath   = "/logout"
 )
 
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
@@ -268,9 +274,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	)
 
 	if policy.Spec.CORS != nil {
-		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
-			errs = multierror.Append(errs, err)
-		}
+		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
 	if policy.Spec.JWT != nil {
@@ -324,10 +328,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors, err = t.buildCORS(policy.Spec.CORS)
-		if err != nil {
-			errs = multierror.Append(errs, err)
-		}
+		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
 	if policy.Spec.JWT != nil {
@@ -376,38 +377,19 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
+func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
-		origin := origin.DeepCopy()
-
-		// matchType default to exact
-		matchType := egv1a1.StringMatchExact
-		if origin.Type != nil {
-			matchType = *origin.Type
-		}
-
-		// TODO zhaohuabing: extract a utils function to build StringMatch
-		switch matchType {
-		case egv1a1.StringMatchExact:
+		origin := origin
+		if isWildcard(string(origin)) {
+			regexStr := wildcard2regex(string(origin))
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Exact: &origin.Value,
+				SafeRegex: &regexStr,
 			})
-		case egv1a1.StringMatchPrefix:
+		} else {
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Prefix: &origin.Value,
-			})
-		case egv1a1.StringMatchSuffix:
-			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Suffix: &origin.Value,
-			})
-		case egv1a1.StringMatchRegularExpression:
-			if err := validateRegex(origin.Value); err != nil {
-				return nil, err // TODO zhaohuabing: also check regex in other places
-			}
-			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				SafeRegex: &origin.Value,
+				Exact: (*string)(&origin),
 			})
 		}
 	}
@@ -419,7 +401,17 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 		ExposeHeaders:    cors.ExposeHeaders,
 		MaxAge:           cors.MaxAge,
 		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
-	}, nil
+	}
+}
+
+func isWildcard(s string) bool {
+	return strings.ContainsAny(s, "*")
+}
+
+func wildcard2regex(wildcard string) string {
+	regexStr := strings.ReplaceAll(wildcard, ".", "\\.")
+	regexStr = strings.ReplaceAll(regexStr, "*", ".*")
+	return regexStr
 }
 
 func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
@@ -461,17 +453,56 @@ func (t *Translator) buildOIDC(
 		return nil, err
 	}
 
-	if err := validateTokenEndpoint(provider.TokenEndpoint); err != nil {
+	if err = validateTokenEndpoint(provider.TokenEndpoint); err != nil {
 		return nil, err
 	}
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
+
+	var (
+		redirectURL  = defaultRedirectURL
+		redirectPath = defaultRedirectPath
+		logoutPath   = defaultLogoutPath
+	)
+
+	if oidc.RedirectURL != nil {
+		path, err := extractRedirectPath(*oidc.RedirectURL)
+		if err != nil {
+			return nil, err
+		}
+		redirectURL = *oidc.RedirectURL
+		redirectPath = path
+		logoutPath = *oidc.LogoutPath
+	}
 
 	return &ir.OIDC{
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
 		Scopes:       scopes,
+		RedirectURL:  redirectURL,
+		RedirectPath: redirectPath,
+		LogoutPath:   logoutPath,
 	}, nil
+}
+
+func extractRedirectPath(redirectURL string) (string, error) {
+	schemeDelimiter := strings.Index(redirectURL, "://")
+	if schemeDelimiter <= 0 {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	scheme := redirectURL[:schemeDelimiter]
+	if scheme != "http" && scheme != "https" && scheme != "%REQ(x-forwarded-proto)%" {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	hostDelimiter := strings.Index(redirectURL[schemeDelimiter+3:], "/")
+	if hostDelimiter <= 0 {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	path := redirectURL[schemeDelimiter+3+hostDelimiter:]
+	if path == "/" {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	return path, nil
 }
 
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes
@@ -547,8 +578,8 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		return fmt.Errorf("token endpoint URL scheme must be https: %s", tokenEndpoint)
 	}
 
-	if ip := net.ParseIP(parsedURL.Hostname()); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
+	if ip, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
+		if ip.Unmap().Is4() {
 			return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
 		}
 	}

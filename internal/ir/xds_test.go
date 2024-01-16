@@ -6,11 +6,14 @@
 package ir
 
 import (
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -30,11 +33,13 @@ var (
 		Address:   "0.0.0.0",
 		Port:      80,
 		Hostnames: []string{"example.com"},
-		TLS: []*TLSListenerConfig{{
-			Name:              "happy",
-			ServerCertificate: []byte{1, 2, 3},
-			PrivateKey:        []byte{1, 2, 3},
-		}},
+		TLS: &TLSConfig{
+			Certificates: []TLSCertificate{{
+
+				Name:              "happy",
+				ServerCertificate: []byte{1, 2, 3},
+				PrivateKey:        []byte{1, 2, 3},
+			}}},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidAddrHTTPListener = HTTPListener{
@@ -72,11 +77,12 @@ var (
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
-		TLS: &TLS{Terminate: []*TLSListenerConfig{{
-			Name:              "happy",
-			ServerCertificate: []byte("server-cert"),
-			PrivateKey:        []byte("priv-key"),
-		}}},
+		TLS: &TLS{Terminate: &TLSConfig{
+			Certificates: []TLSCertificate{{
+				Name:              "happy",
+				ServerCertificate: []byte("server-cert"),
+				PrivateKey:        []byte("priv-key"),
+			}}}},
 		Destination: &happyRouteDestination,
 	}
 
@@ -627,29 +633,32 @@ func TestValidateTCPListener(t *testing.T) {
 func TestValidateTLSListenerConfig(t *testing.T) {
 	tests := []struct {
 		name  string
-		input TLSListenerConfig
+		input TLSConfig
 		want  error
 	}{
 		{
 			name: "happy",
-			input: TLSListenerConfig{
-				ServerCertificate: []byte("server-cert"),
-				PrivateKey:        []byte("priv-key"),
-			},
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					ServerCertificate: []byte("server-cert"),
+					PrivateKey:        []byte("priv-key"),
+				}}},
 			want: nil,
 		},
 		{
 			name: "invalid server cert",
-			input: TLSListenerConfig{
-				PrivateKey: []byte("priv-key"),
-			},
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					PrivateKey: []byte("priv-key"),
+				}}},
 			want: ErrTLSServerCertEmpty,
 		},
 		{
 			name: "invalid private key",
-			input: TLSListenerConfig{
-				ServerCertificate: []byte("server-cert"),
-			},
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					ServerCertificate: []byte("server-cert"),
+				}}},
 			want: ErrTLSPrivateKey,
 		},
 	}
@@ -1216,6 +1225,201 @@ func TestPrintable(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			assert.Equal(t, *test.want, *test.input.Printable())
+		})
+	}
+}
+
+func TestValidateHealthCheck(t *testing.T) {
+	tests := []struct {
+		name  string
+		input HealthCheck
+		want  error
+	}{
+		{
+			name: "invalid timeout",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Duration(0)},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To[uint32](3),
+				HealthyThreshold:   ptr.To[uint32](3),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					ExpectedStatuses: []HTTPStatus{200, 400},
+				},
+			},
+			want: ErrHealthCheckTimeoutInvalid,
+		},
+		{
+			name: "invalid interval",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Duration(0)},
+				UnhealthyThreshold: ptr.To[uint32](3),
+				HealthyThreshold:   ptr.To[uint32](3),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodGet),
+					ExpectedStatuses: []HTTPStatus{200, 400},
+				},
+			},
+			want: ErrHealthCheckIntervalInvalid,
+		},
+		{
+			name: "invalid unhealthy threshold",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To[uint32](0),
+				HealthyThreshold:   ptr.To[uint32](3),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodPatch),
+					ExpectedStatuses: []HTTPStatus{200, 400},
+				},
+			},
+			want: ErrHealthCheckUnhealthyThresholdInvalid,
+		},
+		{
+			name: "invalid healthy threshold",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To[uint32](3),
+				HealthyThreshold:   ptr.To[uint32](0),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodPost),
+					ExpectedStatuses: []HTTPStatus{200, 400},
+				},
+			},
+			want: ErrHealthCheckHealthyThresholdInvalid,
+		},
+		{
+			name: "http-health-check: invalid path",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To[uint32](3),
+				HealthyThreshold:   ptr.To[uint32](3),
+				HTTP: &HTTPHealthChecker{
+					Path:             "",
+					Method:           ptr.To(http.MethodPut),
+					ExpectedStatuses: []HTTPStatus{200, 400},
+				},
+			},
+			want: ErrHCHTTPPathInvalid,
+		},
+		{
+			name: "http-health-check: invalid method",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To(uint32(3)),
+				HealthyThreshold:   ptr.To(uint32(3)),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodConnect),
+					ExpectedStatuses: []HTTPStatus{200, 400},
+				},
+			},
+			want: ErrHCHTTPMethodInvalid,
+		},
+		{
+			name: "http-health-check: invalid expected-statuses",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To(uint32(3)),
+				HealthyThreshold:   ptr.To(uint32(3)),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodDelete),
+					ExpectedStatuses: []HTTPStatus{},
+				},
+			},
+			want: ErrHCHTTPExpectedStatusesInvalid,
+		},
+		{
+			name: "http-health-check: invalid range",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To(uint32(3)),
+				HealthyThreshold:   ptr.To(uint32(3)),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodHead),
+					ExpectedStatuses: []HTTPStatus{100, 600},
+				},
+			},
+			want: ErrHTTPStatusInvalid,
+		},
+		{
+			name: "http-health-check: invalid expected-responses",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To(uint32(3)),
+				HealthyThreshold:   ptr.To(uint32(3)),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodOptions),
+					ExpectedStatuses: []HTTPStatus{200, 300},
+					ExpectedResponse: &HealthCheckPayload{
+						Text:   ptr.To("foo"),
+						Binary: []byte{'f', 'o', 'o'},
+					},
+				},
+			},
+			want: ErrHealthCheckPayloadInvalid,
+		},
+		{
+			name: "tcp-health-check: invalid send payload",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To(uint32(3)),
+				HealthyThreshold:   ptr.To(uint32(3)),
+				TCP: &TCPHealthChecker{
+					Send: &HealthCheckPayload{
+						Text:   ptr.To("foo"),
+						Binary: []byte{'f', 'o', 'o'},
+					},
+					Receive: &HealthCheckPayload{
+						Text: ptr.To("foo"),
+					},
+				},
+			},
+			want: ErrHealthCheckPayloadInvalid,
+		},
+		{
+			name: "tcp-health-check: invalid receive payload",
+			input: HealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To(uint32(3)),
+				HealthyThreshold:   ptr.To(uint32(3)),
+				TCP: &TCPHealthChecker{
+					Send: &HealthCheckPayload{
+						Text: ptr.To("foo"),
+					},
+					Receive: &HealthCheckPayload{
+						Text:   ptr.To("foo"),
+						Binary: []byte{'f', 'o', 'o'},
+					},
+				},
+			},
+			want: ErrHealthCheckPayloadInvalid,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
 		})
 	}
 }

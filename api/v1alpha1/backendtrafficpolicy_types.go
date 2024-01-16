@@ -66,15 +66,26 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
 
+	// HealthCheck allows gateway to perform active health checking on backends.
+	//
+	// +optional
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
+
 	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
 	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
 	// +optional
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
+
 	// Circuit Breaker settings for the upstream connections and requests.
 	// If not set, circuit breakers will be enabled with the default thresholds
 	//
 	// +optional
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
+
+	// Timeout settings for the backend connections.
+	//
+	// +optional
+	Timeout *Timeout `json:"timeout,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
