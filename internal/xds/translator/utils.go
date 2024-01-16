@@ -8,7 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"net"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
@@ -63,8 +63,8 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 
 	name := fmt.Sprintf("%s_%d", strings.ReplaceAll(u.Hostname(), ".", "_"), port)
 
-	if ip := net.ParseIP(u.Hostname()); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
+	if ip, err := netip.ParseAddr(u.Hostname()); err == nil {
+		if ip.Unmap().Is4() {
 			epType = EndpointTypeStatic
 		}
 	}

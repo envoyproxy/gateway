@@ -8,8 +8,8 @@ package ir
 import (
 	"cmp"
 	"errors"
-	"net"
 	"net/http"
+	"net/netip"
 	"reflect"
 
 	"github.com/tetratelabs/multierror"
@@ -217,7 +217,7 @@ func (h HTTPListener) Validate() error {
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
-	if ip := net.ParseIP(h.Address); ip == nil {
+	if _, err := netip.ParseAddr(h.Address); err != nil {
 		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
@@ -714,9 +714,9 @@ func (d DestinationEndpoint) Validate() error {
 	var errs error
 
 	err := validation.IsDNS1123Subdomain(d.Host)
-	ip := net.ParseIP(d.Host)
+	_, pErr := netip.ParseAddr(d.Host)
 
-	if err != nil && ip == nil {
+	if err != nil && pErr != nil {
 		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
 	}
 
@@ -941,7 +941,7 @@ func (h TCPListener) Validate() error {
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
-	if ip := net.ParseIP(h.Address); ip == nil {
+	if _, err := netip.ParseAddr(h.Address); err != nil {
 		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
@@ -1005,7 +1005,7 @@ func (h UDPListener) Validate() error {
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
-	if ip := net.ParseIP(h.Address); ip == nil {
+	if _, err := netip.ParseAddr(h.Address); err != nil {
 		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
