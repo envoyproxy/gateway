@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -146,7 +147,9 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 			}
 
 			if irProvider.ExtractFrom != nil {
+				jwtProvider.FromHeaders = buildJwtFromHeaders(irProvider.ExtractFrom.Headers)
 				jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies
+				jwtProvider.FromParams = irProvider.ExtractFrom.Params
 			}
 
 			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
@@ -331,4 +334,20 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 
 func (*jwt) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
 	return nil
+}
+
+// buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct
+func buildJwtFromHeaders(headers []v1alpha1.JWTHeaderExtractor) []*jwtauthnv3.JwtHeader {
+	jwtHeaders := make([]*jwtauthnv3.JwtHeader, 0, len(headers))
+
+	for _, header := range headers {
+		jwtHeader := &jwtauthnv3.JwtHeader{
+			Name:        header.Name,
+			ValuePrefix: ptr.Deref(header.ValuePrefix, ""),
+		}
+
+		jwtHeaders = append(jwtHeaders, jwtHeader)
+	}
+
+	return jwtHeaders
 }
