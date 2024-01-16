@@ -88,6 +88,11 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// PrivateKeyProvider defines the envoy's private key provider used for the TLS.
+	//
+	// +optional
+	PrivateKeyProvider *EnvoyPrivateKeyProvider `json:"privateKeyProvider,omitempty"`
 }
 
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.

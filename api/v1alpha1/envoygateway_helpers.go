@@ -51,6 +51,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Telemetry == nil {
 		e.Telemetry = DefaultEnvoyGatewayTelemetry()
 	}
+	if e.PrivateKeyProvider == nil {
+		e.PrivateKeyProvider = DefaultEnvoyPrivateKeyProvider()
+	}
 }
 
 // GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
@@ -166,6 +169,16 @@ func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 	return &EnvoyGatewayKubernetesProvider{
 		RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
 	}
+}
+
+// GetEnvoyGatewayPrivateKeyProvider returns the EnvoyPrivateKeyProvider of EnvoyGateway or a default EnvoyPrivateKeyProvider if unspecified.
+func (e *EnvoyGateway) GetEnvoyGatewayPrivateKeyProvider() *EnvoyPrivateKeyProvider {
+	if e.PrivateKeyProvider != nil {
+		return e.PrivateKeyProvider
+	}
+	e.PrivateKeyProvider.Default = DefaultEnvoyDefaultPrivateKeyProvider()
+
+	return e.PrivateKeyProvider
 }
 
 // DefaultEnvoyGatewayAdmin returns a new EnvoyGatewayAdmin with default configuration parameters.

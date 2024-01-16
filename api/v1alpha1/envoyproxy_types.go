@@ -74,6 +74,11 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
+
+	// PrivateKeyProvider defines the envoy's private key provider used for the TLS.
+	//
+	// +optional
+	PrivateKeyProvider *EnvoyPrivateKeyProvider `json:"privateKeyProvider,omitempty"`
 }
 
 type ProxyTelemetry struct {

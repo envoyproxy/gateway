@@ -76,8 +76,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						t.GlobalRateLimit.Timeout = r.EnvoyGateway.RateLimit.Timeout.Duration
 					}
 				}
-
-				result, err := t.Translate(val)
+				var privateKeyProvider *v1alpha1.EnvoyPrivateKeyProvider
+				if val.Config != nil {
+					if val.Config.Spec.PrivateKeyProvider != nil {
+						r.Logger.Info("!!!!!!!!!! using dynamic config for private key provider")
+						privateKeyProvider = val.Config.Spec.PrivateKeyProvider
+					}
+				} else {
+					if (r.EnvoyGateway.PrivateKeyProvider != nil) {
+						r.Logger.Info("!!!!!!!!!! using static config for private key provider")
+						privateKeyProvider = r.EnvoyGateway.PrivateKeyProvider
+					}
+				}
+				result, err := t.Translate(val, privateKeyProvider)
 				if err != nil {
 					r.Logger.Error(err, "failed to translate xds ir")
 					errChan <- err

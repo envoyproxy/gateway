@@ -78,6 +78,8 @@ type Xds struct {
 	UDP []*UDPListener `json:"udp,omitempty" yaml:"udp,omitempty"`
 	// EnvoyPatchPolicies is the intermediate representation of the EnvoyPatchPolicy resource
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
+	// Config defines user-facing configuration of the managed proxy infrastructure.
+	Config *egv1a1.EnvoyProxy `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.

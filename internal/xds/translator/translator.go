@@ -22,6 +22,7 @@ import (
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -60,7 +61,7 @@ type GlobalRateLimitSettings struct {
 }
 
 // Translate translates the XDS IR into xDS resources
-func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
+func (t *Translator) Translate(ir *ir.Xds, privateKeyProvider *egv1a1.EnvoyPrivateKeyProvider) (*types.ResourceVersionTable, error) {
 	if ir == nil {
 		return nil, errors.New("ir is nil")
 	}
@@ -78,11 +79,11 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
 	if err := t.processHTTPListenerXdsTranslation(
-		tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics); err != nil {
+		tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics, privateKeyProvider); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
-	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog); err != nil {
+	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog, privateKeyProvider); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
@@ -116,6 +117,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	accessLog *ir.AccessLog,
 	tracing *ir.Tracing,
 	metrics *ir.Metrics,
+	privateKeyProvider *egv1a1.EnvoyPrivateKeyProvider,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -186,7 +188,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
 			for t := range httpListener.TLS.Certificates {
-				secret := buildXdsDownstreamTLSSecret(httpListener.TLS.Certificates[t])
+				secret := buildXdsDownstreamTLSSecret(httpListener.TLS.Certificates[t], privateKeyProvider)
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 					errs = multierror.Append(errs, err)
 				}
@@ -326,7 +328,8 @@ func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
 	}
 }
 
-func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog) error {
+func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog,
+	                                  privateKeyProvider *egv1a1.EnvoyPrivateKeyProvider,) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error
@@ -358,7 +361,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 
 		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
 			for _, s := range tcpListener.TLS.Terminate.Certificates {
-				secret := buildXdsDownstreamTLSSecret(s)
+				secret := buildXdsDownstreamTLSSecret(s, privateKeyProvider)
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 					errs = multierror.Append(errs, err)
 				}

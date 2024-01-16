@@ -12,6 +12,8 @@ import (
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	cmb "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/private_key_providers/cryptomb/v3alpha"
+	qat "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/private_key_providers/qat/v3alpha"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
@@ -24,6 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -451,7 +454,58 @@ func buildALPNProtocols(alpn []string) []string {
 	return alpn
 }
 
-func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
+func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate,
+	                             privateKeyProvider *egv1a1.EnvoyPrivateKeyProvider) *tlsv3.Secret {
+    if privateKeyProvider != nil {
+		if privateKeyProvider.Type == egv1a1.PrivateKeyProviderTypeCryptoMB {
+			// Build the tls secret
+			return &tlsv3.Secret{
+				Name: tlsConfig.Name,
+				Type: &tlsv3.Secret_TlsCertificate{
+					TlsCertificate: &tlsv3.TlsCertificate{
+						CertificateChain: &corev3.DataSource{
+							Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
+						},
+						PrivateKeyProvider: &tlsv3.PrivateKeyProvider{
+							ProviderName: "cryptomb",
+							ConfigType: &tlsv3.PrivateKeyProvider_TypedConfig{
+								TypedConfig: protocov.ToAny(&cmb.CryptoMbPrivateKeyMethodConfig{
+									PrivateKey: &corev3.DataSource{
+										Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+									},
+								}),
+							},
+							Fallback: true,
+						},
+					},
+				},
+			}
+		}
+		if privateKeyProvider.Type == egv1a1.PrivateKeyProviderTypeQAT {
+			// Build the tls secret
+			return &tlsv3.Secret{
+				Name: tlsConfig.Name,
+				Type: &tlsv3.Secret_TlsCertificate{
+					TlsCertificate: &tlsv3.TlsCertificate{
+						CertificateChain: &corev3.DataSource{
+							Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
+						},
+						PrivateKeyProvider: &tlsv3.PrivateKeyProvider{
+							ProviderName: "qat",
+							ConfigType: &tlsv3.PrivateKeyProvider_TypedConfig{
+								TypedConfig: protocov.ToAny(&qat.QatPrivateKeyMethodConfig{
+									PrivateKey: &corev3.DataSource{
+										Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+									},
+								}),
+							},
+							Fallback: true,
+						},
+					},
+				},
+			}
+		}
+	}
 	// Build the tls secret
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,

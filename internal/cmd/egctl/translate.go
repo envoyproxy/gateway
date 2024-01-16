@@ -316,7 +316,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
 		}
-		xRes, err := xTranslator.Translate(val)
+		xRes, err := xTranslator.Translate(val, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
 		}

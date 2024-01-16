@@ -103,6 +103,51 @@ spec:
                   the newer listener (based on timestamp) will be rejected and its
                   status will be updated with a "Accepted=False" condition.
                 type: boolean
+              privateKeyProvider:
+                description: PrivateKeyProvider defines the envoy's private key provider
+                  used for the TLS.
+                properties:
+                  cryptoMB:
+                    description: CryptoMB defines the configuration of the CryptoMB
+                      private key provider.
+                    properties:
+                      fallback:
+                        type: boolean
+                      interval:
+                        description: Duration is a string value representing a duration
+                          in time. The format is as specified in GEP-2257, a strict
+                          subset of the syntax parsed by Golang time.ParseDuration.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                  default:
+                    description: Default defines the configuration of the private
+                      key provider.
+                    type: object
+                  qat:
+                    description: QAT defines the configuration of the CryptoMB private
+                      key provider.
+                    properties:
+                      fallback:
+                        type: boolean
+                      interval:
+                        description: Duration is a string value representing a duration
+                          in time. The format is as specified in GEP-2257, a strict
+                          subset of the syntax parsed by Golang time.ParseDuration.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                  type:
+                    description: Type is the type of provider to use. Supported types
+                      are "Default", "CryptoMB" and "QAT".
+                    enum:
+                    - Default
+                    - CryptoMB
+                    - QAT
+                    type: string
+                required:
+                - type
+                type: object
               provider:
                 description: Provider defines the desired resource provider and provider-specific
                   configuration. If unspecified, the "Kubernetes" resource provider

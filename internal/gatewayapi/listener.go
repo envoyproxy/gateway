@@ -41,6 +41,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 		if resources.EnvoyProxy != nil {
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
+			xdsIR[irKey].Config = resources.EnvoyProxy
 		}
 
 		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)

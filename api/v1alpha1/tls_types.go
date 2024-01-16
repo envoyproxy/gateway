@@ -5,6 +5,48 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
+// EnvoyPrivateKeyProvider defines the desired configuration of a private key provider.
+// +union
+type EnvoyPrivateKeyProvider struct {
+	// Type is the type of provider to use. Supported types are "Default", "CryptoMB" and "QAT".
+	//
+	// +unionDiscriminator
+	Type PrivateKeyProviderType `json:"type"`
+
+	// Default defines the configuration of the private key provider.
+	//
+	// +optional
+	Default *EnvoyDefaultPrivateKeyProvider `json:"default,omitempty"`
+
+	// CryptoMB defines the configuration of the CryptoMB private key provider.
+	//
+	// +optional
+	CryptoMB *EnvoyCryptoMBPrivateKeyProvider `json:"cryptoMB,omitempty"`
+
+	// QAT defines the configuration of the CryptoMB private key provider.
+	//
+	// +optional
+	QAT *EnvoyQATPrivateKeyProvider `json:"qat,omitempty"`
+}
+
+type EnvoyDefaultPrivateKeyProvider struct {
+
+}
+
+type EnvoyCryptoMBPrivateKeyProvider struct {
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+	Fallback bool `json:"fallback,omitempty"`
+}
+
+type EnvoyQATPrivateKeyProvider struct {
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+	Fallback bool `json:"fallback,omitempty"`
+}
+
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && has(self.maxVersion) ? {\"Auto\":0,\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4}[self.minVersion] <= {\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4,\"Auto\":5}[self.maxVersion] : !has(self.minVersion) && has(self.maxVersion) ? 3 <= {\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4,\"Auto\":5}[self.maxVersion] : true", message="minVersion must be smaller or equal to maxVersion"
 type TLSSettings struct {
