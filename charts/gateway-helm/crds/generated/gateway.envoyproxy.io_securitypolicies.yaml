@@ -127,12 +127,16 @@ spec:
                         (domain), and port of the URL used to access it. The hostname
                         can be “precise” which is just the domain name or “wildcard”
                         which is a domain name prefixed with a single wildcard label
-                        such as “*.example.com”. \n For example, the following are
-                        valid origins: - https://foo.example.com - https://*.example.com
-                        - http://foo.example.com:8080 - http://*.example.com:8080"
+                        such as “*.example.com”. The optional port can be a wildcard
+                        as well to allow all ports. In addition to that a single wildcard
+                        (with or without scheme) can be configured to match any origin.
+                        \n For example, the following are valid origins: - https://foo.example.com
+                        - https://*.example.com - http://foo.example.com:8080 - http://*.example.com:8080
+                        - https://foo.example.com:* - http://localhost - https://*
+                        - *"
                       maxLength: 253
                       minLength: 1
-                      pattern: ^https?:\/\/(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(:[0-9]+)?$
+                      pattern: ^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:(\*|\d{1,5}))?)$
                       type: string
                     minItems: 1
                     type: array

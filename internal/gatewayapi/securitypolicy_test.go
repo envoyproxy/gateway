@@ -62,6 +62,48 @@ func Test_wildcard2regex(t *testing.T) {
 			origin:   "http://foo.example.com",
 			want:     0,
 		},
+		{
+			name:     "test8",
+			wildcard: "http://*.example.com:*",
+			origin:   "http://foo.example.com:8080",
+			want:     1,
+		},
+		{
+			name:     "test9",
+			wildcard: "http://*.example.com:*",
+			origin:   "http://foo.example.com",
+			want:     0,
+		},
+		{
+			name:     "test10",
+			wildcard: "http://*",
+			origin:   "http://foo.example.com",
+			want:     1,
+		},
+		{
+			name:     "test11",
+			wildcard: "http://*",
+			origin:   "https://foo.example.com",
+			want:     0,
+		},
+		{
+			name:     "test12",
+			wildcard: "*",
+			origin:   "http://foo.example.com",
+			want:     1,
+		},
+		{
+			name:     "test13",
+			wildcard: "http://localhost:*",
+			origin:   "http://localhost:1234",
+			want:     1,
+		},
+		{
+			name:     "test14",
+			wildcard: "http://localhost:*",
+			origin:   "http://localhost",
+			want:     0,
+		},
 	}
 
 	for _, tt := range tests {

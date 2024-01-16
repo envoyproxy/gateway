@@ -16,7 +16,11 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
-The below example defines a SecurityPolicy that allows CORS requests from `www.foo.com`.
+When configuring CORS either an origin with a precise hostname can be configured or an hostname containing a wildcard prefix,
+allowing all subdomains of the specified hostname.
+In addition to that the entire origin (with or without specifying a scheme) can be a wildcard to allow all origins.
+
+The below example defines a SecurityPolicy that allows CORS for all HTTP requests originating from `www.foo.com`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -94,7 +98,7 @@ curl -H "Origin: http://www.bar.com" \
 
 You won't see any CORS headers in the response, indicating that the request from `http://www.bar.com` was not allowed.
 
-If you try to send a request from `http://www.foo.com:8080`, you should also see similar response because the port number 
+If you try to send a request from `http://www.foo.com:8080`, you should also see similar response because the port number
 `8080` is not included in the allowed origins.
 
 ```shell
