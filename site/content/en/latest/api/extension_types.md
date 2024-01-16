@@ -90,6 +90,7 @@ _Appears in:_
 | `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
 
 
 
@@ -951,6 +952,21 @@ HTTPStatus defines the http status code.
 _Appears in:_
 - [HTTPHealthChecker](#httphealthchecker)
 
+
+
+#### HTTPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectionIdleTimeout` _Duration_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `maxConnectionDuration` _Duration_ | The maximum duration of an HTTP connection. Default: unlimited. |
 
 
 #### HeaderMatch
@@ -2009,6 +2025,20 @@ _Appears in:_
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
 
 
+#### TCPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
+
+
 #### TLSSettings
 
 
@@ -2037,6 +2067,21 @@ TLSVersion specifies the TLS version
 _Appears in:_
 - [TLSSettings](#tlssettings)
 
+
+
+#### Timeout
+
+
+
+Timeout defines configuration for timeouts related to connections.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `tcp` _[TCPTimeout](#tcptimeout)_ | Timeout settings for TCP. |
+| `http` _[HTTPTimeout](#httptimeout)_ | Timeout settings for HTTP. |
 
 
 #### TracingProvider
