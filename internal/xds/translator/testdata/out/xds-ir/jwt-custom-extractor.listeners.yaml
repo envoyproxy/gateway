@@ -24,6 +24,11 @@
                 forward: true
                 fromCookies:
                 - session_access_token
+                fromHeaders:
+                - name: Authorization
+                  valuePrefix: 'Bearer '
+                fromParams:
+                - token
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:

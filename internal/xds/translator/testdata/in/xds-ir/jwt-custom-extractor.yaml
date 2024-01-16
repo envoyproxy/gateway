@@ -23,6 +23,11 @@ http:
         extractFrom:
           cookies:
           - session_access_token
+          headers:
+          - name: Authorization
+            valuePrefix: 'Bearer '
+          params:
+          - token
     destination:
       name: "first-route-dest"
       settings:
