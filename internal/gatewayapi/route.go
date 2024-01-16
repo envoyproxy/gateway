@@ -23,6 +23,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
+const (
+	// Following the description in `timeout` section of https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto
+	// Request timeout, which is defined as Duration, specifies the upstream timeout for the route
+	// If not specified, the default is 15s
+	HTTPRequestTimeout = "15s"
+)
+
 var (
 	_                RoutesTranslator = (*Translator)(nil)
 	validServiceName                  = `(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*`
@@ -221,16 +228,20 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
 		if rule.Timeouts.Request != nil {
-			// TODO: handle parse errors
-			d, _ := time.ParseDuration(string(*rule.Timeouts.Request))
+			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
+			if err != nil {
+				d, _ = time.ParseDuration(HTTPRequestTimeout)
+			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		// Also set the IR Route Timeout to the backend request timeout
 		// until we introduce retries, then set it to per try timeout
 		if rule.Timeouts.BackendRequest != nil {
-			// TODO: handle parse errors
-			d, _ := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			if err != nil {
+				d, _ = time.ParseDuration(HTTPRequestTimeout)
+			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 	}
