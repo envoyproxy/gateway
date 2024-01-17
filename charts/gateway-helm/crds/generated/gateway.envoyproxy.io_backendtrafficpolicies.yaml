@@ -27,7 +27,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: BackendTrafficPolicy allows the user to configure the behavior
-          of the connection between the downstream client and Envoy Proxy listener.
+          of the connection between the Envoy Proxy listener and the backend service.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
