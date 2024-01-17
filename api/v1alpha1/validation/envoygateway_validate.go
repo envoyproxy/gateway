@@ -15,7 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-// Validate validates the provided EnvoyGateway.
+// ValidateEnvoyGateway validates the provided EnvoyGateway.
 func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 	switch {
 	case eg == nil:
@@ -28,6 +28,20 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 		return errors.New("provider is unspecified")
 	case eg.Provider.Type != v1alpha1.ProviderTypeKubernetes:
 		return fmt.Errorf("unsupported provider %v", eg.Provider.Type)
+	case eg.Provider.Kubernetes != nil && eg.Provider.Kubernetes.Watch != nil:
+		watch := eg.Provider.Kubernetes.Watch
+		switch watch.Type {
+		case v1alpha1.KubernetesWatchModeTypeNamespaces:
+			if len(watch.Namespaces) == 0 {
+				return errors.New("namespaces should be specified when envoy gateway watch mode is 'Namespaces'")
+			}
+		case v1alpha1.KubernetesWatchModeTypeNamespaceSelectors:
+			if len(watch.NamespaceSelectors) == 0 {
+				return errors.New("namespaceSelectors should be specified when envoy gateway watch mode is 'NamespaceSelectors'")
+			}
+		default:
+			return errors.New("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelectors'")
+		}
 	case eg.Logging != nil && len(eg.Logging.Level) != 0:
 		level := eg.Logging.Level
 		for component, logLevel := range level {

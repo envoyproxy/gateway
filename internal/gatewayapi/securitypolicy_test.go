@@ -68,9 +68,67 @@ func Test_wildcard2regex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			regexStr := wildcard2regex(tt.wildcard)
 			regex, err := regexp.Compile(regexStr)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			finds := regex.FindAllString(tt.origin, -1)
-			assert.Equalf(t, tt.want, len(finds), "wildcard2regex(%v)", tt.wildcard)
+			assert.Lenf(t, finds, tt.want, "wildcard2regex(%v)", tt.wildcard)
+		})
+	}
+}
+
+func Test_extractRedirectPath(t *testing.T) {
+	tests := []struct {
+		name        string
+		redirectURL string
+		want        string
+		wantErr     bool
+	}{
+		{
+			name:        "header value syntax",
+			redirectURL: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/petstore/oauth2/callback",
+			want:        "/petstore/oauth2/callback",
+			wantErr:     false,
+		},
+		{
+			name:        "without header value syntax",
+			redirectURL: "https://www.example.com/petstore/oauth2/callback",
+			want:        "/petstore/oauth2/callback",
+			wantErr:     false,
+		},
+		{
+			name:        "with port",
+			redirectURL: "https://www.example.com:9080/petstore/oauth2/callback",
+			want:        "/petstore/oauth2/callback",
+			wantErr:     false,
+		},
+		{
+			name:        "without path",
+			redirectURL: "https://www.example.com/",
+			want:        "",
+			wantErr:     true,
+		},
+		{
+			name:        "without path",
+			redirectURL: "https://www.example.com",
+			want:        "",
+			wantErr:     true,
+		},
+		{
+			name:        "without scheme",
+			redirectURL: "://www.example.com",
+			want:        "",
+			wantErr:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := extractRedirectPath(tt.redirectURL)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractRedirectPath() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				assert.Equalf(t, tt.want, got, "extractRedirectPath(%v)", tt.redirectURL)
+			}
 		})
 	}
 }

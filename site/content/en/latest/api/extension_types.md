@@ -38,8 +38,6 @@ _Appears in:_
 
 
 
-
-
 #### BackendTrafficPolicy
 
 
@@ -92,6 +90,7 @@ _Appears in:_
 | `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
 
 
 
@@ -746,9 +745,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
-| `grpcService` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPCService defines the gRPC External Authorization service Only one of GRPCService or HTTPService may be specified. |
-| `httpService` _[HTTPExtAuthService](#httpextauthservice)_ | HTTPService defines the HTTP External Authorization service Only one of GRPCService or HTTPService may be specified. |
-| `allowWhenFailed` _boolean_ | AllowWhenFailed indicates whether the request should be allowed when the authorization service has failed or has returned an HTTP 5xx error. When set to true, the request will be allowed. When set to false, the request will be denied with an HTTP 403 Forbidden error. Defaults to false. |
+| `grpcService` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service Only one of GRPCService or HTTPService may be specified. |
+| `httpService` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service Only one of GRPCService or HTTPService may be specified. |
 | `allowedHeaders` _string array_ | AllowedHeaders defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
 
 
@@ -974,7 +972,7 @@ _Appears in:_
 | --- | --- |
 | `url` _string_ | URL is the URL of the HTTP External Authorization service. The URL must be a fully qualified URL with a scheme, hostname, and optional port and path. Parameters are not allowed. The URL must use either the http or https scheme. If port is not specified, 80 for http and 443 for https are assumed. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
 | `tlsSettings` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. TLS is only valid when the URL scheme is https. If the URL scheme is https, and TLS is not specified, the proxy will use the system default certificate pool to verify the server certificate. |
-| `allowedUpstreamHeaders` _string array_ | Authorization response headers that will be added to the original client request before sending it to the upstream server. Note that coexistent headers will be overridden. |
+| `allowedBackendHeaders` _string array_ | Authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 
 
 #### HTTPHealthChecker
@@ -1003,6 +1001,21 @@ HTTPStatus defines the http status code.
 _Appears in:_
 - [HTTPHealthChecker](#httphealthchecker)
 
+
+
+#### HTTPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectionIdleTimeout` _Duration_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `maxConnectionDuration` _Duration_ | The maximum duration of an HTTP connection. Default: unlimited. |
 
 
 #### HeaderMatch
@@ -1131,14 +1144,31 @@ _Appears in:_
 
 
 
-JWTExtractor defines a custom JWT token extraction from HTTP request.
+JWTExtractor defines a custom JWT token extraction from HTTP request. If specified, Envoy will extract the JWT token from the listed extractors (headers, cookies, or params) and validate each of them. If any value extracted is found to be an invalid JWT, a 401 error will be returned.
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
-| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. If specified, Envoy will extract the JWT token from the listed cookies and validate each of them. If any cookie is found to be an invalid JWT, a 401 error will be returned. |
+| `headers` _[JWTHeaderExtractor](#jwtheaderextractor) array_ | Headers represents a list of HTTP request headers to extract the JWT token from. |
+| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. |
+| `params` _string array_ | Params represents a list of query parameters to extract the JWT token from. |
+
+
+#### JWTHeaderExtractor
+
+
+
+JWTHeaderExtractor defines an HTTP header location to extract JWT token
+
+_Appears in:_
+- [JWTExtractor](#jwtextractor)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the HTTP header name to retrieve the token |
+| `valuePrefix` _string_ | ValuePrefix is the prefix that should be stripped before extracting the token. The format would be used by Envoy like "{ValuePrefix}<TOKEN>". For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
 
 
 #### JWTProvider
@@ -1279,8 +1309,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
-| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set |
-| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whois namespce have no given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set |
+| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set. |
+| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whose namespace do not match given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set. |
 
 
 #### KubernetesWatchModeType
@@ -1389,17 +1419,15 @@ _Appears in:_
 | `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
  This is an Opaque secret. The client secret should be stored in the key "client-secret". |
 | `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
+| `redirectURL` _string_ | The redirect URL to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
+| `logoutPath` _string_ | The path to log a user out, clearing their credential cookies. If not specified, uses a default logout path "/logout" |
 
 
 #### OIDCProvider
 
 
 
-OIDCProvider defines the OIDC Provider configuration. To make the EG OIDC config easy to use, some of the low-level ouath2 filter configuration knobs are hidden from the user, and default values will be provided when translating to XDS. For example: 
- * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" 
- * signout_path: uses a default signout path "/signout" 
- * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback" 
- If we get requests to expose these knobs, we can always do so later.
+OIDCProvider defines the OIDC Provider configuration.
 
 _Appears in:_
 - [OIDC](#oidc)
@@ -2064,6 +2092,20 @@ _Appears in:_
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
 
 
+#### TCPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
+
+
 #### TLSConfig
 
 
@@ -2108,6 +2150,21 @@ TLSVersion specifies the TLS version
 _Appears in:_
 - [TLSSettings](#tlssettings)
 
+
+
+#### Timeout
+
+
+
+Timeout defines configuration for timeouts related to connections.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `tcp` _[TCPTimeout](#tcptimeout)_ | Timeout settings for TCP. |
+| `http` _[HTTPTimeout](#httptimeout)_ | Timeout settings for HTTP. |
 
 
 #### TracingProvider
