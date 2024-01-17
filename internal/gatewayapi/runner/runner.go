@@ -7,8 +7,6 @@ package runner
 
 import (
 	"context"
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 

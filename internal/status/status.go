@@ -15,8 +15,6 @@ package status
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -87,16 +85,7 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj := update.Mutator.Mutate(obj)
 
-		_, ok := newObj.(*gwapiv1a2.BackendTLSPolicy)
-		if ok {
-			fmt.Println("newobj ********************************* : ", (newObj.(*gwapiv1a2.BackendTLSPolicy)).Status)
-		}
-
 		if isStatusEqual(obj, newObj) {
-			if ok {
-				fmt.Println(" this is equal !!!!!!!!!!!!!! ")
-				fmt.Println(" obj is : ", (obj.(*gwapiv1a2.BackendTLSPolicy)).Status)
-			}
 			u.log.WithName(update.NamespacedName.Name).
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")

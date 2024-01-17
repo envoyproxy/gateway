@@ -216,7 +216,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 								status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionUnknown, gwapiv1a1.PolicyReasonInvalid, messeg)
 								return nil
 							} else {
-								fmt.Println("\n flag 3 *******************************************************************")
 								status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionUnknown, gwapiv1a1.PolicyReasonAccepted, "BackendTLSPolicy is Accepted")
 								return tlsBundle
 							}
