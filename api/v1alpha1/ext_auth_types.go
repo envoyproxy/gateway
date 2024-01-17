@@ -43,6 +43,7 @@ type ExtAuth struct {
 	// services is different. All headers will be included in the check request
 	// to a gRPC authorization server, whereas no headers will be included in the
 	// check request to an HTTP authorization server.
+	// +optional
 	AllowedHeaders []string `json:"allowedHeaders,omitempty"`
 }
 
@@ -57,6 +58,7 @@ type GRPCExtAuthService struct {
 	// TLS defines the TLS configuration for the gRPC External Authorization service.
 	// Note: If not specified, the proxy will talk to the gRPC External
 	// Authorization service in plaintext.
+	// +optional
 	TLS *TLSConfig `json:"tlsSettings,omitempty"`
 }
 
@@ -75,12 +77,16 @@ type HTTPExtAuthService struct {
 	// TLS is only valid when the URL scheme is https. If the URL scheme is
 	// https, and TLS is not specified, the proxy will use the system default
 	// certificate pool to verify the server certificate.
+	// +optional
 	TLS *TLSConfig `json:"tlsSettings,omitempty"`
 
-	// Authorization response headers that will be added to the original client request
-	// before sending it to the upstream server.
+	// Authorization response headers that will be added to the original client
+	// request before sending it to the backend server.
 	// Note that coexisting headers will be overridden.
-	AllowedUpstreamHeaders []string `json:"allowedUpstreamHeaders,omitempty"`
+	// If not specified, no authorization response headers will be added to the
+	// original client request.
+	// +optional
+	AllowedBackendHeaders []string `json:"allowedBackendHeaders,omitempty"`
 }
 
 // TLSConfig describes a TLS configuration.
