@@ -71,6 +71,7 @@ type HTTPExtAuthService struct {
 	// If port is not specified, 80 for http and 443 for https are assumed.
 	// If path is specified, the authorization request will be sent to that path,
 	// or else the authorization request will be sent to the root path.
+	// +kubebuilder:validation:Pattern=`^(https?:)(\/\/[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)((:\d+)?)(\/[a-zA-Z0-9-._~%]+\/?)*$`
 	URL string `json:"url" yaml:"url"`
 
 	// TLS defines the TLS configuration for the HTTP External Authorization service.

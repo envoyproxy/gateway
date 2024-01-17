@@ -336,6 +336,7 @@ spec:
                           are assumed. If path is specified, the authorization request
                           will be sent to that path, or else the authorization request
                           will be sent to the root path.
+                        pattern: ^(https?:)(\/\/[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)((:\d+)?)(\/[a-zA-Z0-9-._~%]+\/?)*$
                         type: string
                     required:
                     - url
@@ -354,6 +355,11 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: one of GRPC or HTTP must be specified
+                  rule: self.grpc == null && self.http == null
+                - message: only one of GRPC or HTTP can be specified
+                  rule: self.grpc != null && self.http != null
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
