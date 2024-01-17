@@ -308,6 +308,20 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// Add the referenced Secrets in SecurityPolicies to the resourceTree
 		r.processSecurityPolicySecretRefs(ctx, gwcResource, resourceMappings)
 
+		// Add all BackendTLSPolies
+		backendTlsPolicies := gwapiv1a2.BackendTLSPolicyList{}
+		if err := r.client.List(ctx, &backendTlsPolicies); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error listing BackendTLSPolicies: %v", err)
+		}
+
+		for _, policy := range backendTlsPolicies.Items {
+			policy := policy
+			// Discard Status to reduce memory consumption in watchable
+			// It will be recomputed by the gateway-api layer
+			policy.Status = gwapiv1a2.PolicyStatus{} // todo ?
+			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
+		}
+
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
 		for ns := range resourceMappings.allAssociatedNamespaces {
@@ -1055,6 +1069,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 	if err := addSecurityPolicyIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
+	// Watch BackendTLSPolicy
+	btlsPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
+	if len(r.namespaceLabels) != 0 {
+		btlsPredicates = append(btlsPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gwapiv1a2.BackendTLSPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		btlsPredicates...,
+	); err != nil {
 		return err
 	}
 

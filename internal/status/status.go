@@ -15,6 +15,7 @@ package status
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -86,7 +87,16 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj := update.Mutator.Mutate(obj)
 
+		_, ok := newObj.(*gwapiv1a2.BackendTLSPolicy)
+		if ok {
+			fmt.Println("newobj ********************************* : ", (newObj.(*gwapiv1a2.BackendTLSPolicy)).Status)
+		}
+
 		if isStatusEqual(obj, newObj) {
+			if ok {
+				fmt.Println(" this is equal !!!!!!!!!!!!!! ")
+				fmt.Println(" obj is : ", (obj.(*gwapiv1a2.BackendTLSPolicy)).Status)
+			}
 			u.log.WithName(update.NamespacedName.Name).
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")
@@ -170,6 +180,7 @@ func (u *UpdateWriter) Send(update Update) {
 //	EnvoyPatchPolicy
 //	ClientTrafficPolicy
 //	SecurityPolicy
+//	BackendTLSPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
@@ -235,6 +246,12 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	case *egv1a1.SecurityPolicy:
 		if b, ok := objB.(*egv1a1.SecurityPolicy); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case gwapiv1a2.BackendTLSPolicy:
+		if b, ok := objB.(*gwapiv1a2.BackendTLSPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
