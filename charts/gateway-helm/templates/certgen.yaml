@@ -34,6 +34,10 @@ spec:
         image: {{ .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy }}
         name: envoy-gateway-certgen
+        {{- with .Values.certgen.job.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- with .Values.deployment.envoyGateway.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
