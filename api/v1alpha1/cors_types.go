@@ -9,9 +9,9 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 
 // Origin is defined by the scheme (protocol), hostname (domain), and port of
-// the URL used to access it. The hostname can be “precise” which is just the
-// domain name or “wildcard” which is a domain name prefixed with a single
-// wildcard label such as “*.example.com”. The optional port can be a wildcard
+// the URL used to access it. The hostname can be "precise" which is just the
+// domain name or "wildcard" which is a domain name prefixed with a single
+// wildcard label such as "*.example.com". The optional port can be a wildcard
 // as well to allow all ports.
 // In addition to that a single wildcard (with or without scheme) can be
 // configured to match any origin.
