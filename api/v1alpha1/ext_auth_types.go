@@ -21,11 +21,15 @@ const (
 	HTTPExtAuthServiceType ExtAuthServiceType = "HTTP"
 )
 
+// +kubebuilder:validation:XValidation:message="http must be specified if type is HTTP",rule="self.type == 'HTTP' ? has(self.http) : true"
+// +kubebuilder:validation:XValidation:message="grpc must be specified if type is GRPC",rule="self.type == 'GRPC' ? has(self.grpc) : true"
+// +kubebuilder:validation:XValidation:message="only one of grpc or http can be specified",rule="!(has(self.grpc) && has(self.http))"
+//
 // ExtAuth defines the configuration for External Authorization.
 type ExtAuth struct {
 	// Type decides the type of External Authorization.
 	// Valid ExtAuthServiceType values are "GRPC" or "HTTP".
-	// +kubebuilder:validation:Enum=GRPCExtAuthServiceType;HTTPExtAuthServiceType
+	// +kubebuilder:validation:Enum=GRPC;HTTP
 	// +unionDiscriminator
 	Type ExtAuthServiceType `json:"type"`
 

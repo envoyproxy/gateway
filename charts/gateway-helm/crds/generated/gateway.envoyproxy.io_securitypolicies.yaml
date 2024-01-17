@@ -347,8 +347,8 @@ spec:
                       - GRPC
                       - HTTP
                     - enum:
-                      - GRPCExtAuthServiceType
-                      - HTTPExtAuthServiceType
+                      - GRPC
+                      - HTTP
                     description: Type decides the type of External Authorization.
                       Valid ExtAuthServiceType values are "GRPC" or "HTTP".
                     type: string
@@ -356,10 +356,12 @@ spec:
                 - type
                 type: object
                 x-kubernetes-validations:
-                - message: one of GRPC or HTTP must be specified
-                  rule: self.grpc == null && self.http == null
-                - message: only one of GRPC or HTTP can be specified
-                  rule: self.grpc != null && self.http != null
+                - message: http must be specified if type is HTTP
+                  rule: 'self.type == ''HTTP'' ? has(self.http) : true'
+                - message: grpc must be specified if type is GRPC
+                  rule: 'self.type == ''GRPC'' ? has(self.grpc) : true'
+                - message: only one of grpc or http can be specified
+                  rule: '!(has(self.grpc) && has(self.http))'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.

@@ -70,8 +70,6 @@ type SecurityPolicySpec struct {
 	// ExtAuth defines the configuration for External Authorization.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="one of GRPC or HTTP must be specified",rule="self.grpc == null && self.http == null"
-	// +kubebuilder:validation:XValidation:message="only one of GRPC or HTTP can be specified",rule="self.grpc != null && self.http != null"
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
 }
 
