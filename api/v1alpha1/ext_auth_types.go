@@ -79,7 +79,7 @@ type HTTPExtAuthService struct {
 
 	// Authorization response headers that will be added to the original client request
 	// before sending it to the upstream server.
-	// Note that coexistent headers will be overridden.
+	// Note that coexisting headers will be overridden.
 	AllowedUpstreamHeaders []string `json:"allowedUpstreamHeaders,omitempty"`
 }
 
