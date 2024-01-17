@@ -15,27 +15,27 @@ type ExtAuthServiceType string
 
 const (
 	// GRPC external authorization service.
-	GRPC ExtAuthServiceType = "GRPC"
+	GRPCExtAuthServiceType ExtAuthServiceType = "GRPC"
 
 	// HTTP external authorization service.
-	HTTP ExtAuthServiceType = "HTTP"
+	HTTPExtAuthServiceType ExtAuthServiceType = "HTTP"
 )
 
 // ExtAuth defines the configuration for External Authorization.
 type ExtAuth struct {
 	// Type decides the type of External Authorization.
 	// Valid ExtAuthServiceType values are "GRPC" or "HTTP".
-	// +kubebuilder:validation:Enum=GRPC;HTTP
+	// +kubebuilder:validation:Enum=GRPCExtAuthServiceType;HTTPExtAuthServiceType
 	// +unionDiscriminator
 	Type ExtAuthServiceType `json:"type"`
 
 	// GRPC defines the gRPC External Authorization service
 	// Only one of GRPCService or HTTPService may be specified.
-	GRPC *GRPCExtAuthService `json:"grpcService,omitempty"`
+	GRPC *GRPCExtAuthService `json:"grpc,omitempty"`
 
 	// HTTP defines the HTTP External Authorization service
 	// Only one of GRPCService or HTTPService may be specified.
-	HTTP *HTTPExtAuthService `json:"httpService,omitempty"`
+	HTTP *HTTPExtAuthService `json:"http,omitempty"`
 
 	// AllowedHeaders defines the client request headers that will be included
 	// in the request to the external authorization service.

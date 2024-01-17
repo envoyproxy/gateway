@@ -347,8 +347,8 @@ spec:
                       - GRPC
                       - HTTP
                     - enum:
-                      - GRPC
-                      - HTTP
+                      - GRPCExtAuthServiceType
+                      - HTTPExtAuthServiceType
                     description: Type decides the type of External Authorization.
                       Valid ExtAuthServiceType values are "GRPC" or "HTTP".
                     type: string

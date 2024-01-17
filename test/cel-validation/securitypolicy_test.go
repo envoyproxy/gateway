@@ -285,6 +285,52 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				"spec.cors.allowOrigins[0]: Invalid value: \"grpc://foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^https?:\\/\\/(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(:[0-9]+)?$'",
 			},
 		},
+
+		// ExtAuth
+		{
+			desc: "no extAuth service",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": one of GRPC or HTTP external authorization service must be specified",
+			},
+		},
+		{
+			desc: "with both extAuth services",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							Host: "foo.bar.com",
+							Port: 15001,
+						},
+						HTTP: &egv1a1.HTTPExtAuthService{
+							URL: "https://foo.bar.com",
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": only one of GRPC or HTTP external authorization service can be specified",
+			},
+		},
 	}
 
 	for _, tc := range cases {
