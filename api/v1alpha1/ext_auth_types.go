@@ -59,7 +59,7 @@ type GRPCExtAuthService struct {
 	// Note: If not specified, the proxy will talk to the gRPC External
 	// Authorization service in plaintext.
 	// +optional
-	TLS *TLSConfig `json:"tlsSettings,omitempty"`
+	TLS *TLSConfig `json:"tls,omitempty"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -79,7 +79,7 @@ type HTTPExtAuthService struct {
 	// https, and TLS is not specified, the proxy will use the system default
 	// certificate pool to verify the server certificate.
 	// +optional
-	TLS *TLSConfig `json:"tlsSettings,omitempty"`
+	TLS *TLSConfig `json:"tls,omitempty"`
 
 	// Authorization response headers that will be added to the original client
 	// request before sending it to the backend server.

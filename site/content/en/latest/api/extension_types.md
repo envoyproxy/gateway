@@ -745,8 +745,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
-| `grpcService` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service Only one of GRPCService or HTTPService may be specified. |
-| `httpService` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service Only one of GRPCService or HTTPService may be specified. |
+| `grpc` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service Only one of GRPCService or HTTPService may be specified. |
+| `http` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service Only one of GRPCService or HTTPService may be specified. |
 | `allowedHeaders` _string array_ | AllowedHeaders defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
 
 
@@ -900,7 +900,7 @@ _Appears in:_
 | --- | --- |
 | `host` _Hostname_ | Host is the hostname of the gRPC External Authorization service |
 | `port` _PortNumber_ | Port is the network port of the gRPC External Authorization service |
-| `tlsSettings` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the gRPC External Authorization service. Note: If not specified, the proxy will talk to the gRPC External Authorization service in plaintext. |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the gRPC External Authorization service. Note: If not specified, the proxy will talk to the gRPC External Authorization service in plaintext. |
 
 
 #### Gateway
@@ -971,7 +971,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `url` _string_ | URL is the URL of the HTTP External Authorization service. The URL must be a fully qualified URL with a scheme, hostname, and optional port and path. Parameters are not allowed. The URL must use either the http or https scheme. If port is not specified, 80 for http and 443 for https are assumed. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
-| `tlsSettings` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. TLS is only valid when the URL scheme is https. If the URL scheme is https, and TLS is not specified, the proxy will use the system default certificate pool to verify the server certificate. |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. TLS is only valid when the URL scheme is https. If the URL scheme is https, and TLS is not specified, the proxy will use the system default certificate pool to verify the server certificate. |
 | `allowedBackendHeaders` _string array_ | Authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 
 

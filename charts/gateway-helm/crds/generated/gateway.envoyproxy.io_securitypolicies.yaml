@@ -161,7 +161,7 @@ spec:
                     items:
                       type: string
                     type: array
-                  grpcService:
+                  grpc:
                     description: GRPC defines the gRPC External Authorization service
                       Only one of GRPCService or HTTPService may be specified.
                     properties:
@@ -179,7 +179,7 @@ spec:
                         maximum: 65535
                         minimum: 1
                         type: integer
-                      tlsSettings:
+                      tls:
                         description: 'TLS defines the TLS configuration for the gRPC
                           External Authorization service. Note: If not specified,
                           the proxy will talk to the gRPC External Authorization service
@@ -248,7 +248,7 @@ spec:
                     - host
                     - port
                     type: object
-                  httpService:
+                  http:
                     description: HTTP defines the HTTP External Authorization service
                       Only one of GRPCService or HTTPService may be specified.
                     properties:
@@ -261,7 +261,7 @@ spec:
                         items:
                           type: string
                         type: array
-                      tlsSettings:
+                      tls:
                         description: TLS defines the TLS configuration for the HTTP
                           External Authorization service. TLS is only valid when the
                           URL scheme is https. If the URL scheme is https, and TLS
