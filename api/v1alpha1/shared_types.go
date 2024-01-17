@@ -36,6 +36,16 @@ type GroupVersionKind struct {
 	Kind    string `json:"kind"`
 }
 
+// CompressorLibraryType defines the types of compressor library supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=Gzip;Brotli;Zstd;Qat
+type CompressorLibraryType string
+
+// DecompressorLibraryType defines the types of decompressor library supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=Gzip;Brotli;Zstd
+type DecompressorLibraryType string
+
 // ProviderType defines the types of providers supported by Envoy Gateway.
 //
 // +kubebuilder:validation:Enum=Kubernetes
