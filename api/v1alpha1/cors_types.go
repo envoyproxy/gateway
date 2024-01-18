@@ -7,7 +7,6 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-
 // Origin is defined by the scheme (protocol), hostname (domain), and port of
 // the URL used to access it. The hostname can be "precise" which is just the
 // domain name or "wildcard" which is a domain name prefixed with a single
