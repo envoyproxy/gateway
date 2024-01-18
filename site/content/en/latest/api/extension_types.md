@@ -42,7 +42,7 @@ _Appears in:_
 
 
 
-BackendTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
+BackendTrafficPolicy allows the user to configure the behavior of the connection between the Envoy Proxy listener and the backend service.
 
 _Appears in:_
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
