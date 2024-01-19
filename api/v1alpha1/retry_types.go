@@ -9,31 +9,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RetryStrategy defines the retry strategy to be applied.
+// Retry defines the retry strategy to be applied.
 type Retry struct {
-	// NumRetries is the number of retries to be attempted. Defaults to 0. If nonzero, maxBudget is ignored.
+	// NumRetries is the number of retries to be attempted. Defaults to 2.
 	//
 	// +optional
+	// +kubebuilder:default=2
 	NumRetries *int `json:"numRetries,omitempty"`
-
-	// MaxBudget is specifies the limit on concurrent retries as a percentage of the sum of active requests and active pending requests.
-	// For example, if there are 100 active requests and the MaxBudget is set to 25, there may be 25 active retries.
-	// This parameter is optional. Defaults to 20%.
-	//
-	// +kubebuilder:default=20
-	// +optional
-	MaxBudget *int `json:"maxBudget,omitempty"`
-
-	// Minconcurrent specifies the minimum retry concurrency allowed for the retry budget. The limit on the number of active retries may never go below this number.
-	// This parameter is optional. Defaults to 3.
-	//
-	// +optional
-	MinConcurrent *int `json:"minConcurrent,omitempty"`
-
-	// MaxParallel is the maximum number of parallel retries. If not specified, the default is 3. Priority lower than retry budget.
-	//
-	// +optional
-	MaxParallel *int `json:"maxParallel,omitempty"`
 
 	// RetryOn specifies the retry trigger condition.
 	//

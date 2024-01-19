@@ -105,7 +105,7 @@ _Appears in:_
 | `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
-| `retry` _[Retry](#retry)_ | Retry provides more advanced retry usage, which allows users to customize the retry method (number of retries、retry budget and concurrency max retries), retry fallback strategy, and retry triggering conditions. If not set, retry will be disabled. |
+| `retry` _[Retry](#retry)_ | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions. If not set, retry will be disabled. |
 
 
 
@@ -1888,17 +1888,14 @@ _Appears in:_
 
 
 
-RetryStrategy defines the retry strategy to be applied.
+Retry defines the retry strategy to be applied.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 | Field | Description |
 | --- | --- |
-| `numRetries` _integer_ | NumRetries is the number of retries to be attempted. Defaults to 0. If nonzero, maxBudget is ignored. |
-| `maxBudget` _integer_ | MaxBudget is specifies the limit on concurrent retries as a percentage of the sum of active requests and active pending requests. For example, if there are 100 active requests and the MaxBudget is set to 25, there may be 25 active retries. This parameter is optional. Defaults to 20%. |
-| `minConcurrent` _integer_ | Minconcurrent specifies the minimum retry concurrency allowed for the retry budget. The limit on the number of active retries may never go below this number. This parameter is optional. Defaults to 3. |
-| `maxParallel` _integer_ | MaxParallel is the maximum number of parallel retries. If not specified, the default is 3. Priority lower than retry budget. |
+| `numRetries` _integer_ | NumRetries is the number of retries to be attempted. Defaults to 2. |
 | `retryOn` _[RetryOn](#retryon)_ | RetryOn specifies the retry trigger condition. 
  If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
 | `perRetry` _[PerRetryPolicy](#perretrypolicy)_ | PerRetry is the retry policy to be applied per retry attempt. |

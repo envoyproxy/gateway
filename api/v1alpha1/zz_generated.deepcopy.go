@@ -2599,21 +2599,6 @@ func (in *Retry) DeepCopyInto(out *Retry) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.MaxBudget != nil {
-		in, out := &in.MaxBudget, &out.MaxBudget
-		*out = new(int)
-		**out = **in
-	}
-	if in.MinConcurrent != nil {
-		in, out := &in.MinConcurrent, &out.MinConcurrent
-		*out = new(int)
-		**out = **in
-	}
-	if in.MaxParallel != nil {
-		in, out := &in.MaxParallel, &out.MaxParallel
-		*out = new(int)
-		**out = **in
-	}
 	if in.RetryOn != nil {
 		in, out := &in.RetryOn, &out.RetryOn
 		*out = new(RetryOn)
