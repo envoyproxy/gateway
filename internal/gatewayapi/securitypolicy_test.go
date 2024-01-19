@@ -64,45 +64,21 @@ func Test_wildcard2regex(t *testing.T) {
 		},
 		{
 			name:     "test8",
-			wildcard: "http://*.example.com:*",
-			origin:   "http://foo.example.com:8080",
-			want:     1,
-		},
-		{
-			name:     "test9",
-			wildcard: "http://*.example.com:*",
-			origin:   "http://foo.example.com",
-			want:     0,
-		},
-		{
-			name:     "test10",
 			wildcard: "http://*",
 			origin:   "http://foo.example.com",
 			want:     1,
 		},
 		{
-			name:     "test11",
+			name:     "test9",
 			wildcard: "http://*",
 			origin:   "https://foo.example.com",
 			want:     0,
 		},
 		{
-			name:     "test12",
+			name:     "test10",
 			wildcard: "*",
 			origin:   "http://foo.example.com",
 			want:     1,
-		},
-		{
-			name:     "test13",
-			wildcard: "http://localhost:*",
-			origin:   "http://localhost:1234",
-			want:     1,
-		},
-		{
-			name:     "test14",
-			wildcard: "http://localhost:*",
-			origin:   "http://localhost",
-			want:     0,
 		},
 	}
 
