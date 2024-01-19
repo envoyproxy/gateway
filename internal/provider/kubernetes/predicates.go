@@ -180,10 +180,13 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
 	if ok {
 		res, _ := r.resources.GatewayAPIResources.Load(gclass)
-		for _, gw := range res.Gateways {
-			gw := gw
-			r.statusUpdateForGateway(ctx, gw)
+		if res != nil && len(res.Gateways) > 0 {
+			for _, gw := range res.Gateways {
+				gw := gw
+				r.statusUpdateForGateway(ctx, gw)
+			}
 		}
+
 		return false
 	}
 
@@ -313,9 +316,11 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
 	if ok {
 		res, _ := r.resources.GatewayAPIResources.Load(gclass)
-		for _, gtw := range res.Gateways {
-			gtw := gtw
-			r.statusUpdateForGateway(ctx, gtw)
+		if res != nil && len(res.Gateways) > 0 {
+			for _, gw := range res.Gateways {
+				gw := gw
+				r.statusUpdateForGateway(ctx, gw)
+			}
 		}
 		return false
 	}

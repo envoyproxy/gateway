@@ -24,15 +24,16 @@
                 claimToHeaders:
                 - claimName: claim.neteased.key
                   headerName: one-route-example-key1
+                forward: true
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_443
+                    cluster: localhost_80
                     timeout: 5s
-                    uri: https://localhost/jwt/public-key/jwks.json
+                    uri: http://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
               first-route-www.test.com/example2:
                 audiences:
@@ -43,6 +44,7 @@
                   headerName: one-route-example2-key1
                 - claimName: name
                   headerName: one-route-example2-key2
+                forward: true
                 issuer: https://www.two.example.com
                 payloadInMetadata: https://www.two.example.com
                 remoteJwks:
@@ -59,20 +61,22 @@
                 claimToHeaders:
                 - claimName: claim.neteased.key
                   headerName: second-route-example-key1
+                forward: true
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_443
+                    cluster: localhost_80
                     timeout: 5s
-                    uri: https://localhost/jwt/public-key/jwks.json
+                    uri: http://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
               second-route-www.test.com/example2:
                 audiences:
                 - one.foo.com
                 - two.foo.com
+                forward: true
                 issuer: https://www.two.example.com
                 payloadInMetadata: https://www.two.example.com
                 remoteJwks:

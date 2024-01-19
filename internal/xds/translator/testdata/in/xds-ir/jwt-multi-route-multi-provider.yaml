@@ -4,6 +4,9 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "first-route-www.test.com"
     hostname: "*"
@@ -16,7 +19,7 @@ http:
         audiences:
         - foo.com
         remoteJWKS:
-          uri: https://localhost/jwt/public-key/jwks.json
+          uri: http://localhost/jwt/public-key/jwks.json
         claimToHeaders:
         - header: one-route-example-key1
           claim: claim.neteased.key
@@ -49,7 +52,7 @@ http:
         audiences:
         - foo.com
         remoteJWKS:
-          uri: https://localhost/jwt/public-key/jwks.json
+          uri: http://localhost/jwt/public-key/jwks.json
         claimToHeaders:
         - header: second-route-example-key1
           claim: claim.neteased.key

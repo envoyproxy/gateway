@@ -27,11 +27,22 @@ API group.
 
 
 
+#### ALPNProtocol
+
+_Underlying type:_ `string`
+
+ALPNProtocol specifies the protocol to be negotiated using ALPN
+
+_Appears in:_
+- [TLSSettings](#tlssettings)
+
+
+
 #### BackendTrafficPolicy
 
 
 
-BackendTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
+BackendTrafficPolicy allows the user to configure the behavior of the connection between the Envoy Proxy listener and the backend service.
 
 _Appears in:_
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
@@ -76,6 +87,10 @@ _Appears in:_
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 | `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
+| `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
+| `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
+| `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
 
 
 
@@ -118,11 +133,28 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `allowOrigins` _[StringMatch](#stringmatch) array_ | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowOrigins` _Origin array_ | AllowOrigins defines the origins that are allowed to make requests. |
 | `allowMethods` _string array_ | AllowMethods defines the methods that are allowed to make requests. |
 | `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
 | `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
 | `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
+| `allowCredentials` _boolean_ | AllowCredentials indicates whether a request can include user credentials like cookies, authentication headers, or TLS client certificates. |
+
+
+#### CircuitBreaker
+
+
+
+CircuitBreaker defines the Circuit Breaker configuration.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `maxConnections` _integer_ | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
+| `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
+| `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 
 
 #### ClaimToHeader
@@ -186,7 +218,11 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
+| `suppressEnvoyHeaders` _boolean_ | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
+| `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
+| `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
+| `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
 
 
 
@@ -601,7 +637,7 @@ _Appears in:_
 | --- | --- |
 | `type` _[EnvoyPatchType](#envoypatchtype)_ | Type decides the type of patch. Valid EnvoyPatchType values are "JSONPatch". |
 | `jsonPatches` _[EnvoyJSONPatchConfig](#envoyjsonpatchconfig) array_ | JSONPatch defines the JSONPatch configuration. |
-| `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef is the name of the Gateway API resource this policy is being attached to. Currently only attaching to Gateway is supported This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway TargetRef |
+| `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef is the name of the Gateway API resource this policy is being attached to. By default attaching to Gateway is supported and when mergeGateways is enabled it should attach to GatewayClass. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway TargetRef |
 | `priority` _integer_ | Priority of the EnvoyPatchPolicy. If multiple EnvoyPatchPolicies are applied to the same TargetRef, they will be applied in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
 
 
@@ -647,6 +683,7 @@ _Appears in:_
 | --- | --- |
 | `envoyDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the managed Envoy deployment resource are applied. |
 | `envoyService` _[KubernetesServiceSpec](#kubernetesservicespec)_ | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the managed Envoy service resource are applied. |
+| `envoyHpa` _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment. Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
 
 
 #### EnvoyProxyProvider
@@ -773,6 +810,52 @@ _Appears in:_
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
+#### FaultInjection
+
+
+
+FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `delay` _[FaultInjectionDelay](#faultinjectiondelay)_ | If specified, a delay will be injected into the request. |
+| `abort` _[FaultInjectionAbort](#faultinjectionabort)_ | If specified, the request will be aborted if it meets the configuration criteria. |
+
+
+#### FaultInjectionAbort
+
+
+
+FaultInjectionAbort defines the abort fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `httpStatus` _integer_ | StatusCode specifies the HTTP status code to be returned |
+| `grpcStatus` _integer_ | GrpcStatus specifies the GRPC status code to be returned |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%. |
+
+
+#### FaultInjectionDelay
+
+
+
+FaultInjectionDelay defines the delay fault injection configuration
+
+_Appears in:_
+- [FaultInjection](#faultinjection)
+
+| Field | Description |
+| --- | --- |
+| `fixedDelay` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | FixedDelay specifies the fixed delay duration |
+| `percentage` _float_ | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
+
+
 #### FileEnvoyProxyAccessLog
 
 
@@ -813,7 +896,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Each rule and its associated limit is applied in a mutually exclusive way i.e. if multiple rules get selected, each of their associated limits get applied, so a single traffic request might increase the rate limit counters for multiple rules if selected. |
+| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Each rule and its associated limit is applied in a mutually exclusive way. If a request matches multiple rules, each of their associated limits get applied, so a single request might increase the rate limit counters for multiple rules if selected. The rate limit service will return a logical OR of the individual rate limit decisions of all matching rules. For example, if a request matches two rules, one rate limited and one not, the final decision will be to rate limit the request. |
 
 
 #### GroupVersionKind
@@ -832,6 +915,60 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+#### HTTP3Settings
+
+
+
+HTTP3Settings provides HTTP/3 configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+
+
+#### HTTPHealthChecker
+
+
+
+HTTPHealthChecker defines the settings of http health check.
+
+_Appears in:_
+- [HealthCheck](#healthcheck)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path defines the HTTP path that will be requested during health checking. |
+| `method` _string_ | Method defines the HTTP method used for health checking. Defaults to GET |
+| `expectedStatuses` _[HTTPStatus](#httpstatus) array_ | ExpectedStatuses defines a list of HTTP response statuses considered healthy. Defaults to 200 only |
+| `expectedResponse` _[HealthCheckPayload](#healthcheckpayload)_ | ExpectedResponse defines a list of HTTP expected responses to match. |
+
+
+#### HTTPStatus
+
+_Underlying type:_ `integer`
+
+HTTPStatus defines the http status code.
+
+_Appears in:_
+- [HTTPHealthChecker](#httphealthchecker)
+
+
+
+#### HTTPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectionIdleTimeout` _Duration_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `maxConnectionDuration` _Duration_ | The maximum duration of an HTTP connection. Default: unlimited. |
+
+
 #### HeaderMatch
 
 
@@ -840,6 +977,65 @@ HeaderMatch defines the match attributes within the HTTP Headers of the request.
 
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
+
+
+
+#### HealthCheck
+
+
+
+HealthCheck defines the health check configuration. EG supports various types of health checking including HTTP, TCP.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Timeout defines the time to wait for a health check response. |
+| `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Interval defines the time between health checks. |
+| `unhealthyThreshold` _integer_ | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
+| `healthyThreshold` _integer_ | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
+| `type` _[HealthCheckerType](#healthcheckertype)_ | Type defines the type of health checker. |
+| `http` _[HTTPHealthChecker](#httphealthchecker)_ | HTTP defines the configuration of http health checker. It's required while the health checker type is HTTP. |
+| `tcp` _[TCPHealthChecker](#tcphealthchecker)_ | TCP defines the configuration of tcp health checker. It's required while the health checker type is TCP. |
+
+
+#### HealthCheckPayload
+
+
+
+HealthCheckPayload defines the encoding of the payload bytes in the payload.
+
+_Appears in:_
+- [HTTPHealthChecker](#httphealthchecker)
+- [TCPHealthChecker](#tcphealthchecker)
+
+| Field | Description |
+| --- | --- |
+| `type` _[HealthCheckPayloadType](#healthcheckpayloadtype)_ | Type defines the type of the payload. |
+| `text` _string_ | Text payload in plain text. |
+| `binary` _integer array_ | Binary payload base64 encoded. |
+
+
+#### HealthCheckPayloadType
+
+_Underlying type:_ `string`
+
+HealthCheckPayloadType is the type of the payload.
+
+_Appears in:_
+- [HealthCheckPayload](#healthcheckpayload)
+
+
+
+#### HealthCheckerType
+
+_Underlying type:_ `string`
+
+HealthCheckerType is the type of health checker.
+
+_Appears in:_
+- [HealthCheck](#healthcheck)
 
 
 
@@ -899,14 +1095,31 @@ _Appears in:_
 
 
 
-JWTExtractor defines a custom JWT token extraction from HTTP request.
+JWTExtractor defines a custom JWT token extraction from HTTP request. If specified, Envoy will extract the JWT token from the listed extractors (headers, cookies, or params) and validate each of them. If any value extracted is found to be an invalid JWT, a 401 error will be returned.
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
-| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. If specified, Envoy will extract the JWT token from the listed cookies and validate each of them. If any cookie is found to be an invalid JWT, a 401 error will be returned. |
+| `headers` _[JWTHeaderExtractor](#jwtheaderextractor) array_ | Headers represents a list of HTTP request headers to extract the JWT token from. |
+| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. |
+| `params` _string array_ | Params represents a list of query parameters to extract the JWT token from. |
+
+
+#### JWTHeaderExtractor
+
+
+
+JWTHeaderExtractor defines an HTTP header location to extract JWT token
+
+_Appears in:_
+- [JWTExtractor](#jwtextractor)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the HTTP header name to retrieve the token |
+| `valuePrefix` _string_ | ValuePrefix is the prefix that should be stripped before extracting the token. The format would be used by Envoy like "{ValuePrefix}<TOKEN>". For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
 
 
 #### JWTProvider
@@ -976,6 +1189,23 @@ _Appears in:_
 | `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#container-v1-core) array_ | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
 
 
+#### KubernetesHorizontalPodAutoscalerSpec
+
+
+
+KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
+
+_Appears in:_
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
+
+| Field | Description |
+| --- | --- |
+| `minReplicas` _integer_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down. It defaults to 1 replica. |
+| `maxReplicas` _integer_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
+| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
+| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
+
+
 #### KubernetesPodSpec
 
 
@@ -993,6 +1223,10 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
 | `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volume-v1-core) array_ | Volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes |
+| `hostNetwork` _boolean_ | HostNetwork, If this is set to true, the pod will use host's network namespace. |
+| `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#localobjectreference-v1-core) array_ | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
+| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints. All topologySpreadConstraints are ANDed. |
 
 
 #### KubernetesServiceSpec
@@ -1011,6 +1245,7 @@ _Appears in:_
 | `loadBalancerClass` _string_ | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` _boolean_ | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` _string_ | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
+| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 
 
 #### KubernetesWatchMode
@@ -1024,9 +1259,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `Type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
-| `Namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set |
-| `namespaces` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whois namespce have no given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set |
+| `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
+| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set. |
+| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whose namespace do not match given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set. |
 
 
 #### KubernetesWatchModeType
@@ -1081,6 +1316,20 @@ _Appears in:_
 
 
 
+#### LocalRateLimit
+
+
+
+LocalRateLimit defines local rate limit configuration.
+
+_Appears in:_
+- [RateLimitSpec](#ratelimitspec)
+
+| Field | Description |
+| --- | --- |
+| `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. If a request matches multiple rules, the strictest limit is applied. For example, if a request matches two rules, one with 10rps and one with 20rps, the final limit will be based on the rule with 10rps. |
+
+
 #### LogLevel
 
 _Underlying type:_ `string`
@@ -1121,17 +1370,15 @@ _Appears in:_
 | `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
  This is an Opaque secret. The client secret should be stored in the key "client-secret". |
 | `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
+| `redirectURL` _string_ | The redirect URL to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
+| `logoutPath` _string_ | The path to log a user out, clearing their credential cookies. If not specified, uses a default logout path "/logout" |
 
 
 #### OIDCProvider
 
 
 
-OIDCProvider defines the OIDC Provider configuration. To make the EG OIDC config easy to use, some of the low-level ouath2 filter configuration knobs are hidden from the user, and default values will be provided when translating to XDS. For example: 
- * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" 
- * signout_path: uses a default signout path "/signout" 
- * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback" 
- If we get requests to expose these knobs, we can always do so later.
+OIDCProvider defines the OIDC Provider configuration.
 
 _Appears in:_
 - [OIDC](#oidc)
@@ -1157,6 +1404,32 @@ _Appears in:_
 | `host` _string_ | Host define the extension service hostname. |
 | `port` _integer_ | Port defines the port the extension service is exposed on. |
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
+#### PathEscapedSlashAction
+
+_Underlying type:_ `string`
+
+PathEscapedSlashAction determines the action for requests that contain %2F, %2f, %5C, or %5c sequences in the URI path.
+
+_Appears in:_
+- [PathSettings](#pathsettings)
+
+
+
+#### PathSettings
+
+
+
+PathSettings provides settings that managing how the incoming path set by clients is handled.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `escapedSlashesAction` _[PathEscapedSlashAction](#pathescapedslashaction)_ | EscapedSlashesAction determines how %2f, %2F, %5c, or %5C sequences in the path URI should be handled. The default is UnescapeAndRedirect. |
+| `disableMergeSlashes` _boolean_ | DisableMergeSlashes allows disabling the default configuration of merging adjacent slashes in the path. Note that slash merging is not part of the HTTP spec and is provided for convenience. |
 
 
 #### ProviderType
@@ -1479,10 +1752,13 @@ RateLimitRule defines the semantics for matching attributes from the incoming re
 
 _Appears in:_
 - [GlobalRateLimit](#globalratelimit)
+- [LocalRateLimit](#localratelimit)
 
 | Field | Description |
 | --- | --- |
-| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. If this field is empty, it is equivalent to True, and the limit is applied. |
+| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. 
+ If no client selectors are specified, the rule applies to all traffic of the targeted Route. 
+ If the policy targets a Gateway, the rule applies to each Route of the Gateway. Please note that each Route has its own rate limit counters. For example, if a Gateway has two Routes, and the policy has a rule with limit 10rps, each Route will have its own 10rps limit. |
 | `limit` _[RateLimitValue](#ratelimitvalue)_ | Limit holds the rate limit values. This limit is applied for traffic flows when the selectors compute to True, causing the request to be counted towards the limit. The limit is enforced and the request is ratelimited, i.e. a response with 429 HTTP status code is sent back to the client when the selected requests have reached the limit. |
 
 
@@ -1497,8 +1773,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. |
-| `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
+| `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. At least one of headers or sourceCIDR condition must be specified. |
+| `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. At least one of headers or sourceCIDR condition must be specified. |
 
 
 #### RateLimitSpec
@@ -1512,8 +1788,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global" or "Local". |
 | `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
+| `local` _[LocalRateLimit](#localratelimit)_ | Local defines local rate limit configuration. |
 
 
 #### RateLimitType
@@ -1660,6 +1937,17 @@ _Appears in:_
 
 
 
+#### ServiceExternalTrafficPolicy
+
+_Underlying type:_ `string`
+
+ServiceExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs.
+
+_Appears in:_
+- [KubernetesServiceSpec](#kubernetesservicespec)
+
+
+
 #### ServiceType
 
 _Underlying type:_ `string`
@@ -1703,7 +1991,6 @@ _Appears in:_
 StringMatch defines how to match any strings. This is a general purpose match condition that can be used by other EG APIs that need to match against a string.
 
 _Appears in:_
-- [CORS](#cors)
 - [ProxyMetrics](#proxymetrics)
 
 | Field | Description |
@@ -1723,6 +2010,21 @@ _Appears in:_
 
 
 
+#### TCPHealthChecker
+
+
+
+TCPHealthChecker defines the settings of tcp health check.
+
+_Appears in:_
+- [HealthCheck](#healthcheck)
+
+| Field | Description |
+| --- | --- |
+| `send` _[HealthCheckPayload](#healthcheckpayload)_ | Send defines the request payload. |
+| `receive` _[HealthCheckPayload](#healthcheckpayload)_ | Receive defines the expected response payload. |
+
+
 #### TCPKeepalive
 
 
@@ -1738,6 +2040,65 @@ _Appears in:_
 | `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
 | `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
+
+
+#### TCPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
+
+
+#### TLSSettings
+
+
+
+
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. The default is TLS 1.2 if this is not specified. |
+| `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow The default is TLS 1.3 if this is not specified. |
+| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
+| `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 In builds using BoringSSL FIPS the default curve is: - P-256 |
+| `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
+| `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. Supported values are: - http/1.0 - http/1.1 - h2 |
+
+
+#### TLSVersion
+
+_Underlying type:_ `string`
+
+TLSVersion specifies the TLS version
+
+_Appears in:_
+- [TLSSettings](#tlssettings)
+
+
+
+#### Timeout
+
+
+
+Timeout defines configuration for timeouts related to connections.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `tcp` _[TCPTimeout](#tcptimeout)_ | Timeout settings for TCP. |
+| `http` _[HTTPTimeout](#httptimeout)_ | Timeout settings for HTTP. |
 
 
 #### TracingProvider

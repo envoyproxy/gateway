@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -53,7 +52,7 @@ func NewLocalPortForwarder(client CLIClient, namespacedName types.NamespacedName
 		// get a random port
 		p, err := netutil.LocalAvailablePort()
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get a local available port for Pod %q", namespacedName)
+			return nil, fmt.Errorf("failed to get a local available port for Pod %q: %w", namespacedName, err)
 		}
 		f.localPort = p
 	}
@@ -90,7 +89,7 @@ func (f *localForwarder) Start() error {
 
 	select {
 	case err := <-errCh:
-		return errors.Wrap(err, "failed to start port forwarder")
+		return fmt.Errorf("failed to start port forwarder: %w", err)
 	case <-readyCh:
 		return nil
 	}
@@ -107,7 +106,7 @@ func (f *localForwarder) buildKubernetesPortForwarder(readyCh chan struct{}) (*p
 
 	roundTripper, upgrader, err := spdy.RoundTripperFor(f.RESTConfig())
 	if err != nil {
-		return nil, fmt.Errorf("failure creating roundtripper: %v", err)
+		return nil, fmt.Errorf("failure creating roundtripper: %w", err)
 	}
 
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, serverURL)
@@ -119,7 +118,7 @@ func (f *localForwarder) buildKubernetesPortForwarder(readyCh chan struct{}) (*p
 		io.Discard,
 		os.Stderr)
 	if err != nil {
-		return nil, fmt.Errorf("failed establishing portforward: %v", err)
+		return nil, fmt.Errorf("failed establishing portforward: %w", err)
 	}
 
 	return fw, nil

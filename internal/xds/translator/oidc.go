@@ -19,18 +19,15 @@ import (
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
 	oauth2Filter                = "envoy.filters.http.oauth2"
 	defaultTokenEndpointTimeout = 10
-	redirectURL                 = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
-	redirectPathMatcher         = "/oauth2/callback"
-	defaultSignoutPath          = "/signout"
 )
 
 func init() {
@@ -109,7 +106,7 @@ func oauth2FilterName(route *ir.HTTPRoute) string {
 }
 
 func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
-	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint)
+	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
 	if err != nil {
 		return nil, err
 	}
@@ -131,12 +128,12 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 				},
 			},
 			AuthorizationEndpoint: route.OIDC.Provider.AuthorizationEndpoint,
-			RedirectUri:           redirectURL,
+			RedirectUri:           route.OIDC.RedirectURL,
 			RedirectPathMatcher: &matcherv3.PathMatcher{
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
 						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: redirectPathMatcher,
+							Exact: route.OIDC.RedirectPath,
 						},
 					},
 				},
@@ -145,7 +142,7 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
 						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: defaultSignoutPath,
+							Exact: route.OIDC.LogoutPath,
 						},
 					},
 				},
@@ -218,7 +215,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			err     error
 		)
 
-		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint)
+		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 			continue
@@ -251,7 +248,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 		}
 
 		ds = &ir.DestinationSetting{
-			Weight: ptr.To(uint32(1)),
+			Weight: ptr.To[uint32](1),
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(
 				cluster.hostname,
 				cluster.port),

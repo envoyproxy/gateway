@@ -13,9 +13,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestExpectedServiceSpec(t *testing.T) {
@@ -37,6 +37,18 @@ func TestExpectedServiceSpec(t *testing.T) {
 				Type:                  corev1.ServiceTypeLoadBalancer,
 				SessionAffinity:       corev1.ServiceAffinityNone,
 				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
+			name: "LoadBalancerWithExternalTrafficPolicyCluster",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
 			},
 		},
 		{

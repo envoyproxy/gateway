@@ -15,8 +15,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -149,18 +150,19 @@ func TestDeployment(t *testing.T) {
 			caseName:  "custom",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To[int32](2),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
+						RunAsUser: ptr.To[int64](1000),
 					},
+					HostNetwork: true,
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
-					Image: pointer.String("custom-image"),
+					Image: ptr.To("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -172,7 +174,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -181,14 +183,14 @@ func TestDeployment(t *testing.T) {
 			caseName:  "extension-env",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To[int32](2),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
+						RunAsUser: ptr.To[int64](1000),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
@@ -202,7 +204,7 @@ func TestDeployment(t *testing.T) {
 							Value: "env_b_value",
 						},
 					},
-					Image: pointer.String("custom-image"),
+					Image: ptr.To("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -214,7 +216,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -223,19 +225,19 @@ func TestDeployment(t *testing.T) {
 			caseName:  "default-env",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To[int32](2),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
+						RunAsUser: ptr.To[int64](1000),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Env:   nil,
-					Image: pointer.String("custom-image"),
+					Image: ptr.To("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -247,7 +249,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -256,14 +258,14 @@ func TestDeployment(t *testing.T) {
 			caseName:  "override-env",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To[int32](2),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
+						RunAsUser: ptr.To[int64](1000),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
@@ -273,7 +275,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: pointer.String("custom-image"),
+					Image: ptr.To("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -285,7 +287,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -306,14 +308,14 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To[int32](2),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
+						RunAsUser: ptr.To[int64](1000),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
@@ -327,7 +329,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: pointer.String("custom-image"),
+					Image: ptr.To("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -339,7 +341,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -360,14 +362,14 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To[int32](2),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
+						RunAsUser: ptr.To[int64](1000),
 					},
 					Tolerations: []corev1.Toleration{
 						{
@@ -389,7 +391,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: pointer.String("custom-image"),
+					Image: ptr.To("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -401,7 +403,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -422,14 +424,14 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To[int32](2),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
+						RunAsUser: ptr.To[int64](1000),
 					},
 					Tolerations: []corev1.Toleration{
 						{
@@ -445,7 +447,7 @@ func TestDeployment(t *testing.T) {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "custom-cert",
-									DefaultMode: pointer.Int32(420),
+									DefaultMode: ptr.To[int32](420),
 								},
 							},
 						},
@@ -462,7 +464,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: pointer.String("custom-image"),
+					Image: ptr.To("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -474,9 +476,40 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 					VolumeMounts: []corev1.VolumeMount{},
+				},
+			},
+		},
+		{
+			caseName:  "with-node-selector",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					NodeSelector: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			},
+		},
+		{
+			caseName:  "with-topology-spread-constraints",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+						{
+							MaxSkew:           1,
+							TopologyKey:       "kubernetes.io/hostname",
+							WhenUnsatisfiable: corev1.DoNotSchedule,
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"app": "foo"},
+							},
+							MatchLabelKeys: []string{"pod-template-hash"},
+						},
+					},
 				},
 			},
 		},

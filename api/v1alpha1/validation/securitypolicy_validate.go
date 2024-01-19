@@ -73,14 +73,14 @@ func ValidateJWTProvider(providers []egv1a1.JWTProvider) error {
 			if _, err := url.ParseRequestURI(provider.Issuer); err != nil {
 				_, err := mail.ParseAddress(provider.Issuer)
 				if err != nil {
-					errs = append(errs, fmt.Errorf("invalid issuer; must be a URL or email address: %v", err))
+					errs = append(errs, fmt.Errorf("invalid issuer; must be a URL or email address: %w", err))
 				}
 			}
 		case len(provider.RemoteJWKS.URI) == 0:
 			errs = append(errs, fmt.Errorf("uri must be set for remote JWKS provider: %s", provider.Name))
 		}
 		if _, err := url.ParseRequestURI(provider.RemoteJWKS.URI); err != nil {
-			errs = append(errs, fmt.Errorf("invalid remote JWKS URI: %v", err))
+			errs = append(errs, fmt.Errorf("invalid remote JWKS URI: %w", err))
 		}
 
 		if len(errs) == 0 {

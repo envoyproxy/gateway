@@ -33,6 +33,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      {{- with .Values.deployment.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - args:
         - server
@@ -71,6 +75,10 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+      {{- with .Values.deployment.envoyGateway.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway

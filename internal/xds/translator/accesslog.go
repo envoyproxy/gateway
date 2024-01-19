@@ -19,9 +19,9 @@ import (
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -242,7 +242,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
 
 		ds := &ir.DestinationSetting{
-			Weight:    ptr.To(uint32(1)),
+			Weight:    ptr.To[uint32](1),
 			Protocol:  ir.GRPC,
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
 		}

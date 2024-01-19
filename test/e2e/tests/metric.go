@@ -131,7 +131,7 @@ func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port 
 	}
 	res, err := httpClient.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to scrape metrics: %v", err)
+		return fmt.Errorf("failed to scrape metrics: %w", err)
 	}
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to scrape metrics: %s", res.Status)

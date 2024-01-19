@@ -7,11 +7,12 @@ package ratelimit
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
@@ -171,19 +172,23 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
 					ServiceAccountName:            InfraName,
-					AutomountServiceAccountToken:  pointer.Bool(false),
-					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
+					AutomountServiceAccountToken:  ptr.To(false),
+					TerminationGracePeriodSeconds: ptr.To[int64](300),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
+					HostNetwork:                   r.rateLimitDeployment.Pod.HostNetwork,
 					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
+					ImagePullSecrets:              r.rateLimitDeployment.Pod.ImagePullSecrets,
+					NodeSelector:                  r.rateLimitDeployment.Pod.NodeSelector,
+					TopologySpreadConstraints:     r.rateLimitDeployment.Pod.TopologySpreadConstraints,
 				},
 			},
-			RevisionHistoryLimit:    pointer.Int32(10),
-			ProgressDeadlineSeconds: pointer.Int32(600),
+			RevisionHistoryLimit:    ptr.To[int32](10),
+			ProgressDeadlineSeconds: ptr.To[int32](600),
 		},
 	}
 
@@ -201,4 +206,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	return deployment, nil
+}
+
+func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	return nil, nil
 }

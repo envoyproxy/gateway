@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    anno1: value1
+    anno2: value2
+  labels:
+    app.kubernetes.io/name: envoy
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    gateway.envoyproxy.io/owning-gateway-name: default
+    gateway.envoyproxy.io/owning-gateway-namespace: default
+  name: envoy-default-37a8eec1
+  namespace: envoy-gateway-system
+data:
+  xds-certificate.json: '{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret","name":"xds_certificate","tls_certificate":{"certificate_chain":{"filename":"/certs/tls.crt"},"private_key":{"filename":"/certs/tls.key"}}}]}'
+  xds-trusted-ca.json: '{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret","name":"xds_trusted_ca","validation_context":{"trusted_ca":{"filename":"/certs/ca.crt"},"match_typed_subject_alt_names":[{"san_type":"DNS","matcher":{"exact":"envoy-gateway"}}]}}]}'

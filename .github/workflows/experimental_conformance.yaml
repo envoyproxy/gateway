@@ -10,6 +10,9 @@ on:
   # Add workflow_dispatch to trigger this workflow manually by maintainers.
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   experimental-conformance-test:
     runs-on: ubuntu-latest
@@ -17,7 +20,7 @@ jobs:
       matrix:
         version: [ v1.26.6, v1.27.3, v1.28.0 ]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
 
     # gateway api experimental conformance
@@ -29,7 +32,7 @@ jobs:
       run: make experimental-conformance
 
     - name: Upload Conformance Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595  # v4.1.0
       with:
         name: conformance-report-k8s-${{ matrix.version }}
         path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml

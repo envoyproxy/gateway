@@ -13,13 +13,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 const (
@@ -31,9 +31,9 @@ func hasSectionName(policy *egv1a1.ClientTrafficPolicy) bool {
 	return policy.Spec.TargetRef.SectionName != nil
 }
 
-func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
+func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap) []*egv1a1.ClientTrafficPolicy {
+	xdsIR XdsIRMap, infraIR InfraIRMap) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
 	// Sort based on timestamp
@@ -91,7 +91,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 			// Translate for listener matching section name
 			for _, l := range gateway.listeners {
 				if string(l.Name) == section {
-					translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR)
+					t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
 					break
 				}
 			}
@@ -168,7 +168,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 					continue
 				}
 
-				translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR)
+				t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
 			}
 
 			// Set Accepted=True
@@ -265,7 +265,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 	return gateway
 }
 
-func translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap) {
+func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap, infraIR InfraIRMap) {
 	// Find IR
 	irKey := irStringKey(l.gateway.Namespace, l.gateway.Name)
 	// It must exist since we've already finished processing the gateways
@@ -291,6 +291,30 @@ func translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPol
 
 		// Translate Proxy Protocol
 		translateListenerProxyProtocol(policySpec.EnableProxyProtocol, httpIR)
+
+		// Translate Suppress Envoy Headers
+		translateListenerSuppressEnvoyHeaders(policySpec.SuppressEnvoyHeaders, httpIR)
+
+		// Translate Path Settings
+		translatePathSettings(policySpec.Path, httpIR)
+
+		// enable http3 if set and TLS is enabled
+		if httpIR.TLS != nil && policySpec.HTTP3 != nil {
+			httpIR.HTTP3 = &ir.HTTP3Settings{}
+			var proxyListenerIR *ir.ProxyListener
+			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
+				if proxyListener.Name == irListenerName {
+					proxyListenerIR = proxyListener
+					break
+				}
+			}
+			if proxyListenerIR != nil {
+				proxyListenerIR.HTTP3 = &ir.HTTP3Settings{}
+			}
+		}
+
+		// Translate TLS parameters
+		translateListenerTLSParameters(policySpec.TLS, httpIR)
 	}
 }
 
@@ -325,6 +349,18 @@ func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir
 	httpIR.TCPKeepalive = irTCPKeepalive
 }
 
+func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPListener) {
+	if pathSettings == nil {
+		return
+	}
+	if pathSettings.DisableMergeSlashes != nil {
+		httpIR.Path.MergeSlashes = !*pathSettings.DisableMergeSlashes
+	}
+	if pathSettings.EscapedSlashesAction != nil {
+		httpIR.Path.EscapedSlashesAction = ir.PathEscapedSlashAction(*pathSettings.EscapedSlashesAction)
+	}
+}
+
 func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {
 	// Return early if not set
 	if enableProxyProtocol == nil {
@@ -333,5 +369,53 @@ func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPLi
 
 	if *enableProxyProtocol {
 		httpIR.EnableProxyProtocol = true
+	}
+}
+
+func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *ir.HTTPListener) {
+	if suppressEnvoyHeaders != nil {
+		httpIR.SuppressEnvoyHeaders = *suppressEnvoyHeaders
+	}
+}
+
+func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HTTPListener) {
+	// Return if this listener isn't a TLS listener. There has to be
+	// at least one certificate defined, which would cause httpIR to
+	// have a TLS structure.
+	if httpIR.TLS == nil {
+		return
+	}
+	// Make sure that the negotiated TLS protocol version is as expected if TLS is used,
+	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
+	httpIR.TLS.MinVersion = ptr.To(ir.TLSv12)
+	httpIR.TLS.MaxVersion = ptr.To(ir.TLSv13)
+	// If HTTP3 is enabled, the ALPN protocols array should be hardcoded
+	// for HTTP3
+	if httpIR.HTTP3 != nil {
+		httpIR.TLS.ALPNProtocols = []string{"h3"}
+	} else if tlsParams != nil && len(tlsParams.ALPNProtocols) > 0 {
+		httpIR.TLS.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
+		for i := range tlsParams.ALPNProtocols {
+			httpIR.TLS.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
+		}
+	}
+	// Return early if not set
+	if tlsParams == nil {
+		return
+	}
+	if tlsParams.MinVersion != nil {
+		httpIR.TLS.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
+	}
+	if tlsParams.MaxVersion != nil {
+		httpIR.TLS.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
+	}
+	if len(tlsParams.Ciphers) > 0 {
+		httpIR.TLS.Ciphers = tlsParams.Ciphers
+	}
+	if len(tlsParams.ECDHCurves) > 0 {
+		httpIR.TLS.ECDHCurves = tlsParams.ECDHCurves
+	}
+	if len(tlsParams.SignatureAlgorithms) > 0 {
+		httpIR.TLS.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
 }

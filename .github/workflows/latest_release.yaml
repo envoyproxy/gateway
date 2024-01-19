@@ -1,5 +1,8 @@
 name: Latest Release
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -10,8 +13,10 @@ on:
 jobs:
   latest-release:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Generate Release Manifests
@@ -50,7 +55,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844  # v0.1.15
       with:
         draft: false
         prerelease: true

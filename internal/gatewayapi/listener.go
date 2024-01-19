@@ -104,6 +104,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
 					TLS:     irTLSConfigs(listener.tlsSecrets),
+					Path: ir.PathSettings{
+						MergeSlashes:         true,
+						EscapedSlashesAction: ir.UnescapeAndRedirect,
+					},
 				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
@@ -138,15 +142,19 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				if t.MergeGateways {
 					infraPortName = irHTTPListenerName(listener)
 				}
-
 				infraPort := ir.ListenerPort{
 					Name:          infraPortName,
 					Protocol:      proto,
 					ServicePort:   servicePort.port,
 					ContainerPort: containerPort,
 				}
-				// Only 1 listener is supported.
-				infraIR[irKey].Proxy.Listeners[0].Ports = append(infraIR[irKey].Proxy.Listeners[0].Ports, infraPort)
+
+				proxyListener := &ir.ProxyListener{
+					Name:  irHTTPListenerName(listener),
+					Ports: []ir.ListenerPort{infraPort},
+				}
+
+				infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 			}
 		}
 	}

@@ -9,7 +9,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultKubernetesDeploymentReplicas returns the default replica settings.
@@ -27,7 +27,7 @@ func DefaultKubernetesDeploymentStrategy() *appv1.DeploymentStrategy {
 
 // DefaultKubernetesContainerImage returns the default envoyproxy image.
 func DefaultKubernetesContainerImage(image string) *string {
-	return pointer.String(image)
+	return ptr.To(image)
 }
 
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
@@ -66,7 +66,8 @@ func DefaultResourceRequirements() *corev1.ResourceRequirements {
 // DefaultKubernetesService returns a new KubernetesServiceSpec with default settings.
 func DefaultKubernetesService() *KubernetesServiceSpec {
 	return &KubernetesServiceSpec{
-		Type: DefaultKubernetesServiceType(),
+		Type:                  DefaultKubernetesServiceType(),
+		ExternalTrafficPolicy: DefaultKubernetesServiceExternalTrafficPolicy(),
 	}
 }
 
@@ -78,6 +79,14 @@ func DefaultKubernetesServiceType() *ServiceType {
 // GetKubernetesServiceType returns the KubernetesServiceType pointer.
 func GetKubernetesServiceType(serviceType ServiceType) *ServiceType {
 	return &serviceType
+}
+
+func DefaultKubernetesServiceExternalTrafficPolicy() *ServiceExternalTrafficPolicy {
+	return GetKubernetesServiceExternalTrafficPolicy(ServiceExternalTrafficPolicyLocal)
+}
+
+func GetKubernetesServiceExternalTrafficPolicy(serviceExternalTrafficPolicy ServiceExternalTrafficPolicy) *ServiceExternalTrafficPolicy {
+	return &serviceExternalTrafficPolicy
 }
 
 // defaultKubernetesDeploymentSpec fill a default KubernetesDeploymentSpec if unspecified.
@@ -104,5 +113,11 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 
 	if deployment.Container.Image == nil {
 		deployment.Container.Image = DefaultKubernetesContainerImage(image)
+	}
+}
+
+func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
+	if len(hpa.Metrics) == 0 {
+		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()
 	}
 }

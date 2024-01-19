@@ -181,5 +181,5 @@ func SecurityPolicyMustBeAccepted(
 		t.Logf("SecurityPolicy not yet accepted: %v", securityPolicy)
 		return false, nil
 	})
-	require.NoErrorf(t, waitErr, "error waiting for HTTPRoute to have parents matching expectations")
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }

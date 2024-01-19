@@ -156,7 +156,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http
@@ -170,7 +171,8 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
           name: http
@@ -199,6 +201,11 @@ securityPolicies:
         extractFrom:
           cookies:
           - session_access_token
+          headers:
+          - name: Authorization
+            valuePrefix: 'Bearer '
+          params:
+          - token
         issuer: https://three.example.com
         name: example3
         remoteJWKS:
@@ -265,6 +272,9 @@ xdsIR:
       - '*'
       isHTTP2: true
       name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -311,6 +321,9 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-2/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -336,6 +349,11 @@ xdsIR:
             extractFrom:
               cookies:
               - session_access_token
+              headers:
+              - name: Authorization
+                valuePrefix: 'Bearer '
+              params:
+              - token
             issuer: https://three.example.com
             name: example3
             remoteJWKS:

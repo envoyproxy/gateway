@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -147,7 +148,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR, infraIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
@@ -234,13 +235,21 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 	for _, gateway := range gateways {
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
+		labels := infrastructureLabels(gateway.Gateway)
+		annotations := infrastructureAnnotations(gateway.Gateway)
+		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
+
 		if isMergeGatewaysEnabled(resources) {
 			t.MergeGateways = true
 			irKey = string(t.GatewayClassName)
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
+
+			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
+			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		} else {
 			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
+
+			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
+			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		}
 
 		gwInfraIR.Proxy.Name = irKey
@@ -250,6 +259,27 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 	}
 
 	return xdsIR, infraIR
+}
+
+func infrastructureAnnotations(gtw *gwapiv1.Gateway) map[string]string {
+	if gtw.Spec.Infrastructure != nil && len(gtw.Spec.Infrastructure.Annotations) > 0 {
+		res := make(map[string]string)
+		for k, v := range gtw.Spec.Infrastructure.Annotations {
+			res[string(k)] = string(v)
+		}
+		return res
+	}
+	return nil
+}
+
+func infrastructureLabels(gtw *gwapiv1.Gateway) map[string]string {
+	res := make(map[string]string)
+	if gtw.Spec.Infrastructure != nil {
+		for k, v := range gtw.Spec.Infrastructure.Labels {
+			res[string(k)] = string(v)
+		}
+	}
+	return res
 }
 
 // XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.

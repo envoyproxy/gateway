@@ -1,0 +1,64 @@
+envoyproxy:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeGateways: true
+envoyPatchPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: edit-conn-buffer-bytes
+  spec:
+    type: "JSONPatch"
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+      namespace: envoy-gateway
+    jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "envoy-gateway-gateway-1-http"
+      operation:
+        op: replace
+        path: "/per_connection_buffer_limit_bytes"
+        value: "1024"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: edit-ignore-global-limit
+  spec:
+    type: "JSONPatch"
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+      namespace: envoy-gateway
+    # Higher priority
+    priority: -1
+    jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "envoy-gateway-gateway-1-http"
+      operation:
+        op: replace
+        path: "/ignore_global_conn_limit"
+        value: "true"
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

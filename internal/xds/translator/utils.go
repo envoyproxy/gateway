@@ -8,7 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"net"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	defaultPort = 443
+	defaultHTTPSPort uint64 = 443
+	defaultHTTPPort  uint64 = 80
 )
 
 // urlCluster is a cluster that is created from a URL.
@@ -29,10 +30,11 @@ type urlCluster struct {
 	hostname     string
 	port         uint32
 	endpointType EndpointType
+	tls          bool
 }
 
 // url2Cluster returns a urlCluster from the provided url.
-func url2Cluster(strURL string) (*urlCluster, error) {
+func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 	epType := EndpointTypeDNS
 
 	// The URL should have already been validated in the gateway API translator.
@@ -41,13 +43,19 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		return nil, err
 	}
 
-	if u.Scheme != "https" {
+	if secure && u.Scheme != "https" {
 		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 
-	port := defaultPort
+	var port uint64
+	if u.Scheme == "https" {
+		port = defaultHTTPSPort
+	} else {
+		port = defaultHTTPPort
+	}
+
 	if u.Port() != "" {
-		port, err = strconv.Atoi(u.Port())
+		port, err = strconv.ParseUint(u.Port(), 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -55,8 +63,8 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 
 	name := fmt.Sprintf("%s_%d", strings.ReplaceAll(u.Hostname(), ".", "_"), port)
 
-	if ip := net.ParseIP(u.Hostname()); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
+	if ip, err := netip.ParseAddr(u.Hostname()); err == nil {
+		if ip.Unmap().Is4() {
 			epType = EndpointTypeStatic
 		}
 	}
@@ -66,6 +74,7 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		hostname:     u.Hostname(),
 		port:         uint32(port),
 		endpointType: epType,
+		tls:          u.Scheme == "https",
 	}, nil
 }
 

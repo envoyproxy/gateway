@@ -27,7 +27,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: BackendTrafficPolicy allows the user to configure the behavior
-          of the connection between the downstream client and Envoy Proxy listener.
+          of the connection between the Envoy Proxy listener and the backend service.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -44,6 +44,264 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              circuitBreaker:
+                description: Circuit Breaker settings for the upstream connections
+                  and requests. If not set, circuit breakers will be enabled with
+                  the default thresholds
+                properties:
+                  maxConnections:
+                    default: 1024
+                    description: The maximum number of connections that Envoy will
+                      establish to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxParallelRequests:
+                    default: 1024
+                    description: The maximum number of parallel requests that Envoy
+                      will make to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                  maxPendingRequests:
+                    default: 1024
+                    description: The maximum number of pending requests that Envoy
+                      will queue to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
+                type: object
+              faultInjection:
+                description: FaultInjection defines the fault injection policy to
+                  be applied. This configuration can be used to inject delays and
+                  abort requests to mimic failure scenarios such as service failures
+                  and overloads
+                properties:
+                  abort:
+                    description: If specified, the request will be aborted if it meets
+                      the configuration criteria.
+                    properties:
+                      grpcStatus:
+                        description: GrpcStatus specifies the GRPC status code to
+                          be returned
+                        format: int32
+                        type: integer
+                      httpStatus:
+                        description: StatusCode specifies the HTTP status code to
+                          be returned
+                        format: int32
+                        maximum: 600
+                        minimum: 200
+                        type: integer
+                      percentage:
+                        default: 100
+                        description: Percentage specifies the percentage of requests
+                          to be aborted. Default 100%, if set 0, no requests will
+                          be aborted. Accuracy to 0.0001%.
+                        type: number
+                    type: object
+                    x-kubernetes-validations:
+                    - message: httpStatus and grpcStatus cannot be simultaneously
+                        defined.
+                      rule: ' !(has(self.httpStatus) && has(self.grpcStatus)) '
+                    - message: httpStatus and grpcStatus are set at least one.
+                      rule: ' has(self.httpStatus) || has(self.grpcStatus) '
+                  delay:
+                    description: If specified, a delay will be injected into the request.
+                    properties:
+                      fixedDelay:
+                        description: FixedDelay specifies the fixed delay duration
+                        type: string
+                      percentage:
+                        default: 100
+                        description: Percentage specifies the percentage of requests
+                          to be delayed. Default 100%, if set 0, no requests will
+                          be delayed. Accuracy to 0.0001%.
+                        type: number
+                    required:
+                    - fixedDelay
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: Delay and abort faults are set at least one.
+                  rule: ' has(self.delay) || has(self.abort) '
+              healthCheck:
+                description: HealthCheck allows gateway to perform active health checking
+                  on backends.
+                properties:
+                  healthyThreshold:
+                    default: 1
+                    description: HealthyThreshold defines the number of healthy health
+                      checks required before a backend host is marked healthy.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  http:
+                    description: HTTP defines the configuration of http health checker.
+                      It's required while the health checker type is HTTP.
+                    properties:
+                      expectedResponse:
+                        description: ExpectedResponse defines a list of HTTP expected
+                          responses to match.
+                        properties:
+                          binary:
+                            description: Binary payload base64 encoded.
+                            format: byte
+                            type: string
+                          text:
+                            description: Text payload in plain text.
+                            type: string
+                          type:
+                            allOf:
+                            - enum:
+                              - Text
+                              - Binary
+                            - enum:
+                              - Text
+                              - Binary
+                            description: Type defines the type of the payload.
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: If payload type is Text, text field needs to be
+                            set.
+                          rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                        - message: If payload type is Binary, binary field needs to
+                            be set.
+                          rule: 'self.type == ''Binary'' ? has(self.binary) : !has(self.binary)'
+                      expectedStatuses:
+                        description: ExpectedStatuses defines a list of HTTP response
+                          statuses considered healthy. Defaults to 200 only
+                        items:
+                          description: HTTPStatus defines the http status code.
+                          exclusiveMaximum: true
+                          maximum: 600
+                          minimum: 100
+                          type: integer
+                        type: array
+                      method:
+                        description: Method defines the HTTP method used for health
+                          checking. Defaults to GET
+                        type: string
+                      path:
+                        description: Path defines the HTTP path that will be requested
+                          during health checking.
+                        maxLength: 1024
+                        minLength: 1
+                        type: string
+                    required:
+                    - path
+                    type: object
+                  interval:
+                    default: 3s
+                    description: Interval defines the time between health checks.
+                    format: duration
+                    type: string
+                  tcp:
+                    description: TCP defines the configuration of tcp health checker.
+                      It's required while the health checker type is TCP.
+                    properties:
+                      receive:
+                        description: Receive defines the expected response payload.
+                        properties:
+                          binary:
+                            description: Binary payload base64 encoded.
+                            format: byte
+                            type: string
+                          text:
+                            description: Text payload in plain text.
+                            type: string
+                          type:
+                            allOf:
+                            - enum:
+                              - Text
+                              - Binary
+                            - enum:
+                              - Text
+                              - Binary
+                            description: Type defines the type of the payload.
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: If payload type is Text, text field needs to be
+                            set.
+                          rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                        - message: If payload type is Binary, binary field needs to
+                            be set.
+                          rule: 'self.type == ''Binary'' ? has(self.binary) : !has(self.binary)'
+                      send:
+                        description: Send defines the request payload.
+                        properties:
+                          binary:
+                            description: Binary payload base64 encoded.
+                            format: byte
+                            type: string
+                          text:
+                            description: Text payload in plain text.
+                            type: string
+                          type:
+                            allOf:
+                            - enum:
+                              - Text
+                              - Binary
+                            - enum:
+                              - Text
+                              - Binary
+                            description: Type defines the type of the payload.
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: If payload type is Text, text field needs to be
+                            set.
+                          rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                        - message: If payload type is Binary, binary field needs to
+                            be set.
+                          rule: 'self.type == ''Binary'' ? has(self.binary) : !has(self.binary)'
+                    type: object
+                  timeout:
+                    default: 1s
+                    description: Timeout defines the time to wait for a health check
+                      response.
+                    format: duration
+                    type: string
+                  type:
+                    allOf:
+                    - enum:
+                      - HTTP
+                      - TCP
+                    - enum:
+                      - HTTP
+                      - TCP
+                    description: Type defines the type of health checker.
+                    type: string
+                  unhealthyThreshold:
+                    default: 3
+                    description: UnhealthyThreshold defines the number of unhealthy
+                      health checks required before a backend host is marked unhealthy.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: If Health Checker type is HTTP, http field needs to be
+                    set.
+                  rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
+                - message: If Health Checker type is TCP, tcp field needs to be set.
+                  rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
               loadBalancer:
                 description: LoadBalancer policy to apply when routing traffic from
                   the gateway to the backend endpoints
@@ -125,22 +383,32 @@ spec:
                       rules:
                         description: Rules are a list of RateLimit selectors and limits.
                           Each rule and its associated limit is applied in a mutually
-                          exclusive way i.e. if multiple rules get selected, each
-                          of their associated limits get applied, so a single traffic
-                          request might increase the rate limit counters for multiple
-                          rules if selected.
+                          exclusive way. If a request matches multiple rules, each
+                          of their associated limits get applied, so a single request
+                          might increase the rate limit counters for multiple rules
+                          if selected. The rate limit service will return a logical
+                          OR of the individual rate limit decisions of all matching
+                          rules. For example, if a request matches two rules, one
+                          rate limited and one not, the final decision will be to
+                          rate limit the request.
                         items:
                           description: RateLimitRule defines the semantics for matching
                             attributes from the incoming requests, and setting limits
                             for them.
                           properties:
                             clientSelectors:
-                              description: ClientSelectors holds the list of select
+                              description: "ClientSelectors holds the list of select
                                 conditions to select specific clients using attributes
                                 from the traffic flow. All individual select conditions
                                 must hold True for this rule and its limit to be applied.
-                                If this field is empty, it is equivalent to True,
-                                and the limit is applied.
+                                \n If no client selectors are specified, the rule
+                                applies to all traffic of the targeted Route. \n If
+                                the policy targets a Gateway, the rule applies to
+                                each Route of the Gateway. Please note that each Route
+                                has its own rate limit counters. For example, if a
+                                Gateway has two Routes, and the policy has a rule
+                                with limit 10rps, each Route will have its own 10rps
+                                limit."
                               items:
                                 description: RateLimitSelectCondition specifies the
                                   attributes within the traffic flow that can be used
@@ -152,7 +420,8 @@ spec:
                                     description: Headers is a list of request headers
                                       to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified
-                                      headers.
+                                      headers. At least one of headers or sourceCIDR
+                                      condition must be specified.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -190,7 +459,8 @@ spec:
                                     x-kubernetes-list-type: map
                                   sourceCIDR:
                                     description: SourceCIDR is the client IP Address
-                                      range to match on.
+                                      range to match on. At least one of headers or
+                                      sourceCIDR condition must be specified.
                                     properties:
                                       type:
                                         default: Exact
@@ -245,11 +515,143 @@ spec:
                     required:
                     - rules
                     type: object
+                  local:
+                    description: Local defines local rate limit configuration.
+                    properties:
+                      rules:
+                        description: Rules are a list of RateLimit selectors and limits.
+                          If a request matches multiple rules, the strictest limit
+                          is applied. For example, if a request matches two rules,
+                          one with 10rps and one with 20rps, the final limit will
+                          be based on the rule with 10rps.
+                        items:
+                          description: RateLimitRule defines the semantics for matching
+                            attributes from the incoming requests, and setting limits
+                            for them.
+                          properties:
+                            clientSelectors:
+                              description: "ClientSelectors holds the list of select
+                                conditions to select specific clients using attributes
+                                from the traffic flow. All individual select conditions
+                                must hold True for this rule and its limit to be applied.
+                                \n If no client selectors are specified, the rule
+                                applies to all traffic of the targeted Route. \n If
+                                the policy targets a Gateway, the rule applies to
+                                each Route of the Gateway. Please note that each Route
+                                has its own rate limit counters. For example, if a
+                                Gateway has two Routes, and the policy has a rule
+                                with limit 10rps, each Route will have its own 10rps
+                                limit."
+                              items:
+                                description: RateLimitSelectCondition specifies the
+                                  attributes within the traffic flow that can be used
+                                  to select a subset of clients to be ratelimited.
+                                  All the individual conditions must hold True for
+                                  the overall condition to hold True.
+                                properties:
+                                  headers:
+                                    description: Headers is a list of request headers
+                                      to match. Multiple header values are ANDed together,
+                                      meaning, a request MUST match all the specified
+                                      headers. At least one of headers or sourceCIDR
+                                      condition must be specified.
+                                    items:
+                                      description: HeaderMatch defines the match attributes
+                                        within the HTTP Headers of the request.
+                                      properties:
+                                        name:
+                                          description: Name of the HTTP header.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the header.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: Value within the HTTP header.
+                                            Due to the case-insensitivity of header
+                                            names, "foo" and "Foo" are considered
+                                            equivalent. Do not set this field when
+                                            Type="Distinct", implying matching on
+                                            any/all unique values within the header.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - name
+                                    x-kubernetes-list-type: map
+                                  sourceCIDR:
+                                    description: SourceCIDR is the client IP Address
+                                      range to match on. At least one of headers or
+                                      sourceCIDR condition must be specified.
+                                    properties:
+                                      type:
+                                        default: Exact
+                                        type: string
+                                      value:
+                                        description: Value is the IP CIDR that represents
+                                          the range of Source IP Addresses of the
+                                          client. These could also be the intermediate
+                                          addresses through which the request has
+                                          flown through and is part of the  `X-Forwarded-For`
+                                          header. For example, `192.168.0.1/32`, `192.168.0.0/24`,
+                                          `001:db8::/64`.
+                                        maxLength: 256
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - value
+                                    type: object
+                                type: object
+                              maxItems: 8
+                              type: array
+                            limit:
+                              description: Limit holds the rate limit values. This
+                                limit is applied for traffic flows when the selectors
+                                compute to True, causing the request to be counted
+                                towards the limit. The limit is enforced and the request
+                                is ratelimited, i.e. a response with 429 HTTP status
+                                code is sent back to the client when the selected
+                                requests have reached the limit.
+                              properties:
+                                requests:
+                                  type: integer
+                                unit:
+                                  description: RateLimitUnit specifies the intervals
+                                    for setting rate limits. Valid RateLimitUnit values
+                                    are "Second", "Minute", "Hour", and "Day".
+                                  enum:
+                                  - Second
+                                  - Minute
+                                  - Hour
+                                  - Day
+                                  type: string
+                              required:
+                              - requests
+                              - unit
+                              type: object
+                          required:
+                          - limit
+                          type: object
+                        maxItems: 16
+                        type: array
+                    type: object
                   type:
                     description: Type decides the scope for the RateLimits. Valid
-                      RateLimitType values are "Global".
+                      RateLimitType values are "Global" or "Local".
                     enum:
                     - Global
+                    - Local
                     type: string
                 required:
                 - type
@@ -331,6 +733,34 @@ spec:
                       before deciding the connection is dead. Defaults to 9.
                     format: int32
                     type: integer
+                type: object
+              timeout:
+                description: Timeout settings for the backend connections.
+                properties:
+                  http:
+                    description: Timeout settings for HTTP.
+                    properties:
+                      connectionIdleTimeout:
+                        description: 'The idle timeout for an HTTP connection. Idle
+                          time is defined as a period in which there are no active
+                          requests in the connection. Default: 1 hour.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      maxConnectionDuration:
+                        description: 'The maximum duration of an HTTP connection.
+                          Default: unlimited.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                  tcp:
+                    description: Timeout settings for TCP.
+                    properties:
+                      connectTimeout:
+                        description: 'The timeout for network connection establishment,
+                          including TCP and TLS handshakes. Default: 10 seconds.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                 type: object
             required:
             - targetRef
