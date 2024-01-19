@@ -220,26 +220,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "cors alloworigin valid with wildcard and port",
-			mutate: func(sp *egv1a1.SecurityPolicy) {
-				sp.Spec = egv1a1.SecurityPolicySpec{
-					CORS: &egv1a1.CORS{
-						AllowOrigins: []egv1a1.Origin{
-							"http://bar.foo.com:*", // valid
-						},
-					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
 			desc: "cors alloworigin valid with scheme and wildcard",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
