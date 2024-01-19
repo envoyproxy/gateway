@@ -32,6 +32,8 @@ linters-settings:
             desc: "use sigs.k8s.io/yaml instead"
           - pkg: k8s.io/utils/pointer
             desc: "use k8s.io/utils/ptr instead"
+          - pkg: github.com/tetratelabs/multierror
+            desc: "use errors instead"
   gci:
     sections:
       # Captures all standard packages if they do not match another section.

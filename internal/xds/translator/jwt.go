@@ -15,7 +15,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
@@ -267,7 +266,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 			provider := route.JWT.Providers[i]
 			jwks, err = url2Cluster(provider.RemoteJWKS.URI, false)
 			if err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				continue
 			}
 
@@ -284,14 +283,14 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 			if jwks.tls {
 				tSocket, err = buildXdsUpstreamTLSSocket()
 				if err != nil {
-					errs = multierror.Append(errs, err)
+					errs = errors.Join(errs, err)
 					continue
 				}
 				clusterArgs.tSocket = tSocket
 			}
 
 			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 			}
 		}
 	}

@@ -7,13 +7,13 @@ package egctl
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/tetratelabs/multierror"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
@@ -74,7 +74,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyServerStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
 						if err != nil {
-							errs = multierror.Append(errs, err)
+							errs = errors.Join(errs, err)
 						}
 						wg.Done()
 					}(pod)
@@ -87,7 +87,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyClusterStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
 						if err != nil {
-							errs = multierror.Append(errs, err)
+							errs = errors.Join(errs, err)
 						}
 						wg.Done()
 					}(pod)
