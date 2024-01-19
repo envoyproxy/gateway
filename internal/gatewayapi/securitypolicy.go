@@ -8,8 +8,8 @@ package gatewayapi
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"sort"
 	"strconv"
@@ -27,6 +27,12 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+)
+
+const (
+	defaultRedirectURL  = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+	defaultRedirectPath = "/oauth2/callback"
+	defaultLogoutPath   = "/logout"
 )
 
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
@@ -447,17 +453,56 @@ func (t *Translator) buildOIDC(
 		return nil, err
 	}
 
-	if err := validateTokenEndpoint(provider.TokenEndpoint); err != nil {
+	if err = validateTokenEndpoint(provider.TokenEndpoint); err != nil {
 		return nil, err
 	}
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
+
+	var (
+		redirectURL  = defaultRedirectURL
+		redirectPath = defaultRedirectPath
+		logoutPath   = defaultLogoutPath
+	)
+
+	if oidc.RedirectURL != nil {
+		path, err := extractRedirectPath(*oidc.RedirectURL)
+		if err != nil {
+			return nil, err
+		}
+		redirectURL = *oidc.RedirectURL
+		redirectPath = path
+		logoutPath = *oidc.LogoutPath
+	}
 
 	return &ir.OIDC{
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
 		Scopes:       scopes,
+		RedirectURL:  redirectURL,
+		RedirectPath: redirectPath,
+		LogoutPath:   logoutPath,
 	}, nil
+}
+
+func extractRedirectPath(redirectURL string) (string, error) {
+	schemeDelimiter := strings.Index(redirectURL, "://")
+	if schemeDelimiter <= 0 {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	scheme := redirectURL[:schemeDelimiter]
+	if scheme != "http" && scheme != "https" && scheme != "%REQ(x-forwarded-proto)%" {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	hostDelimiter := strings.Index(redirectURL[schemeDelimiter+3:], "/")
+	if hostDelimiter <= 0 {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	path := redirectURL[schemeDelimiter+3+hostDelimiter:]
+	if path == "/" {
+		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
+	}
+	return path, nil
 }
 
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes
@@ -533,8 +578,8 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		return fmt.Errorf("token endpoint URL scheme must be https: %s", tokenEndpoint)
 	}
 
-	if ip := net.ParseIP(parsedURL.Hostname()); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
+	if ip, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
+		if ip.Unmap().Is4() {
 			return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
 		}
 	}

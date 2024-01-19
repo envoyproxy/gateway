@@ -60,6 +60,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 	}
 	gwNsName := utils.NamespacedName(gw).String()
 
+	invalidDuration := gwapiv1.Duration("invalid duration")
+
 	testCases := []struct {
 		name               string
 		routes             []*gwapiv1.HTTPRoute
@@ -180,6 +182,54 @@ func TestProcessHTTPRoutes(t *testing.T) {
 					Group:   "gateway.example.io",
 					Version: "v1alpha1",
 					Kind:    "Foo",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "httproute with invalid timeout setting for HTTPRouteRule",
+			routes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+								Timeouts: &gwapiv1.HTTPRouteTimeouts{
+									Request:        &invalidDuration,
+									BackendRequest: &invalidDuration,
+								},
+							},
+						},
+					},
 				},
 			},
 			expected: true,

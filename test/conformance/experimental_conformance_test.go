@@ -12,7 +12,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -53,11 +53,11 @@ func TestExperimentalConformance(t *testing.T) {
 	}
 
 	err = v1alpha2.AddToScheme(mgrClient.Scheme())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = v1beta1.AddToScheme(mgrClient.Scheme())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = v1.AddToScheme(mgrClient.Scheme())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// experimental conformance flags
 	conformanceProfiles = sets.New(
@@ -119,7 +119,7 @@ func experimentalConformance(t *testing.T) {
 	}
 
 	err = experimentalConformanceReport(t.Logf, *report, *flags.ReportOutput)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func experimentalConformanceReport(logf func(string, ...any), report confv1a1.ConformanceReport, output string) error {

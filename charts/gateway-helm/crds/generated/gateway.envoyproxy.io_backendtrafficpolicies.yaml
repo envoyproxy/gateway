@@ -27,7 +27,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: BackendTrafficPolicy allows the user to configure the behavior
-          of the connection between the downstream client and Envoy Proxy listener.
+          of the connection between the Envoy Proxy listener and the backend service.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -796,6 +796,34 @@ spec:
                       before deciding the connection is dead. Defaults to 9.
                     format: int32
                     type: integer
+                type: object
+              timeout:
+                description: Timeout settings for the backend connections.
+                properties:
+                  http:
+                    description: Timeout settings for HTTP.
+                    properties:
+                      connectionIdleTimeout:
+                        description: 'The idle timeout for an HTTP connection. Idle
+                          time is defined as a period in which there are no active
+                          requests in the connection. Default: 1 hour.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      maxConnectionDuration:
+                        description: 'The maximum duration of an HTTP connection.
+                          Default: unlimited.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                  tcp:
+                    description: Timeout settings for TCP.
+                    properties:
+                      connectTimeout:
+                        description: 'The timeout for network connection establishment,
+                          including TCP and TLS handshakes. Default: 10 seconds.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                 type: object
             required:
             - targetRef

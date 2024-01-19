@@ -202,10 +202,36 @@ spec:
                           properties:
                             cookies:
                               description: Cookies represents a list of cookie names
-                                to extract the JWT token from. If specified, Envoy
-                                will extract the JWT token from the listed cookies
-                                and validate each of them. If any cookie is found
-                                to be an invalid JWT, a 401 error will be returned.
+                                to extract the JWT token from.
+                              items:
+                                type: string
+                              type: array
+                            headers:
+                              description: Headers represents a list of HTTP request
+                                headers to extract the JWT token from.
+                              items:
+                                description: JWTHeaderExtractor defines an HTTP header
+                                  location to extract JWT token
+                                properties:
+                                  name:
+                                    description: Name is the HTTP header name to retrieve
+                                      the token
+                                    type: string
+                                  valuePrefix:
+                                    description: 'ValuePrefix is the prefix that should
+                                      be stripped before extracting the token. The
+                                      format would be used by Envoy like "{ValuePrefix}<TOKEN>".
+                                      For example, "Authorization: Bearer <TOKEN>",
+                                      then the ValuePrefix="Bearer " with a space
+                                      at the end.'
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                            params:
+                              description: Params represents a list of query parameters
+                                to extract the JWT token from.
                               items:
                                 type: string
                               type: array
@@ -300,6 +326,10 @@ spec:
                     required:
                     - name
                     type: object
+                  logoutPath:
+                    description: The path to log a user out, clearing their credential
+                      cookies. If not specified, uses a default logout path "/logout"
+                    type: string
                   provider:
                     description: The OIDC Provider configuration.
                     properties:
@@ -323,6 +353,11 @@ spec:
                     required:
                     - issuer
                     type: object
+                  redirectURL:
+                    description: The redirect URL to be used in the OIDC [Authentication
+                      Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+                    type: string
                   scopes:
                     description: The OIDC scopes to be used in the [Authentication
                       Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).

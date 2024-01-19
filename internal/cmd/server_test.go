@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -54,15 +55,15 @@ func TestGetConfigValidate(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			file, err := os.CreateTemp("", "config")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer os.Remove(file.Name())
 
 			_, err = file.Write([]byte(test.input))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			_, err = getConfigByPath(file.Name())
 			if test.errors == nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
 				for _, e := range test.errors {
 					assert.ErrorContains(t, err, e)

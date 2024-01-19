@@ -201,6 +201,11 @@ securityPolicies:
         extractFrom:
           cookies:
           - session_access_token
+          headers:
+          - name: Authorization
+            valuePrefix: 'Bearer '
+          params:
+          - token
         issuer: https://three.example.com
         name: example3
         remoteJWKS:
@@ -344,6 +349,11 @@ xdsIR:
             extractFrom:
               cookies:
               - session_access_token
+              headers:
+              - name: Authorization
+                valuePrefix: 'Bearer '
+              params:
+              - token
             issuer: https://three.example.com
             name: example3
             remoteJWKS:

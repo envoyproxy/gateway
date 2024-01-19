@@ -18,6 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
+
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -754,6 +756,31 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				`[spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
+		},
+		{
+			desc: " valid timeout",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				d := gwapiv1.Duration("3s")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					Timeout: &egv1a1.Timeout{
+						TCP: &egv1a1.TCPTimeout{
+							ConnectTimeout: &d,
+						},
+						HTTP: &egv1a1.HTTPTimeout{
+							ConnectionIdleTimeout: &d,
+							MaxConnectionDuration: &d,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 	}
 

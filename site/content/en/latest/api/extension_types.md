@@ -57,7 +57,7 @@ _Appears in:_
 
 
 
-BackendTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
+BackendTrafficPolicy allows the user to configure the behavior of the connection between the Envoy Proxy listener and the backend service.
 
 _Appears in:_
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
@@ -106,6 +106,7 @@ _Appears in:_
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 | `retry` _[Retry](#retry)_ | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions. If not set, retry will be disabled. |
+| `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
 
 
 
@@ -969,6 +970,21 @@ _Appears in:_
 
 
 
+#### HTTPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectionIdleTimeout` _Duration_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `maxConnectionDuration` _Duration_ | The maximum duration of an HTTP connection. Default: unlimited. |
+
+
 #### HeaderMatch
 
 
@@ -1095,14 +1111,31 @@ _Appears in:_
 
 
 
-JWTExtractor defines a custom JWT token extraction from HTTP request.
+JWTExtractor defines a custom JWT token extraction from HTTP request. If specified, Envoy will extract the JWT token from the listed extractors (headers, cookies, or params) and validate each of them. If any value extracted is found to be an invalid JWT, a 401 error will be returned.
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
-| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. If specified, Envoy will extract the JWT token from the listed cookies and validate each of them. If any cookie is found to be an invalid JWT, a 401 error will be returned. |
+| `headers` _[JWTHeaderExtractor](#jwtheaderextractor) array_ | Headers represents a list of HTTP request headers to extract the JWT token from. |
+| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. |
+| `params` _string array_ | Params represents a list of query parameters to extract the JWT token from. |
+
+
+#### JWTHeaderExtractor
+
+
+
+JWTHeaderExtractor defines an HTTP header location to extract JWT token
+
+_Appears in:_
+- [JWTExtractor](#jwtextractor)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the HTTP header name to retrieve the token |
+| `valuePrefix` _string_ | ValuePrefix is the prefix that should be stripped before extracting the token. The format would be used by Envoy like "{ValuePrefix}<TOKEN>". For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
 
 
 #### JWTProvider
@@ -1228,6 +1261,7 @@ _Appears in:_
 | `loadBalancerClass` _string_ | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` _boolean_ | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` _string_ | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
+| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 
 
 #### KubernetesWatchMode
@@ -1242,8 +1276,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
-| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set |
-| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whois namespce have no given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set |
+| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set. |
+| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whose namespace do not match given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set. |
 
 
 #### KubernetesWatchModeType
@@ -1352,17 +1386,15 @@ _Appears in:_
 | `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
  This is an Opaque secret. The client secret should be stored in the key "client-secret". |
 | `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
+| `redirectURL` _string_ | The redirect URL to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
+| `logoutPath` _string_ | The path to log a user out, clearing their credential cookies. If not specified, uses a default logout path "/logout" |
 
 
 #### OIDCProvider
 
 
 
-OIDCProvider defines the OIDC Provider configuration. To make the EG OIDC config easy to use, some of the low-level ouath2 filter configuration knobs are hidden from the user, and default values will be provided when translating to XDS. For example: 
- * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" 
- * signout_path: uses a default signout path "/signout" 
- * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback" 
- If we get requests to expose these knobs, we can always do so later.
+OIDCProvider defines the OIDC Provider configuration.
 
 _Appears in:_
 - [OIDC](#oidc)
@@ -1969,6 +2001,17 @@ _Appears in:_
 
 
 
+#### ServiceExternalTrafficPolicy
+
+_Underlying type:_ `string`
+
+ServiceExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs.
+
+_Appears in:_
+- [KubernetesServiceSpec](#kubernetesservicespec)
+
+
+
 #### ServiceType
 
 _Underlying type:_ `string`
@@ -2063,6 +2106,20 @@ _Appears in:_
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
 
 
+#### TCPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
+
+
 #### TLSSettings
 
 
@@ -2091,6 +2148,21 @@ TLSVersion specifies the TLS version
 _Appears in:_
 - [TLSSettings](#tlssettings)
 
+
+
+#### Timeout
+
+
+
+Timeout defines configuration for timeouts related to connections.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `tcp` _[TCPTimeout](#tcptimeout)_ | Timeout settings for TCP. |
+| `http` _[HTTPTimeout](#httptimeout)_ | Timeout settings for HTTP. |
 
 
 #### TracingProvider

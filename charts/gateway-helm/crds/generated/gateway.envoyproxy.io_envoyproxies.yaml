@@ -6540,6 +6540,18 @@ spec:
                             description: Annotations that should be appended to the
                               service. By default, no annotations are appended.
                             type: object
+                          externalTrafficPolicy:
+                            default: Local
+                            description: ExternalTrafficPolicy determines the externalTrafficPolicy
+                              for the Envoy Service. Valid options are Local and Cluster.
+                              Default is "Local". "Local" means traffic will only
+                              go to pods on the node receiving the traffic. "Cluster"
+                              means connections are loadbalanced to all pods in the
+                              cluster.
+                            enum:
+                            - Local
+                            - Cluster
+                            type: string
                           loadBalancerClass:
                             description: LoadBalancerClass, when specified, allows
                               for choosing the LoadBalancer provider implementation
