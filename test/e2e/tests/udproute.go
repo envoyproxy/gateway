@@ -54,7 +54,8 @@ var UDPRouteTest = suite.ConformanceTest{
 					t.Logf("performing DNS query %s on %s", domain, gwAddr)
 					_, err = dns.Exchange(msg, gwAddr)
 					if err != nil {
-						return false, err
+						t.Logf("failed to perform a UDP query: %v", err)
+						return false, nil
 					}
 					return true, nil
 				}); err != nil {
@@ -64,7 +65,7 @@ var UDPRouteTest = suite.ConformanceTest{
 	},
 }
 
-// GatewayRef is a tiny type for specifying an UDP Route ParentRef without
+// GatewayRef is a tiny type for specifying a UDP Route ParentRef without
 // relying on a specific api version.
 type GatewayRef struct {
 	types.NamespacedName

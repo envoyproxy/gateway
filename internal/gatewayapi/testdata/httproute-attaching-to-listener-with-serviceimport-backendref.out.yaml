@@ -82,7 +82,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http
@@ -104,6 +105,9 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -112,7 +116,8 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 8.8.8.8
               port: 8080
             protocol: HTTP

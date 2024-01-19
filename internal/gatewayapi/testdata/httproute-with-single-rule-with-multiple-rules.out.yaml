@@ -92,15 +92,11 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: 'Regex "*regex*" is invalid: error parsing regexp: missing argument
+          to repetition operator: `*`'
+        reason: UnsupportedValue
+        status: "False"
         type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -109,7 +105,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http
@@ -131,72 +128,7 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
-      routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        headerMatches:
-        - distinct: false
-          exact: exact
-          name: Header-1
-        hostname: '*'
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /exact
-          name: ""
-        queryParamMatches:
-        - distinct: false
-          exact: exact
-          name: QueryParam-1
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        name: httproute/default/httproute-1/rule/1/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /prefix
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: httproute/default/httproute-1/rule/2
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        headerMatches:
-        - distinct: false
-          name: Header-1
-          safeRegex: '*regex*'
-        hostname: '*'
-        name: httproute/default/httproute-1/rule/2/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          safeRegex: '*regex*'
-        queryParamMatches:
-        - distinct: false
-          name: QueryParam-1
-          safeRegex: '*regex*'

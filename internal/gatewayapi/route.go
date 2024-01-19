@@ -13,12 +13,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a1 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
+	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
+)
+
+const (
+	// Following the description in `timeout` section of https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto
+	// Request timeout, which is defined as Duration, specifies the upstream timeout for the route
+	// If not specified, the default is 15s
+	HTTPRequestTimeout = "15s"
 )
 
 var (
@@ -96,7 +105,16 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+		routeRoutes, err := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+		if err != nil {
+			parentRef.SetCondition(httpRoute,
+				gwapiv1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				gwapiv1.RouteReasonUnsupportedValue, // TODO: better reason
+				status.Error2ConditionMsg(err),
+			)
+			continue
+		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
@@ -137,7 +155,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
 
 	// compute matches, filters, backends
@@ -147,10 +165,19 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
-		var ruleRoutes = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		if err != nil {
+			return nil, err
+		}
+
+		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
+			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
+				dstAddrTypeMap[*ds.AddressType]++
+			}
+
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
@@ -163,12 +190,20 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						}
 						route.Destination.Settings = append(route.Destination.Settings, ds)
 						route.BackendWeights.Valid += backendWeight
-
 					} else {
 						route.BackendWeights.Invalid += backendWeight
 					}
 				}
 			}
+		}
+
+		// TODO: support mixed endpointslice address type between backendRefs
+		if !t.EndpointRoutingDisabled && len(dstAddrTypeMap) > 1 {
+			parentRef.SetCondition(httpRoute,
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapiv1a1.RouteReasonResolvedRefs,
+				"Mixed endpointslice address type between backendRefs is not supported")
 		}
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
@@ -187,28 +222,32 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		routeRoutes = append(routeRoutes, ruleRoutes...)
 	}
 
-	return routeRoutes
+	return routeRoutes, nil
 }
 
 func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
 		if rule.Timeouts.Request != nil {
-			// TODO: handle parse errors
-			d, _ := time.ParseDuration(string(*rule.Timeouts.Request))
+			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
+			if err != nil {
+				d, _ = time.ParseDuration(HTTPRequestTimeout)
+			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		// Also set the IR Route Timeout to the backend request timeout
 		// until we introduce retries, then set it to per try timeout
 		if rule.Timeouts.BackendRequest != nil {
-			// TODO: handle parse errors
-			d, _ := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			if err != nil {
+				d, _ = time.ParseDuration(HTTPRequestTimeout)
+			}
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 	}
 }
 
-func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.HTTPRouteRule) []*ir.HTTPRoute {
+func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.HTTPRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
@@ -241,6 +280,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: match.Path.Value,
 				}
 			case gwapiv1.PathMatchRegularExpression:
+				if err := regex.Validate(*match.Path.Value); err != nil {
+					return nil, err
+				}
 				irRoute.PathMatch = &ir.StringMatch{
 					SafeRegex: match.Path.Value,
 				}
@@ -254,6 +296,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: ptr.To(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
+				if err := regex.Validate(headerMatch.Value); err != nil {
+					return nil, err
+				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
 					SafeRegex: ptr.To(headerMatch.Value),
@@ -268,6 +313,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Exact: ptr.To(queryParamMatch.Value),
 				})
 			case gwapiv1.QueryParamMatchRegularExpression:
+				if err := regex.Validate(queryParamMatch.Value); err != nil {
+					return nil, err
+				}
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:      string(queryParamMatch.Name),
 					SafeRegex: ptr.To(queryParamMatch.Value),
@@ -285,7 +333,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
-	return ruleRoutes
+	return ruleRoutes, nil
 }
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
@@ -327,7 +375,16 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		routeRoutes, err := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		if err != nil {
+			parentRef.SetCondition(grpcRoute,
+				gwapiv1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				gwapiv1.RouteReasonUnsupportedValue, // TODO: better reason
+				status.Error2ConditionMsg(err),
+			)
+			continue
+		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
@@ -366,7 +423,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
 
 	// compute matches, filters, backends
@@ -376,7 +433,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
-		var ruleRoutes = t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
+		ruleRoutes, err := t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
+		if err != nil {
+			return nil, err
+		}
 
 		for _, backendRef := range rule.BackendRefs {
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
@@ -416,10 +476,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		routeRoutes = append(routeRoutes, ruleRoutes...)
 	}
 
-	return routeRoutes
+	return routeRoutes, nil
 }
 
-func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1a1.GRPCRouteRule) []*ir.HTTPRoute {
+func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1a1.GRPCRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every gRPC request.
@@ -447,6 +507,9 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 					Exact: ptr.To(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
+				if err := regex.Validate(headerMatch.Value); err != nil {
+					return nil, err
+				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
 					SafeRegex: ptr.To(headerMatch.Value),
@@ -460,6 +523,16 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 			case gwapiv1a1.GRPCMethodMatchExact:
 				t.processGRPCRouteMethodExact(match.Method, irRoute)
 			case gwapiv1a1.GRPCMethodMatchRegularExpression:
+				if match.Method.Service != nil {
+					if err := regex.Validate(*match.Method.Service); err != nil {
+						return nil, err
+					}
+				}
+				if match.Method.Method != nil {
+					if err := regex.Validate(*match.Method.Method); err != nil {
+						return nil, err
+					}
+				}
 				t.processGRPCRouteMethodRegularExpression(match.Method, irRoute)
 			}
 		}
@@ -467,7 +540,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		ruleRoutes = append(ruleRoutes, irRoute)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 	}
-	return ruleRoutes
+	return ruleRoutes, nil
 }
 
 func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1a1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
@@ -980,7 +1053,10 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		return nil, weight
 	}
 
-	var endpoints []*ir.DestinationEndpoint
+	var (
+		endpoints []*ir.DestinationEndpoint
+		addrType  *ir.DestinationAddressType
+	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindServiceImport:
@@ -992,9 +1068,10 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 				break
 			}
 		}
+
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
+			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 			for _, ip := range backendIps {
@@ -1023,7 +1100,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		// Route to endpoints by default
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
+			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			// Fall back to Service ClusterIP routing
 			ep := ir.NewDestEndpoint(
@@ -1033,10 +1110,20 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		}
 	}
 
+	// TODO: support mixed endpointslice address type for the same backendRef
+	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
+		parentRef.SetCondition(route,
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			gwapiv1a1.RouteReasonResolvedRefs,
+			"Mixed endpointslice address type for the same backendRef is not supported")
+	}
+
 	ds = &ir.DestinationSetting{
-		Weight:    &weight,
-		Protocol:  protocol,
-		Endpoints: endpoints,
+		Weight:      &weight,
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
 	}
 	return ds, weight
 }
@@ -1137,22 +1224,52 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 	return relevantRoute
 }
 
-func getIREndpointsFromEndpointSlice(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
-	endpoints := []*ir.DestinationEndpoint{}
+func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
+	var (
+		dstEndpoints []*ir.DestinationEndpoint
+		dstAddrType  *ir.DestinationAddressType
+	)
+
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	for _, endpointSlice := range endpointSlices {
-		for _, endpoint := range endpointSlice.Endpoints {
-			for _, endpointPort := range endpointSlice.Ports {
-				// Check if the endpoint port matches the service port
-				// and if endpoint is Ready
-				if *endpointPort.Name == portName &&
-					*endpointPort.Protocol == portProtocol &&
-					*endpoint.Conditions.Ready {
-					for _, address := range endpoint.Addresses {
-						ep := ir.NewDestEndpoint(
-							address,
-							uint32(*endpointPort.Port))
-						endpoints = append(endpoints, ep)
-					}
+		if endpointSlice.AddressType == discoveryv1.AddressTypeFQDN {
+			addrTypeMap[ir.FQDN]++
+		} else {
+			addrTypeMap[ir.IP]++
+		}
+		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol)
+		dstEndpoints = append(dstEndpoints, endpoints...)
+	}
+
+	for addrTypeState, addrTypeCounts := range addrTypeMap {
+		if addrTypeCounts == len(endpointSlices) {
+			dstAddrType = ptr.To(addrTypeState)
+			break
+		}
+	}
+
+	if len(addrTypeMap) > 0 && dstAddrType == nil {
+		dstAddrType = ptr.To(ir.MIXED)
+	}
+
+	return dstEndpoints, dstAddrType
+}
+
+func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+	var endpoints []*ir.DestinationEndpoint
+	for _, endpoint := range endpointSlice.Endpoints {
+		for _, endpointPort := range endpointSlice.Ports {
+			// Check if the endpoint port matches the service port
+			// and if endpoint is Ready
+			if *endpointPort.Name == portName &&
+				*endpointPort.Protocol == portProtocol &&
+				// Unknown state (nil) should be interpreted as Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
+				(endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready) {
+				for _, address := range endpoint.Addresses {
+					ep := ir.NewDestEndpoint(
+						address,
+						uint32(*endpointPort.Port))
+					endpoints = append(endpoints, ep)
 				}
 			}
 		}

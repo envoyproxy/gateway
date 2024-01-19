@@ -12,9 +12,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
@@ -85,9 +86,9 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := GetRenderedBootstrapConfig(tc.proxyMetrics)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			expected, err := readTestData(tc.name)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, expected, got)
 		})
 	}

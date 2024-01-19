@@ -5,8 +5,23 @@
 
 version: 2
 updates:
+  - package-ecosystem: docker
+    directory: /tools/docker/envoy-gateway/
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /site
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # skip to update retest, because it won't work with the latest version
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+  - package-ecosystem: github-actions
+    directory: /tools/github-actions/setup-deps
     schedule:
       interval: weekly
   - package-ecosystem: gomod

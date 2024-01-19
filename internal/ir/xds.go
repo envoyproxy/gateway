@@ -8,7 +8,8 @@ package ir
 import (
 	"cmp"
 	"errors"
-	"net"
+	"net/http"
+	"net/netip"
 	"reflect"
 
 	"github.com/tetratelabs/multierror"
@@ -17,35 +18,46 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 var (
-	ErrListenerNameEmpty             = errors.New("field Name must be specified")
-	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
-	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
-	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPListenerSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
-	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
-	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
-	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
-	ErrDestinationNameEmpty          = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP address")
-	ErrDestEndpointPortInvalid       = errors.New("field Port specified is invalid")
-	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
-	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
-	ErrDirectResponseStatusInvalid   = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus     = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
-	ErrRedirectUnsupportedScheme     = errors.New("only http and https are supported for the scheme in redirect filters")
-	ErrHTTPPathModifierDoubleReplace = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
-	ErrHTTPPathModifierNoReplace     = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
-	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
-	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
-	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrLoadBalancerInvalid           = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrListenerNameEmpty                    = errors.New("field Name must be specified")
+	ErrListenerAddressInvalid               = errors.New("field Address must be a valid IP address")
+	ErrListenerPortInvalid                  = errors.New("field Port specified is invalid")
+	ErrHTTPListenerHostnamesEmpty           = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTCPListenerSNIsEmpty                 = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTLSServerCertEmpty                   = errors.New("field ServerCertificate must be specified")
+	ErrTLSPrivateKey                        = errors.New("field PrivateKey must be specified")
+	ErrHTTPRouteNameEmpty                   = errors.New("field Name must be specified")
+	ErrHTTPRouteHostnameEmpty               = errors.New("field Hostname must be specified")
+	ErrDestinationNameEmpty                 = errors.New("field Name must be specified")
+	ErrDestEndpointHostInvalid              = errors.New("field Address must be a valid IP or FQDN address")
+	ErrDestEndpointPortInvalid              = errors.New("field Port specified is invalid")
+	ErrStringMatchConditionInvalid          = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchNameIsEmpty               = errors.New("field Name must be specified")
+	ErrDirectResponseStatusInvalid          = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
+	ErrRedirectUnsupportedStatus            = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedScheme            = errors.New("only http and https are supported for the scheme in redirect filters")
+	ErrHTTPPathModifierDoubleReplace        = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
+	ErrHTTPPathModifierNoReplace            = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
+	ErrAddHeaderEmptyName                   = errors.New("header modifier filter cannot configure a header without a name to be added")
+	ErrAddHeaderDuplicate                   = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
+	ErrRemoveHeaderDuplicate                = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrLoadBalancerInvalid                  = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrHealthCheckTimeoutInvalid            = errors.New("field HealthCheck.Timeout must be specified")
+	ErrHealthCheckIntervalInvalid           = errors.New("field HealthCheck.Interval must be specified")
+	ErrHealthCheckUnhealthyThresholdInvalid = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
+	ErrHealthCheckHealthyThresholdInvalid   = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
+	ErrHealthCheckerInvalid                 = errors.New("health checker setting is invalid, only one health checker can be set")
+	ErrHCHTTPPathInvalid                    = errors.New("field HTTPHealthChecker.Path should be specified")
+	ErrHCHTTPMethodInvalid                  = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
+	ErrHCHTTPExpectedStatusesInvalid        = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHealthCheckPayloadInvalid            = errors.New("one of Text, Binary fields must be set in payload")
+	ErrHTTPStatusInvalid                    = errors.New("HTTPStatus should be in [200,600)")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -178,8 +190,8 @@ type HTTPListener struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
 	// for more info.
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
-	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	TLS []*TLSListenerConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
@@ -187,8 +199,16 @@ type HTTPListener struct {
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// SuppressEnvoyHeaders controls if "x-envoy-" headers are suppressed by the HTTP Router filter
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
+	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// HTTP3 provides HTTP/3 configuration on the listener.
+	// +optional
+	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// Path contains settings for path URI manipulations
+	Path PathSettings `json:"path,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -197,7 +217,7 @@ func (h HTTPListener) Validate() error {
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
-	if ip := net.ParseIP(h.Address); ip == nil {
+	if _, err := netip.ParseAddr(h.Address); err != nil {
 		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
@@ -207,10 +227,8 @@ func (h HTTPListener) Validate() error {
 		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
-		for t := range h.TLS {
-			if err := h.TLS[t].Validate(); err != nil {
-				errs = multierror.Append(errs, err)
-			}
+		if err := h.TLS.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
 	for _, route := range h.Routes {
@@ -221,9 +239,43 @@ func (h HTTPListener) Validate() error {
 	return errs
 }
 
-// TLSListenerConfig holds the configuration for downstream TLS context.
+type TLSVersion egv1a1.TLSVersion
+
+const (
+	// TLSAuto allows Envoy to choose the optimal TLS Version
+	TLSAuto = TLSVersion(egv1a1.TLSAuto)
+	// TLSv10 specifies TLS version 1.0
+	TLSv10 = TLSVersion(egv1a1.TLSv10)
+	// TLSv11 specifies TLS version 1.1
+	TLSv11 = TLSVersion(egv1a1.TLSv11)
+	// TLSv12 specifies TLS version 1.2
+	TLSv12 = TLSVersion(egv1a1.TLSv12)
+	// TLSv13 specifies TLS version 1.3
+	TLSv13 = TLSVersion(egv1a1.TLSv13)
+)
+
+// TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
-type TLSListenerConfig struct {
+type TLSConfig struct {
+	// Certificates contains the set of certificates associated with this listener
+	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
+	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
+	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
+	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
+	MaxVersion *TLSVersion `json:"maxVersion,omitempty" yaml:"version,omitempty"`
+	// CipherSuites supported by this listener
+	Ciphers []string `json:"ciphers,omitempty" yaml:"ciphers,omitempty"`
+	// EDCHCurves supported by this listener
+	ECDHCurves []string `json:"ecdhCurves,omitempty" yaml:"ecdhCurves,omitempty"`
+	// SignatureAlgorithms supported by this listener
+	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
+	// ALPNProtocols exposed by this listener
+	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+}
+
+// TLSCertificate holds a single certificate's details
+// +k8s:deepcopy-gen=true
+type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
 	// ServerCertificate of the server.
@@ -232,8 +284,7 @@ type TLSListenerConfig struct {
 	PrivateKey []byte `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
 
-// Validate the fields within the TLSListenerConfig structure
-func (t TLSListenerConfig) Validate() error {
+func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.ServerCertificate) == 0 {
 		errs = multierror.Append(errs, ErrTLSServerCertEmpty)
@@ -242,6 +293,38 @@ func (t TLSListenerConfig) Validate() error {
 		errs = multierror.Append(errs, ErrTLSPrivateKey)
 	}
 	return errs
+}
+
+// Validate the fields within the TLSListenerConfig structure
+func (t TLSConfig) Validate() error {
+	var errs error
+	for _, cert := range t.Certificates {
+		if err := cert.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	// Correct values for cipher suites, ECDH curves, and signature algorithms are
+	// dependent on the version of EnvoyProxy being used - different values are valid
+	// depending if Envoy was compiled against BoringSSL or OpenSSL, or even the exact version
+	// of each of these libraries.
+	// Validation for TLS versions was done with CEL
+	return errs
+}
+
+type PathEscapedSlashAction egv1a1.PathEscapedSlashAction
+
+const (
+	KeepUnchangedAction = PathEscapedSlashAction(egv1a1.KeepUnchangedAction)
+	RejectRequestAction = PathEscapedSlashAction(egv1a1.RejectRequestAction)
+	UnescapeAndRedirect = PathEscapedSlashAction(egv1a1.UnescapeAndRedirect)
+	UnescapeAndForward  = PathEscapedSlashAction(egv1a1.UnescapeAndForward)
+)
+
+// PathSettings holds configuration for path URI manipulations
+// +k8s:deepcopy-gen=true
+type PathSettings struct {
+	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
+	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
@@ -300,8 +383,14 @@ type HTTPRoute struct {
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// BasicAuth defines the schema for the HTTP Basic Authentication.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	// HealthCheck defines the configuration for active health checking on the upstream.
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
+	// FaultInjection defines the schema for injecting faults into HTTP requests.
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// Circuit Breaker Settings
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -327,6 +416,8 @@ type CORS struct {
 	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
 	// MaxAge defines how long the results of a preflight request can be cached.
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+	// AllowCredentials indicates whether a request can include user credentials.
+	AllowCredentials bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
 }
 
 // JWT defines the schema for authenticating HTTP requests using
@@ -360,6 +451,16 @@ type OIDC struct {
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+
+	// The redirect URL to be used in the OIDC
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	RedirectURL string `json:"redirectURL,omitempty"`
+
+	// The path part of the redirect URL
+	RedirectPath string `json:"redirectPath,omitempty"`
+
+	// The path to log a user out, clearing their credential cookies.
+	LogoutPath string `json:"logoutPath,omitempty"`
 }
 
 // BasicAuth defines the schema for the HTTP Basic Authentication.
@@ -376,6 +477,38 @@ type OIDCProvider struct {
 
 	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
 	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+}
+
+// FaultInjection defines the schema for injecting faults into requests.
+//
+// +k8s:deepcopy-gen=true
+type FaultInjection struct {
+	// Delay defines the fault injection delay.
+	Delay *FaultInjectionDelay `json:"delay,omitempty" yaml:"delay,omitempty"`
+	// Abort defines the fault injection abort.
+	Abort *FaultInjectionAbort `json:"abort,omitempty" yaml:"abort,omitempty"`
+}
+
+// FaultInjectionDelay defines the schema for injecting delay into requests.
+//
+// +k8s:deepcopy-gen=true
+type FaultInjectionDelay struct {
+	// FixedDelay defines the fixed delay duration.
+	FixedDelay *metav1.Duration `json:"fixedDelay,omitempty" yaml:"fixedDelay,omitempty"`
+	// Percentage defines the percentage of requests to be delayed.
+	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+}
+
+// FaultInjectionAbort defines the schema for injecting abort into requests.
+//
+// +k8s:deepcopy-gen=true
+type FaultInjectionAbort struct {
+	// HTTPStatus defines the HTTP status code to be returned.
+	HTTPStatus *int32 `json:"httpStatus,omitempty" yaml:"httpStatus,omitempty"`
+	// GrpcStatus defines the gRPC status code to be returned.
+	GrpcStatus *int32 `json:"grpcStatus,omitempty" yaml:"grpcStatus,omitempty"`
+	// Percentage defines the percentage of requests to be aborted.
+	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -489,6 +622,11 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
+	if h.HealthCheck != nil {
+		if err := h.HealthCheck.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
 
 	return errs
 }
@@ -496,7 +634,7 @@ func (h HTTPRoute) Validate() error {
 func (j *JWT) validate() error {
 	var errs error
 
-	if err := validation.ValidateJWTProvider(j.Providers); err != nil {
+	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
@@ -537,6 +675,8 @@ type DestinationSetting struct {
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	// AddressTypeState specifies the state of DestinationEndpoint address type.
+	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -551,6 +691,15 @@ func (d DestinationSetting) Validate() error {
 	return errs
 }
 
+// DestinationAddressType describes the address type state for a group of DestinationEndpoint
+type DestinationAddressType string
+
+const (
+	IP    DestinationAddressType = "IP"
+	FQDN  DestinationAddressType = "FQDN"
+	MIXED DestinationAddressType = "Mixed"
+)
+
 // DestinationEndpoint holds the endpoint details associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationEndpoint struct {
@@ -563,10 +712,14 @@ type DestinationEndpoint struct {
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
-	// Only support IP hosts for now
-	if ip := net.ParseIP(d.Host); ip == nil {
+
+	err := validation.IsDNS1123Subdomain(d.Host)
+	_, pErr := netip.ParseAddr(d.Host)
+
+	if err != nil && pErr != nil {
 		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
 	}
+
 	if d.Port == 0 {
 		errs = multierror.Append(errs, ErrDestEndpointPortInvalid)
 	}
@@ -590,7 +743,7 @@ type AddHeader struct {
 	Append bool   `json:"append" yaml:"append"`
 }
 
-// / Validate the fields within the AddHeader structure
+// Validate the fields within the AddHeader structure
 func (h AddHeader) Validate() error {
 	var errs error
 	if h.Name == "" {
@@ -779,7 +932,7 @@ type TLS struct {
 	// connections' server names are inspected and routed to backends accordingly.
 	Passthrough *TLSInspectorConfig `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
 	// TLS information required for TLS Termination
-	Terminate []*TLSListenerConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
+	Terminate *TLSConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
 }
 
 // Validate the fields within the TCPListener structure
@@ -788,7 +941,7 @@ func (h TCPListener) Validate() error {
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
-	if ip := net.ParseIP(h.Address); ip == nil {
+	if _, err := netip.ParseAddr(h.Address); err != nil {
 		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
@@ -801,10 +954,8 @@ func (h TCPListener) Validate() error {
 	}
 
 	if h.TLS != nil && h.TLS.Terminate != nil {
-		for t := range h.TLS.Terminate {
-			if err := h.TLS.Terminate[t].Validate(); err != nil {
-				errs = multierror.Append(errs, err)
-			}
+		if err := h.TLS.Terminate.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
 
@@ -854,7 +1005,7 @@ func (h UDPListener) Validate() error {
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
-	if ip := net.ParseIP(h.Address); ip == nil {
+	if _, err := netip.ParseAddr(h.Address); err != nil {
 		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
@@ -874,11 +1025,27 @@ func (h UDPListener) Validate() error {
 type RateLimit struct {
 	// Global rate limit settings.
 	Global *GlobalRateLimit `json:"global,omitempty" yaml:"global,omitempty"`
+
+	// Local rate limit settings.
+	Local *LocalRateLimit `json:"local,omitempty" yaml:"local,omitempty"`
 }
 
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
+	// TODO zhaohuabing: add default values for Global rate limiting.
+
+	// Rules for rate limiting.
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+}
+
+// LocalRateLimit holds the local rate limiting configuration.
+// +k8s:deepcopy-gen=true
+type LocalRateLimit struct {
+	// Default rate limiting values.
+	// If a request does not match any of the rules, the default values are used.
+	Default RateLimitValue `json:"default,omitempty" yaml:"default,omitempty"`
+
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
@@ -891,7 +1058,7 @@ type RateLimitRule struct {
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
-	Limit *RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
+	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 }
 
 type CIDRMatch struct {
@@ -903,6 +1070,7 @@ type CIDRMatch struct {
 	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
+// TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
 	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
 }
@@ -1107,4 +1275,184 @@ type ProxyProtocol struct {
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
 	Window *metav1.Duration `json:"window" yaml:"window"`
+}
+
+// Backend CircuitBreaker settings for the DEFAULT routing priority
+// +k8s:deepcopy-gen=true
+type CircuitBreaker struct {
+	// The maximum number of connections that Envoy will establish.
+	MaxConnections *uint32 `json:"maxConnections,omitempty" yaml:"maxConnections,omitempty"`
+
+	// The maximum number of pending requests that Envoy will queue.
+	MaxPendingRequests *uint32 `json:"maxPendingRequests,omitempty" yaml:"maxPendingRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make.
+	MaxParallelRequests *uint32 `json:"maxParallelRequests,omitempty" yaml:"maxParallelRequests,omitempty"`
+}
+
+// HealthCheck defines health check settings
+// +k8s:deepcopy-gen=true
+type HealthCheck struct {
+	// Timeout defines the time to wait for a health check response.
+	Timeout *metav1.Duration `json:"timeout"`
+	// Interval defines the time between health checks.
+	Interval *metav1.Duration `json:"interval"`
+	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+	UnhealthyThreshold *uint32 `json:"unhealthyThreshold"`
+	// HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy.
+	HealthyThreshold *uint32 `json:"healthyThreshold"`
+	// HTTP defines the configuration of http health checker.
+	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
+	// TCP defines the configuration of tcp health checker.
+	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+}
+
+// Validate the fields within the HealthCheck structure.
+func (h *HealthCheck) Validate() error {
+	var errs error
+
+	if h.Timeout != nil && h.Timeout.Duration == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckTimeoutInvalid)
+	}
+	if h.Interval != nil && h.Interval.Duration == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckIntervalInvalid)
+	}
+	if h.UnhealthyThreshold != nil && *h.UnhealthyThreshold == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckUnhealthyThresholdInvalid)
+	}
+	if h.HealthyThreshold != nil && *h.HealthyThreshold == 0 {
+		errs = multierror.Append(errs, ErrHealthCheckHealthyThresholdInvalid)
+	}
+
+	matchCount := 0
+	if h.HTTP != nil {
+		matchCount++
+	}
+	if h.TCP != nil {
+		matchCount++
+	}
+	if matchCount != 1 {
+		errs = multierror.Append(errs, ErrHealthCheckerInvalid)
+	}
+
+	if h.HTTP != nil {
+		if err := h.HTTP.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if h.TCP != nil {
+		if err := h.TCP.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	return errs
+}
+
+// HTTPHealthChecker defines the settings of http health check.
+// +k8s:deepcopy-gen=true
+type HTTPHealthChecker struct {
+	// Path defines the HTTP path that will be requested during health checking.
+	Path string `json:"path" yaml:"path"`
+	// Method defines the HTTP method used for health checking.
+	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
+	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
+	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// ExpectedResponse defines a list of HTTP expected responses to match.
+	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
+}
+
+// Validate the fields within the HTTPHealthChecker structure.
+func (c *HTTPHealthChecker) Validate() error {
+	var errs error
+	if c.Path == "" {
+		errs = multierror.Append(errs, ErrHCHTTPPathInvalid)
+	}
+	if c.Method != nil {
+		switch *c.Method {
+		case http.MethodGet:
+		case http.MethodHead:
+		case http.MethodPost:
+		case http.MethodPut:
+		case http.MethodDelete:
+		case http.MethodOptions:
+		case http.MethodTrace:
+		case http.MethodPatch:
+		case "":
+		default:
+			errs = multierror.Append(errs, ErrHCHTTPMethodInvalid)
+		}
+	}
+	if len(c.ExpectedStatuses) == 0 {
+		errs = multierror.Append(errs, ErrHCHTTPExpectedStatusesInvalid)
+	}
+	for _, r := range c.ExpectedStatuses {
+		if err := r.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if c.ExpectedResponse != nil {
+		if err := c.ExpectedResponse.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// HTTPStatus represents http status code.
+type HTTPStatus int
+
+func (h HTTPStatus) Validate() error {
+	if h < 100 || h >= 600 {
+		return ErrHTTPStatusInvalid
+	}
+	return nil
+}
+
+// TCPHealthChecker defines the settings of tcp health check.
+// +k8s:deepcopy-gen=true
+type TCPHealthChecker struct {
+	Send    *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
+	Receive *HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
+}
+
+// Validate the fields within the TCPHealthChecker structure.
+func (c *TCPHealthChecker) Validate() error {
+	var errs error
+	if c.Send != nil {
+		if err := c.Send.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if c.Receive != nil {
+		if err := c.Receive.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// HealthCheckPayload defines the encoding of the payload bytes in the payload.
+// +k8s:deepcopy-gen=true
+type HealthCheckPayload struct {
+	// Text payload in plain text.
+	Text *string `json:"text,omitempty" yaml:"text,omitempty"`
+	// Binary payload base64 encoded
+	Binary []byte `json:"binary,omitempty" yaml:"binary,omitempty"`
+}
+
+// Validate the fields in the HealthCheckPayload.
+func (p *HealthCheckPayload) Validate() error {
+	var errs error
+	matchCount := 0
+	if p.Text != nil && *p.Text != "" {
+		matchCount++
+	}
+	if len(p.Binary) > 0 {
+		matchCount++
+	}
+	if matchCount != 1 {
+		errs = multierror.Append(errs, ErrHealthCheckPayloadInvalid)
+	}
+	return errs
 }

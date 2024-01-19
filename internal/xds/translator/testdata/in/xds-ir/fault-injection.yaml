@@ -1,0 +1,83 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    faultInjection:
+      abort:
+        httpStatus: 500
+        percentage: 0.01
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    faultInjection:
+      delay:
+        fixedDelay: 5.4s
+        percentage: 80
+    pathMatch:
+      exact: "example"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "third-route"
+    hostname: "*"
+    faultInjection:
+      abort:
+        httpStatus: 500
+        percentage: 100
+      delay:
+        fixedDelay: 5.005s
+        percentage: 100
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fourth-route"
+    hostname: "*"
+    faultInjection:
+      abort:
+        grpcStatus: 14
+        percentage: 100
+      delay:
+        fixedDelay: 5.005s
+        percentage: 100
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fifth-route"
+    hostname: "*"
+    faultInjection:
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "fifth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

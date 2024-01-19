@@ -82,7 +82,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		// Handle Type specific operations
 		if resourceOfType, ok := xdsResource.(*listenerv3.Listener); ok {
 			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
 			}
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to Listener type", xdsResource)
@@ -91,7 +91,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		// Handle Type specific operations
 		if resourceOfType, ok := xdsResource.(*routev3.RouteConfiguration); ok {
 			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
 			}
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
@@ -101,7 +101,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		// Handle specific operations
 		if resourceOfType, ok := xdsResource.(*tlsv3.Secret); ok {
 			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
 			}
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to Secret type", xdsResource)
@@ -110,7 +110,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 	case resourcev3.EndpointType:
 		if resourceOfType, ok := xdsResource.(*endpointv3.ClusterLoadAssignment); ok {
 			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
 			}
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to ClusterLoadAssignment type", xdsResource)
@@ -120,7 +120,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		// Handle specific operations
 		if resourceOfType, ok := xdsResource.(*clusterv3.Cluster); ok {
 			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
 			}
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to Cluster type", xdsResource)

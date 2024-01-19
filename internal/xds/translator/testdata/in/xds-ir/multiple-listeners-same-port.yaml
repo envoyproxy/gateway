@@ -4,12 +4,19 @@ http:
   port: 10080
   hostnames:
   - "foo.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   tls:
-  - name: first-listener
-    # byte slice representation of "cert-data"
-    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    # byte slice representation of "key-data"
-    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: first-listener
+      # byte slice representation of "cert-data"
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
   routes:
   - name: "first-route"
     hostname: "*"
@@ -24,12 +31,19 @@ http:
   port: 10080
   hostnames:
   - "foo.net"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   tls:
-  - name: second-listener
-    # byte slice representation of "cert-data"
-    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    # byte slice representation of "key-data"
-    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: second-listener
+      # byte slice representation of "cert-data"
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
   routes:
   - name: "second-route"
     hostname: "*"
@@ -44,6 +58,9 @@ http:
   port: 10080
   hostnames:
   - "example.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "third-route"
     hostname: "*"
@@ -58,6 +75,9 @@ http:
   port: 10080
   hostnames:
   - "example.net"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "fourth-route"
     hostname: "*"

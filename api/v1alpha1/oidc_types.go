@@ -36,20 +36,18 @@ type OIDC struct {
 	// specified.
 	// +optional
 	Scopes []string `json:"scopes,omitempty"`
+
+	// The redirect URL to be used in the OIDC
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+	RedirectURL *string `json:"redirectURL,omitempty"`
+
+	// The path to log a user out, clearing their credential cookies.
+	// If not specified, uses a default logout path "/logout"
+	LogoutPath *string `json:"logoutPath,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
-// To make the EG OIDC config easy to use, some of the low-level ouath2 filter
-// configuration knobs are hidden from the user, and default values will be provided
-// when translating to XDS. For example:
-//
-// * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
-//
-// * signout_path: uses a default signout path "/signout"
-//
-// * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback"
-//
-// If we get requests to expose these knobs, we can always do so later.
 type OIDCProvider struct {
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST

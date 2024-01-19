@@ -186,7 +186,7 @@ func newCert(request *certificateRequest) ([]byte, []byte, error) {
 
 	newKey, err := rsa.GenerateKey(rand.Reader, keySize)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot generate key: %v", err)
+		return nil, nil, fmt.Errorf("cannot generate key: %w", err)
 	}
 
 	now := time.Now()

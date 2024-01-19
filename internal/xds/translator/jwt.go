@@ -18,9 +18,10 @@ import (
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"k8s.io/utils/ptr"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -109,7 +110,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		for i := range route.JWT.Providers {
 			irProvider := route.JWT.Providers[i]
 			// Create the cluster for the remote jwks, if it doesn't exist.
-			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI)
+			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI, false)
 			if err != nil {
 				return nil, err
 			}
@@ -142,10 +143,13 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				JwksSourceSpecifier: remote,
 				PayloadInMetadata:   irProvider.Issuer,
 				ClaimToHeaders:      claimToHeaders,
+				Forward:             true,
 			}
 
 			if irProvider.ExtractFrom != nil {
+				jwtProvider.FromHeaders = buildJwtFromHeaders(irProvider.ExtractFrom.Headers)
 				jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies
+				jwtProvider.FromParams = irProvider.ExtractFrom.Params
 			}
 
 			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
@@ -261,29 +265,32 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 			)
 
 			provider := route.JWT.Providers[i]
-			jwks, err = url2Cluster(provider.RemoteJWKS.URI)
+			jwks, err = url2Cluster(provider.RemoteJWKS.URI, false)
 			if err != nil {
 				errs = multierror.Append(errs, err)
 				continue
 			}
 
 			ds = &ir.DestinationSetting{
-				Weight:    ptr.To(uint32(1)),
+				Weight:    ptr.To[uint32](1),
 				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
 			}
 
-			tSocket, err = buildXdsUpstreamTLSSocket()
-			if err != nil {
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if err = addXdsCluster(tCtx, &xdsClusterArgs{
+			clusterArgs := &xdsClusterArgs{
 				name:         jwks.name,
 				settings:     []*ir.DestinationSetting{ds},
-				tSocket:      tSocket,
 				endpointType: jwks.endpointType,
-			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			}
+			if jwks.tls {
+				tSocket, err = buildXdsUpstreamTLSSocket()
+				if err != nil {
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				clusterArgs.tSocket = tSocket
+			}
+
+			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = multierror.Append(errs, err)
 			}
 		}
@@ -327,4 +334,20 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 
 func (*jwt) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
 	return nil
+}
+
+// buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct
+func buildJwtFromHeaders(headers []v1alpha1.JWTHeaderExtractor) []*jwtauthnv3.JwtHeader {
+	jwtHeaders := make([]*jwtauthnv3.JwtHeader, 0, len(headers))
+
+	for _, header := range headers {
+		jwtHeader := &jwtauthnv3.JwtHeader{
+			Name:        header.Name,
+			ValuePrefix: ptr.Deref(header.ValuePrefix, ""),
+		}
+
+		jwtHeaders = append(jwtHeaders, jwtHeader)
+	}
+
+	return jwtHeaders
 }

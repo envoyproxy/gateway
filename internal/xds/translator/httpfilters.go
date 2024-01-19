@@ -97,8 +97,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 3
 	case filter.Name == jwtAuthn:
 		order = 4
-	case filter.Name == wellknown.HTTPRateLimit:
+	case filter.Name == wellknown.Fault:
 		order = 5
+	case filter.Name == localRateLimitFilter:
+		order = 6
+	case filter.Name == wellknown.HTTPRateLimit:
+		order = 7
 	case filter.Name == wellknown.Router:
 		order = 100
 	}
@@ -164,7 +168,7 @@ func (t *Translator) patchHCMWithFilters(
 	t.patchHCMWithRateLimit(mgr, irListener)
 
 	// Add the router filter
-	mgr.HttpFilters = append(mgr.HttpFilters, filters.HTTPRouter)
+	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(irListener.SuppressEnvoyHeaders))
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)

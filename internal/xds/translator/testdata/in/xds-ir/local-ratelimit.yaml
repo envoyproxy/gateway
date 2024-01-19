@@ -1,0 +1,84 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route-ratelimit-single-rule"
+    hostname: "*"
+    rateLimit:
+      local:
+        default:
+          requests: 10
+          unit: Minute
+        rules:
+        - headerMatches:
+          - name: x-user-id
+            exact: one
+          - name: x-org-id
+            exact: foo
+          limit:
+            requests: 10
+            unit: Hour
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route-ratelimit-multiple-rules"
+    hostname: "*"
+    rateLimit:
+      local:
+        default:
+          requests: 10
+          unit: Minute
+        rules:
+        - headerMatches:
+          - name: x-user-id
+            exact: one
+          - name: x-org-id
+            exact: foo
+          limit:
+            requests: 10
+            unit: Hour
+        - cidrMatch:
+            cidr: 192.168.0.0/16
+            maskLen: 16
+          headerMatches:
+          - name: x-user-id
+            exact: two
+          - name: x-org-id
+            exact: bar
+          limit:
+            requests: 10
+            unit: Minute
+    pathMatch:
+      exact: "example"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "third-route-ratelimit-no-rule"
+    hostname: "*"
+    rateLimit:
+      local:
+        default:
+          requests: 10
+          unit: Minute
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

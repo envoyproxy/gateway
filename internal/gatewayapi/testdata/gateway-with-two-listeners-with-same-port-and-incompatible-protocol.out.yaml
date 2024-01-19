@@ -108,8 +108,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      listeners:
-      - address: ""
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1

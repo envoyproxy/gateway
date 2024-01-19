@@ -32,12 +32,17 @@ $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 tools/codespell    = $(tools.bindir)/codespell
 tools/yamllint     = $(tools.bindir)/yamllint
 tools/sphinx-build = $(tools.bindir)/sphinx-build
+tools/release-notes-docs = $(tools.bindir)/release-notes-docs
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
 	mkdir -p $(@D)
 	python3 -m venv $@
 	$@/bin/pip3 install -r $< || (rm -rf $@; exit 1)
-$(tools.bindir)/%: $(tools.bindir)/%.d/venv
-	ln -sf $*.d/venv/bin/$* $@
+$(tools.bindir)/%: $(tools.bindir)/%.d/venv	
+	@if [ -e $(tools.srcdir)/$*/$*.sh ]; then \
+		ln -sf ../../$(tools.srcdir)/$*/$*.sh $@; \
+	else \
+		ln -sf $*.d/venv/bin/$* $@; \
+	fi
 
 ifneq ($(GOOS),windows)
 # Shellcheck

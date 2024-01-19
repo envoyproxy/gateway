@@ -28,6 +28,11 @@ stats_config:
           regex: {{js $item}}
       {{- end}}
 {{- end }}
+layered_runtime:
+  layers:
+  - name: global_config
+    static_layer:
+      envoy.restart_features.use_eds_cache_for_ads: true
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC

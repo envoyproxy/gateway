@@ -64,10 +64,10 @@ var RateLimitTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 
 			// fire the rest request
-			if err := GotExactNExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("fail to get expected response at first three request: %v", err)
 			}
-			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("fail to get expected response at last fourth request: %v", err)
 			}
 		})
@@ -165,15 +165,15 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, JwtOkResp)
 
 			// fire the rest request
-			if err := GotExactNExpectedResponse(t, 2, suite.RoundTripper, JwtReq, JwtOkResp); err != nil {
+			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, JwtReq, JwtOkResp); err != nil {
 				t.Errorf("failed to get expected response at third request: %v", err)
 			}
-			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, JwtReq, expectLimitResp); err != nil {
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, JwtReq, expectLimitResp); err != nil {
 				t.Errorf("failed to get expected response at the fourth request: %v", err)
 			}
 
 			// Carrying different jwt claims will not be limited
-			if err := GotExactNExpectedResponse(t, 4, suite.RoundTripper, difJwtReq, expectOkResp); err != nil {
+			if err := GotExactExpectedResponse(t, 4, suite.RoundTripper, difJwtReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected response for the request with a different jwt: %v", err)
 			}
 
@@ -188,7 +188,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			noTokenReq := http.MakeRequest(t, &noTokenResp, gwAddr, "HTTP", "http")
-			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, noTokenReq, noTokenResp); err != nil {
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, noTokenReq, noTokenResp); err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
@@ -196,7 +196,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 	},
 }
 
-func GotExactNExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
+func GotExactExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
 	for i := 0; i < n; i++ {
 		cReq, cRes, err := r.CaptureRoundTrip(req)
 		if err != nil {

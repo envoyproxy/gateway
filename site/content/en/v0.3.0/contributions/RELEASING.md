@@ -84,11 +84,11 @@ Configuration looks like following:
     if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v0.4') && github.event.pull_request.merged == true }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           fetch-depth: 0
       - name: Cherry pick into release/v0.4
-        uses: carloscastrojumo/github-cherry-pick-action@v1.0.9
+        uses: carloscastrojumo/github-cherry-pick-action@a145da1b8142e752d3cbc11aaaa46a535690f0c5  # v1.0.9
         with:
           branch: release/v0.4
           title: "[release/v0.4] {old_title}"

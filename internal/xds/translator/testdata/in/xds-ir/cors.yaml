@@ -4,6 +4,9 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "first-route"
     hostname: "*"
@@ -32,4 +35,5 @@ http:
       exposeHeaders:
       - "x-header-3"
       - "x-header-4"
+      allowCredentials: true
       maxAge: 1000s

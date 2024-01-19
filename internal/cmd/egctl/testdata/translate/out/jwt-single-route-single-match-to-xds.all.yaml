@@ -27,6 +27,11 @@ xds:
           ldsConfig:
             ads: {}
             resourceApiVersion: V3
+        layeredRuntime:
+          layers:
+          - name: global_config
+            staticLayer:
+              envoy.restart_features.use_eds_cache_for_ads: true
         staticResources:
           clusters:
           - connectTimeout: 0.250s
@@ -233,6 +238,7 @@ xds:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                       providers:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example:
+                          forward: true
                           remoteJwks:
                             asyncFetch: {}
                             cacheDuration: 300s

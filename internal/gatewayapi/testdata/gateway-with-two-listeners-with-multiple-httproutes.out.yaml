@@ -143,12 +143,16 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10080
           name: http-1
           protocol: HTTP
           servicePort: 80
+      - address: null
+        name: envoy-gateway/gateway-1/http-2
+        ports:
         - containerPort: 10081
           name: http-2
           protocol: HTTP
@@ -169,6 +173,9 @@ xdsIR:
       - foo.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -177,7 +184,8 @@ xdsIR:
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -194,7 +202,8 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -210,6 +219,9 @@ xdsIR:
       - bar.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10081
       routes:
       - backendWeights:
@@ -218,7 +230,8 @@ xdsIR:
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP
@@ -235,7 +248,8 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
             protocol: HTTP

@@ -11,12 +11,9 @@ spec:
     namespace: gateway-conformance-infra
   cors:
     allowOrigins:
-    - type: Exact
-      value: "https://www.foo.com"
-    - type: Exact
-      value: "https://www.bar.com"
-    - type: RegularExpression
-      value: "https://[a-zA-Z0-9]+.foobar.com"
+    - "https://www.foo.com"
+    - "https://www.bar.com"
+    - "https://*.foobar.com"
     allowMethods:
     - GET
     - POST

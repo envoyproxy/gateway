@@ -148,17 +148,17 @@ func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNa
 
 	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
 	if err != nil {
-		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}
 	err = fw.Start()
 	if err != nil {
-		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	defer fw.Stop()
 
 	result, err := statsRequest(fw.Address(), path)
 	if err != nil {
-		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	return string(result), nil
 }
@@ -171,17 +171,17 @@ func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podN
 	}
 	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
 	if err != nil {
-		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}
 	err = fw.Start()
 	if err != nil {
-		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	defer fw.Stop()
 
 	result, err := statsRequest(fw.Address(), path)
 	if err != nil {
-		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	return string(result), nil
 }

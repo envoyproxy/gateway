@@ -86,11 +86,11 @@ securityPolicies:
         - header: one-route-example-key
           claim: claim1
       - name: example2
-        issuer: https://two.example.com
+        issuer: http://two.example.com
         audiences:
         - two.foo.com
         remoteJWKS:
-          uri: https://two.example.com/jwt/public-key/jwks.json
+          uri: http://two.example.com/jwt/public-key/jwks.json
         claimToHeaders:
         - header: two-route-example-key
           claim: claim2

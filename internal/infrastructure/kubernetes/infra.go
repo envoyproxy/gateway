@@ -7,9 +7,10 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,6 +26,7 @@ type ResourceRender interface {
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
+	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
 }
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -53,19 +55,23 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 	if err := i.createOrUpdateServiceAccount(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to create or update serviceaccount %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to create or update serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.createOrUpdateConfigMap(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to create or update configmap %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to create or update configmap %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.createOrUpdateDeployment(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to create or update deployment %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to create or update deployment %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.createOrUpdateService(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to create or update service %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to create or update service %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
+	if err := i.createOrUpdateHPA(ctx, r); err != nil {
+		return fmt.Errorf("failed to create or update hpa %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	return nil
@@ -74,19 +80,23 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 // delete deletes the ServiceAccount/ConfigMap/Deployment/Service in the kube api server, if it exists.
 func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 	if err := i.deleteServiceAccount(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to delete serviceaccount %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to delete serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.deleteConfigMap(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to delete configmap %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to delete configmap %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.deleteDeployment(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to delete deployment %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to delete deployment %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.deleteService(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to delete service %s/%s", i.Namespace, r.Name())
+		return fmt.Errorf("failed to delete service %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
+	if err := i.deleteHPA(ctx, r); err != nil {
+		return fmt.Errorf("failed to delete hpa %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	return nil

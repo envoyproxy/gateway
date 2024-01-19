@@ -1,5 +1,5 @@
 ---
-title: "Rate Limit"
+title: "Global Rate Limit"
 ---
 
 Rate limit is a feature that allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
@@ -10,12 +10,18 @@ Here are some reasons why you may want to implement Rate limits
 * To prevent applications and its resources (such as a database) from getting overloaded.
 * To create API limits based on user entitlements.
 
-Envoy Gateway supports [Global rate limiting][], where the rate limit is common across all the instances of Envoy proxies where its applied
-i.e. if the data plane has 2 replicas of Envoy running, and the rate limit is 10 requests/second, this limit is common and will be hit
+Envoy Gateway supports two types of rate limiting: [Global rate limiting][] and [Local rate limiting][].
+
+[Global rate limiting][] applies a shared rate limit to the traffic flowing through all the instances of Envoy proxies where it is configured.
+i.e. if the data plane has 2 replicas of Envoy running, and the rate limit is 10 requests/second, this limit is shared and will be hit
 if 5 requests pass through the first replica and 5 requests pass through the second replica within the same second.
 
 Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their rate limit intent. This instantiated resource
 can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
+
+**Note:** Limit is applied per route. Even if a [BackendTrafficPolicy][] targets a gateway, each route in that gateway
+still has a separate rate limit bucket. For example, if a gateway has 2 routes, and the limit is 100r/s, then each route
+has its own 100r/s rate limit bucket.
 
 ## Prerequisites
 
@@ -192,7 +198,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Lets query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests 
+Let's query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests 
 and then receive a `429` status code for the 4th request since the limit is set at 3 requests/Hour for the request which contains the header `x-user-id`
 and value `one`.
 
@@ -599,18 +605,22 @@ Here is an example of a rate limit implemented by the application developer to l
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: AuthenticationFilter
+kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  type: JWT
-  jwtProviders:
-  - name: example
-    remoteJWKS:
-      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
-    claimToHeaders:
-    - claim: name
-      header: x-claim-name
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+      claimToHeaders:
+      - claim: name
+        header: x-claim-name
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
@@ -621,7 +631,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example 
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -650,12 +659,6 @@ spec:
       name: backend
       port: 3000
       weight: 1
-    filters:
-    - extensionRef:
-        group: gateway.envoyproxy.io
-        kind: AuthenticationFilter
-        name: jwt-example
-      type: ExtensionRef
     matches:
     - path:
         type: PathPrefix
@@ -666,11 +669,11 @@ EOF
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
 ```
 
 ```shell
-TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
+TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
 ```
 
 ### Rate limit by carrying `TOKEN`
@@ -821,7 +824,8 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
-[BackendTrafficPolicy]: https://gateway.envoyproxy.io/latest/api/extension_types.html#backendtrafficpolicy
+[Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting
+[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
 [EnvoyGateway]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoygateway
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
