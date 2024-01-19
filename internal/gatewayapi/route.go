@@ -213,10 +213,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 							}
 							if err != nil {
 								messeg := err.Error()
-								status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionUnknown, gwapiv1a1.PolicyReasonInvalid, messeg)
+								status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1a1.PolicyReasonInvalid, messeg)
 								return nil
 							} else {
-								status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionUnknown, gwapiv1a1.PolicyReasonAccepted, "BackendTLSPolicy is Accepted")
+								status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1a1.PolicyReasonAccepted, "BackendTLSPolicy is Accepted")
 								return tlsBundle
 							}
 						}()
