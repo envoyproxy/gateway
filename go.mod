@@ -47,6 +47,7 @@ require (
 	sigs.k8s.io/gateway-api v1.0.0
 	sigs.k8s.io/mcs-api v0.1.0
 	sigs.k8s.io/yaml v1.4.0
+	github.com/quic-go/quic-go v0.41.0
 )
 
 require (
