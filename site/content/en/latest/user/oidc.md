@@ -92,7 +92,7 @@ export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gatewa
 sudo kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 443:443
 ```
 
-Put www.exampe.com in the /etc/hosts file in your test machine, so we can use this host name to access the demo from a browser:
+Put www.example.com in the /etc/hosts file in your test machine, so we can use this host name to access the demo from a browser:
 
 ```shell
 ...
