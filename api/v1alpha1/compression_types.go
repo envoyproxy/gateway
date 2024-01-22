@@ -23,18 +23,31 @@ type GzipCompressor struct {
 	// +optional
 	MemoryLevel *uint32 `json:"memoryLevel,omitempty"`
 
-	// A value used for selecting the zlib compression level. This field will be set to “DEFAULT_COMPRESSION”
+	// A value used for selecting the zlib compression level. This setting will affect speed and
+	// amount of compression applied to the content. “BEST_COMPRESSION” provides higher compression
+	// at the cost of higher latency and is equal to “COMPRESSION_LEVEL_9”. “BEST_SPEED” provides lower
+	// compression with minimum impact on response time, the same as “COMPRESSION_LEVEL_1”. “DEFAULT_COMPRESSION”
+	// provides an optimal result between speed and compression. According to zlib’s manual this level
+	// gives the same result as “COMPRESSION_LEVEL_6”. This field will be set to “DEFAULT_COMPRESSION”
 	// if not specified.
 	//
 	// +optional
 	CompressionLevel GzipCompressionLevel `json:"compressionLevel,omitempty"`
 
-	// A value used for selecting the zlib compression strategy which is directly related to the characteristics of the content.
+	// A value used for selecting the zlib compression strategy which is directly related to the
+	// characteristics of the content. Most of the time “DEFAULT_STRATEGY” will be the best choice,
+	// which is also the default value for the parameter, though there are situations when changing
+	// this parameter might produce better results. For example, run-length encoding (RLE) is typically
+	// used when the content is known for having sequences which same data occurs many consecutive times.
+	// For more information about each strategy, please refer to zlib manual.
 	//
 	// +optional
 	CompressionStrategy GzipCompressionStrategy `json:"compressionStrategy,omitempty"`
 
 	// Value from 9 to 15 that represents the base two logarithmic of the compressor’s window size.
+	// Larger window results in better compression at the expense of memory usage. The default is 12
+	// which will produce a 4096 bytes window. For more details about this parameter, please refer to
+	// zlib manual > deflateInit2.
 	//
 	// +optional
 	WindowBits *uint32 `json:"windowBits,omitempty"`
@@ -46,7 +59,10 @@ type GzipCompressor struct {
 }
 
 type GzipDecompressor struct {
-	// Value from 9 to 15 that represents the base two logarithmic of the decompressor’s window size.
+	// Value from 9 to 15 that represents the base two logarithmic of the compressor’s window size.
+	// Larger window results in better compression at the expense of memory usage. The default is 12
+	// which will produce a 4096 bytes window. For more details about this parameter, please refer to
+	// zlib manual > deflateInit2.
 	//
 	// +optional
 	WindowBits *uint32 `json:"windowBits,omitempty"`
@@ -56,7 +72,9 @@ type GzipDecompressor struct {
 	// +optional
 	ChunkSize *uint32 `json:"chunkSize,omitempty"`
 
-	// An upper bound to the number of times the output buffer is allowed to be bigger than the size of the accumulated input.
+	// An upper bound to the number of times the output buffer is allowed to be bigger than the size
+	// of the accumulated input. This value is used to prevent decompression bombs. If not set,
+	// defaults to 100.
 	//
 	// +optional
 	MaxInflateRatio *uint32 `json:"maxInflateRatio,omitempty"`
@@ -79,6 +97,8 @@ type Compression struct {
 	ContentType []string `json:"contentType,omitempty"`
 
 	// If true, disables compression when the response contains an etag header.
+	// When it is false, weak etags will be preserve and remove the ones that require
+	// strong validation.
 	//
 	// +optional
 	DisableOnEtagHeader bool `json:"disableOnEtagHeader,omitempty"`
@@ -109,6 +129,9 @@ type Decompression struct {
 	// +required
 	DecompressiorLibrary *DecompressorLibrary `json:"decompressorLibrary,omitempty"`
 
+	// The configuration for GZIP decompressor.
+	//
+	// +optional
 	GzipDecompressor *GzipDecompressor `json:"gzipDecompressor,omitempty"`
 }
 
