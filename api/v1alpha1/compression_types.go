@@ -5,6 +5,63 @@
 
 package v1alpha1
 
+// GzipCompressionLevel defines the compression level of zip compressor library supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=DEFAULT_COMPRESSION;BEST_SPEED;COMPRESSION_LEVEL_1;COMPRESSION_LEVEL_2;COMPRESSION_LEVEL_3;COMPRESSION_LEVEL_4;COMPRESSION_LEVEL_5;COMPRESSION_LEVEL_6;COMPRESSION_LEVEL_7;COMPRESSION_LEVEL_8;COMPRESSION_LEVEL_9;BEST_COMPRESSION
+type GzipCompressionLevel string
+
+// GzipCompressionStrategy defines the compression strategy of zip compressor library supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=DEFAULT_STRATEGY;FILTERED;HUFFMAN_ONLY;RLE;FIXED
+type GzipCompressionStrategy string
+
+type GzipCompressor struct {
+	// Value from 1 to 9 that controls the amount of internal memory used by zlib. Higher
+	// values use more memory, but are faster and produce better compression results. The default
+	// value is 5
+	//
+	// +optional
+	MemoryLevel *uint32 `json:"memoryLevel,omitempty"`
+
+	// A value used for selecting the zlib compression level. This field will be set to “DEFAULT_COMPRESSION”
+	// if not specified.
+	//
+	// +optional
+	CompressionLevel GzipCompressionLevel `json:"compressionLevel,omitempty"`
+
+	// A value used for selecting the zlib compression strategy which is directly related to the characteristics of the content.
+	//
+	// +optional
+	CompressionStrategy GzipCompressionStrategy `json:"compressionStrategy,omitempty"`
+
+	// Value from 9 to 15 that represents the base two logarithmic of the compressor’s window size.
+	//
+	// +optional
+	WindowBits *uint32 `json:"windowBits,omitempty"`
+
+	// Value for Zlib’s next output buffer. If not set, defaults to 4096
+	//
+	// +optional
+	ChunkSize *uint32 `json:"chunkSize,omitempty"`
+}
+
+type GzipDecompressor struct {
+	// Value from 9 to 15 that represents the base two logarithmic of the decompressor’s window size.
+	//
+	// +optional
+	WindowBits *uint32 `json:"windowBits,omitempty"`
+
+	// Value for zlib’s decompressor output buffer. If not set, defaults to 4096.
+	//
+	// +optional
+	ChunkSize *uint32 `json:"chunkSize,omitempty"`
+
+	// An upper bound to the number of times the output buffer is allowed to be bigger than the size of the accumulated input.
+	//
+	// +optional
+	MaxInflateRatio *uint32 `json:"maxInflateRatio,omitempty"`
+}
+
 type Compression struct {
 	// Minimum value of Content-Length header of request or response messages.
 	// The default value is 30.
@@ -38,14 +95,16 @@ type Decompression struct {
 	// A decompressor library to use for decompression
 	//
 	// +required
-	DecompressiorLibrary *DecompressiorLibrary `json:"decompressorLibrary,omitempty"`
+	DecompressiorLibrary *DecompressorLibrary `json:"decompressorLibrary,omitempty"`
+
+	GzipDecompressor *GzipDecompressor `json:"gzipDecompressor,omitempty"`
 }
 
 type CompressorLibrary struct {
 	// LibraryType defines which library want to use for compression.
 	//
 	// +required
-	CompressorLibraryType LibraryType `json:"compressorLibraryType,omitempty"`
+	CompressorLibraryType CompressorLibraryType `json:"compressorLibraryType,omitempty"`
 
 	// The configuration for GZIP compressor.
 	//
@@ -57,13 +116,10 @@ type DecompressorLibrary struct {
 	// LibraryType defines which library want to use for decompression.
 	//
 	// +required
-	DecompressorLibraryType LibraryType `json:"decompressorLibraryType,omitempty"`
+	DecompressorLibraryType DecompressorLibraryType `json:"decompressorLibraryType,omitempty"`
 
 	// The configuration for GZIP compressor.
 	//
 	// +optional
 	GzipDecompressor *GzipDecompressor `json:"gzipDecompressor,omitempty"`
-}
-
-type GzipDecompressor struct {
 }

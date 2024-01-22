@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package v1alpha1
+package gzip
 
 // CompressionLevel defines the compression level of zip compressor library supported by Envoy Gateway.
 //
@@ -29,7 +29,7 @@ type GzipCompressor struct {
 	// +optional
 	CompressionLevel CompressionLevel `json:"compressionLevel,omitempty"`
 
-	// A value used for selecting the zlib compression strategy which is directly related to the characteristics of the content. 
+	// A value used for selecting the zlib compression strategy which is directly related to the characteristics of the content.
 	//
 	// +optional
 	CompressionStrategy CompressionStrategy `json:"compressionStrategy,omitempty"`

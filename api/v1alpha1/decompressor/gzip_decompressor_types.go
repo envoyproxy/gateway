@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package v1alpha1
+package gzip
 
 type GzipDecompressor struct {
 	// Value from 9 to 15 that represents the base two logarithmic of the decompressor’s window size.

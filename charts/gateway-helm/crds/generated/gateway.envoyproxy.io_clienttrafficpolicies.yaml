@@ -44,6 +44,153 @@ spec:
           spec:
             description: Spec defines the desired state of ClientTrafficPolicy.
             properties:
+              compression:
+                description: The compression config for the downstream client connections.
+                items:
+                  properties:
+                    compressorLibrary:
+                      description: A compressor library to use for compression
+                      properties:
+                        compressorLibraryType:
+                          description: LibraryType defines which library want to use
+                            for compression.
+                          enum:
+                          - Gzip
+                          - Brotli
+                          - Zstd
+                          - Qat
+                          type: string
+                        gzipCompressor:
+                          description: The configuration for GZIP compressor.
+                          properties:
+                            chunkSize:
+                              description: Value for Zlib’s next output buffer. If
+                                not set, defaults to 4096
+                              format: int32
+                              type: integer
+                            compressionLevel:
+                              description: A value used for selecting the zlib compression
+                                level. This field will be set to “DEFAULT_COMPRESSION”
+                                if not specified.
+                              enum:
+                              - DEFAULT_COMPRESSION
+                              - BEST_SPEED
+                              - COMPRESSION_LEVEL_1
+                              - COMPRESSION_LEVEL_2
+                              - COMPRESSION_LEVEL_3
+                              - COMPRESSION_LEVEL_4
+                              - COMPRESSION_LEVEL_5
+                              - COMPRESSION_LEVEL_6
+                              - COMPRESSION_LEVEL_7
+                              - COMPRESSION_LEVEL_8
+                              - COMPRESSION_LEVEL_9
+                              - BEST_COMPRESSION
+                              type: string
+                            compressionStrategy:
+                              description: A value used for selecting the zlib compression
+                                strategy which is directly related to the characteristics
+                                of the content.
+                              enum:
+                              - DEFAULT_STRATEGY
+                              - FILTERED
+                              - HUFFMAN_ONLY
+                              - RLE
+                              - FIXED
+                              type: string
+                            memoryLevel:
+                              description: Value from 1 to 9 that controls the amount
+                                of internal memory used by zlib. Higher values use
+                                more memory, but are faster and produce better compression
+                                results. The default value is 5
+                              format: int32
+                              type: integer
+                            windowBits:
+                              description: Value from 9 to 15 that represents the
+                                base two logarithmic of the compressor’s window size.
+                              format: int32
+                              type: integer
+                          type: object
+                      type: object
+                    contentLength:
+                      description: Minimum value of Content-Length header of request
+                        or response messages. The default value is 30.
+                      format: int32
+                      type: integer
+                    contentType:
+                      description: 'Set of strings that allows specifying which mime-types
+                        yield compression; e.g., application/json, text/html, etc.
+                        When this field is not defined, compression will be applied
+                        to the following mime-types: “application/javascript”, “application/json”,
+                        “application/xhtml+xml”, “image/svg+xml”, “text/css”, “text/html”,
+                        “text/plain”, “text/xml” and their synonyms.'
+                      items:
+                        type: string
+                      type: array
+                    removeAcceptEncodingHeader:
+                      description: If true, removes accept-encoding from the request
+                        headers before dispatching it to the upstream so that responses
+                        do not get compressed before reaching the filter.
+                      type: boolean
+                  type: object
+                type: array
+              decompression:
+                description: The decompression config for the downstream client connections.
+                items:
+                  properties:
+                    decompressorLibrary:
+                      description: A decompressor library to use for decompression
+                      properties:
+                        decompressorLibraryType:
+                          description: LibraryType defines which library want to use
+                            for decompression.
+                          enum:
+                          - Gzip
+                          - Brotli
+                          - Zstd
+                          type: string
+                        gzipDecompressor:
+                          description: The configuration for GZIP compressor.
+                          properties:
+                            chunkSize:
+                              description: Value for zlib’s decompressor output buffer.
+                                If not set, defaults to 4096.
+                              format: int32
+                              type: integer
+                            maxInflateRatio:
+                              description: An upper bound to the number of times the
+                                output buffer is allowed to be bigger than the size
+                                of the accumulated input.
+                              format: int32
+                              type: integer
+                            windowBits:
+                              description: Value from 9 to 15 that represents the
+                                base two logarithmic of the decompressor’s window
+                                size.
+                              format: int32
+                              type: integer
+                          type: object
+                      type: object
+                    gzipDecompressor:
+                      properties:
+                        chunkSize:
+                          description: Value for zlib’s decompressor output buffer.
+                            If not set, defaults to 4096.
+                          format: int32
+                          type: integer
+                        maxInflateRatio:
+                          description: An upper bound to the number of times the output
+                            buffer is allowed to be bigger than the size of the accumulated
+                            input.
+                          format: int32
+                          type: integer
+                        windowBits:
+                          description: Value from 9 to 15 that represents the base
+                            two logarithmic of the decompressor’s window size.
+                          format: int32
+                          type: integer
+                      type: object
+                  type: object
+                type: array
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header
                   and adds the Client Address into the X-Forwarded-For header. Note
