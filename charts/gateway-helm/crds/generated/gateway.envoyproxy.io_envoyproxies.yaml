@@ -71,6 +71,12 @@ spec:
                   If unset, it defaults to the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              extraArgs:
+                description: 'ExtraArgs defines additional command line options that
+                  are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options'
+                items:
+                  type: string
+                type: array
               logging:
                 default:
                   level:

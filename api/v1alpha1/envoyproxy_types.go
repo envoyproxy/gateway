@@ -67,6 +67,12 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
+	// ExtraArgs defines additional command line options that are provided to Envoy.
+	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
+	//
+	// +optional
+	ExtraArgs []string `json:"extraArgs,omitempty"`
+
 	// MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
 	// Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
 	// This means that the port, protocol and hostname tuple must be unique for every listener.
