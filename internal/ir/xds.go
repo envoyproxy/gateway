@@ -12,7 +12,6 @@ import (
 	"net/netip"
 	"reflect"
 
-	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -113,17 +112,17 @@ func (x Xds) Validate() error {
 	var errs error
 	for _, http := range x.HTTP {
 		if err := http.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	for _, tcp := range x.TCP {
 		if err := tcp.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	for _, udp := range x.UDP {
 		if err := udp.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs
@@ -215,25 +214,25 @@ type HTTPListener struct {
 func (h HTTPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrListenerNameEmpty)
+		errs = errors.Join(errs, ErrListenerNameEmpty)
 	}
 	if _, err := netip.ParseAddr(h.Address); err != nil {
-		errs = multierror.Append(errs, ErrListenerAddressInvalid)
+		errs = errors.Join(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
-		errs = multierror.Append(errs, ErrListenerPortInvalid)
+		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
 	if len(h.Hostnames) == 0 {
-		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
+		errs = errors.Join(errs, ErrHTTPListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
 		if err := h.TLS.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	for _, route := range h.Routes {
 		if err := route.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs
@@ -287,10 +286,10 @@ type TLSCertificate struct {
 func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.ServerCertificate) == 0 {
-		errs = multierror.Append(errs, ErrTLSServerCertEmpty)
+		errs = errors.Join(errs, ErrTLSServerCertEmpty)
 	}
 	if len(t.PrivateKey) == 0 {
-		errs = multierror.Append(errs, ErrTLSPrivateKey)
+		errs = errors.Join(errs, ErrTLSPrivateKey)
 	}
 	return errs
 }
@@ -300,7 +299,7 @@ func (t TLSConfig) Validate() error {
 	var errs error
 	for _, cert := range t.Certificates {
 		if err := cert.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	// Correct values for cipher suites, ECDH curves, and signature algorithms are
@@ -515,50 +514,50 @@ type FaultInjectionAbort struct {
 func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
+		errs = errors.Join(errs, ErrHTTPRouteNameEmpty)
 	}
 	if h.Hostname == "" {
-		errs = multierror.Append(errs, ErrHTTPRouteHostnameEmpty)
+		errs = errors.Join(errs, ErrHTTPRouteHostnameEmpty)
 	}
 	if h.PathMatch != nil {
 		if err := h.PathMatch.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	for _, hMatch := range h.HeaderMatches {
 		if err := hMatch.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	for _, qMatch := range h.QueryParamMatches {
 		if err := qMatch.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.Destination != nil {
 		if err := h.Destination.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.Redirect != nil {
 		if err := h.Redirect.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.DirectResponse != nil {
 		if err := h.DirectResponse.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.URLRewrite != nil {
 		if err := h.URLRewrite.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.Mirrors != nil {
 		for _, mirror := range h.Mirrors {
 			if err := mirror.Validate(); err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
@@ -566,12 +565,12 @@ func (h HTTPRoute) Validate() error {
 		occurred := map[string]bool{}
 		for _, header := range h.AddRequestHeaders {
 			if err := header.Validate(); err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 			}
 			if !occurred[header.Name] {
 				occurred[header.Name] = true
 			} else {
-				errs = multierror.Append(errs, ErrAddHeaderDuplicate)
+				errs = errors.Join(errs, ErrAddHeaderDuplicate)
 				break
 			}
 		}
@@ -582,7 +581,7 @@ func (h HTTPRoute) Validate() error {
 			if !occurred[header] {
 				occurred[header] = true
 			} else {
-				errs = multierror.Append(errs, ErrRemoveHeaderDuplicate)
+				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
 				break
 			}
 		}
@@ -591,12 +590,12 @@ func (h HTTPRoute) Validate() error {
 		occurred := map[string]bool{}
 		for _, header := range h.AddResponseHeaders {
 			if err := header.Validate(); err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 			}
 			if !occurred[header.Name] {
 				occurred[header.Name] = true
 			} else {
-				errs = multierror.Append(errs, ErrAddHeaderDuplicate)
+				errs = errors.Join(errs, ErrAddHeaderDuplicate)
 				break
 			}
 		}
@@ -607,24 +606,24 @@ func (h HTTPRoute) Validate() error {
 			if !occurred[header] {
 				occurred[header] = true
 			} else {
-				errs = multierror.Append(errs, ErrRemoveHeaderDuplicate)
+				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
 				break
 			}
 		}
 	}
 	if h.LoadBalancer != nil {
 		if err := h.LoadBalancer.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.JWT != nil {
 		if err := h.JWT.validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.HealthCheck != nil {
 		if err := h.HealthCheck.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -635,7 +634,7 @@ func (j *JWT) validate() error {
 	var errs error
 
 	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
 	return errs
@@ -655,11 +654,11 @@ type RouteDestination struct {
 func (r RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
-		errs = multierror.Append(errs, ErrDestinationNameEmpty)
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
 	for _, s := range r.Settings {
 		if err := s.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -684,7 +683,7 @@ func (d DestinationSetting) Validate() error {
 	var errs error
 	for _, ep := range d.Endpoints {
 		if err := ep.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -717,11 +716,11 @@ func (d DestinationEndpoint) Validate() error {
 	_, pErr := netip.ParseAddr(d.Host)
 
 	if err != nil && pErr != nil {
-		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
+		errs = errors.Join(errs, ErrDestEndpointHostInvalid)
 	}
 
 	if d.Port == 0 {
-		errs = multierror.Append(errs, ErrDestEndpointPortInvalid)
+		errs = errors.Join(errs, ErrDestEndpointPortInvalid)
 	}
 
 	return errs
@@ -747,7 +746,7 @@ type AddHeader struct {
 func (h AddHeader) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrAddHeaderEmptyName)
+		errs = errors.Join(errs, ErrAddHeaderEmptyName)
 	}
 
 	return errs
@@ -767,7 +766,7 @@ type DirectResponse struct {
 func (r DirectResponse) Validate() error {
 	var errs error
 	if status := r.StatusCode; status > 599 || status < 100 {
-		errs = multierror.Append(errs, ErrDirectResponseStatusInvalid)
+		errs = errors.Join(errs, ErrDirectResponseStatusInvalid)
 	}
 
 	return errs
@@ -788,7 +787,7 @@ func (r URLRewrite) Validate() error {
 
 	if r.Path != nil {
 		if err := r.Path.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -816,19 +815,19 @@ func (r Redirect) Validate() error {
 
 	if r.Scheme != nil {
 		if *r.Scheme != "http" && *r.Scheme != "https" {
-			errs = multierror.Append(errs, ErrRedirectUnsupportedScheme)
+			errs = errors.Join(errs, ErrRedirectUnsupportedScheme)
 		}
 	}
 
 	if r.Path != nil {
 		if err := r.Path.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if r.StatusCode != nil {
 		if *r.StatusCode != 301 && *r.StatusCode != 302 {
-			errs = multierror.Append(errs, ErrRedirectUnsupportedStatus)
+			errs = errors.Join(errs, ErrRedirectUnsupportedStatus)
 		}
 	}
 
@@ -849,11 +848,11 @@ func (r HTTPPathModifier) Validate() error {
 	var errs error
 
 	if r.FullReplace != nil && r.PrefixMatchReplace != nil {
-		errs = multierror.Append(errs, ErrHTTPPathModifierDoubleReplace)
+		errs = errors.Join(errs, ErrHTTPPathModifierDoubleReplace)
 	}
 
 	if r.FullReplace == nil && r.PrefixMatchReplace == nil {
-		errs = multierror.Append(errs, ErrHTTPPathModifierNoReplace)
+		errs = errors.Join(errs, ErrHTTPPathModifierNoReplace)
 	}
 
 	return errs
@@ -896,13 +895,13 @@ func (s StringMatch) Validate() error {
 	}
 	if s.Distinct {
 		if s.Name == "" {
-			errs = multierror.Append(errs, ErrStringMatchNameIsEmpty)
+			errs = errors.Join(errs, ErrStringMatchNameIsEmpty)
 		}
 		matchCount++
 	}
 
 	if matchCount != 1 {
-		errs = multierror.Append(errs, ErrStringMatchConditionInvalid)
+		errs = errors.Join(errs, ErrStringMatchConditionInvalid)
 	}
 
 	return errs
@@ -939,29 +938,29 @@ type TLS struct {
 func (h TCPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrListenerNameEmpty)
+		errs = errors.Join(errs, ErrListenerNameEmpty)
 	}
 	if _, err := netip.ParseAddr(h.Address); err != nil {
-		errs = multierror.Append(errs, ErrListenerAddressInvalid)
+		errs = errors.Join(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
-		errs = multierror.Append(errs, ErrListenerPortInvalid)
+		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
 	if h.TLS != nil && h.TLS.Passthrough != nil {
 		if err := h.TLS.Passthrough.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if h.TLS != nil && h.TLS.Terminate != nil {
 		if err := h.TLS.Terminate.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if h.Destination != nil {
 		if err := h.Destination.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs
@@ -981,7 +980,7 @@ type TLSInspectorConfig struct {
 func (t TLSInspectorConfig) Validate() error {
 	var errs error
 	if len(t.SNIs) == 0 {
-		errs = multierror.Append(errs, ErrTCPListenerSNIsEmpty)
+		errs = errors.Join(errs, ErrTCPListenerSNIsEmpty)
 	}
 	return errs
 }
@@ -1003,17 +1002,17 @@ type UDPListener struct {
 func (h UDPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrListenerNameEmpty)
+		errs = errors.Join(errs, ErrListenerNameEmpty)
 	}
 	if _, err := netip.ParseAddr(h.Address); err != nil {
-		errs = multierror.Append(errs, ErrListenerAddressInvalid)
+		errs = errors.Join(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
-		errs = multierror.Append(errs, ErrListenerPortInvalid)
+		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
 	if h.Destination != nil {
 		if err := h.Destination.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -1221,7 +1220,7 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if matchCount != 1 {
-		errs = multierror.Append(errs, ErrLoadBalancerInvalid)
+		errs = errors.Join(errs, ErrLoadBalancerInvalid)
 	}
 
 	return errs
@@ -1312,16 +1311,16 @@ func (h *HealthCheck) Validate() error {
 	var errs error
 
 	if h.Timeout != nil && h.Timeout.Duration == 0 {
-		errs = multierror.Append(errs, ErrHealthCheckTimeoutInvalid)
+		errs = errors.Join(errs, ErrHealthCheckTimeoutInvalid)
 	}
 	if h.Interval != nil && h.Interval.Duration == 0 {
-		errs = multierror.Append(errs, ErrHealthCheckIntervalInvalid)
+		errs = errors.Join(errs, ErrHealthCheckIntervalInvalid)
 	}
 	if h.UnhealthyThreshold != nil && *h.UnhealthyThreshold == 0 {
-		errs = multierror.Append(errs, ErrHealthCheckUnhealthyThresholdInvalid)
+		errs = errors.Join(errs, ErrHealthCheckUnhealthyThresholdInvalid)
 	}
 	if h.HealthyThreshold != nil && *h.HealthyThreshold == 0 {
-		errs = multierror.Append(errs, ErrHealthCheckHealthyThresholdInvalid)
+		errs = errors.Join(errs, ErrHealthCheckHealthyThresholdInvalid)
 	}
 
 	matchCount := 0
@@ -1332,17 +1331,17 @@ func (h *HealthCheck) Validate() error {
 		matchCount++
 	}
 	if matchCount != 1 {
-		errs = multierror.Append(errs, ErrHealthCheckerInvalid)
+		errs = errors.Join(errs, ErrHealthCheckerInvalid)
 	}
 
 	if h.HTTP != nil {
 		if err := h.HTTP.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if h.TCP != nil {
 		if err := h.TCP.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -1366,7 +1365,7 @@ type HTTPHealthChecker struct {
 func (c *HTTPHealthChecker) Validate() error {
 	var errs error
 	if c.Path == "" {
-		errs = multierror.Append(errs, ErrHCHTTPPathInvalid)
+		errs = errors.Join(errs, ErrHCHTTPPathInvalid)
 	}
 	if c.Method != nil {
 		switch *c.Method {
@@ -1380,20 +1379,20 @@ func (c *HTTPHealthChecker) Validate() error {
 		case http.MethodPatch:
 		case "":
 		default:
-			errs = multierror.Append(errs, ErrHCHTTPMethodInvalid)
+			errs = errors.Join(errs, ErrHCHTTPMethodInvalid)
 		}
 	}
 	if len(c.ExpectedStatuses) == 0 {
-		errs = multierror.Append(errs, ErrHCHTTPExpectedStatusesInvalid)
+		errs = errors.Join(errs, ErrHCHTTPExpectedStatusesInvalid)
 	}
 	for _, r := range c.ExpectedStatuses {
 		if err := r.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if c.ExpectedResponse != nil {
 		if err := c.ExpectedResponse.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs
@@ -1421,12 +1420,12 @@ func (c *TCPHealthChecker) Validate() error {
 	var errs error
 	if c.Send != nil {
 		if err := c.Send.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	if c.Receive != nil {
 		if err := c.Receive.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs
@@ -1452,7 +1451,7 @@ func (p *HealthCheckPayload) Validate() error {
 		matchCount++
 	}
 	if matchCount != 1 {
-		errs = multierror.Append(errs, ErrHealthCheckPayloadInvalid)
+		errs = errors.Join(errs, ErrHealthCheckPayloadInvalid)
 	}
 	return errs
 }

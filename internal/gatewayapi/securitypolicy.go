@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -21,8 +22,6 @@ import (
 	"k8s.io/utils/ptr"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/tetratelabs/multierror"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -283,13 +282,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -337,13 +336,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
