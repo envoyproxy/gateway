@@ -78,12 +78,24 @@ type Compression struct {
 	// + optional
 	ContentType []string `json:"contentType,omitempty"`
 
+	// If true, disables compression when the response contains an etag header.
+	//
+	// +optional
+	DisableOnEtagHeader bool `json:"disableOnEtagHeader,omitempty"`
+
 	// If true, removes accept-encoding from the request headers before dispatching
 	// it to the upstream so that responses do not get compressed before reaching
 	// the filter.
 	//
 	// +optional
 	RemoveAcceptEncodingHeader bool `json:"removeAcceptEncodingHeader,omitempty"`
+
+	// If true, chooses this compressor first to do compression when the q-values in
+	// Accept-Encoding are same. The last compressor which enables choose_first will
+	// be chosen if multiple compressor in the policy have choose_first as true.
+	//
+	// +optional
+	ChooseFirst bool `json:"chooseFirst,omitempty"`
 
 	// A compressor library to use for compression
 	//
