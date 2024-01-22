@@ -76,29 +76,18 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool
 	); err != nil {
 		return false, err
 	}
-	return containAll(ns.Labels, r.namespaceLabels), nil
-}
 
-func containAll(labels map[string]string, labelsToCheck []string) bool {
-	if len(labels) < len(labelsToCheck) {
-		return false
+	if len(ns.Labels) < len(r.namespaceLabels) {
+		return false, nil
 	}
-	for _, l := range labelsToCheck {
-		if !contains(labels, l) {
-			return false
-		}
-	}
-	return true
-}
 
-func contains(m map[string]string, i string) bool {
-	for k := range m {
-		if k == i {
-			return true
+	for _, l := range r.namespaceLabels {
+		if _, ok := ns.Labels[l]; !ok {
+			return false, nil
 		}
 	}
 
-	return false
+	return true, nil
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
