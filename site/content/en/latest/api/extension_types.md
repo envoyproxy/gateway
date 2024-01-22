@@ -91,6 +91,8 @@ _Appears in:_
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 | `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
+| `compression` _[Compression](#compression) array_ | The compression config for the backend connections. |
+| `decompression` _[Decompression](#decompression) array_ | The decompression config for the backend connections. |
 
 
 
@@ -223,7 +225,55 @@ _Appears in:_
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 | `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
+| `compression` _[Compression](#compression) array_ | The compression config for the downstream client connections. |
+| `decompression` _[Decompression](#decompression) array_ | The decompression config for the downstream client connections. |
 
+
+
+
+#### Compression
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `contentLength` _integer_ | Minimum value of Content-Length header of request or response messages. The default value is 30. |
+| `contentType` _string array_ | Set of strings that allows specifying which mime-types yield compression; e.g., application/json, text/html, etc. When this field is not defined, compression will be applied to the following mime-types: “application/javascript”, “application/json”, “application/xhtml+xml”, “image/svg+xml”, “text/css”, “text/html”, “text/plain”, “text/xml” and their synonyms. |
+| `disableOnEtagHeader` _boolean_ | If true, disables compression when the response contains an etag header. When it is false, weak etags will be preserve and remove the ones that require strong validation. |
+| `removeAcceptEncodingHeader` _boolean_ | If true, removes accept-encoding from the request headers before dispatching it to the upstream so that responses do not get compressed before reaching the filter. |
+| `chooseFirst` _boolean_ | If true, chooses this compressor first to do compression when the q-values in Accept-Encoding are same. The last compressor which enables choose_first will be chosen if multiple compressor in the policy have choose_first as true. |
+| `compressorLibrary` _[CompressorLibrary](#compressorlibrary)_ | A compressor library to use for compression |
+
+
+#### CompressorLibrary
+
+
+
+
+
+_Appears in:_
+- [Compression](#compression)
+
+| Field | Description |
+| --- | --- |
+| `compressorLibraryType` _[CompressorLibraryType](#compressorlibrarytype)_ | LibraryType defines which library want to use for compression. |
+| `gzipCompressor` _[GzipCompressor](#gzipcompressor)_ | The configuration for GZIP compressor. |
+
+
+#### CompressorLibraryType
+
+_Underlying type:_ `string`
+
+CompressorLibraryType defines the types of compressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [CompressorLibrary](#compressorlibrary)
 
 
 
@@ -277,6 +327,48 @@ _Underlying type:_ `string`
 
 _Appears in:_
 - [CustomTag](#customtag)
+
+
+
+#### Decompression
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `decompressorLibrary` _[DecompressorLibrary](#decompressorlibrary)_ | A decompressor library to use for decompression |
+| `gzipDecompressor` _[GzipDecompressor](#gzipdecompressor)_ | The configuration for GZIP decompressor. |
+
+
+#### DecompressorLibrary
+
+
+
+
+
+_Appears in:_
+- [Decompression](#decompression)
+
+| Field | Description |
+| --- | --- |
+| `decompressorLibraryType` _[DecompressorLibraryType](#decompressorlibrarytype)_ | LibraryType defines which library want to use for decompression. |
+| `gzipDecompressor` _[GzipDecompressor](#gzipdecompressor)_ | The configuration for GZIP compressor. |
+
+
+#### DecompressorLibraryType
+
+_Underlying type:_ `string`
+
+DecompressorLibraryType defines the types of decompressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [DecompressorLibrary](#decompressorlibrary)
 
 
 
@@ -913,6 +1005,63 @@ _Appears in:_
 | `group` _string_ |  |
 | `version` _string_ |  |
 | `kind` _string_ |  |
+
+
+#### GzipCompressionLevel
+
+_Underlying type:_ `string`
+
+GzipCompressionLevel defines the compression level of zip compressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [GzipCompressor](#gzipcompressor)
+
+
+
+#### GzipCompressionStrategy
+
+_Underlying type:_ `string`
+
+GzipCompressionStrategy defines the compression strategy of zip compressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [GzipCompressor](#gzipcompressor)
+
+
+
+#### GzipCompressor
+
+
+
+
+
+_Appears in:_
+- [CompressorLibrary](#compressorlibrary)
+
+| Field | Description |
+| --- | --- |
+| `memoryLevel` _integer_ | Value from 1 to 9 that controls the amount of internal memory used by zlib. Higher values use more memory, but are faster and produce better compression results. The default value is 5 |
+| `compressionLevel` _[GzipCompressionLevel](#gzipcompressionlevel)_ | A value used for selecting the zlib compression level. This setting will affect speed and amount of compression applied to the content. “BEST_COMPRESSION” provides higher compression at the cost of higher latency and is equal to “COMPRESSION_LEVEL_9”. “BEST_SPEED” provides lower compression with minimum impact on response time, the same as “COMPRESSION_LEVEL_1”. “DEFAULT_COMPRESSION” provides an optimal result between speed and compression. According to zlib’s manual this level gives the same result as “COMPRESSION_LEVEL_6”. This field will be set to “DEFAULT_COMPRESSION” if not specified. |
+| `compressionStrategy` _[GzipCompressionStrategy](#gzipcompressionstrategy)_ | A value used for selecting the zlib compression strategy which is directly related to the characteristics of the content. Most of the time “DEFAULT_STRATEGY” will be the best choice, which is also the default value for the parameter, though there are situations when changing this parameter might produce better results. For example, run-length encoding (RLE) is typically used when the content is known for having sequences which same data occurs many consecutive times. For more information about each strategy, please refer to zlib manual. |
+| `windowBits` _integer_ | Value from 9 to 15 that represents the base two logarithmic of the compressor’s window size. Larger window results in better compression at the expense of memory usage. The default is 12 which will produce a 4096 bytes window. For more details about this parameter, please refer to zlib manual > deflateInit2. |
+| `chunkSize` _integer_ | Value for Zlib’s next output buffer. If not set, defaults to 4096 |
+
+
+#### GzipDecompressor
+
+
+
+
+
+_Appears in:_
+- [Decompression](#decompression)
+- [DecompressorLibrary](#decompressorlibrary)
+
+| Field | Description |
+| --- | --- |
+| `windowBits` _integer_ | Value from 9 to 15 that represents the base two logarithmic of the compressor’s window size. Larger window results in better compression at the expense of memory usage. The default is 12 which will produce a 4096 bytes window. For more details about this parameter, please refer to zlib manual > deflateInit2. |
+| `chunkSize` _integer_ | Value for zlib’s decompressor output buffer. If not set, defaults to 4096. |
+| `maxInflateRatio` _integer_ | An upper bound to the number of times the output buffer is allowed to be bigger than the size of the accumulated input. This value is used to prevent decompression bombs. If not set, defaults to 100. |
 
 
 #### HTTP3Settings
