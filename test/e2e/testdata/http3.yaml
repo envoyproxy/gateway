@@ -1,0 +1,32 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-http3
+  namespace: gateway-conformance-infra
+spec:
+  http3: {}
+  targetRef:
+    group: gateway.networking.k8s.io
+    Kind: Gateway
+    name: http3-gateway
+    namespace: gateway-conformance-infra
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http3-backend
+  namespace: gateway-conformance-http3
+spec:
+  parentRefs:
+    - name: http3-gateway
+  rules:
+    - backendRefs:
+        - kind: Service
+          name: http3-backend
+          port: 3000
+          group: ""
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
