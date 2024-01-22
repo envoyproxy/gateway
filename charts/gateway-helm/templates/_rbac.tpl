@@ -71,8 +71,6 @@ resources:
 verbs:
 - get
 - list
-- patch
-- update
 - watch
 {{- end }}
 
@@ -102,8 +100,6 @@ resources:
 verbs:
 - get
 - list
-- patch
-- update
 - watch
 {{- end }}
 

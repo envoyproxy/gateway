@@ -22,7 +22,7 @@ const (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 //
 // BackendTrafficPolicy allows the user to configure the behavior of the connection
-// between the downstream client and Envoy Proxy listener.
+// between the Envoy Proxy listener and the backend service.
 type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
