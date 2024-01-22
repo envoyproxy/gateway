@@ -48,6 +48,12 @@ spec:
                 description: The compression config for the downstream client connections.
                 items:
                   properties:
+                    chooseFirst:
+                      description: If true, chooses this compressor first to do compression
+                        when the q-values in Accept-Encoding are same. The last compressor
+                        which enables choose_first will be chosen if multiple compressor
+                        in the policy have choose_first as true.
+                      type: boolean
                     compressorLibrary:
                       description: A compressor library to use for compression
                       properties:
@@ -70,8 +76,17 @@ spec:
                               type: integer
                             compressionLevel:
                               description: A value used for selecting the zlib compression
-                                level. This field will be set to “DEFAULT_COMPRESSION”
-                                if not specified.
+                                level. This setting will affect speed and amount of
+                                compression applied to the content. “BEST_COMPRESSION”
+                                provides higher compression at the cost of higher
+                                latency and is equal to “COMPRESSION_LEVEL_9”. “BEST_SPEED”
+                                provides lower compression with minimum impact on
+                                response time, the same as “COMPRESSION_LEVEL_1”.
+                                “DEFAULT_COMPRESSION” provides an optimal result between
+                                speed and compression. According to zlib’s manual
+                                this level gives the same result as “COMPRESSION_LEVEL_6”.
+                                This field will be set to “DEFAULT_COMPRESSION” if
+                                not specified.
                               enum:
                               - DEFAULT_COMPRESSION
                               - BEST_SPEED
@@ -89,7 +104,15 @@ spec:
                             compressionStrategy:
                               description: A value used for selecting the zlib compression
                                 strategy which is directly related to the characteristics
-                                of the content.
+                                of the content. Most of the time “DEFAULT_STRATEGY”
+                                will be the best choice, which is also the default
+                                value for the parameter, though there are situations
+                                when changing this parameter might produce better
+                                results. For example, run-length encoding (RLE) is
+                                typically used when the content is known for having
+                                sequences which same data occurs many consecutive
+                                times. For more information about each strategy, please
+                                refer to zlib manual.
                               enum:
                               - DEFAULT_STRATEGY
                               - FILTERED
@@ -107,6 +130,10 @@ spec:
                             windowBits:
                               description: Value from 9 to 15 that represents the
                                 base two logarithmic of the compressor’s window size.
+                                Larger window results in better compression at the
+                                expense of memory usage. The default is 12 which will
+                                produce a 4096 bytes window. For more details about
+                                this parameter, please refer to zlib manual > deflateInit2.
                               format: int32
                               type: integer
                           type: object
@@ -126,6 +153,11 @@ spec:
                       items:
                         type: string
                       type: array
+                    disableOnEtagHeader:
+                      description: If true, disables compression when the response
+                        contains an etag header. When it is false, weak etags will
+                        be preserve and remove the ones that require strong validation.
+                      type: boolean
                     removeAcceptEncodingHeader:
                       description: If true, removes accept-encoding from the request
                         headers before dispatching it to the upstream so that responses
@@ -159,18 +191,23 @@ spec:
                             maxInflateRatio:
                               description: An upper bound to the number of times the
                                 output buffer is allowed to be bigger than the size
-                                of the accumulated input.
+                                of the accumulated input. This value is used to prevent
+                                decompression bombs. If not set, defaults to 100.
                               format: int32
                               type: integer
                             windowBits:
                               description: Value from 9 to 15 that represents the
-                                base two logarithmic of the decompressor’s window
-                                size.
+                                base two logarithmic of the compressor’s window size.
+                                Larger window results in better compression at the
+                                expense of memory usage. The default is 12 which will
+                                produce a 4096 bytes window. For more details about
+                                this parameter, please refer to zlib manual > deflateInit2.
                               format: int32
                               type: integer
                           type: object
                       type: object
                     gzipDecompressor:
+                      description: The configuration for GZIP decompressor.
                       properties:
                         chunkSize:
                           description: Value for zlib’s decompressor output buffer.
@@ -180,12 +217,17 @@ spec:
                         maxInflateRatio:
                           description: An upper bound to the number of times the output
                             buffer is allowed to be bigger than the size of the accumulated
-                            input.
+                            input. This value is used to prevent decompression bombs.
+                            If not set, defaults to 100.
                           format: int32
                           type: integer
                         windowBits:
                           description: Value from 9 to 15 that represents the base
-                            two logarithmic of the decompressor’s window size.
+                            two logarithmic of the compressor’s window size. Larger
+                            window results in better compression at the expense of
+                            memory usage. The default is 12 which will produce a 4096
+                            bytes window. For more details about this parameter, please
+                            refer to zlib manual > deflateInit2.
                           format: int32
                           type: integer
                       type: object
