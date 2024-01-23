@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	matav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +46,7 @@ func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
-	ok, err := r.checkObjectNamespaceLabels(obj.GetNamespace())
+	ok, err := r.checkObjectNamespaceLabels(obj)
 	if err != nil {
 		r.log.Error(
 			err, "failed to get Namespace",
@@ -61,10 +62,14 @@ type NamespaceGetter interface {
 }
 
 // checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
-// TODO: check if param can be an interface, so the caller doesn't need to get the namespace before calling
-// this function.
-func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool, error) {
-	// TODO: add validation here because some objects don't have namespace
+func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj matav1.Object) (bool, error) {
+
+	var nsString string
+	// TODO: it requires extra condition validate cluster resources or resources without namespace?
+	if nsString = obj.GetNamespace(); len(nsString) == 0 {
+		return false, nil
+	}
+
 	ns := &corev1.Namespace{}
 	if err := r.client.Get(
 		context.Background(),
