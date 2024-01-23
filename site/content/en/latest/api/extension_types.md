@@ -223,6 +223,7 @@ _Appears in:_
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 | `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
+| `http1` _[HTTP1Settings](#http1settings)_ | HTTP1 provides HTTP/1 configuration on the listener. |
 
 
 
@@ -929,6 +930,20 @@ _Appears in:_
 | `group` _string_ |  |
 | `version` _string_ |  |
 | `kind` _string_ |  |
+
+
+#### HTTP1Settings
+
+
+
+HTTP1Settings provides HTTP/1 configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `enableTrailers` _boolean_ | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
 
 
 #### HTTP3Settings
