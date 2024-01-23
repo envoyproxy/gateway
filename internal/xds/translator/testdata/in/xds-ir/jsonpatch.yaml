@@ -70,6 +70,25 @@ envoyPatchPolicies:
         tls_certificate:
           certificate_chain:
             inline_bytes: Y2VydC1kYXRh
+  - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+    name: "first-route-dest"
+    operation:
+      op: add
+      path: "/endpoints/1"
+      value:
+        lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 1.2.3.4
+                  portValue: 50000
+            loadBalancingWeight: 1
+  - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+    name: "first-route-dest"
+    operation:
+      op: "move"
+      from: "/endpoints/0/load_balancing_weight"
+      path: "/endpoints/1/load_balancing_weight"
 http:
 - name: "first-listener"
   address: "0.0.0.0"
