@@ -69,7 +69,7 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool
 	if err := r.client.Get(
 		context.Background(),
 		client.ObjectKey{
-			Namespace: "", // Namespace object should have empty Namespace
+			Namespace: "", // Namespace object should have an empty Namespace
 			Name:      nsString,
 		},
 		ns,
@@ -77,17 +77,7 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool
 		return false, err
 	}
 
-	if len(ns.Labels) < len(r.namespaceLabels) {
-		return false, nil
-	}
-
-	for _, l := range r.namespaceLabels {
-		if _, ok := ns.Labels[l]; !ok {
-			return false, nil
-		}
-	}
-
-	return true, nil
+	return utils.ContainsAllLabels(ns.Labels, r.namespaceLabels), nil
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
