@@ -7,6 +7,7 @@
             address: 1.2.3.4
             portValue: 50000
       loadBalancingWeight: 1
+    loadBalancingWeight: 50
     locality:
       region: first-route-dest/backend/0
   - lbEndpoints:
