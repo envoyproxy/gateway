@@ -197,7 +197,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 				if resourceJSON, err = m.Marshal(secret); err != nil {
 					err = fmt.Errorf("unable to marshal xds resource %s: %s, err: %w", p.Type, p.Name, err)
-					errs = multierror.Append(errs, err)
+					errs = errors.Join(errs, err)
 					continue
 				}
 			}
@@ -320,7 +320,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 				if err = deepCopyPtr(temp, secret); err != nil {
 					err := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
-					errs = multierror.Append(errs, err)
+					errs = errors.Join(errs, err)
 					continue
 				}
 			}
