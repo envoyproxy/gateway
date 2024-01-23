@@ -231,14 +231,14 @@ _Appears in:_
 
 
 
-ClientValidationContext holds configuration that can be used to validate the client intiating the TLS connection to the Gateway. By default, no client specific configuration is validated.
+ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection to the Gateway. By default, no client specific configuration is validated.
 
 _Appears in:_
 - [TLSSettings](#tlssettings)
 
 | Field | Description |
 | --- | --- |
-| `CACertificateRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectreference-v1-core) array_ | CACertificateRefs contains one or more references to Kubernetes objects that contain TLS certificates of the Certificate Authorities that can be used as a trust anchor to validate the certificates presented by the client. 
+| `caCertificateRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectreference-v1-core) array_ | CACertificateRefs contains one or more references to Kubernetes objects that contain TLS certificates of the Certificate Authorities that can be used as a trust anchor to validate the certificates presented by the client. 
  A single reference to a Kubernetes ConfigMap, with the CA certificate in a key named `ca.crt` is currently supported. 
  References to a resource in different namespace are invalid UNLESS there is a ReferenceGrant in the target namespace that allows the certificate to be attached. |
 

@@ -106,7 +106,7 @@ const (
 	TLSv13 TLSVersion = "1.3"
 )
 
-// ClientValidationContext holds configuration that can be used to validate the client intiating the TLS connection
+// ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection
 // to the Gateway.
 // By default, no client specific configuration is validated.
 type ClientValidationContext struct {
@@ -124,5 +124,5 @@ type ClientValidationContext struct {
 	//
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
-	CACertificateRefs []corev1.ObjectReference `json:”caCertificateRefs,omitempty”`
+	CACertificateRefs []corev1.ObjectReference `json:"caCertificateRefs,omitempty"`
 }
