@@ -13,7 +13,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	basicauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/basic_auth/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -54,7 +53,7 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 
 		filter, err := buildHCMBasicAuthFilter(route)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 
@@ -148,7 +147,7 @@ func (*basicAuth) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListe
 		if _, ok := filterCfg[filterName]; ok {
 			// This should not happen since this is the only place where the basicAuth
 			// filter is added in a route.
-			errs = multierror.Append(errs, fmt.Errorf(
+			errs = errors.Join(errs, fmt.Errorf(
 				"route config already contains basicAuth config: %+v", route))
 			continue
 		}
@@ -157,7 +156,7 @@ func (*basicAuth) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListe
 		// per-route in the typePerFilterConfig of the route.
 		routeCfgAny, err := anypb.New(&routev3.FilterConfig{Disabled: true})
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 

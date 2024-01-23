@@ -227,6 +227,22 @@ _Appears in:_
 
 
 
+#### ClientValidationContext
+
+
+
+ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection to the Gateway. By default, no client specific configuration is validated.
+
+_Appears in:_
+- [TLSSettings](#tlssettings)
+
+| Field | Description |
+| --- | --- |
+| `caCertificateRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectreference-v1-core) array_ | CACertificateRefs contains one or more references to Kubernetes objects that contain TLS certificates of the Certificate Authorities that can be used as a trust anchor to validate the certificates presented by the client. 
+ A single reference to a Kubernetes ConfigMap, with the CA certificate in a key named `ca.crt` is currently supported. 
+ References to a resource in different namespace are invalid UNLESS there is a ReferenceGrant in the target namespace that allows the certificate to be attached. |
+
+
 #### ConsistentHash
 
 
@@ -2139,6 +2155,7 @@ _Appears in:_
 | `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 In builds using BoringSSL FIPS the default curve is: - P-256 |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
 | `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. Supported values are: - http/1.0 - http/1.1 - h2 |
+| `clientValidation` _[ClientValidationContext](#clientvalidationcontext)_ | ClientValidation specifies the configuration to validate the client initiating the TLS connection to the Gateway listener. |
 
 
 #### TLSVersion
