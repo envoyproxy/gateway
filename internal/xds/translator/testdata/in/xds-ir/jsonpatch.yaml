@@ -77,12 +77,12 @@ envoyPatchPolicies:
       path: "/endpoints/1"
       value:
         lbEndpoints:
-          - endpoint:
-              address:
-                socketAddress:
-                  address: 1.2.3.4
-                  portValue: 50000
-            loadBalancingWeight: 1
+        - endpoint:
+            address:
+              socketAddress:
+                address: 1.2.3.4
+                portValue: 50000
+          loadBalancingWeight: 1
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
     name: "first-route-dest"
     operation:
