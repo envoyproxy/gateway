@@ -14,6 +14,7 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	jsonpatchv5 "github.com/evanphx/json-patch/v5"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -45,6 +46,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				routeConfig  *routev3.RouteConfiguration
 				cluster      *clusterv3.Cluster
 				endpoint     *endpointv3.ClusterLoadAssignment
+				secret       *tlsv3.Secret
 				resourceJSON []byte
 				err          error
 			)
@@ -118,6 +120,18 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
+				case string(resourcev3.SecretType):
+					temp := &tlsv3.Secret{}
+					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+						msg := unmarshalErrorMessage(err, p.Operation.Value)
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+					if err = tCtx.AddXdsResource(resourcev3.SecretType, temp); err != nil {
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
 
 				}
 
@@ -173,6 +187,17 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				if resourceJSON, err = m.Marshal(endpoint); err != nil {
 					err = fmt.Errorf("unable to marshal xds resource %s: %s, err: %w", p.Type, p.Name, err)
 					errs = errors.Join(errs, err)
+					continue
+				}
+			case string(resourcev3.SecretType):
+				if secret = findXdsSecret(tCtx, p.Name); secret == nil {
+					msg := fmt.Sprintf("unable to find xds resource %s: %s", p.Type, p.Name)
+					status.SetEnvoyPatchPolicyResourceNotFound(e.Status, msg)
+					continue
+				}
+				if resourceJSON, err = m.Marshal(secret); err != nil {
+					err = fmt.Errorf("unable to marshal xds resource %s: %s, err: %w", p.Type, p.Name, err)
+					errs = multierror.Append(errs, err)
 					continue
 				}
 			}
@@ -279,6 +304,23 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				if err = deepCopyPtr(temp, endpoint); err != nil {
 					err := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
 					errs = errors.Join(errs, err)
+					continue
+				}
+			case string(resourcev3.SecretType):
+				temp := &tlsv3.Secret{}
+				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+					msg := unmarshalErrorMessage(err, string(modifiedJSON))
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				if err = temp.Validate(); err != nil {
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				if err = deepCopyPtr(temp, secret); err != nil {
+					err := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
+					errs = multierror.Append(errs, err)
 					continue
 				}
 			}

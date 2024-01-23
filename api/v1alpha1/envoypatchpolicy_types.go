@@ -86,7 +86,7 @@ type EnvoyJSONPatchConfig struct {
 }
 
 // EnvoyResourceType specifies the type URL of the Envoy resource.
-// +kubebuilder:validation:Enum=type.googleapis.com/envoy.config.listener.v3.Listener;type.googleapis.com/envoy.config.route.v3.RouteConfiguration;type.googleapis.com/envoy.config.cluster.v3.Cluster;type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+// +kubebuilder:validation:Enum=type.googleapis.com/envoy.config.listener.v3.Listener;type.googleapis.com/envoy.config.route.v3.RouteConfiguration;type.googleapis.com/envoy.config.cluster.v3.Cluster;type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment;type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
 type EnvoyResourceType string
 
 const (
