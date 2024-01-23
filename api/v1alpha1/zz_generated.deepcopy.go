@@ -1137,8 +1137,8 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = new(HTTPExtAuthService)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.AllowedHeaders != nil {
-		in, out := &in.AllowedHeaders, &out.AllowedHeaders
+	if in.AllowedClientHeaders != nil {
+		in, out := &in.AllowedClientHeaders, &out.AllowedClientHeaders
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

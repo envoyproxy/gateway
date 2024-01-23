@@ -747,7 +747,7 @@ _Appears in:_
 | `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
 | `grpc` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service Only one of GRPCService or HTTPService may be specified. |
 | `http` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service Only one of GRPCService or HTTPService may be specified. |
-| `allowedHeaders` _string array_ | AllowedHeaders defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
+| `allowedClientHeaders` _string array_ | AllowedClientHeaders defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
 
 
 #### ExtensionAPISettings
