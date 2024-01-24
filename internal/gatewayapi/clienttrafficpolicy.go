@@ -490,4 +490,5 @@ func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HT
 	if len(tlsParams.SignatureAlgorithms) > 0 {
 		httpIR.TLS.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
+
 }

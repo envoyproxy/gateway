@@ -510,8 +510,10 @@ func (in *ClientValidationContext) DeepCopyInto(out *ClientValidationContext) {
 	*out = *in
 	if in.CACertificateRefs != nil {
 		in, out := &in.CACertificateRefs, &out.CACertificateRefs
-		*out = make([]corev1.ObjectReference, len(*in))
-		copy(*out, *in)
+		*out = make([]apisv1.SecretObjectReference, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 

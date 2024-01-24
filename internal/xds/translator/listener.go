@@ -527,13 +527,13 @@ func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 	}
 }
 
-func buildXdsTLSCACertSecret(CACertificate *ir.TLSCACertificate) *tlsv3.Secret {
+func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate) *tlsv3.Secret {
 	return &tlsv3.Secret{
-		Name: CACertificate.Name,
+		Name: caCertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
 			ValidationContext: &tlsv3.CertificateValidationContext{
 				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: CACertificate.Certificate},
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
 				},
 			},
 		},
