@@ -83,6 +83,7 @@ func TestDeployment(t *testing.T) {
 		bootstrap    string
 		telemetry    *egv1a1.ProxyTelemetry
 		concurrency  *int32
+		extraArgs    []string
 	}{
 		{
 			caseName: "default",
@@ -423,6 +424,11 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName:  "with-extra-args",
+			infra:     newTestInfra(),
+			extraArgs: []string{"--key1 val1", "--key2 val2"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -459,6 +465,10 @@ func TestDeployment(t *testing.T) {
 
 			if tc.concurrency != nil {
 				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
+			}
+
+			if len(tc.extraArgs) > 0 {
+				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())

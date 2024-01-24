@@ -173,6 +173,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
 	}
 
+	if infra.Config != nil {
+		args = append(args, infra.Config.Spec.ExtraArgs...)
+	}
+
 	containers := []corev1.Container{
 		{
 			Name:                     envoyContainerName,

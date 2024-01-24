@@ -1117,6 +1117,11 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.ExtraArgs != nil {
+		in, out := &in.ExtraArgs, &out.ExtraArgs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.MergeGateways != nil {
 		in, out := &in.MergeGateways, &out.MergeGateways
 		*out = new(bool)
