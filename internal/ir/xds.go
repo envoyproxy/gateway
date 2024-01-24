@@ -1156,6 +1156,11 @@ type JSONPatchOperation struct {
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path" yaml:"path"`
+	// From is the source location of the value to be copied or moved. Only valid
+	// for move or copy operations
+	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+	// +optional
+	From *string `json:"from,omitempty" yaml:"from,omitempty"`
 	// Value is the new value of the path location.
 	Value apiextensionsv1.JSON `json:"value" yaml:"value"`
 }
