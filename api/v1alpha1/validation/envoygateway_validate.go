@@ -35,12 +35,12 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 			if len(watch.Namespaces) == 0 {
 				return errors.New("namespaces should be specified when envoy gateway watch mode is 'Namespaces'")
 			}
-		case v1alpha1.KubernetesWatchModeTypeNamespaceSelectors:
-			if watch.NamespaceSelectors != nil {
-				return errors.New("namespaceSelectors should be specified when envoy gateway watch mode is 'NamespaceSelectors'")
+		case v1alpha1.KubernetesWatchModeTypeNamespaceSelector:
+			if watch.NamespaceSelector == nil {
+				return errors.New("namespaceSelector should be specified when envoy gateway watch mode is 'NamespaceSelector'")
 			}
 		default:
-			return errors.New("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelectors'")
+			return errors.New("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelector'")
 		}
 	case eg.Logging != nil && len(eg.Logging.Level) != 0:
 		level := eg.Logging.Level

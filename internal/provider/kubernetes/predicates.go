@@ -82,8 +82,8 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bo
 	); err != nil {
 		return false, err
 	}
-  
-	return matchLabelsAndExpressions(r.namespaceLabels, ns.Labels), nil
+
+	return matchLabelsAndExpressions(r.namespaceLabel, ns.Labels), nil
 }
 
 // matchLabelsAndExpressions extracts information from a given label selector and checks whether
@@ -94,12 +94,12 @@ func matchLabelsAndExpressions(ls *metav1.LabelSelector, objLabels map[string]st
 	if ls == nil {
 		return true
 	}
-  
+
 	selector, err := metav1.LabelSelectorAsSelector(ls)
 	if err != nil {
 		return false
 	}
-  
+
 	return selector.Matches(labels.Set(objLabels))
 }
 

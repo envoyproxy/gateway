@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -108,16 +107,16 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 
 		r := gatewayAPIReconciler{
 			classController: v1alpha1.GatewayControllerName,
-			namespaceLabels: &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.namespaceLabels, metav1.LabelSelectorOpExists, []string{})},
+			namespaceLabel:  &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.namespaceLabels, metav1.LabelSelectorOpExists, []string{})},
 			log:             logger,
 			client: fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(&corev1.Namespace{
-					TypeMeta: v1.TypeMeta{
+					TypeMeta: metav1.TypeMeta{
 						Kind:       "Namespace",
 						APIVersion: "v1",
 					},
-					ObjectMeta: v1.ObjectMeta{Name: ns, Labels: tc.labels},
+					ObjectMeta: metav1.ObjectMeta{Name: ns, Labels: tc.labels},
 				}).
 				Build(),
 		}
@@ -530,7 +529,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 				8080,
 			),
 			ns: &corev1.Namespace{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
 					Labels: map[string]string{
 						"label-1": "",
@@ -555,7 +554,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 				8080,
 			),
 			ns: &corev1.Namespace{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "bar",
 					Labels: map[string]string{
 						"label-2": "",
@@ -568,7 +567,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 		{
 			name: "non-matching labels of namespace of the cluster-level object is a subset of namespaceLabels",
 			object: &corev1.Namespace{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo-1",
 					Labels: map[string]string{
 						"label-1": "",
@@ -576,7 +575,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 				},
 			},
 			ns: &corev1.Namespace{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "bar-1",
 					Labels: map[string]string{
 						"label-1": "",
@@ -599,7 +598,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		r.client = fakeclient.NewClientBuilder().WithObjects(tc.ns).Build()
-		r.namespaceLabels = &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
+		r.namespaceLabel = &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
 		ok, err := r.checkObjectNamespaceLabels(tc.object)
 		require.NoError(t, err)
 		require.Equal(t, tc.expect, ok)

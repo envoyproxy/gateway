@@ -65,7 +65,7 @@ type gatewayAPIReconciler struct {
 	classController gwapiv1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
-	namespaceLabels *metav1.LabelSelector
+	namespaceLabel  *metav1.LabelSelector
 	envoyGateway    *v1alpha1.EnvoyGateway
 	mergeGateways   bool
 
@@ -90,9 +90,9 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	byNamespaceSelector := cfg.EnvoyGateway.Provider != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes.Watch != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == v1alpha1.KubernetesWatchModeTypeNamespaceSelectors &&
-		cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors.MatchLabels != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors.MatchExpressions != nil
+		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == v1alpha1.KubernetesWatchModeTypeNamespaceSelector &&
+		(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector.MatchLabels != nil ||
+			len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector.MatchExpressions) > 0)
 
 	r := &gatewayAPIReconciler{
 		client:          mgr.GetClient(),
@@ -107,7 +107,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	if byNamespaceSelector {
-		r.namespaceLabels = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
+		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -578,7 +578,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	}
 
 	refGrants := refGrantList.Items
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		var rgs []gwapiv1b1.ReferenceGrant
 		for _, refGrant := range refGrants {
 			refGrant := refGrant
@@ -622,7 +622,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 	}
 
 	gateways := gatewayList.Items
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		var gtws []gwapiv1.Gateway
 		for _, gtw := range gateways {
 			gtw := gtw
@@ -1351,7 +1351,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.ResourceVersionChangedPredicate{},
 		predicate.NewPredicateFuncs(r.hasManagedClass),
 	}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		epPredicates = append(epPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1367,7 +1367,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
 	}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		gPredicates = append(gPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1383,7 +1383,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	httprPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		httprPredicates = append(httprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1399,7 +1399,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch GRPCRoute CRUDs and process affected Gateways.
 	grpcrPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		grpcrPredicates = append(grpcrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1415,7 +1415,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TLSRoute CRUDs and process affected Gateways.
 	tlsrPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		tlsrPredicates = append(tlsrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1431,7 +1431,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch UDPRoute CRUDs and process affected Gateways.
 	udprPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		udprPredicates = append(udprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1447,7 +1447,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TCPRoute CRUDs and process affected Gateways.
 	tcprPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		tcprPredicates = append(tcprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1463,7 +1463,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Service CRUDs and process affected *Route objects.
 	servicePredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateServiceForReconcile)}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		servicePredicates = append(servicePredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1496,7 +1496,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile),
 	}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		esPredicates = append(esPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1513,7 +1513,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.handleNode),
 	}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		nPredicates = append(nPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	// resource address.
@@ -1530,7 +1530,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		secretPredicates = append(secretPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1543,7 +1543,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ReferenceGrant CRUDs and process affected Gateways.
 	rgPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		rgPredicates = append(rgPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1559,7 +1559,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Deployment CRUDs and process affected Gateways.
 	dPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateDeploymentForReconcile)}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		dPredicates = append(dPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1572,7 +1572,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch EnvoyPatchPolicy if enabled in config
 	eppPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		eppPredicates = append(eppPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
@@ -1588,7 +1588,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ClientTrafficPolicy
 	ctpPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		ctpPredicates = append(ctpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
@@ -1602,7 +1602,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch BackendTrafficPolicy
 	btpPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		btpPredicates = append(btpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
@@ -1616,7 +1616,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch SecurityPolicy
 	spPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		spPredicates = append(spPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
@@ -1632,7 +1632,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch any additional GVKs from the registered extension.
 	uPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if r.namespaceLabels != nil {
+	if r.namespaceLabel != nil {
 		uPredicates = append(uPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	for _, gvk := range r.extGVKs {
