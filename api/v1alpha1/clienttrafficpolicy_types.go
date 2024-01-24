@@ -82,10 +82,21 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Compression []*Compression `json:"compression,omitempty"`
+	// HTTP1 provides HTTP/1 configuration on the listener.
+	//
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
 type HTTP3Settings struct {
+}
+
+// HTTP1Settings provides HTTP/1 configuration on the listener.
+type HTTP1Settings struct {
+	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+	// +optional
+	EnableTrailers *bool `json:"enableTrailers,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy
