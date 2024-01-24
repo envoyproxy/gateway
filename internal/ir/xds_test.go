@@ -525,7 +525,7 @@ func TestValidateXds(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -576,7 +576,7 @@ func TestValidateHTTPListener(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -623,7 +623,7 @@ func TestValidateTCPListener(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -783,7 +783,7 @@ func TestValidateUDPListener(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -935,7 +935,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
