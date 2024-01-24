@@ -64,17 +64,17 @@ linters-settings:
         disabled: true
   testifylint:
     disable:
-      - bool-compare
-      - compares
       - float-compare
       - go-require
-      - require-error
     enable:
+      - bool-compare
+      - compares
       - empty
       - error-is-as
       - error-nil
       - expected-actual
       - len
+      - require-error
       - suite-dont-use-pkg
       - suite-extra-assert-call
   unparam:

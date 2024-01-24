@@ -66,7 +66,7 @@ func TestGetConfigValidate(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				for _, e := range test.errors {
-					assert.ErrorContains(t, err, e)
+					require.ErrorContains(t, err, e)
 				}
 			}
 		})

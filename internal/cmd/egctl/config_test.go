@@ -239,7 +239,7 @@ func TestLabelSelectorBadInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			labelSelectors = tc.labels
 			_, err := retrieveConfigDump(tc.args, false, AllEnvoyConfigType)
-			assert.Error(t, err, "error not found")
+			require.Error(t, err, "error not found")
 		})
 	}
 }
