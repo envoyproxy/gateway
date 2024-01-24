@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/status"
 )
 
 func TestAddGatewayClassFinalizer(t *testing.T) {
@@ -189,6 +190,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionTrue,
 							},
 						},
+						SupportedFeatures: status.GetSupportedFeatures(),
 					},
 				},
 			},
@@ -223,6 +225,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionTrue,
 							},
 						},
+						SupportedFeatures: status.GetSupportedFeatures(),
 					},
 				},
 			},
@@ -275,6 +278,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionTrue,
 							},
 						},
+						SupportedFeatures: status.GetSupportedFeatures(),
 					},
 				},
 				{
@@ -297,6 +301,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionFalse,
 							},
 						},
+						SupportedFeatures: status.GetSupportedFeatures(),
 					},
 				},
 			},
