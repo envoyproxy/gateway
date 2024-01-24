@@ -8,13 +8,13 @@ package egctl
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	corev1 "k8s.io/api/core/v1"
@@ -81,12 +81,12 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 		go func() {
 			fw, err := portForwarder(cli, pod)
 			if err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				return
 			}
 
 			if err := fw.Start(); err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				return
 			}
 			defer fw.Stop()
@@ -94,7 +94,7 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 
 			configDump, err := extractConfigDump(fw, includeEds, configType)
 			if err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				return
 			}
 

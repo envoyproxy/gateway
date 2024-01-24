@@ -526,7 +526,7 @@ func TestIsValidHostname(t *testing.T) {
 			if tc.err == "" {
 				require.NoError(t, err)
 			} else {
-				assert.EqualError(t, err, tc.err)
+				require.EqualError(t, err, tc.err)
 			}
 		})
 	}

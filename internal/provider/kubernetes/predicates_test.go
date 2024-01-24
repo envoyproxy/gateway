@@ -495,3 +495,103 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckObjectNamespaceLabels(t *testing.T) {
+
+	testCases := []struct {
+		name            string
+		object          client.Object
+		reconcileLabels []string
+		ns              *corev1.Namespace
+		expect          bool
+	}{
+		{
+			name: "matching labels of namespace of the object is a subset of namespaceLabels",
+			object: test.GetHTTPRoute(
+				types.NamespacedName{
+					Name:      "foo-route",
+					Namespace: "foo",
+				},
+				"eg",
+				types.NamespacedName{
+					Name:      "foo-svc",
+					Namespace: "foo",
+				},
+				8080,
+			),
+			ns: &corev1.Namespace{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "foo",
+					Labels: map[string]string{
+						"label-1": "",
+					},
+				},
+			},
+			reconcileLabels: []string{"label-1"},
+			expect:          true,
+		},
+		{
+			name: "non-matching labels of namespace of the object is a subset of namespaceLabels",
+			object: test.GetHTTPRoute(
+				types.NamespacedName{
+					Name:      "bar-route",
+					Namespace: "bar",
+				},
+				"eg",
+				types.NamespacedName{
+					Name:      "bar-svc",
+					Namespace: "bar",
+				},
+				8080,
+			),
+			ns: &corev1.Namespace{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "bar",
+					Labels: map[string]string{
+						"label-2": "",
+					},
+				},
+			},
+			reconcileLabels: []string{"label-1"},
+			expect:          false,
+		},
+		{
+			name: "non-matching labels of namespace of the cluster-level object is a subset of namespaceLabels",
+			object: &corev1.Namespace{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "foo-1",
+					Labels: map[string]string{
+						"label-1": "",
+					},
+				},
+			},
+			ns: &corev1.Namespace{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "bar-1",
+					Labels: map[string]string{
+						"label-1": "",
+					},
+				},
+			},
+			reconcileLabels: []string{"label-1"},
+			expect:          false,
+		},
+	}
+
+	// Create the reconciler.
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
+	r := gatewayAPIReconciler{
+		classController: v1alpha1.GatewayControllerName,
+		log:             logger,
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		r.client = fakeclient.NewClientBuilder().WithObjects(tc.ns).Build()
+		r.namespaceLabels = tc.reconcileLabels
+		ok, err := r.checkObjectNamespaceLabels(tc.object)
+		require.NoError(t, err)
+		require.Equal(t, tc.expect, ok)
+	}
+}
