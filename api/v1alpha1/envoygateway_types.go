@@ -222,11 +222,10 @@ type KubernetesWatchMode struct {
 	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set.
 	Namespaces []string `json:"namespaces,omitempty"`
 
-	// NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched.
-	// Note this doesn't set the informer to watch the namespaces with the given labels. Informer still
-	// watches all namespaces. But the events for objects whose namespace do not match given labels
-	// will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set.
-	NamespaceSelectors []string `json:"namespaceSelectors,omitempty"`
+	// NamespaceSelectors holds the label selector used to dynamically select namespaces.
+	// Envoy Gateway will watch for namespaces matching the specified label selector.
+	// Precisely one of Namespaces and NamespaceSelectors must be set.
+	NamespaceSelectors *metav1.LabelSelector `json:"namespaceSelectors,omitempty"`
 }
 
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy

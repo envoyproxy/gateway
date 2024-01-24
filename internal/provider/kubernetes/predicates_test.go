@@ -6,10 +6,12 @@
 package kubernetes
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,30 +67,37 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 // TestGatewayClassHasMatchingNamespaceLabels tests the hasMatchingNamespaceLabels
 // predicate function.
 func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
+	matchExpressions := func(key string, operator metav1.LabelSelectorOperator, values []string) []metav1.LabelSelectorRequirement {
+		return []metav1.LabelSelectorRequirement{{
+			Key:      key,
+			Operator: operator,
+			Values:   values,
+		}}
+	}
 	ns := "namespace-1"
 	testCases := []struct {
 		name            string
-		labels          []string
-		namespaceLabels []string
+		labels          map[string]string
+		namespaceLabels string
 		expect          bool
 	}{
 		{
 			name:            "matching one label when namespace has one label",
-			labels:          []string{"label-1"},
-			namespaceLabels: []string{"label-1"},
+			labels:          map[string]string{"label-1": ""},
+			namespaceLabels: "label-1",
 			expect:          true,
 		},
 		{
 			name:            "matching one label when namespace has two labels",
-			labels:          []string{"label-1"},
-			namespaceLabels: []string{"label-1", "label-2"},
-			expect:          true,
+			labels:          map[string]string{"label-1": ""},
+			namespaceLabels: "label-2",
+			expect:          false,
 		},
 		{
 			name:            "namespace has less labels than the specified labels",
-			labels:          []string{"label-1", "label-2"},
-			namespaceLabels: []string{"label-1"},
-			expect:          false,
+			labels:          map[string]string{"label-1": "", "label-2": ""},
+			namespaceLabels: "label-1",
+			expect:          true,
 		},
 	}
 
@@ -97,14 +106,9 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 
-		namespaceLabelsToMap := make(map[string]string)
-		for _, l := range tc.namespaceLabels {
-			namespaceLabelsToMap[l] = ""
-		}
-
 		r := gatewayAPIReconciler{
 			classController: v1alpha1.GatewayControllerName,
-			namespaceLabels: tc.labels,
+			namespaceLabels: &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.namespaceLabels, metav1.LabelSelectorOpExists, []string{})},
 			log:             logger,
 			client: fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
@@ -113,7 +117,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 						Kind:       "Namespace",
 						APIVersion: "v1",
 					},
-					ObjectMeta: v1.ObjectMeta{Name: ns, Labels: namespaceLabelsToMap},
+					ObjectMeta: v1.ObjectMeta{Name: ns, Labels: tc.labels},
 				}).
 				Build(),
 		}
@@ -497,11 +501,17 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 }
 
 func TestCheckObjectNamespaceLabels(t *testing.T) {
-
+	matchExpressions := func(key string, operator metav1.LabelSelectorOperator, values []string) []metav1.LabelSelectorRequirement {
+		return []metav1.LabelSelectorRequirement{{
+			Key:      key,
+			Operator: operator,
+			Values:   values,
+		}}
+	}
 	testCases := []struct {
 		name            string
 		object          client.Object
-		reconcileLabels []string
+		reconcileLabels string
 		ns              *corev1.Namespace
 		expect          bool
 	}{
@@ -527,7 +537,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 					},
 				},
 			},
-			reconcileLabels: []string{"label-1"},
+			reconcileLabels: "label-1",
 			expect:          true,
 		},
 		{
@@ -552,7 +562,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 					},
 				},
 			},
-			reconcileLabels: []string{"label-1"},
+			reconcileLabels: "label-1",
 			expect:          false,
 		},
 		{
@@ -573,7 +583,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 					},
 				},
 			},
-			reconcileLabels: []string{"label-1"},
+			reconcileLabels: "label-1",
 			expect:          false,
 		},
 	}
@@ -589,9 +599,105 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		r.client = fakeclient.NewClientBuilder().WithObjects(tc.ns).Build()
-		r.namespaceLabels = tc.reconcileLabels
+		r.namespaceLabels = &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
 		ok, err := r.checkObjectNamespaceLabels(tc.object)
 		require.NoError(t, err)
 		require.Equal(t, tc.expect, ok)
+	}
+}
+
+func TestMatchLabelsAndExpressions(t *testing.T) {
+	matchLabels := map[string]string{"foo": "bar"}
+	matchExpressions := func(operator metav1.LabelSelectorOperator, values []string) []metav1.LabelSelectorRequirement {
+		return []metav1.LabelSelectorRequirement{{
+			Key:      "baz",
+			Operator: operator,
+			Values:   values,
+		}}
+	}
+
+	tests := []struct {
+		ls        *metav1.LabelSelector
+		objLabels map[string]string
+		want      bool
+	}{
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels},
+			objLabels: map[string]string{"foo": "bar"},
+			want:      true,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpIn, []string{"norf"})},
+			objLabels: map[string]string{"foo": "bar", "baz": "norf"},
+			want:      true,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchExpressions: matchExpressions(metav1.LabelSelectorOpIn, []string{"norf"})},
+			objLabels: map[string]string{"baz": "norf"},
+			want:      true,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpIn, []string{"norf", "qux"})},
+			objLabels: map[string]string{"foo": "bar", "baz": "norf"},
+			want:      true,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpIn, []string{"norf", "qux"})},
+			objLabels: map[string]string{"foo": "bar"},
+			want:      false,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchExpressions: matchExpressions(metav1.LabelSelectorOpNotIn, []string{"norf", "qux"})},
+			objLabels: map[string]string{},
+			want:      true,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchExpressions: matchExpressions(metav1.LabelSelectorOpNotIn, []string{"norf", "qux"})},
+			objLabels: map[string]string{"baz": "norf"},
+			want:      false,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpNotIn, []string{"norf", "qux"})},
+			objLabels: map[string]string{"foo": "bar"},
+			want:      true,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpNotIn, []string{"norf", "qux"})},
+			objLabels: map[string]string{"foo": "bar", "baz": "norf"},
+			want:      false,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpExists, []string{})},
+			objLabels: map[string]string{"foo": "bar"},
+			want:      false,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpExists, []string{})},
+			objLabels: map[string]string{"foo": "bar", "baz": "1111"},
+			want:      true,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchLabels: matchLabels, MatchExpressions: matchExpressions(metav1.LabelSelectorOpDoesNotExist, []string{})},
+			objLabels: map[string]string{"foo": "bar", "baz": "1111"},
+			want:      false,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchExpressions: matchExpressions(metav1.LabelSelectorOpDoesNotExist, []string{})},
+			objLabels: map[string]string{"baz": "1111"},
+			want:      false,
+		},
+		{
+			ls:        &metav1.LabelSelector{MatchExpressions: matchExpressions(metav1.LabelSelectorOpDoesNotExist, []string{})},
+			objLabels: map[string]string{"bazz": "1111"},
+			want:      true,
+		},
+	}
+
+	for i, tc := range tests {
+		t.Run(fmt.Sprintf("test-%d", i), func(t *testing.T) {
+			if got := matchLabelsAndExpressions(tc.ls, tc.objLabels); got != tc.want {
+				t.Errorf("ExtractMatchedSelectorInfo() = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
