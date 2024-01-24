@@ -763,7 +763,7 @@ _Appears in:_
 | `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
 | `grpc` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service Only one of GRPCService or HTTPService may be specified. |
 | `http` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service Only one of GRPCService or HTTPService may be specified. |
-| `allowedClientHeaders` _string array_ | AllowedClientHeaders defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
+| `headersToExtAuth` _string array_ | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
 
 
 #### ExtensionAPISettings
@@ -988,7 +988,7 @@ _Appears in:_
 | --- | --- |
 | `url` _string_ | URL is the URL of the HTTP External Authorization service. The URL must be a fully qualified URL with a scheme, hostname, and optional port and path. Parameters are not allowed. The URL must use either the http or https scheme. If port is not specified, 80 for http and 443 for https are assumed. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. TLS is only valid when the URL scheme is https. If the URL scheme is https, and TLS is not specified, the proxy will use the system default certificate pool to verify the server certificate. |
-| `allowedBackendHeaders` _string array_ | Authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
+| `headersToBackend` _string array_ | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 
 
 #### HTTPHealthChecker

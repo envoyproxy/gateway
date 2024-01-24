@@ -41,14 +41,14 @@ type ExtAuth struct {
 	// Only one of GRPCService or HTTPService may be specified.
 	HTTP *HTTPExtAuthService `json:"http,omitempty"`
 
-	// AllowedClientHeaders defines the client request headers that will be
+	// HeadersToExtAuth defines the client request headers that will be
 	// included in the request to the external authorization service.
 	// Note: If not specified, the default behavior of different external
 	// authorization services is different. All headers will be included in the
 	// check request to a gRPC authorization server, whereas no headers will be
 	// included in the check request to an HTTP authorization server.
 	// +optional
-	AllowedClientHeaders []string `json:"allowedClientHeaders,omitempty"`
+	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service
@@ -85,13 +85,13 @@ type HTTPExtAuthService struct {
 	// +optional
 	TLS *TLSConfig `json:"tls,omitempty"`
 
-	// Authorization response headers that will be added to the original client
-	// request before sending it to the backend server.
+	// HeadersToBackend are the authorization response headers that will be added
+	// to the original client request before sending it to the backend server.
 	// Note that coexisting headers will be overridden.
 	// If not specified, no authorization response headers will be added to the
 	// original client request.
 	// +optional
-	AllowedBackendHeaders []string `json:"allowedBackendHeaders,omitempty"`
+	HeadersToBackend []string `json:"headersToBackend,omitempty"`
 }
 
 // TLSConfig describes a TLS configuration.

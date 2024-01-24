@@ -152,17 +152,6 @@ spec:
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:
-                  allowedClientHeaders:
-                    description: 'AllowedClientHeaders defines the client request
-                      headers that will be included in the request to the external
-                      authorization service. Note: If not specified, the default behavior
-                      of different external authorization services is different. All
-                      headers will be included in the check request to a gRPC authorization
-                      server, whereas no headers will be included in the check request
-                      to an HTTP authorization server.'
-                    items:
-                      type: string
-                    type: array
                   grpc:
                     description: GRPC defines the gRPC External Authorization service
                       Only one of GRPCService or HTTPService may be specified.
@@ -250,16 +239,27 @@ spec:
                     - host
                     - port
                     type: object
+                  headersToExtAuth:
+                    description: 'HeadersToExtAuth defines the client request headers
+                      that will be included in the request to the external authorization
+                      service. Note: If not specified, the default behavior of different
+                      external authorization services is different. All headers will
+                      be included in the check request to a gRPC authorization server,
+                      whereas no headers will be included in the check request to
+                      an HTTP authorization server.'
+                    items:
+                      type: string
+                    type: array
                   http:
                     description: HTTP defines the HTTP External Authorization service
                       Only one of GRPCService or HTTPService may be specified.
                     properties:
-                      allowedBackendHeaders:
-                        description: Authorization response headers that will be added
-                          to the original client request before sending it to the
-                          backend server. Note that coexisting headers will be overridden.
-                          If not specified, no authorization response headers will
-                          be added to the original client request.
+                      headersToBackend:
+                        description: HeadersToBackend are the authorization response
+                          headers that will be added to the original client request
+                          before sending it to the backend server. Note that coexisting
+                          headers will be overridden. If not specified, no authorization
+                          response headers will be added to the original client request.
                         items:
                           type: string
                         type: array

@@ -1157,8 +1157,8 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = new(HTTPExtAuthService)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.AllowedClientHeaders != nil {
-		in, out := &in.AllowedClientHeaders, &out.AllowedClientHeaders
+	if in.HeadersToExtAuth != nil {
+		in, out := &in.HeadersToExtAuth, &out.HeadersToExtAuth
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -1465,8 +1465,8 @@ func (in *HTTPExtAuthService) DeepCopyInto(out *HTTPExtAuthService) {
 		*out = new(TLSConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.AllowedBackendHeaders != nil {
-		in, out := &in.AllowedBackendHeaders, &out.AllowedBackendHeaders
+	if in.HeadersToBackend != nil {
+		in, out := &in.HeadersToBackend, &out.HeadersToBackend
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
