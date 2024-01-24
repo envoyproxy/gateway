@@ -470,6 +470,8 @@ func (t *Translator) buildOIDC(
 		}
 		redirectURL = *oidc.RedirectURL
 		redirectPath = path
+	}
+	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
 	}
 
