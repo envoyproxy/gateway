@@ -91,11 +91,6 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	Compression []*Compression `json:"compression,omitempty"`
-
-	// The decompression config for the backend connections.
-	//
-	// +optional
-	Decompression []*Decompression `json:"decompression,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
