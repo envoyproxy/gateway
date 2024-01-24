@@ -69,7 +69,7 @@ type EnvoyProxySpec struct {
 
 	// ExtraArgs defines additional command line options that are provided to Envoy.
 	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
-	// Note: some command line options are used internally(e.g. --log-level) so they can't be provided here.
+	// Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here.
 	//
 	// +optional
 	ExtraArgs []string `json:"extraArgs,omitempty"`
