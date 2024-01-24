@@ -237,6 +237,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "path-settings",
 		},
+		{
+			name: "http1-trailers",
+		},
 	}
 
 	for _, tc := range testCases {
