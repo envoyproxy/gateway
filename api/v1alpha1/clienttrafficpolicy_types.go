@@ -53,12 +53,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-	// SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-'
-	// headers from both requests and responses.
-	// By default these headers are added to both requests and responses.
-	//
-	// +optional
-	SuppressEnvoyHeaders *bool `json:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
 	// Client Address into the X-Forwarded-For header.
 	// Note Proxy Protocol must be present when this field is set, else the connection
@@ -86,6 +80,45 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
+	// HeaderSettings provides configuration for header management.
+	//
+	// +optional
+	Headers *HeaderSettings `json:"headers,omitempty"`
+}
+
+// ServerHeaderTransformation specifies the transformation required for the Server header
+// +kubebuilder:validation:Enum=Overwrite;AppendIfAbsent;PassThrough
+type ServerHeaderTransformation string
+
+const (
+	// ServerHeaderOverwrite causes the Server header to be overwritten with the configured
+	// ServerName
+	ServerHeaderOverwrite ServerHeaderTransformation = "Overwrite"
+	// ServerHeaderAppendIfAbsent causes the ServerName value to be used only if there is no
+	// Server header
+	ServerHeaderAppendIfAbsent ServerHeaderTransformation = "AppendIfAbsent"
+	// ServerHeaderPassThrough will not modify the value of the Server header.
+	ServerHeaderPassThrough ServerHeaderTransformation = "PassThrough"
+)
+
+// HeaderSettings providess configuration options for headers on the listener.
+type HeaderSettings struct {
+	// SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-'
+	// headers from both requests and responses.
+	// By default these headers are added to both requests and responses.
+	//
+	// +optional
+	SuppressEnvoyHeaders *bool `json:"suppressEnvoyHeaders,omitempty"`
+	// ServerName is the value to be used if the server header transformation
+	// requested is Overwrite or AppendIfAbsent. Defaults to "envoy" if not specified.
+	//
+	// +optional
+	ServerName *string `json:"serverName,omitEmpty"`
+	// ServerHeaderTransformation defines how the Server header should be handled for
+	// proxied traffic. Defaults to "Overwrite".
+	//
+	// +optional
+	ServerHeaderTransformation *ServerHeaderTransformation `json:"serverHeaderTransformation,omitempty"`
 }
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.

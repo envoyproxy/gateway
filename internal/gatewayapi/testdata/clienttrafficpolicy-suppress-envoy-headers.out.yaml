@@ -6,7 +6,8 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
-    suppressEnvoyHeaders: true
+    headers:
+      suppressEnvoyHeaders: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
