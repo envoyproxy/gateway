@@ -78,10 +78,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Path *PathSettings `json:"path,omitempty"`
-	// The compression config for the downstream client connections.
-	//
-	// +optional
-	Compression []*Compression `json:"compression,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener.
 	//
 	// +optional

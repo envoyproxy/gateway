@@ -9,20 +9,13 @@ type GzipCompressor struct {
 }
 
 type Compression struct {
-	// A compressor library to use for compression
-	//
-	// +required
-	CompressorLibrary *CompressorLibrary `json:"compressorLibrary,omitempty"`
-}
-
-type CompressorLibrary struct {
 	// LibraryType defines which library want to use for compression.
 	//
 	// +required
-	CompressorLibraryType CompressorLibraryType `json:"compressorLibraryType,omitempty"`
+	Type CompressorLibraryType `json:"type,omitempty"`
 
 	// The configuration for GZIP compressor.
 	//
 	// +optional
-	GzipCompressor *GzipCompressor `json:"gzipCompressor,omitempty"`
+	Gzip *GzipCompressor `json:"gzip,omitempty"`
 }
