@@ -38,13 +38,8 @@ type GroupVersionKind struct {
 
 // CompressorLibraryType defines the types of compressor library supported by Envoy Gateway.
 //
-// +kubebuilder:validation:Enum=Gzip;Brotli;Zstd;Qat
+// +kubebuilder:validation:Enum=Gzip
 type CompressorLibraryType string
-
-// DecompressorLibraryType defines the types of decompressor library supported by Envoy Gateway.
-//
-// +kubebuilder:validation:Enum=Gzip;Brotli;Zstd
-type DecompressorLibraryType string
 
 // ProviderType defines the types of providers supported by Envoy Gateway.
 //
