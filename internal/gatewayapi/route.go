@@ -212,7 +212,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 								ControllerName: gwapiv1.GatewayController(httpRoute.GatewayControllerName),
 							}
 							if err != nil {
-								messeg := err.Error()
+								messeg := status.Error2ConditionMsg(err)
 								status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1a1.PolicyReasonInvalid, messeg)
 								return nil
 							} else {
@@ -1424,6 +1424,10 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 				} else {
 					return fmt.Errorf("no tls key found in secret %s", secret.Name), nil
 				}
+			} else if _, keyOk := secret.Data["tls.key"]; keyOk {
+				return fmt.Errorf("no tls cert found in secret %s", secret.Name), nil
+			} else {
+				return fmt.Errorf("no tls cert or key found in secret %s", secret.Name), nil
 			}
 		}
 	}
