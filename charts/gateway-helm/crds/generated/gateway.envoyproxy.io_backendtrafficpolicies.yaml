@@ -80,13 +80,17 @@ spec:
               compression:
                 description: The compression config for the http streams.
                 items:
+                  description: 'Compression defines the config of compression for
+                    the http streams. Currently only the minial config was added.
+                    All configs from the Envoy Proxy are using the default value.
+                    For the default value can be reference here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/compressor/v3/compressor.proto#extensions-filters-http-compressor-v3-compressor'
                   properties:
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
                     type:
-                      description: LibraryType defines which library want to use for
-                        compression.
+                      description: CompressorType defines which type compressor wants
+                        to use for compression.
                       enum:
                       - Gzip
                       type: string

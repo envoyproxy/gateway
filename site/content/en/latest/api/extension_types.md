@@ -249,22 +249,22 @@ _Appears in:_
 
 
 
-
+Compression defines the config of compression for the http streams. Currently only the minial config was added. All configs from the Envoy Proxy are using the default value. For the default value can be reference here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/compressor/v3/compressor.proto#extensions-filters-http-compressor-v3-compressor
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 | Field | Description |
 | --- | --- |
-| `type` _[CompressorLibraryType](#compressorlibrarytype)_ | LibraryType defines which library want to use for compression. |
+| `type` _[CompressorType](#compressortype)_ | CompressorType defines which type compressor wants to use for compression. |
 | `gzip` _[GzipCompressor](#gzipcompressor)_ | The configuration for GZIP compressor. |
 
 
-#### CompressorLibraryType
+#### CompressorType
 
 _Underlying type:_ `string`
 
-CompressorLibraryType defines the types of compressor library supported by Envoy Gateway.
+CompressorType defines the types of compressor library supported by Envoy Gateway.
 
 _Appears in:_
 - [Compression](#compression)
@@ -964,7 +964,7 @@ _Appears in:_
 
 
 
-
+GzipCompressor defines the config for the Gzip compressor. There are some configs available from the Envoy Proxy. Currently only use the default value for configs. For the default value for those configs can be reference here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/compressor/v3/gzip.proto#extension-envoy-compression-gzip-compressor
 
 _Appears in:_
 - [Compression](#compression)
