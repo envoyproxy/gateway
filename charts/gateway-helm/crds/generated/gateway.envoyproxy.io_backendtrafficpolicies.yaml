@@ -89,9 +89,6 @@ spec:
                         compression.
                       enum:
                       - Gzip
-                      - Brotli
-                      - Zstd
-                      - Qat
                       type: string
                   type: object
                 type: array
