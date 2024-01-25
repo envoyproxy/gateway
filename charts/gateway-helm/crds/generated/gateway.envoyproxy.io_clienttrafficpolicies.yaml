@@ -57,6 +57,11 @@ spec:
                     description: EnableTrailers defines if HTTP/1 trailers should
                       be proxied by Envoy.
                     type: boolean
+                  preserveHeaderCase:
+                    description: PreserveHeaderCase defines if Envoy should preserve
+                      the letter case of headers. By default, Envoy will lowercase
+                      all the headers.
+                    type: boolean
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
