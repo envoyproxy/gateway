@@ -945,6 +945,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `enableTrailers` _boolean_ | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
+| `preserveHeaderCase` _boolean_ | PreserveHeaderCase defines if Envoy should preserve the letter case of headers. By default, Envoy will lowercase all the headers. |
 
 
 #### HTTP3Settings
