@@ -224,7 +224,6 @@ _Appears in:_
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 | `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
-| `compression` _[Compression](#compression) array_ | The compression config for the downstream client connections. |
 | `http1` _[HTTP1Settings](#http1settings)_ | HTTP1 provides HTTP/1 configuration on the listener. |
 
 
@@ -254,26 +253,11 @@ _Appears in:_
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Description |
 | --- | --- |
-| `compressorLibrary` _[CompressorLibrary](#compressorlibrary)_ | A compressor library to use for compression |
-
-
-#### CompressorLibrary
-
-
-
-
-
-_Appears in:_
-- [Compression](#compression)
-
-| Field | Description |
-| --- | --- |
-| `compressorLibraryType` _[CompressorLibraryType](#compressorlibrarytype)_ | LibraryType defines which library want to use for compression. |
-| `gzipCompressor` _[GzipCompressor](#gzipcompressor)_ | The configuration for GZIP compressor. |
+| `type` _[CompressorLibraryType](#compressorlibrarytype)_ | LibraryType defines which library want to use for compression. |
+| `gzip` _[GzipCompressor](#gzipcompressor)_ | The configuration for GZIP compressor. |
 
 
 #### CompressorLibraryType
@@ -283,7 +267,7 @@ _Underlying type:_ `string`
 CompressorLibraryType defines the types of compressor library supported by Envoy Gateway.
 
 _Appears in:_
-- [CompressorLibrary](#compressorlibrary)
+- [Compression](#compression)
 
 
 
@@ -982,7 +966,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [CompressorLibrary](#compressorlibrary)
+- [Compression](#compression)
 
 
 

@@ -81,22 +81,18 @@ spec:
                 description: The compression config for the backend connections.
                 items:
                   properties:
-                    compressorLibrary:
-                      description: A compressor library to use for compression
-                      properties:
-                        compressorLibraryType:
-                          description: LibraryType defines which library want to use
-                            for compression.
-                          enum:
-                          - Gzip
-                          - Brotli
-                          - Zstd
-                          - Qat
-                          type: string
-                        gzipCompressor:
-                          description: The configuration for GZIP compressor.
-                          type: object
+                    gzip:
+                      description: The configuration for GZIP compressor.
                       type: object
+                    type:
+                      description: LibraryType defines which library want to use for
+                        compression.
+                      enum:
+                      - Gzip
+                      - Brotli
+                      - Zstd
+                      - Qat
+                      type: string
                   type: object
                 type: array
               faultInjection:

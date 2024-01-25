@@ -44,28 +44,6 @@ spec:
           spec:
             description: Spec defines the desired state of ClientTrafficPolicy.
             properties:
-              compression:
-                description: The compression config for the downstream client connections.
-                items:
-                  properties:
-                    compressorLibrary:
-                      description: A compressor library to use for compression
-                      properties:
-                        compressorLibraryType:
-                          description: LibraryType defines which library want to use
-                            for compression.
-                          enum:
-                          - Gzip
-                          - Brotli
-                          - Zstd
-                          - Qat
-                          type: string
-                        gzipCompressor:
-                          description: The configuration for GZIP compressor.
-                          type: object
-                      type: object
-                  type: object
-                type: array
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header
                   and adds the Client Address into the X-Forwarded-For header. Note
