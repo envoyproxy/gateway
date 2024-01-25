@@ -471,10 +471,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
@@ -606,10 +602,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
@@ -620,10 +612,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test2",
@@ -700,10 +688,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
