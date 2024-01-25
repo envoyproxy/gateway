@@ -208,6 +208,9 @@ type HTTPListener struct {
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// HTTP1 provides HTTP/1 configuration on the listener
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
