@@ -78,7 +78,7 @@ spec:
                     type: integer
                 type: object
               compression:
-                description: The compression config for the backend connections.
+                description: The compression config for the http streams.
                 items:
                   properties:
                     gzip:

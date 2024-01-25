@@ -91,7 +91,7 @@ _Appears in:_
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 | `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
-| `compression` _[Compression](#compression) array_ | The compression config for the backend connections. |
+| `compression` _[Compression](#compression) array_ | The compression config for the http streams. |
 
 
 
