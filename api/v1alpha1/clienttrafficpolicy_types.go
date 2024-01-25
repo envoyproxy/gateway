@@ -113,7 +113,7 @@ type HeaderSettings struct {
 	// requested is Overwrite or AppendIfAbsent. Defaults to "envoy" if not specified.
 	//
 	// +optional
-	ServerName *string `json:"serverName,omitEmpty"`
+	ServerName *string `json:"serverName,omitempty"`
 	// ServerHeaderTransformation defines how the Server header should be handled for
 	// proxied traffic. Defaults to "Overwrite".
 	//
