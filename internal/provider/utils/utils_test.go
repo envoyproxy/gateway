@@ -31,27 +31,3 @@ func TestGetHashedName(t *testing.T) {
 		})
 	}
 }
-
-func TestContainsAllLabels(t *testing.T) {
-	type args struct {
-		labels        map[string]string
-		labelsToCheck []string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{"test all labels present", args{map[string]string{"label1": "foo", "label2": "bar"}, []string{"label1", "label2"}}, true},
-		{"test some labels missing", args{map[string]string{"label1": "foo", "label2": "bar"}, []string{"label1", "label3"}}, false},
-		{"test empty map", args{map[string]string{}, []string{"label1", "label2"}}, false},
-		{"test empty labelsToCheck", args{map[string]string{"label1": "foo", "label2": "bar"}, []string{}}, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ContainsAllLabels(tt.args.labels, tt.args.labelsToCheck); got != tt.want {
-				t.Errorf("ContainsAllLabels() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}

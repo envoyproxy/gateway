@@ -12,8 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	matav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -62,7 +63,7 @@ type NamespaceGetter interface {
 }
 
 // checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
-func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj matav1.Object) (bool, error) {
+func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
 
 	var nsString string
 	// TODO: it requires extra condition validate cluster resources or resources without namespace?
@@ -82,7 +83,24 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj matav1.Object) (bo
 		return false, err
 	}
 
-	return utils.ContainsAllLabels(ns.Labels, r.namespaceLabels), nil
+	return matchLabelsAndExpressions(r.namespaceLabel, ns.Labels), nil
+}
+
+// matchLabelsAndExpressions extracts information from a given label selector and checks whether
+// the provided object labels match the selector criteria.
+// If the label selector is nil, it returns true, indicating a match.
+// It returns false if there is an error while converting the label selector or if the labels do not match.
+func matchLabelsAndExpressions(ls *metav1.LabelSelector, objLabels map[string]string) bool {
+	if ls == nil {
+		return true
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(ls)
+	if err != nil {
+		return false
+	}
+
+	return selector.Matches(labels.Set(objLabels))
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
@@ -102,7 +120,7 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 	}
 
 	if gc.Spec.ControllerName != r.classController {
-		r.log.Info("gatewayclass controller name", gc.Spec.ControllerName, "class controller name", r.classController)
+		r.log.Info("gatewayclass controller name", string(gc.Spec.ControllerName), "class controller name", string(r.classController))
 		r.log.Info("gatewayclass name for gateway doesn't match configured name",
 			"namespace", gw.Namespace, "name", gw.Name)
 		return false
