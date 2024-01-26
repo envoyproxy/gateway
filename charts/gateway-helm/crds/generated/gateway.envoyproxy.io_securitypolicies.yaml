@@ -356,7 +356,6 @@ spec:
                         type: object
                     required:
                     - host
-                    - path
                     - port
                     type: object
                   type:

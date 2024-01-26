@@ -79,7 +79,7 @@ type HTTPExtAuthService struct {
 
 	// Port is the network port of the HTTP External Authorization service.
 	// If port is not specified, 80 for http and 443 for https are assumed.
-	Port *gwapiv1a2.PortNumber `json:"port"`
+	Port *gwapiv1a2.PortNumber `json:"port,omitempty"`
 
 	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,
