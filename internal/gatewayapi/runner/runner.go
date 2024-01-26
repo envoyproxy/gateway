@@ -10,7 +10,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -77,11 +76,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Translate to IR
 			result := t.Translate(val)
 
-			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
-			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
-			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
-			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
-
 			var curKeys, newKeys []string
 			// Get current IR keys
 			for key := range r.InfraIR.LoadAll() {
@@ -91,6 +85,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Publish the IRs.
 			// Also validate the ir before sending it.
 			for key, val := range result.InfraIR {
+				r.Logger.WithValues("infra-ir", key).Info(val.YAMLString())
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 					errChan <- err
@@ -101,6 +96,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 
 			for key, val := range result.XdsIR {
+				r.Logger.WithValues("xds-ir", key).Info(val.YAMLString())
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 					errChan <- err
