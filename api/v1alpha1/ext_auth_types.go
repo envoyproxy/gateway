@@ -33,11 +33,11 @@ type ExtAuth struct {
 	// +unionDiscriminator
 	Type ExtAuthServiceType `json:"type"`
 
-	// GRPC defines the gRPC External Authorization service
+	// GRPC defines the gRPC External Authorization service.
 	// Only one of GRPCService or HTTPService may be specified.
 	GRPC *GRPCExtAuthService `json:"grpc,omitempty"`
 
-	// HTTP defines the HTTP External Authorization service
+	// HTTP defines the HTTP External Authorization service.
 	// Only one of GRPCService or HTTPService may be specified.
 	HTTP *HTTPExtAuthService `json:"http,omitempty"`
 
@@ -53,35 +53,36 @@ type ExtAuth struct {
 
 // GRPCExtAuthService defines the gRPC External Authorization service
 type GRPCExtAuthService struct {
-	// Host is the hostname of the gRPC External Authorization service
+	// Host is the hostname of the gRPC External Authorization service.
 	Host gwapiv1a2.Hostname `json:"host"`
 
-	// Port is the network port of the gRPC External Authorization service
+	// Port is the network port of the gRPC External Authorization service.
 	Port gwapiv1a2.PortNumber `json:"port"`
 
 	// TLS defines the TLS configuration for the gRPC External Authorization service.
-	// Note: If not specified, the proxy will talk to the gRPC External
-	// Authorization service in plaintext.
+	// Note: If not specified, the proxy will talk to the gRPC External Authorization
+	// service in plaintext.
 	// +optional
 	TLS *TLSConfig `json:"tls,omitempty"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
 type HTTPExtAuthService struct {
-	// URL is the URL of the HTTP External Authorization service.
-	// The URL must be a fully qualified URL with a scheme, hostname,
-	// and optional port and path. Parameters are not allowed.
-	// The URL must use either the http or https scheme.
+	// Host is the hostname of the HTTP External Authorization service.
+	Host gwapiv1a2.Hostname `json:"host"`
+
+	// Port is the network port of the HTTP External Authorization service.
 	// If port is not specified, 80 for http and 443 for https are assumed.
+	Port *gwapiv1a2.PortNumber `json:"port"`
+
+	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,
 	// or else the authorization request will be sent to the root path.
-	// +kubebuilder:validation:Pattern=`^(https?:)(\/\/[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)((:\d+)?)(\/[a-zA-Z0-9-._~%]+\/?)*$`
-	URL string `json:"url" yaml:"url"`
+	Path *string `json:"path"`
 
 	// TLS defines the TLS configuration for the HTTP External Authorization service.
-	// TLS is only valid when the URL scheme is https. If the URL scheme is
-	// https, and TLS is not specified, the proxy will use the system default
-	// certificate pool to verify the server certificate.
+	// Note: If not specified, the proxy will talk to the HTTP External Authorization
+	// service in plaintext.
 	// +optional
 	TLS *TLSConfig `json:"tls,omitempty"`
 

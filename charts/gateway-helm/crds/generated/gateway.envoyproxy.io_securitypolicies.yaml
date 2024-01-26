@@ -153,19 +153,19 @@ spec:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:
                   grpc:
-                    description: GRPC defines the gRPC External Authorization service
+                    description: GRPC defines the gRPC External Authorization service.
                       Only one of GRPCService or HTTPService may be specified.
                     properties:
                       host:
                         description: Host is the hostname of the gRPC External Authorization
-                          service
+                          service.
                         maxLength: 253
                         minLength: 1
                         pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                         type: string
                       port:
                         description: Port is the network port of the gRPC External
-                          Authorization service
+                          Authorization service.
                         format: int32
                         maximum: 65535
                         minimum: 1
@@ -251,7 +251,7 @@ spec:
                       type: string
                     type: array
                   http:
-                    description: HTTP defines the HTTP External Authorization service
+                    description: HTTP defines the HTTP External Authorization service.
                       Only one of GRPCService or HTTPService may be specified.
                     properties:
                       headersToBackend:
@@ -263,12 +263,32 @@ spec:
                         items:
                           type: string
                         type: array
+                      host:
+                        description: Host is the hostname of the HTTP External Authorization
+                          service.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      path:
+                        description: Path is the path of the HTTP External Authorization
+                          service. If path is specified, the authorization request
+                          will be sent to that path, or else the authorization request
+                          will be sent to the root path.
+                        type: string
+                      port:
+                        description: Port is the network port of the HTTP External
+                          Authorization service. If port is not specified, 80 for
+                          http and 443 for https are assumed.
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
                       tls:
-                        description: TLS defines the TLS configuration for the HTTP
-                          External Authorization service. TLS is only valid when the
-                          URL scheme is https. If the URL scheme is https, and TLS
-                          is not specified, the proxy will use the system default
-                          certificate pool to verify the server certificate.
+                        description: 'TLS defines the TLS configuration for the HTTP
+                          External Authorization service. Note: If not specified,
+                          the proxy will talk to the HTTP External Authorization service
+                          in plaintext.'
                         properties:
                           certificateRefs:
                             description: "CertificateRefs contains a series of references
@@ -329,19 +349,10 @@ spec:
                             maxItems: 64
                             type: array
                         type: object
-                      url:
-                        description: URL is the URL of the HTTP External Authorization
-                          service. The URL must be a fully qualified URL with a scheme,
-                          hostname, and optional port and path. Parameters are not
-                          allowed. The URL must use either the http or https scheme.
-                          If port is not specified, 80 for http and 443 for https
-                          are assumed. If path is specified, the authorization request
-                          will be sent to that path, or else the authorization request
-                          will be sent to the root path.
-                        pattern: ^(https?:)(\/\/[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)((:\d+)?)(\/[a-zA-Z0-9-._~%]+\/?)*$
-                        type: string
                     required:
-                    - url
+                    - host
+                    - path
+                    - port
                     type: object
                   type:
                     allOf:
