@@ -99,7 +99,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				gwv1a2.PolicyConditionAccepted,
 				metav1.ConditionFalse,
 				gwv1a2.PolicyReasonInvalid,
-				"envoy patch policy is disabled",
+				"EnvoyPatchPolicy feature is disabled",
 			)
 			continue
 		}
