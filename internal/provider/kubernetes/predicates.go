@@ -120,7 +120,7 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 	}
 
 	if gc.Spec.ControllerName != r.classController {
-		r.log.Info("gatewayclass controller name", gc.Spec.ControllerName, "class controller name", r.classController)
+		r.log.Info("gatewayclass controller name", string(gc.Spec.ControllerName), "class controller name", string(r.classController))
 		r.log.Info("gatewayclass name for gateway doesn't match configured name",
 			"namespace", gw.Namespace, "name", gw.Name)
 		return false

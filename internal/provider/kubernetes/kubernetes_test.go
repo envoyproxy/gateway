@@ -1296,19 +1296,8 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
 		Watch: &egv1a1.KubernetesWatchMode{
-			Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "label-1",
-						Operator: metav1.LabelSelectorOpIn,
-					},
-					{
-						Key:      "label-2",
-						Operator: metav1.LabelSelectorOpIn,
-					},
-				},
-			},
+			Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
 		},
 	}
 
