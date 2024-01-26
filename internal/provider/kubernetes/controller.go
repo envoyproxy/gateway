@@ -42,19 +42,20 @@ import (
 )
 
 const (
-	classGatewayIndex        = "classGatewayIndex"
-	gatewayTLSRouteIndex     = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex    = "gatewayHTTPRouteIndex"
-	gatewayGRPCRouteIndex    = "gatewayGRPCRouteIndex"
-	gatewayTCPRouteIndex     = "gatewayTCPRouteIndex"
-	gatewayUDPRouteIndex     = "gatewayUDPRouteIndex"
-	secretGatewayIndex       = "secretGatewayIndex"
-	targetRefGrantRouteIndex = "targetRefGrantRouteIndex"
-	backendHTTPRouteIndex    = "backendHTTPRouteIndex"
-	backendGRPCRouteIndex    = "backendGRPCRouteIndex"
-	backendTLSRouteIndex     = "backendTLSRouteIndex"
-	backendTCPRouteIndex     = "backendTCPRouteIndex"
-	backendUDPRouteIndex     = "backendUDPRouteIndex"
+	classGatewayIndex         = "classGatewayIndex"
+	gatewayTLSRouteIndex      = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex     = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex     = "gatewayGRPCRouteIndex"
+	gatewayTCPRouteIndex      = "gatewayTCPRouteIndex"
+	gatewayUDPRouteIndex      = "gatewayUDPRouteIndex"
+	secretGatewayIndex        = "secretGatewayIndex"
+	targetRefGrantRouteIndex  = "targetRefGrantRouteIndex"
+	backendHTTPRouteIndex     = "backendHTTPRouteIndex"
+	backendGRPCRouteIndex     = "backendGRPCRouteIndex"
+	backendTLSRouteIndex      = "backendTLSRouteIndex"
+	backendTCPRouteIndex      = "backendTCPRouteIndex"
+	backendUDPRouteIndex      = "backendUDPRouteIndex"
+	secretSecurityPolicyIndex = "secretSecurityPolicyIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -922,9 +923,11 @@ func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 	return backendRefs
 }
 
-// addUDPRouteIndexers adds indexing on UDPRoute, for Service objects that are
-// referenced in UDPRoute objects via `.spec.rules.backendRefs`. This helps in
-// querying for UDPRoutes that are affected by a particular Service CRUD.
+// addUDPRouteIndexers adds indexing on UDPRoute.
+//   - For Gateway objects that are referenced in UDPRoute objects via `.spec.parentRefs`. This helps in
+//     querying for UDPRoutes that are affected by a particular Gateway CRUD.
+//   - For Service objects that are referenced in UDPRoute objects via `.spec.rules.backendRefs`. This helps in
+//     querying for UDPRoutes that are affected by a particular Service CRUD.
 func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, gatewayUDPRouteIndex, func(rawObj client.Object) []string {
 		udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
@@ -1524,7 +1527,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch Secret CRUDs and process affected Gateways.
+	// Watch Secret CRUDs and process affected EG CRs (Gateway, SecurityPolicy, more in the future).
 	secretPredicates := []predicate.Predicate{
 		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
@@ -1624,6 +1627,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		spPredicates...,
 	); err != nil {
+		return err
+	}
+	if err := addSecurityPolicyIndexers(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -1755,4 +1761,32 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	}
 
 	return serviceImportFound
+}
+
+// addSecurityPolicyIndexers adds indexing on SecurityPolicy, for Secret objects that are
+// referenced in SecurityPolicy objects. This helps in querying for SecurityPolicies that are
+// affected by a particular Secret CRUD.
+func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc)
+}
+
+func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
+	securityPolicy := rawObj.(*v1alpha1.SecurityPolicy)
+	oidcSecret := securityPolicy.Spec.OIDC.ClientSecret
+	basicAuthSecret := securityPolicy.Spec.BasicAuth.Users
+
+	var secretReferences []string
+	secretReferences = append(secretReferences,
+		types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(oidcSecret.Namespace, securityPolicy.Namespace),
+			Name:      string(oidcSecret.Name),
+		}.String(),
+	)
+	secretReferences = append(secretReferences,
+		types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(basicAuthSecret.Namespace, securityPolicy.Namespace),
+			Name:      string(basicAuthSecret.Name),
+		}.String(),
+	)
+	return secretReferences
 }

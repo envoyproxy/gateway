@@ -20,6 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -119,11 +120,23 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return false
 	}
 
+	if r.secretReferencedByGateway(secret) {
+		return true
+	}
+
+	if r.secretReferencedBySecurityPolicy(secret) {
+		return true
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) secretReferencedByGateway(secret *corev1.Secret) bool {
 	gwList := &gwapiv1.GatewayList{}
 	if err := r.client.List(context.Background(), gwList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, utils.NamespacedName(secret).String()),
 	}); err != nil {
-		r.log.Error(err, "unable to find associated HTTPRoutes")
+		r.log.Error(err, "unable to find associated Gateways")
 		return false
 	}
 
@@ -137,8 +150,19 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 			return false
 		}
 	}
-
 	return true
+}
+
+func (r *gatewayAPIReconciler) secretReferencedBySecurityPolicy(secret *corev1.Secret) bool {
+	spList := &v1alpha1.SecurityPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, utils.NamespacedName(secret).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated SecurityPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
 }
 
 // validateServiceForReconcile tries finding the owning Gateway of the Service
