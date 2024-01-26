@@ -765,7 +765,7 @@ _Appears in:_
 | `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
 | `grpc` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service. Only one of GRPCService or HTTPService may be specified. |
 | `http` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service. Only one of GRPCService or HTTPService may be specified. |
-| `headersToExtAuth` _string array_ | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior of different external authorization services is different. All headers will be included in the check request to a gRPC authorization server, whereas no headers will be included in the check request to an HTTP authorization server. |
+| `headersToExtAuth` _string array_ | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
 
 
 #### ExtensionAPISettings
@@ -909,7 +909,7 @@ _Appears in:_
 
 
 
-GRPCExtAuthService defines the gRPC External Authorization service
+GRPCExtAuthService defines the gRPC External Authorization service The authorization request message is defined in https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 
 _Appears in:_
 - [ExtAuth](#extauth)
