@@ -180,7 +180,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
 	gtw := r.findOwningGateway(ctx, labels)
 	if gtw != nil {
-		r.statusUpdateForGateway(ctx, gtw)
+		r.updateStatusForGateway(ctx, gtw)
 		return false
 	}
 
@@ -191,7 +191,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		if res != nil && len(res.Gateways) > 0 {
 			for _, gw := range res.Gateways {
 				gw := gw
-				r.statusUpdateForGateway(ctx, gw)
+				r.updateStatusForGateway(ctx, gw)
 			}
 		}
 
@@ -315,7 +315,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
-			r.statusUpdateForGateway(ctx, gtw)
+			r.updateStatusForGateway(ctx, gtw)
 			return false
 		}
 	}
@@ -327,7 +327,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		if res != nil && len(res.Gateways) > 0 {
 			for _, gw := range res.Gateways {
 				gw := gw
-				r.statusUpdateForGateway(ctx, gw)
+				r.updateStatusForGateway(ctx, gw)
 			}
 		}
 		return false
