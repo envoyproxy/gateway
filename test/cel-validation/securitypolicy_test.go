@@ -379,7 +379,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Type: egv1a1.GRPCExtAuthServiceType,
 						HTTP: &egv1a1.HTTPExtAuthService{
 							Host: "foo.bar.com",
-							Port: 15001,
 						},
 					},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -407,7 +406,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 						HTTP: &egv1a1.HTTPExtAuthService{
 							Host: "foo.bar.com",
-							Port: 15001,
 						},
 					},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
