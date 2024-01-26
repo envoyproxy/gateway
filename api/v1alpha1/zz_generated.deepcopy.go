@@ -1983,10 +1983,10 @@ func (in *KubernetesWatchMode) DeepCopyInto(out *KubernetesWatchMode) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.NamespaceSelectors != nil {
-		in, out := &in.NamespaceSelectors, &out.NamespaceSelectors
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+	if in.NamespaceSelector != nil {
+		in, out := &in.NamespaceSelector, &out.NamespaceSelector
+		*out = new(v1.LabelSelector)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
