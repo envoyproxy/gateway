@@ -56,9 +56,10 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, input, resources)
 
 			translator := &Translator{
-				GatewayControllerName:  egv1a1.GatewayControllerName,
-				GatewayClassName:       "envoy-gateway-class",
-				GlobalRateLimitEnabled: true,
+				GatewayControllerName:   egv1a1.GatewayControllerName,
+				GatewayClassName:        "envoy-gateway-class",
+				GlobalRateLimitEnabled:  true,
+				EnvoyPatchPolicyEnabled: true,
 			}
 
 			// Add common test fixtures
