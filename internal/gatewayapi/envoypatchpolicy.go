@@ -94,6 +94,16 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			continue
 		}
 
+		if !t.EnvoyPatchPolicyEnabled {
+			status.SetEnvoyPatchPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				"envoy patch policy is disabled",
+			)
+			continue
+		}
+
 		// Save the patch
 		for _, patch := range policy.Spec.JSONPatches {
 			irPatch := ir.JSONPatchConfig{}
