@@ -42,6 +42,7 @@ type xdsClusterArgs struct {
 	proxyProtocol  *ir.ProxyProtocol
 	circuitBreaker *ir.CircuitBreaker
 	healthCheck    *ir.HealthCheck
+	enableTrailers bool
 }
 
 type EndpointType int
@@ -95,9 +96,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			break
 		}
 	}
-	if isHTTP2 {
-		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
-	}
+	cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions(isHTTP2, args.enableTrailers)
 
 	// Set Load Balancer policy
 	//nolint:gocritic
@@ -315,22 +314,44 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
-func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
-	protocolOptions := httpv3.HttpProtocolOptions{
-		UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
-			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
+func buildTypedExtensionProtocolOptions(http2, http1Trailers bool) map[string]*anypb.Any {
+	var anyProtocolOptions *anypb.Any
+
+	if http2 {
+		protocolOptions := httpv3.HttpProtocolOptions{
+			UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+				ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+					ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
+				},
 			},
-		},
+		}
+
+		anyProtocolOptions, _ = anypb.New(&protocolOptions)
+	} else if http1Trailers {
+		// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
+		// so that when ALPN is supported enabling trailers doesn't force HTTP/1.1
+		protocolOptions := httpv3.HttpProtocolOptions{
+			UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+				ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+					ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+						HttpProtocolOptions: &corev3.Http1ProtocolOptions{
+							EnableTrailers: http1Trailers,
+						},
+					},
+				},
+			},
+		}
+		anyProtocolOptions, _ = anypb.New(&protocolOptions)
 	}
 
-	anyProtocolOptions, _ := anypb.New(&protocolOptions)
+	if anyProtocolOptions != nil {
+		extensionOptions := map[string]*anypb.Any{
+			extensionOptionsKey: anyProtocolOptions,
+		}
 
-	extensionOptions := map[string]*anypb.Any{
-		extensionOptionsKey: anyProtocolOptions,
+		return extensionOptions
 	}
-
-	return extensionOptions
+	return nil
 }
 
 // buildClusterName returns a cluster name for the given `host` and `port`.

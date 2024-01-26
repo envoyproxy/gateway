@@ -111,10 +111,13 @@ curl -H "Origin: http://www.foo.com:8080" \
   1> /dev/null
 ```
 
-Note: CORS specification requires that the browsers to send a preflight request to the server to ask if it's allowed
+Note: 
+* CORS specification requires that the browsers to send a preflight request to the server to ask if it's allowed
 to access the limited resource in another domains. The browsers are supposed to follow the response from the server to
 determine whether to send the actual request or not. The CORS filter only response to the preflight requests according to
 its configuration. It won't deny any requests. The browsers are responsible for enforcing the CORS policy.
+* The targeted HTTPRoute or the HTTPRoutes that the targeted Gateway routes to must allow the OPTIONS method for the CORS 
+filter to work. Otherwise, the OPTIONS request won't match the routes and the CORS filter won't be invoked.
 
 
 ## Clean-Up

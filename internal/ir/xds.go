@@ -208,6 +208,9 @@ type HTTPListener struct {
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// HTTP1 provides HTTP/1 configuration on the listener
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -1156,6 +1159,11 @@ type JSONPatchOperation struct {
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path" yaml:"path"`
+	// From is the source location of the value to be copied or moved. Only valid
+	// for move or copy operations
+	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+	// +optional
+	From *string `json:"from,omitempty" yaml:"from,omitempty"`
 	// Value is the new value of the path location.
 	Value apiextensionsv1.JSON `json:"value" yaml:"value"`
 }

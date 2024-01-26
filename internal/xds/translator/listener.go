@@ -40,6 +40,18 @@ const (
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 )
 
+func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
+	if opts == nil {
+		return nil
+	}
+	if opts.EnableTrailers {
+		return &corev3.Http1ProtocolOptions{
+			EnableTrailers: opts.EnableTrailers,
+		}
+	}
+	return nil
+}
+
 func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 	return &corev3.Http2ProtocolOptions{
 		MaxConcurrentStreams: &wrappers.UInt32Value{
@@ -130,6 +142,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 				RouteConfigName: irListener.Name,
 			},
 		},
+		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),

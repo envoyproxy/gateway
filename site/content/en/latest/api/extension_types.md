@@ -223,6 +223,7 @@ _Appears in:_
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 | `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
+| `http1` _[HTTP1Settings](#http1settings)_ | HTTP1 provides HTTP/1 configuration on the listener. |
 
 
 
@@ -733,6 +734,7 @@ _Appears in:_
 | `telemetry` _[ProxyTelemetry](#proxytelemetry)_ | Telemetry defines telemetry parameters for managed proxies. |
 | `bootstrap` _[ProxyBootstrap](#proxybootstrap)_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 | `concurrency` _integer_ | Concurrency defines the number of worker threads to run. If unset, it defaults to the number of cpuset threads on the platform. |
+| `extraArgs` _string array_ | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` _boolean_ | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 
 
@@ -964,6 +966,21 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+#### HTTP1Settings
+
+
+
+HTTP1Settings provides HTTP/1 configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `enableTrailers` _boolean_ | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
+| `preserveHeaderCase` _boolean_ | PreserveHeaderCase defines if Envoy should preserve the letter case of headers. By default, Envoy will lowercase all the headers. |
+
+
 #### HTTP3Settings
 
 
@@ -1130,6 +1147,7 @@ _Appears in:_
 | --- | --- |
 | `op` _[JSONPatchOperationType](#jsonpatchoperationtype)_ | Op is the type of operation to perform |
 | `path` _string_ | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
+| `from` _string_ | From is the source location of the value to be copied or moved. Only valid for move or copy operations Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `value` _[JSON](#json)_ | Value is the new value of the path location. |
 
 

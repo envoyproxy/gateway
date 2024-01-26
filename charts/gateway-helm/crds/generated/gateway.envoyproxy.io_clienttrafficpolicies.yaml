@@ -50,6 +50,19 @@ spec:
                   Proxy Protocol must be present when this field is set, else the
                   connection is closed.
                 type: boolean
+              http1:
+                description: HTTP1 provides HTTP/1 configuration on the listener.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  preserveHeaderCase:
+                    description: PreserveHeaderCase defines if Envoy should preserve
+                      the letter case of headers. By default, Envoy will lowercase
+                      all the headers.
+                    type: boolean
+                type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
                 type: object

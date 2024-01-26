@@ -74,36 +74,15 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj matav1.Object) (bo
 	if err := r.client.Get(
 		context.Background(),
 		client.ObjectKey{
-			Namespace: "", // Namespace object should have empty Namespace
+			Namespace: "", // Namespace object should have an empty Namespace
 			Name:      nsString,
 		},
 		ns,
 	); err != nil {
 		return false, err
 	}
-	return containAll(ns.Labels, r.namespaceLabels), nil
-}
 
-func containAll(labels map[string]string, labelsToCheck []string) bool {
-	if len(labels) < len(labelsToCheck) {
-		return false
-	}
-	for _, l := range labelsToCheck {
-		if !contains(labels, l) {
-			return false
-		}
-	}
-	return true
-}
-
-func contains(m map[string]string, i string) bool {
-	for k := range m {
-		if k == i {
-			return true
-		}
-	}
-
-	return false
+	return utils.ContainsAllLabels(ns.Labels, r.namespaceLabels), nil
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
