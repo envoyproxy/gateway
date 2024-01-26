@@ -84,7 +84,7 @@ type HTTPExtAuthService struct {
 	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,
 	// or else the authorization request will be sent to the root path.
-	Path *string `json:"path"`
+	Path *string `json:"path,omitempty"`
 
 	// TLS defines the TLS configuration for the HTTP External Authorization service.
 	// Note: If not specified, the proxy will talk to the HTTP External Authorization
