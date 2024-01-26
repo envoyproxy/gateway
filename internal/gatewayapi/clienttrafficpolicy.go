@@ -386,7 +386,8 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 		return
 	}
 	httpIR.HTTP1 = &ir.HTTP1Settings{
-		EnableTrailers: ptr.Deref(http1Settings.EnableTrailers, false),
+		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
+		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
 	}
 }
 

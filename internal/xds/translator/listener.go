@@ -16,6 +16,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
+	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -44,12 +45,24 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts == nil {
 		return nil
 	}
-	if opts.EnableTrailers {
-		return &corev3.Http1ProtocolOptions{
-			EnableTrailers: opts.EnableTrailers,
+	if !opts.EnableTrailers && !opts.PreserveHeaderCase {
+		return nil
+	}
+	r := &corev3.Http1ProtocolOptions{
+		EnableTrailers: opts.EnableTrailers,
+	}
+	if opts.PreserveHeaderCase {
+		preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
+			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
+				StatefulFormatter: &corev3.TypedExtensionConfig{
+					Name:        "preserve_case",
+					TypedConfig: preservecaseAny,
+				},
+			},
 		}
 	}
-	return nil
+	return r
 }
 
 func http2ProtocolOptions() *corev3.Http2ProtocolOptions {

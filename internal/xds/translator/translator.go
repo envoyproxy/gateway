@@ -20,7 +20,6 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -260,8 +259,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
-				trailers := ptr.Deref(httpListener.HTTP1, ir.HTTP1Settings{}).EnableTrailers
-				if err = processXdsCluster(tCtx, httpRoute, trailers); err != nil {
+				if err = processXdsCluster(tCtx, httpRoute, httpListener.HTTP1); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -486,7 +484,7 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
-func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, enableTrailers bool) error {
+func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
 	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
 	// since there's no Mixed AddressType among all the DestinationSettings.
 	addrTypeState := httpRoute.Destination.Settings[0].AddressType
@@ -507,7 +505,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		proxyProtocol:  httpRoute.ProxyProtocol,
 		circuitBreaker: httpRoute.CircuitBreaker,
 		healthCheck:    httpRoute.HealthCheck,
-		enableTrailers: enableTrailers,
+		http1Settings:  http1Settings,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

@@ -14,6 +14,7 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -23,6 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -42,7 +44,7 @@ type xdsClusterArgs struct {
 	proxyProtocol  *ir.ProxyProtocol
 	circuitBreaker *ir.CircuitBreaker
 	healthCheck    *ir.HealthCheck
-	enableTrailers bool
+	http1Settings  *ir.HTTP1Settings
 }
 
 type EndpointType int
@@ -96,7 +98,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			break
 		}
 	}
-	cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions(isHTTP2, args.enableTrailers)
+	cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions(isHTTP2,
+		ptr.Deref(args.http1Settings, ir.HTTP1Settings{}))
 
 	// Set Load Balancer policy
 	//nolint:gocritic
@@ -314,44 +317,51 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
-func buildTypedExtensionProtocolOptions(http2, http1Trailers bool) map[string]*anypb.Any {
+func buildTypedExtensionProtocolOptions(http2 bool, http1Opts ir.HTTP1Settings) map[string]*anypb.Any {
+	if !http2 && !http1Opts.EnableTrailers && !http1Opts.PreserveHeaderCase {
+		return nil
+	}
 	var anyProtocolOptions *anypb.Any
 
+	protocolOptions := httpv3.HttpProtocolOptions{}
 	if http2 {
-		protocolOptions := httpv3.HttpProtocolOptions{
-			UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
-				ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-					ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
-				},
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
 			},
 		}
-
-		anyProtocolOptions, _ = anypb.New(&protocolOptions)
-	} else if http1Trailers {
-		// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
-		// so that when ALPN is supported enabling trailers doesn't force HTTP/1.1
-		protocolOptions := httpv3.HttpProtocolOptions{
-			UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
-				ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-					ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
-						HttpProtocolOptions: &corev3.Http1ProtocolOptions{
-							EnableTrailers: http1Trailers,
-						},
+	} else if http1Opts.EnableTrailers || http1Opts.PreserveHeaderCase {
+		opts := &corev3.Http1ProtocolOptions{
+			EnableTrailers: http1Opts.EnableTrailers,
+		}
+		if http1Opts.PreserveHeaderCase {
+			preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+			opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
+				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
+					StatefulFormatter: &corev3.TypedExtensionConfig{
+						Name:        "preserve_case",
+						TypedConfig: preservecaseAny,
 					},
 				},
+			}
+		}
+		// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
+		// so that when ALPN is supported setting HTTP/1.1 options doesn't force HTTP/1.1
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+					HttpProtocolOptions: opts,
+				},
 			},
 		}
-		anyProtocolOptions, _ = anypb.New(&protocolOptions)
+	}
+	anyProtocolOptions, _ = anypb.New(&protocolOptions)
+
+	extensionOptions := map[string]*anypb.Any{
+		extensionOptionsKey: anyProtocolOptions,
 	}
 
-	if anyProtocolOptions != nil {
-		extensionOptions := map[string]*anypb.Any{
-			extensionOptionsKey: anyProtocolOptions,
-		}
-
-		return extensionOptions
-	}
-	return nil
+	return extensionOptions
 }
 
 // buildClusterName returns a cluster name for the given `host` and `port`.
