@@ -378,7 +378,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					ExtAuth: &egv1a1.ExtAuth{
 						Type: egv1a1.GRPCExtAuthServiceType,
 						HTTP: &egv1a1.HTTPExtAuthService{
-							URL: "https://foo.bar.com",
+							Host: "foo.bar.com",
+							Port: 15001,
 						},
 					},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -405,7 +406,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							Port: 15001,
 						},
 						HTTP: &egv1a1.HTTPExtAuthService{
-							URL: "https://foo.bar.com",
+							Host: "foo.bar.com",
+							Port: 15001,
 						},
 					},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -419,71 +421,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.extAuth: Invalid value: \"object\": only one of grpc or http can be specified",
-			},
-		},
-		{
-			desc: "valid HTTP auth service url with scheme and port",
-			mutate: func(sp *egv1a1.SecurityPolicy) {
-				sp.Spec = egv1a1.SecurityPolicySpec{
-					ExtAuth: &egv1a1.ExtAuth{
-						Type: egv1a1.HTTPExtAuthServiceType,
-						HTTP: &egv1a1.HTTPExtAuthService{
-							URL: "https://foo.bar.com:8080",
-						},
-					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "valid HTTP auth service url with scheme,port, and path",
-			mutate: func(sp *egv1a1.SecurityPolicy) {
-				sp.Spec = egv1a1.SecurityPolicySpec{
-					ExtAuth: &egv1a1.ExtAuth{
-						Type: egv1a1.HTTPExtAuthServiceType,
-						HTTP: &egv1a1.HTTPExtAuthService{
-							URL: "https://foo.bar.com:8080/path",
-						},
-					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "HTTP auth service url with invalid scheme",
-			mutate: func(sp *egv1a1.SecurityPolicy) {
-				sp.Spec = egv1a1.SecurityPolicySpec{
-					ExtAuth: &egv1a1.ExtAuth{
-						Type: egv1a1.HTTPExtAuthServiceType,
-						HTTP: &egv1a1.HTTPExtAuthService{
-							URL: "grpc://foo.bar.com:8080",
-						},
-					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
-						},
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.extAuth.http.url: Invalid value: \"grpc://foo.bar.com:8080\"",
 			},
 		},
 	}

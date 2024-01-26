@@ -52,6 +52,8 @@ type ExtAuth struct {
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service
+// The authorization request message is defined in
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 type GRPCExtAuthService struct {
 	// Host is the hostname of the gRPC External Authorization service.
 	Host gwapiv1a2.Hostname `json:"host"`
