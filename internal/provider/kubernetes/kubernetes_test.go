@@ -1285,7 +1285,7 @@ func TestNamespacedProvider(t *testing.T) {
 	}()
 }
 
-func TestNamespaceSelectorsProvider(t *testing.T) {
+func TestNamespaceSelectorProvider(t *testing.T) {
 	// Setup the test environment.
 	testEnv, cliCfg, err := startEnv()
 	require.NoError(t, err)
@@ -1296,8 +1296,8 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
 		Watch: &egv1a1.KubernetesWatchMode{
-			Type:               egv1a1.KubernetesWatchModeTypeNamespaceSelectors,
-			NamespaceSelectors: []string{"label-1", "label-2"},
+			Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
 		},
 	}
 

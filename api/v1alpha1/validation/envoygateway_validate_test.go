@@ -503,8 +503,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							Watch: &v1alpha1.KubernetesWatchMode{
-								Type:               v1alpha1.KubernetesWatchModeTypeNamespaces,
-								NamespaceSelectors: []string{"foo"},
+								Type:              v1alpha1.KubernetesWatchModeTypeNamespaces,
+								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
 							},
 						},
 					},
@@ -513,7 +513,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "happy namespaceSelectors must be set when watch mode is NamespaceSelectors",
+			name: "happy namespaceSelector must be set when watch mode is NamespaceSelector",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 					Gateway: v1alpha1.DefaultGateway(),
@@ -521,8 +521,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							Watch: &v1alpha1.KubernetesWatchMode{
-								Type:               v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
-								NamespaceSelectors: []string{"foo"},
+								Type:              v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
+								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
 							},
 						},
 					},
@@ -531,7 +531,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
-			name: "fail namespaceSelectors is not be set when watch mode is NamespaceSelectors",
+			name: "fail namespaceSelector is not be set when watch mode is NamespaceSelector",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 					Gateway: v1alpha1.DefaultGateway(),
@@ -539,7 +539,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							Watch: &v1alpha1.KubernetesWatchMode{
-								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
 							},
 						},
 					},

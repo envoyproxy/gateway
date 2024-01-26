@@ -23,7 +23,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		}
 
 		uExtResources := uExtResourceList.Items
-		if len(r.namespaceLabels) != 0 {
+		if r.namespaceLabel != nil {
 			var extRs []unstructured.Unstructured
 			for _, extR := range uExtResources {
 				extR := extR
