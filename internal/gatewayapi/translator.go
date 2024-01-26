@@ -81,6 +81,8 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// EnvoyPatchPolicyEnabled when the EnvoyPatchPolicy
+	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
 
 	// ExtensionGroupKinds stores the group/kind for all resources
