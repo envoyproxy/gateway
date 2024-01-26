@@ -1772,21 +1772,26 @@ func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
 
 func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*v1alpha1.SecurityPolicy)
-	oidcSecret := securityPolicy.Spec.OIDC.ClientSecret
-	basicAuthSecret := securityPolicy.Spec.BasicAuth.Users
 
-	var secretReferences []string
-	secretReferences = append(secretReferences,
-		types.NamespacedName{
-			Namespace: gatewayapi.NamespaceDerefOr(oidcSecret.Namespace, securityPolicy.Namespace),
-			Name:      string(oidcSecret.Name),
-		}.String(),
+	var (
+		secretReferences []gwapiv1b1.SecretObjectReference
+		values           []string
 	)
-	secretReferences = append(secretReferences,
-		types.NamespacedName{
-			Namespace: gatewayapi.NamespaceDerefOr(basicAuthSecret.Namespace, securityPolicy.Namespace),
-			Name:      string(basicAuthSecret.Name),
-		}.String(),
-	)
-	return secretReferences
+
+	if securityPolicy.Spec.OIDC != nil {
+		secretReferences = append(secretReferences, securityPolicy.Spec.OIDC.ClientSecret)
+	}
+	if securityPolicy.Spec.BasicAuth != nil {
+		secretReferences = append(secretReferences, securityPolicy.Spec.BasicAuth.Users)
+	}
+
+	for _, reference := range secretReferences {
+		values = append(values,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(reference.Namespace, securityPolicy.Namespace),
+				Name:      string(reference.Name),
+			}.String(),
+		)
+	}
+	return values
 }
