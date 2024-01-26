@@ -86,6 +86,11 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	Timeout *Timeout `json:"timeout,omitempty"`
+
+	// The compression config for the http streams.
+	//
+	// +optional
+	Compression []*Compression `json:"compression,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
