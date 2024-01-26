@@ -76,8 +76,8 @@ xdsIR:
       status:
         conditions:
         - lastTransitionTime: null
-          message: EnvoyPatchPolicy feature is disabled
-          reason: Invalid
+          message: EnvoyPatchPolicy is disabled in the EnvoyGateway configuration
+          reason: Disabled
           status: "False"
           type: Accepted
     http:

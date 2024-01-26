@@ -98,8 +98,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			status.SetEnvoyPatchPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
 				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				"EnvoyPatchPolicy feature is disabled",
+				egv1a1.PolicyReasonDisabled,
+				"EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
 			)
 			continue
 		}
