@@ -218,7 +218,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
 				&v1alpha1.SecurityPolicy{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "oidc",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
@@ -251,7 +251,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
 				&v1alpha1.SecurityPolicy{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "basic-auth",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
