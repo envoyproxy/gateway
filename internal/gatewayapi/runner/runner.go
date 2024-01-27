@@ -61,9 +61,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{
-				GatewayControllerName:  r.Server.EnvoyGateway.Gateway.ControllerName,
-				GatewayClassName:       v1.ObjectName(update.Key),
-				GlobalRateLimitEnabled: r.EnvoyGateway.RateLimit != nil,
+				GatewayControllerName:   r.Server.EnvoyGateway.Gateway.ControllerName,
+				GatewayClassName:        v1.ObjectName(update.Key),
+				GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
+				EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 			}
 
 			// If an extension is loaded, pass its supported groups/kinds to the translator
