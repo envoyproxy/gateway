@@ -356,7 +356,6 @@ spec:
                         type: object
                     required:
                     - host
-                    - port
                     type: object
                   type:
                     allOf:
