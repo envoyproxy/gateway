@@ -240,6 +240,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "http1-trailers",
 		},
+		{
+			name: "http1-preserve-case",
+		},
 	}
 
 	for _, tc := range testCases {

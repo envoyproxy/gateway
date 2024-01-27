@@ -42,6 +42,20 @@ var (
 			}}},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
+	redactedHappyHTTPSListener = HTTPListener{
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		TLS: &TLSConfig{
+			Certificates: []TLSCertificate{{
+
+				Name:              "happy",
+				ServerCertificate: []byte{1, 2, 3},
+				PrivateKey:        redacted,
+			}}},
+		Routes: []*HTTPRoute{&happyHTTPRoute},
+	}
 	invalidAddrHTTPListener = HTTPListener{
 		Name:      "invalid-addr",
 		Address:   "1.0.0",
@@ -1217,7 +1231,7 @@ func TestPrintable(t *testing.T) {
 				HTTP: []*HTTPListener{&happyHTTPSListener},
 			},
 			want: &Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener},
+				HTTP: []*HTTPListener{&redactedHappyHTTPSListener},
 			},
 		},
 	}

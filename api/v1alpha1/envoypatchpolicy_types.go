@@ -158,6 +158,10 @@ const (
 	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
 	// policy cannot find the resource type to patch to.
 	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
+
+	// PolicyReasonDisabled is used with the "Accepted" condition when the policy
+	// feature is disabled by the configuration.
+	PolicyReasonDisabled gwapiv1a2.PolicyConditionReason = "Disabled"
 )
 
 //+kubebuilder:object:root=true
