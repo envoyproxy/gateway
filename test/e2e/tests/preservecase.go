@@ -116,7 +116,7 @@ var PreserveCaseTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			// Can't use the standard method for checking the response, since the remote side isn't the
-			// conformance echo server and it returns a differently formated response.
+			// conformance echo server and it returns a differently formatted response.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/preserve?headers=ReSpOnSeHeAdEr",
