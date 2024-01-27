@@ -91,6 +91,7 @@ _Appears in:_
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 | `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
+| `compression` _[Compression](#compression) array_ | The compression config for the http streams. |
 
 
 
@@ -242,6 +243,32 @@ _Appears in:_
 | `caCertificateRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectreference-v1-core) array_ | CACertificateRefs contains one or more references to Kubernetes objects that contain TLS certificates of the Certificate Authorities that can be used as a trust anchor to validate the certificates presented by the client. 
  A single reference to a Kubernetes ConfigMap, with the CA certificate in a key named `ca.crt` is currently supported. 
  References to a resource in different namespace are invalid UNLESS there is a ReferenceGrant in the target namespace that allows the certificate to be attached. |
+
+
+#### Compression
+
+
+
+Compression defines the config of enabling compression. This can help reduce the bandwidth at the expense of higher CPU.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[CompressorType](#compressortype)_ | CompressorType defines the compressor type to use for compression. |
+| `gzip` _[GzipCompressor](#gzipcompressor)_ | The configuration for GZIP compressor. |
+
+
+#### CompressorType
+
+_Underlying type:_ `string`
+
+CompressorType defines the types of compressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [Compression](#compression)
+
 
 
 #### ConsistentHash
@@ -933,6 +960,17 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+#### GzipCompressor
+
+
+
+GzipCompressor defines the config for the Gzip compressor. The default values can be found here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/compressor/v3/gzip.proto#extension-envoy-compression-gzip-compressor
+
+_Appears in:_
+- [Compression](#compression)
+
+
+
 #### HTTP1Settings
 
 
@@ -1293,9 +1331,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
-| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set. |
-| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whose namespace do not match given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set. |
+| `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelector are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
+| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set. |
+| `namespaceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#labelselector-v1-meta)_ | NamespaceSelector holds the label selector used to dynamically select namespaces. Envoy Gateway will watch for namespaces matching the specified label selector. Precisely one of Namespaces and NamespaceSelector must be set. |
 
 
 #### KubernetesWatchModeType

@@ -41,18 +41,3 @@ func HashString(str string) string {
 	h.Write([]byte(str))
 	return strings.ToLower(fmt.Sprintf("%x", h.Sum(nil)))
 }
-
-// ContainsAllLabels checks if all specified labels are present in the given map.
-// It returns true if all labels are found, otherwise false.
-// The function assumes that the map contains at least as many labels as specified in labelsToCheck.
-func ContainsAllLabels(labels map[string]string, labelsToCheck []string) bool {
-	if len(labels) < len(labelsToCheck) {
-		return false
-	}
-	for _, label := range labelsToCheck {
-		if _, ok := labels[label]; !ok {
-			return false
-		}
-	}
-	return true
-}

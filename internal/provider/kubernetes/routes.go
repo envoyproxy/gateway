@@ -34,7 +34,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 	}
 
 	tlsRoutes := tlsRouteList.Items
-	if len(r.namespaceLabels) != 0 {
+	if r.namespaceLabel != nil {
 		var rts []gwapiv1a2.TLSRoute
 		for _, rt := range tlsRoutes {
 			rt := rt
@@ -115,7 +115,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	}
 
 	grpcRoutes := grpcRouteList.Items
-	if len(r.namespaceLabels) != 0 {
+	if r.namespaceLabel != nil {
 		var grs []gwapiv1a2.GRPCRoute
 		for _, gr := range grpcRoutes {
 			gr := gr
@@ -244,7 +244,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	}
 
 	httpRoutes := httpRouteList.Items
-	if len(r.namespaceLabels) != 0 {
+	if r.namespaceLabel != nil {
 		var hrs []gwapiv1.HTTPRoute
 		for _, hr := range httpRoutes {
 			hr := hr
@@ -417,7 +417,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 	}
 
 	tcpRoutes := tcpRouteList.Items
-	if len(r.namespaceLabels) != 0 {
+	if r.namespaceLabel != nil {
 		var trs []gwapiv1a2.TCPRoute
 		for _, tr := range tcpRoutes {
 			tr := tr
@@ -498,7 +498,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 	}
 
 	udpRoutes := udpRouteList.Items
-	if len(r.namespaceLabels) != 0 {
+	if r.namespaceLabel != nil {
 		var urs []gwapiv1a2.UDPRoute
 		for _, ur := range udpRoutes {
 			ur := ur
