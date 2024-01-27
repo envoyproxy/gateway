@@ -13,11 +13,11 @@ import (
 	"reflect"
 
 	"golang.org/x/exp/slices"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -57,6 +57,8 @@ var (
 	ErrHCHTTPExpectedStatusesInvalid        = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
 	ErrHealthCheckPayloadInvalid            = errors.New("one of Text, Binary fields must be set in payload")
 	ErrHTTPStatusInvalid                    = errors.New("HTTPStatus should be in [200,600)")
+
+	redacted = []byte("[redacted]")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -155,20 +157,29 @@ func (x Xds) GetUDPListener(name string) *UDPListener {
 	return nil
 }
 
+func (x Xds) YAMLString() string {
+	y, _ := yaml.Marshal(x.Printable())
+	return string(y)
+}
+
 // Printable returns a deep copy of the resource that can be safely logged.
 func (x Xds) Printable() *Xds {
 	out := x.DeepCopy()
 	for _, listener := range out.HTTP {
 		// Omit field
-		listener.TLS = nil
+		if listener.TLS != nil {
+			for i := range listener.TLS.Certificates {
+				listener.TLS.Certificates[i].PrivateKey = redacted
+			}
+		}
 
 		for _, route := range listener.Routes {
 			// Omit field
 			if route.OIDC != nil {
-				route.OIDC.ClientSecret = []byte{}
+				route.OIDC.ClientSecret = redacted
 			}
 			if route.BasicAuth != nil {
-				route.BasicAuth.Users = []byte{}
+				route.BasicAuth.Users = redacted
 			}
 		}
 	}
