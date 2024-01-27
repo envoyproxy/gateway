@@ -268,19 +268,18 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	}
 
 	// Add all EnvoyPatchPolicies
-	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
-		envoyPatchPolicies := v1alpha1.EnvoyPatchPolicyList{}
-		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
-		}
+	envoyPatchPolicies := v1alpha1.EnvoyPatchPolicyList{}
+	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
+	}
 
-		for _, policy := range envoyPatchPolicies.Items {
-			policy := policy
-			// Discard Status to reduce memory consumption in watchable
-			// It will be recomputed by the gateway-api layer
-			policy.Status = v1alpha1.EnvoyPatchPolicyStatus{}
-			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
-		}
+	for _, policy := range envoyPatchPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = v1alpha1.EnvoyPatchPolicyStatus{}
+
+		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 	}
 
 	// Add all ClientTrafficPolicies
