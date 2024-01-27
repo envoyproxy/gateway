@@ -53,7 +53,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 	defer cancel()
 	req, err := nethttp.NewRequestWithContext(ctx, method, request.URL.String(), nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if request.Host != "" {
 		req.Host = request.Host
@@ -67,7 +67,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 		var dump []byte
 		dump, err = httputil.DumpRequestOut(req, true)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		fmt.Printf("Sending Request:\n%s\n\n", formatDump(dump, "< "))
@@ -75,7 +75,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -83,7 +83,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 		var dump []byte
 		dump, err = httputil.DumpResponse(resp, true)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		fmt.Printf("Received Response:\n%s\n\n", formatDump(dump, "< "))
@@ -93,12 +93,12 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = json.Unmarshal(body, &cReq)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unexpected error reading response: %w", err)
+		return nil, fmt.Errorf("unexpected error reading response: %w", err)
 	}
 
 	return cReq, nil

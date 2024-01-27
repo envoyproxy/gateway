@@ -575,7 +575,6 @@ data:
          		fmt.Fprintf(ctx, string(d)+"\n")
          	}
          }
-         
          func main() {
          	s := fasthttp.Server{
          		Handler:                       HandleFastHTTP,
@@ -626,6 +625,6 @@ spec:
   selector:
     app: golang-app
   ports:
-    - protocol: TCP
-      port: 8000
-      targetPort: 8000
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
