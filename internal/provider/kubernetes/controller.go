@@ -43,19 +43,20 @@ import (
 )
 
 const (
-	classGatewayIndex        = "classGatewayIndex"
-	gatewayTLSRouteIndex     = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex    = "gatewayHTTPRouteIndex"
-	gatewayGRPCRouteIndex    = "gatewayGRPCRouteIndex"
-	gatewayTCPRouteIndex     = "gatewayTCPRouteIndex"
-	gatewayUDPRouteIndex     = "gatewayUDPRouteIndex"
-	secretGatewayIndex       = "secretGatewayIndex"
-	targetRefGrantRouteIndex = "targetRefGrantRouteIndex"
-	backendHTTPRouteIndex    = "backendHTTPRouteIndex"
-	backendGRPCRouteIndex    = "backendGRPCRouteIndex"
-	backendTLSRouteIndex     = "backendTLSRouteIndex"
-	backendTCPRouteIndex     = "backendTCPRouteIndex"
-	backendUDPRouteIndex     = "backendUDPRouteIndex"
+	classGatewayIndex         = "classGatewayIndex"
+	gatewayTLSRouteIndex      = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex     = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex     = "gatewayGRPCRouteIndex"
+	gatewayTCPRouteIndex      = "gatewayTCPRouteIndex"
+	gatewayUDPRouteIndex      = "gatewayUDPRouteIndex"
+	secretGatewayIndex        = "secretGatewayIndex"
+	targetRefGrantRouteIndex  = "targetRefGrantRouteIndex"
+	backendHTTPRouteIndex     = "backendHTTPRouteIndex"
+	backendGRPCRouteIndex     = "backendGRPCRouteIndex"
+	backendTLSRouteIndex      = "backendTLSRouteIndex"
+	backendTCPRouteIndex      = "backendTCPRouteIndex"
+	backendUDPRouteIndex      = "backendUDPRouteIndex"
+	secretSecurityPolicyIndex = "secretSecurityPolicyIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -189,7 +190,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	// Update status for all gateway classes
 	for _, gc := range cc.notAcceptedClasses() {
-		if err := r.gatewayClassUpdater(ctx, gc, false, string(status.ReasonOlderGatewayClassExists),
+		if err := r.updateStatusForGatewayClass(ctx, gc, false, string(status.ReasonOlderGatewayClassExists),
 			status.MsgOlderGatewayClassExists); err != nil {
 			r.resources.GatewayAPIResources.Delete(acceptedGC.Name)
 			return reconcile.Result{}, err
@@ -346,7 +347,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	if acceptedGC.Spec.ParametersRef != nil && acceptedGC.DeletionTimestamp == nil {
 		if err := r.processParamsRef(ctx, acceptedGC, resourceTree); err != nil {
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-			if err := r.gatewayClassUpdater(ctx, acceptedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
+			if err := r.updateStatusForGatewayClass(ctx, acceptedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
 				r.log.Error(err, "unable to update GatewayClass status")
 			}
 			r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
@@ -358,7 +359,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		r.mergeGateways = *resourceTree.EnvoyProxy.Spec.MergeGateways
 	}
 
-	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
+	if err := r.updateStatusForGatewayClass(ctx, acceptedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 		r.log.Error(err, "unable to update GatewayClass status")
 		return reconcile.Result{}, err
 	}
@@ -490,31 +491,6 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	return nil
 }
 
-func (r *gatewayAPIReconciler) gatewayClassUpdater(ctx context.Context, gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) error {
-	if r.statusUpdater != nil {
-		r.statusUpdater.Send(status.Update{
-			NamespacedName: types.NamespacedName{Name: gc.Name},
-			Resource:       &gwapiv1.GatewayClass{},
-			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-				gc, ok := obj.(*gwapiv1.GatewayClass)
-				if !ok {
-					panic(fmt.Sprintf("unsupported object type %T", obj))
-				}
-
-				return status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
-			}),
-		})
-	} else {
-		// this branch makes testing easier by not going through the status.Updater.
-		duplicate := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
-
-		if err := r.client.Status().Update(ctx, duplicate); err != nil && !kerrors.IsNotFound(err) {
-			return fmt.Errorf("error updating status of gatewayclass %s: %w", duplicate.Name, err)
-		}
-	}
-	return nil
-}
-
 func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*corev1.Namespace, error) {
 	nsKey := types.NamespacedName{Name: name}
 	ns := new(corev1.Namespace)
@@ -523,50 +499,6 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 		return nil, err
 	}
 	return ns, nil
-}
-
-func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
-	// nil check for unit tests.
-	if r.statusUpdater == nil {
-		return
-	}
-
-	// Get deployment
-	deploy, err := r.envoyDeploymentForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Deployment for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
-	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Service for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-	// update accepted condition
-	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
-	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy, r.store.listNodeAddresses()...)
-
-	key := utils.NamespacedName(gtw)
-
-	// publish status
-	r.statusUpdater.Send(status.Update{
-		NamespacedName: key,
-		Resource:       new(gwapiv1.Gateway),
-		Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-			g, ok := obj.(*gwapiv1.Gateway)
-			if !ok {
-				panic(fmt.Sprintf("unsupported object type %T", obj))
-			}
-			gCopy := g.DeepCopy()
-			gCopy.Status.Conditions = gtw.Status.Conditions
-			gCopy.Status.Addresses = gtw.Status.Addresses
-			gCopy.Status.Listeners = gtw.Status.Listeners
-			return gCopy
-		}),
-	})
 }
 
 func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1b1.ReferenceGrant, error) {
@@ -922,9 +854,11 @@ func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 	return backendRefs
 }
 
-// addUDPRouteIndexers adds indexing on UDPRoute, for Service objects that are
-// referenced in UDPRoute objects via `.spec.rules.backendRefs`. This helps in
-// querying for UDPRoutes that are affected by a particular Service CRUD.
+// addUDPRouteIndexers adds indexing on UDPRoute.
+//   - For Gateway objects that are referenced in UDPRoute objects via `.spec.parentRefs`. This helps in
+//     querying for UDPRoutes that are affected by a particular Gateway CRUD.
+//   - For Service objects that are referenced in UDPRoute objects via `.spec.rules.backendRefs`. This helps in
+//     querying for UDPRoutes that are affected by a particular Service CRUD.
 func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, gatewayUDPRouteIndex, func(rawObj client.Object) []string {
 		udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
@@ -1034,303 +968,6 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1.Gat
 		}
 	}
 	return nil
-}
-
-// subscribeAndUpdateStatus subscribes to gateway API object status updates and
-// writes it into the Kubernetes API Server.
-func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
-	// Gateway object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "gateway-status"}, r.resources.GatewayStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				// Get gateway object
-				gtw := new(gwapiv1.Gateway)
-				if err := r.client.Get(ctx, update.Key, gtw); err != nil {
-					r.log.Error(err, "gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
-					errChan <- err
-					return
-				}
-				// Set the updated Status and call the status update
-				gtw.Status = *update.Value
-				r.statusUpdateForGateway(ctx, gtw)
-			},
-		)
-		r.log.Info("gateway status subscriber shutting down")
-	}()
-
-	// HTTPRoute object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "httproute-status"}, r.resources.HTTPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1.HTTPRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(gwapiv1.HTTPRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						h, ok := obj.(*gwapiv1.HTTPRoute)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Parents
-						return hCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("httpRoute status subscriber shutting down")
-	}()
-
-	// GRPCRoute object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(gwapiv1a2.GRPCRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						h, ok := obj.(*gwapiv1a2.GRPCRoute)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Parents
-						return hCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("grpcRoute status subscriber shutting down")
-	}()
-
-	// TLSRoute object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "tlsroute-status"}, r.resources.TLSRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(gwapiv1a2.TLSRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.TLSRoute)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("tlsRoute status subscriber shutting down")
-	}()
-
-	// TCPRoute object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "tcproute-status"}, r.resources.TCPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(gwapiv1a2.TCPRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.TCPRoute)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("tcpRoute status subscriber shutting down")
-	}()
-
-	// UDPRoute object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "udproute-status"}, r.resources.UDPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(gwapiv1a2.UDPRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.UDPRoute)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("udpRoute status subscriber shutting down")
-	}()
-
-	// EnvoyPatchPolicy object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "envoypatchpolicy-status"}, r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.EnvoyPatchPolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(v1alpha1.EnvoyPatchPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*v1alpha1.EnvoyPatchPolicy)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("envoyPatchPolicy status subscriber shutting down")
-	}()
-
-	// ClientTrafficPolicy object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "clienttrafficpolicy-status"}, r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.ClientTrafficPolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(v1alpha1.ClientTrafficPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*v1alpha1.ClientTrafficPolicy)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("clientTrafficPolicy status subscriber shutting down")
-	}()
-
-	// BackendTrafficPolicy object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "backendtrafficpolicy-status"}, r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.BackendTrafficPolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(v1alpha1.BackendTrafficPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*v1alpha1.BackendTrafficPolicy)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("backendTrafficPolicy status subscriber shutting down")
-	}()
-
-	// SecurityPolicy object status updater
-	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "securitypolicy-status"}, r.resources.SecurityPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.SecurityPolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(v1alpha1.SecurityPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*v1alpha1.SecurityPolicy)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("securityPolicy status subscriber shutting down")
-	}()
 }
 
 // watchResources watches gateway api resources.
@@ -1524,7 +1161,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch Secret CRUDs and process affected Gateways.
+	// Watch Secret CRUDs and process affected EG CRs (Gateway, SecurityPolicy, more in the future).
 	secretPredicates := []predicate.Predicate{
 		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
@@ -1624,6 +1261,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		spPredicates...,
 	); err != nil {
+		return err
+	}
+	if err := addSecurityPolicyIndexers(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -1755,4 +1395,37 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	}
 
 	return serviceImportFound
+}
+
+// addSecurityPolicyIndexers adds indexing on SecurityPolicy, for Secret objects that are
+// referenced in SecurityPolicy objects. This helps in querying for SecurityPolicies that are
+// affected by a particular Secret CRUD.
+func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc)
+}
+
+func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
+	securityPolicy := rawObj.(*v1alpha1.SecurityPolicy)
+
+	var (
+		secretReferences []gwapiv1b1.SecretObjectReference
+		values           []string
+	)
+
+	if securityPolicy.Spec.OIDC != nil {
+		secretReferences = append(secretReferences, securityPolicy.Spec.OIDC.ClientSecret)
+	}
+	if securityPolicy.Spec.BasicAuth != nil {
+		secretReferences = append(secretReferences, securityPolicy.Spec.BasicAuth.Users)
+	}
+
+	for _, reference := range secretReferences {
+		values = append(values,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(reference.Namespace, securityPolicy.Namespace),
+				Name:      string(reference.Name),
+			}.String(),
+		)
+	}
+	return values
 }
