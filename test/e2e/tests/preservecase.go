@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -42,14 +41,12 @@ func formatDump(data []byte, prefix string) string {
 // to the remote side.
 // The default HTTP client implementation in Golang also automatically normalizes received
 // headers as they are parsed , so it's not possible to verify that returned headers were not normalized
-func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.RoundTripper) (map[string]any, error) {
-	var timeout config.TimeoutConfig
-	config.SetupTimeoutConfig(&timeout)
+func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.RoundTripper, suite *suite.ConformanceTestSuite) (map[string]any, error) {
 	client := &nethttp.Client{}
 	client.Transport = transport
 
 	method := "GET"
-	ctx, cancel := context.WithTimeout(context.Background(), timeout.RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), suite.TimeoutConfig.RequestTimeout)
 	defer cancel()
 	req, err := nethttp.NewRequestWithContext(ctx, method, request.URL.String(), nil)
 	if err != nil {
@@ -63,7 +60,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 			req.Header[name] = value
 		}
 	}
-	if true {
+	if suite.Debug {
 		var dump []byte
 		dump, err = httputil.DumpRequestOut(req, true)
 		if err != nil {
@@ -79,7 +76,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 	}
 	defer resp.Body.Close()
 
-	if true {
+	if suite.Debug {
 		var dump []byte
 		dump, err = httputil.DumpResponse(resp, true)
 		if err != nil {
@@ -129,7 +126,7 @@ var PreserveCaseTest = suite.ConformanceTest{
 
 			var rt nethttp.RoundTripper
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			respBody, err := casePreservingRoundTrip(req, rt)
+			respBody, err := casePreservingRoundTrip(req, rt, suite)
 			if err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
