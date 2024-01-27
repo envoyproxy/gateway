@@ -13,10 +13,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -211,7 +213,67 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "gateway does not exist",
+			name: "references SecurityPolicy OIDC",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
+				&v1alpha1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "oidc",
+					},
+					Spec: v1alpha1.SecurityPolicySpec{
+						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						OIDC: &v1alpha1.OIDC{
+							Provider: v1alpha1.OIDCProvider{
+								Issuer:                "https://accounts.google.com",
+								AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
+								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+							},
+							ClientID: "client-id",
+							ClientSecret: gwapiv1b1.SecretObjectReference{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "references SecurityPolicy Basic Auth",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
+				&v1alpha1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "basic-auth",
+					},
+					Spec: v1alpha1.SecurityPolicySpec{
+						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						BasicAuth: &v1alpha1.BasicAuth{
+							Users: gwapiv1b1.SecretObjectReference{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "secret is not referenced by any EG CRs",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 			},
@@ -234,6 +296,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
+			WithIndex(&v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
