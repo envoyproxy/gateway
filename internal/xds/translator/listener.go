@@ -48,6 +48,8 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if !opts.EnableTrailers && !opts.PreserveHeaderCase {
 		return nil
 	}
+	// If PreserveHeaderCase is true and EnableTrailers is false then setting the EnableTrailers field to false
+	// is simply keeping it at its default value of "disabled".
 	r := &corev3.Http1ProtocolOptions{
 		EnableTrailers: opts.EnableTrailers,
 	}

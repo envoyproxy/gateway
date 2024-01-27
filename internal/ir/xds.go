@@ -346,6 +346,13 @@ type BackendWeights struct {
 	Invalid uint32 `json:"invalid" yaml:"invalid"`
 }
 
+// HTTP1Settings provides HTTP/1 configuration on the listener.
+// +k8s:deepcopy-gen=true
+type HTTP1Settings struct {
+	EnableTrailers     bool `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase bool `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+}
+
 // HTTPRoute holds the route information associated with the HTTP Route
 // +k8s:deepcopy-gen=true
 type HTTPRoute struct {
