@@ -62,7 +62,7 @@ func TestTranslate(t *testing.T) {
 			}
 
 			// Add common test fixtures
-			for i := 1; i <= 3; i++ {
+			for i := 1; i <= 4; i++ {
 				svcName := "service-" + strconv.Itoa(i)
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
