@@ -57,6 +57,8 @@ var (
 	ErrHCHTTPExpectedStatusesInvalid        = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
 	ErrHealthCheckPayloadInvalid            = errors.New("one of Text, Binary fields must be set in payload")
 	ErrHTTPStatusInvalid                    = errors.New("HTTPStatus should be in [200,600)")
+
+	redacted = []byte("[redacted]")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -162,7 +164,6 @@ func (x Xds) YAMLString() string {
 
 // Printable returns a deep copy of the resource that can be safely logged.
 func (x Xds) Printable() *Xds {
-	redacted := []byte("[redacted]")
 	out := x.DeepCopy()
 	for _, listener := range out.HTTP {
 		// Omit field
