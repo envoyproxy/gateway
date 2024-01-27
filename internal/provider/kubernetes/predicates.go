@@ -12,14 +12,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	matav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -62,7 +64,7 @@ type NamespaceGetter interface {
 }
 
 // checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
-func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj matav1.Object) (bool, error) {
+func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
 
 	var nsString string
 	// TODO: it requires extra condition validate cluster resources or resources without namespace?
@@ -82,7 +84,24 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj matav1.Object) (bo
 		return false, err
 	}
 
-	return utils.ContainsAllLabels(ns.Labels, r.namespaceLabels), nil
+	return matchLabelsAndExpressions(r.namespaceLabel, ns.Labels), nil
+}
+
+// matchLabelsAndExpressions extracts information from a given label selector and checks whether
+// the provided object labels match the selector criteria.
+// If the label selector is nil, it returns true, indicating a match.
+// It returns false if there is an error while converting the label selector or if the labels do not match.
+func matchLabelsAndExpressions(ls *metav1.LabelSelector, objLabels map[string]string) bool {
+	if ls == nil {
+		return true
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(ls)
+	if err != nil {
+		return false
+	}
+
+	return selector.Matches(labels.Set(objLabels))
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
@@ -102,7 +121,7 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 	}
 
 	if gc.Spec.ControllerName != r.classController {
-		r.log.Info("gatewayclass controller name", gc.Spec.ControllerName, "class controller name", r.classController)
+		r.log.Info("gatewayclass controller name", string(gc.Spec.ControllerName), "class controller name", string(r.classController))
 		r.log.Info("gatewayclass name for gateway doesn't match configured name",
 			"namespace", gw.Namespace, "name", gw.Name)
 		return false
@@ -119,11 +138,23 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return false
 	}
 
+	if r.secretReferencedByGateway(secret) {
+		return true
+	}
+
+	if r.secretReferencedBySecurityPolicy(secret) {
+		return true
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) secretReferencedByGateway(secret *corev1.Secret) bool {
 	gwList := &gwapiv1.GatewayList{}
 	if err := r.client.List(context.Background(), gwList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, utils.NamespacedName(secret).String()),
 	}); err != nil {
-		r.log.Error(err, "unable to find associated HTTPRoutes")
+		r.log.Error(err, "unable to find associated Gateways")
 		return false
 	}
 
@@ -137,8 +168,19 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 			return false
 		}
 	}
-
 	return true
+}
+
+func (r *gatewayAPIReconciler) secretReferencedBySecurityPolicy(secret *corev1.Secret) bool {
+	spList := &v1alpha1.SecurityPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, utils.NamespacedName(secret).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated SecurityPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
 }
 
 // validateServiceForReconcile tries finding the owning Gateway of the Service
@@ -156,7 +198,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
 	gtw := r.findOwningGateway(ctx, labels)
 	if gtw != nil {
-		r.statusUpdateForGateway(ctx, gtw)
+		r.updateStatusForGateway(ctx, gtw)
 		return false
 	}
 
@@ -167,7 +209,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		if res != nil && len(res.Gateways) > 0 {
 			for _, gw := range res.Gateways {
 				gw := gw
-				r.statusUpdateForGateway(ctx, gw)
+				r.updateStatusForGateway(ctx, gw)
 			}
 		}
 
@@ -291,7 +333,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
-			r.statusUpdateForGateway(ctx, gtw)
+			r.updateStatusForGateway(ctx, gtw)
 			return false
 		}
 	}
@@ -303,7 +345,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		if res != nil && len(res.Gateways) > 0 {
 			for _, gw := range res.Gateways {
 				gw := gw
-				r.statusUpdateForGateway(ctx, gw)
+				r.updateStatusForGateway(ctx, gw)
 			}
 		}
 		return false

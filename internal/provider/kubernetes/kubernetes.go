@@ -41,7 +41,6 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
 	}
 
-	// TODO: implement config validation on the watch mode config
 	if svr.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
