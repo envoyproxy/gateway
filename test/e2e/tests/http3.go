@@ -39,7 +39,7 @@ var HTTP3Test = suite.ConformanceTest{
 	Manifests:   []string{"testdata/http3.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Send http3 request", func(t *testing.T) {
-			namespace := "gateway-conformance-http3"
+			namespace := "gateway-conformance-https"
 			routeNN := types.NamespacedName{Name: "http3-route", Namespace: namespace}
 			gwNN := types.NamespacedName{Name: "http3-gateway", Namespace: namespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
@@ -52,6 +52,10 @@ var HTTP3Test = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCode: 200,
+					Headers: map[string]string{
+						"User-Agent":      "curl/7.84.0-DEV",
+						"X-Forwarded-For": "https",
+					},
 				},
 				Namespace: namespace,
 			}
