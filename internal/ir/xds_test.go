@@ -42,6 +42,20 @@ var (
 			}}},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
+	redactedHappyHTTPSListener = HTTPListener{
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		TLS: &TLSConfig{
+			Certificates: []TLSCertificate{{
+
+				Name:              "happy",
+				ServerCertificate: []byte{1, 2, 3},
+				PrivateKey:        redacted,
+			}}},
+		Routes: []*HTTPRoute{&happyHTTPRoute},
+	}
 	invalidAddrHTTPListener = HTTPListener{
 		Name:      "invalid-addr",
 		Address:   "1.0.0",
@@ -525,7 +539,7 @@ func TestValidateXds(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -576,7 +590,7 @@ func TestValidateHTTPListener(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -623,7 +637,7 @@ func TestValidateTCPListener(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -783,7 +797,7 @@ func TestValidateUDPListener(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -935,7 +949,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			} else {
 				got := test.input.Validate()
 				for _, w := range test.want {
-					assert.ErrorContains(t, got, w.Error())
+					require.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -1217,7 +1231,7 @@ func TestPrintable(t *testing.T) {
 				HTTP: []*HTTPListener{&happyHTTPSListener},
 			},
 			want: &Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener},
+				HTTP: []*HTTPListener{&redactedHappyHTTPSListener},
 			},
 		},
 	}

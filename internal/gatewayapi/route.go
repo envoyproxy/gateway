@@ -1053,6 +1053,11 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		return nil, weight
 	}
 
+	// Skip processing backends with 0 weight
+	if weight == 0 {
+		return nil, weight
+	}
+
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType

@@ -91,6 +91,7 @@ _Appears in:_
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
 | `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
+| `compression` _[Compression](#compression) array_ | The compression config for the http streams. |
 
 
 
@@ -223,7 +224,50 @@ _Appears in:_
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 | `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
+| `http1` _[HTTP1Settings](#http1settings)_ | HTTP1 provides HTTP/1 configuration on the listener. |
 
+
+
+
+#### ClientValidationContext
+
+
+
+ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection to the Gateway. By default, no client specific configuration is validated.
+
+_Appears in:_
+- [TLSSettings](#tlssettings)
+
+| Field | Description |
+| --- | --- |
+| `caCertificateRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectreference-v1-core) array_ | CACertificateRefs contains one or more references to Kubernetes objects that contain TLS certificates of the Certificate Authorities that can be used as a trust anchor to validate the certificates presented by the client. 
+ A single reference to a Kubernetes ConfigMap, with the CA certificate in a key named `ca.crt` is currently supported. 
+ References to a resource in different namespace are invalid UNLESS there is a ReferenceGrant in the target namespace that allows the certificate to be attached. |
+
+
+#### Compression
+
+
+
+Compression defines the config of enabling compression. This can help reduce the bandwidth at the expense of higher CPU.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[CompressorType](#compressortype)_ | CompressorType defines the compressor type to use for compression. |
+| `gzip` _[GzipCompressor](#gzipcompressor)_ | The configuration for GZIP compressor. |
+
+
+#### CompressorType
+
+_Underlying type:_ `string`
+
+CompressorType defines the types of compressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [Compression](#compression)
 
 
 
@@ -717,6 +761,7 @@ _Appears in:_
 | `telemetry` _[ProxyTelemetry](#proxytelemetry)_ | Telemetry defines telemetry parameters for managed proxies. |
 | `bootstrap` _[ProxyBootstrap](#proxybootstrap)_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 | `concurrency` _integer_ | Concurrency defines the number of worker threads to run. If unset, it defaults to the number of cpuset threads on the platform. |
+| `extraArgs` _string array_ | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` _boolean_ | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 
 
@@ -915,6 +960,32 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+#### GzipCompressor
+
+
+
+GzipCompressor defines the config for the Gzip compressor. The default values can be found here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/compressor/v3/gzip.proto#extension-envoy-compression-gzip-compressor
+
+_Appears in:_
+- [Compression](#compression)
+
+
+
+#### HTTP1Settings
+
+
+
+HTTP1Settings provides HTTP/1 configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `enableTrailers` _boolean_ | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
+| `preserveHeaderCase` _boolean_ | PreserveHeaderCase defines if Envoy should preserve the letter case of headers. By default, Envoy will lowercase all the headers. |
+
+
 #### HTTP3Settings
 
 
@@ -1063,6 +1134,7 @@ _Appears in:_
 | --- | --- |
 | `op` _[JSONPatchOperationType](#jsonpatchoperationtype)_ | Op is the type of operation to perform |
 | `path` _string_ | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
+| `from` _string_ | From is the source location of the value to be copied or moved. Only valid for move or copy operations Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `value` _[JSON](#json)_ | Value is the new value of the path location. |
 
 
@@ -1259,9 +1331,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
-| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set. |
-| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whose namespace do not match given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set. |
+| `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelector are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
+| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set. |
+| `namespaceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#labelselector-v1-meta)_ | NamespaceSelector holds the label selector used to dynamically select namespaces. Envoy Gateway will watch for namespaces matching the specified label selector. Precisely one of Namespaces and NamespaceSelector must be set. |
 
 
 #### KubernetesWatchModeType
@@ -2073,6 +2145,7 @@ _Appears in:_
 | `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 In builds using BoringSSL FIPS the default curve is: - P-256 |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
 | `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. Supported values are: - http/1.0 - http/1.1 - h2 |
+| `clientValidation` _[ClientValidationContext](#clientvalidationcontext)_ | ClientValidation specifies the configuration to validate the client initiating the TLS connection to the Gateway listener. |
 
 
 #### TLSVersion

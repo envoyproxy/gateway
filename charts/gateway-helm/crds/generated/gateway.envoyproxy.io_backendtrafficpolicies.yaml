@@ -77,6 +77,25 @@ spec:
                     minimum: 0
                     type: integer
                 type: object
+              compression:
+                description: The compression config for the http streams.
+                items:
+                  description: Compression defines the config of enabling compression.
+                    This can help reduce the bandwidth at the expense of higher CPU.
+                  properties:
+                    gzip:
+                      description: The configuration for GZIP compressor.
+                      type: object
+                    type:
+                      description: CompressorType defines the compressor type to use
+                        for compression.
+                      enum:
+                      - Gzip
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
               faultInjection:
                 description: FaultInjection defines the fault injection policy to
                   be applied. This configuration can be used to inject delays and

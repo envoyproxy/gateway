@@ -167,6 +167,7 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
+			requireSecrets:            true,
 		},
 		{
 			name:                      "jsonpatch-missing-resource",
@@ -235,6 +236,12 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "path-settings",
+		},
+		{
+			name: "http1-trailers",
+		},
+		{
+			name: "http1-preserve-case",
 		},
 	}
 
