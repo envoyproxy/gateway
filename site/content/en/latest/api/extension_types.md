@@ -42,7 +42,7 @@ _Appears in:_
 
 
 
-BackendTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
+BackendTrafficPolicy allows the user to configure the behavior of the connection between the Envoy Proxy listener and the backend service.
 
 _Appears in:_
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
@@ -90,6 +90,7 @@ _Appears in:_
 | `healthCheck` _[HealthCheck](#healthcheck)_ | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` _[FaultInjection](#faultinjection)_ | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` _[CircuitBreaker](#circuitbreaker)_ | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `timeout` _[Timeout](#timeout)_ | Timeout settings for the backend connections. |
 
 
 
@@ -953,6 +954,21 @@ _Appears in:_
 
 
 
+#### HTTPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectionIdleTimeout` _Duration_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `maxConnectionDuration` _Duration_ | The maximum duration of an HTTP connection. Default: unlimited. |
+
+
 #### HeaderMatch
 
 
@@ -1079,14 +1095,31 @@ _Appears in:_
 
 
 
-JWTExtractor defines a custom JWT token extraction from HTTP request.
+JWTExtractor defines a custom JWT token extraction from HTTP request. If specified, Envoy will extract the JWT token from the listed extractors (headers, cookies, or params) and validate each of them. If any value extracted is found to be an invalid JWT, a 401 error will be returned.
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
-| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. If specified, Envoy will extract the JWT token from the listed cookies and validate each of them. If any cookie is found to be an invalid JWT, a 401 error will be returned. |
+| `headers` _[JWTHeaderExtractor](#jwtheaderextractor) array_ | Headers represents a list of HTTP request headers to extract the JWT token from. |
+| `cookies` _string array_ | Cookies represents a list of cookie names to extract the JWT token from. |
+| `params` _string array_ | Params represents a list of query parameters to extract the JWT token from. |
+
+
+#### JWTHeaderExtractor
+
+
+
+JWTHeaderExtractor defines an HTTP header location to extract JWT token
+
+_Appears in:_
+- [JWTExtractor](#jwtextractor)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the HTTP header name to retrieve the token |
+| `valuePrefix` _string_ | ValuePrefix is the prefix that should be stripped before extracting the token. The format would be used by Envoy like "{ValuePrefix}<TOKEN>". For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
 
 
 #### JWTProvider
@@ -1227,8 +1260,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
-| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set |
-| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whois namespce have no given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set |
+| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set. |
+| `namespaceSelectors` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whose namespace do not match given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set. |
 
 
 #### KubernetesWatchModeType
@@ -2009,6 +2042,20 @@ _Appears in:_
 | `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
 
 
+#### TCPTimeout
+
+
+
+
+
+_Appears in:_
+- [Timeout](#timeout)
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
+
+
 #### TLSSettings
 
 
@@ -2037,6 +2084,21 @@ TLSVersion specifies the TLS version
 _Appears in:_
 - [TLSSettings](#tlssettings)
 
+
+
+#### Timeout
+
+
+
+Timeout defines configuration for timeouts related to connections.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `tcp` _[TCPTimeout](#tcptimeout)_ | Timeout settings for TCP. |
+| `http` _[HTTPTimeout](#httptimeout)_ | Timeout settings for HTTP. |
 
 
 #### TracingProvider

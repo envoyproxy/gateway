@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -44,10 +43,10 @@ func TestGenerateCerts(t *testing.T) {
 			currentTime := time.Now()
 
 			err = verifyCert(got.EnvoyGatewayCertificate, roots, tc.wantEnvoyGatewayDNSName, currentTime)
-			assert.NoErrorf(t, err, "Validating %s failed", name)
+			require.NoErrorf(t, err, "Validating %s failed", name)
 
 			err = verifyCert(got.EnvoyCertificate, roots, tc.wantEnvoyDNSName, currentTime)
-			assert.NoErrorf(t, err, "Validating %s failed", name)
+			require.NoErrorf(t, err, "Validating %s failed", name)
 		})
 	}
 
@@ -126,7 +125,7 @@ func TestGeneratedValidKubeCerts(t *testing.T) {
 		tc := tests[i]
 		t.Run(tc.name, func(t *testing.T) {
 			err := verifyCert(tc.cert, roots, tc.dnsName, now)
-			assert.NoErrorf(t, err, "Validating %s failed", tc.name)
+			require.NoErrorf(t, err, "Validating %s failed", tc.name)
 		})
 	}
 

@@ -62,15 +62,33 @@ func Test_wildcard2regex(t *testing.T) {
 			origin:   "http://foo.example.com",
 			want:     0,
 		},
+		{
+			name:     "test8",
+			wildcard: "http://*",
+			origin:   "http://foo.example.com",
+			want:     1,
+		},
+		{
+			name:     "test9",
+			wildcard: "http://*",
+			origin:   "https://foo.example.com",
+			want:     0,
+		},
+		{
+			name:     "test10",
+			wildcard: "*",
+			origin:   "http://foo.example.com",
+			want:     1,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			regexStr := wildcard2regex(tt.wildcard)
 			regex, err := regexp.Compile(regexStr)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			finds := regex.FindAllString(tt.origin, -1)
-			assert.Equalf(t, tt.want, len(finds), "wildcard2regex(%v)", tt.wildcard)
+			assert.Lenf(t, finds, tt.want, "wildcard2regex(%v)", tt.wildcard)
 		})
 	}
 }

@@ -108,7 +108,7 @@ func TestGatewaysOfClass(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			gwList := &gwapiv1.GatewayList{Items: tc.gws}
 			actual := gatewaysOfClass(gc, gwList)
-			require.Equal(t, tc.expect, len(actual))
+			require.Len(t, actual, tc.expect)
 		})
 	}
 }

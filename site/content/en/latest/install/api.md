@@ -25,6 +25,7 @@ The Helm chart for Envoy Gateway
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | certgen.job.annotations | object | `{}` |  |
+| certgen.job.resources | object | `{}` |  |
 | certgen.job.ttlSecondsAfterFinished | int | `0` |  |
 | certgen.rbac.annotations | object | `{}` |  |
 | certgen.rbac.labels | object | `{}` |  |

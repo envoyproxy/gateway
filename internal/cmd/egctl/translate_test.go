@@ -318,14 +318,14 @@ func TestTranslate(t *testing.T) {
 
 			root.SetArgs(args)
 			if tc.expect {
-				assert.NoError(t, root.ExecuteContext(context.Background()))
+				require.NoError(t, root.ExecuteContext(context.Background()))
 			} else {
 				assert.Error(t, root.ExecuteContext(context.Background()))
 				return
 			}
 
 			out, err := io.ReadAll(b)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			got := &TranslationResult{}
 			mustUnmarshal(t, out, got)
 			var fn string

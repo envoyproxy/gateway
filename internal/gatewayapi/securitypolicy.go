@@ -8,8 +8,8 @@ package gatewayapi
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"sort"
 	"strconv"
@@ -578,8 +578,8 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		return fmt.Errorf("token endpoint URL scheme must be https: %s", tokenEndpoint)
 	}
 
-	if ip := net.ParseIP(parsedURL.Hostname()); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
+	if ip, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
+		if ip.Unmap().Is4() {
 			return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
 		}
 	}

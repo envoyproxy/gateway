@@ -523,14 +523,14 @@ spec:
       - kind: UDPRoute
 ---
 apiVersion: v1
-Kind: Namespace
+kind: Namespace
 metadata:
   name: gateway-conformance-http3
   labels:
     gateway-conformance: http3
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-Kind: Secret
+apiVersion: v1
+kind: Secret
 metadata:
   name: http3-secret
   namespace: gateway-conformance-http3
@@ -581,7 +581,7 @@ data:
     HQe9nVbQT7GtAD4UPFouCQZRevXznzZJJ1fmhOjFrc5Uj486q/xkg2fcejpUhDgG
     N5Czgf9NPX47ZlnnnYSz2KU=
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: http3-gateway
@@ -589,61 +589,70 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-    - name: https
-      protocol: HTTPS
-      port: 443
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            group: gateway.networking.k8s.io
-            name: http3-secret
-            namespace: gateway-conformance-http3
+  - name: https
+    protocol: HTTPS
+    port: 443
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: http3-secret
+        namespace: gateway-conformance-http3
+  - name: http
+    protocol: HTTP
+    port: 80
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-Kind: Service
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: http3-service
+  name: http3-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http3-backend
   namespace: gateway-conformance-http3
   labels:
-    service: http3
+    service: http3-backend
+    app: http3-backend
 spec:
   ports:
-    - name: http3
-      port: 3000
-      targetPort: 3000
+  - name: http3
+    port: 3000
+    targetPort: 3000
   selectors:
-    app: http3
+    app: http3-backend
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-Kind: Deployment
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: http3-deployment
+  name: http3-backend
   namespace: gateway-conformance-http3
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: http3
+      app: http3-backend
+      version: v1
   template:
     metadata:
       labels:
-        app: http3
+        app: http3-backend
+        version: v1
     spec:
-      serviceAccountName: backend
+      serviceAccountName: http3-backend
       containers:
-        - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
-          imagePullPolicy: IfNotPresent
-          name: backend
-          ports:
-            - containerPort: 3000
+      - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        imagePullPolicy: IfNotPresent
+        name: backend
+        ports:
+        - containerPort: 3000
           env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-
-  
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
