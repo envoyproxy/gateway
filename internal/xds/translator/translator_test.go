@@ -243,6 +243,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "http1-preserve-case",
 		},
+		{
+			name: "timeout",
+		},
 	}
 
 	for _, tc := range testCases {
