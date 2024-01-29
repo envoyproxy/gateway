@@ -943,7 +943,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `host` _Hostname_ | Host is the hostname of the gRPC External Authorization service. |
+| `host` _PreciseHostname_ | Host is the hostname of the gRPC External Authorization service. |
 | `port` _PortNumber_ | Port is the network port of the gRPC External Authorization service. |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the gRPC External Authorization service. Note: If not specified, the proxy will talk to the gRPC External Authorization service in plaintext. |
 
@@ -1041,7 +1041,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `host` _Hostname_ | Host is the hostname of the HTTP External Authorization service. |
+| `host` _PreciseHostname_ | Host is the hostname of the HTTP External Authorization service. |
 | `port` _PortNumber_ | Port is the network port of the HTTP External Authorization service. If port is not specified, 80 for http and 443 for https are assumed. |
 | `path` _string_ | Path is the path of the HTTP External Authorization service. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. Note: If not specified, the proxy will talk to the HTTP External Authorization service in plaintext. |
@@ -2192,8 +2192,10 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRefs` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ | CertificateRefs contains a series of references to Kubernetes objects that contains TLS certificates and private keys. These certificates are used to establish a TLS handshake with the external authorization server. 
- If this field is not specified, the proxy will not present a client certificate and will use the system default certificate pool to verify the server certificate. |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef is the reference to a Kubernetes Secret that contains the TLS certificate and private key. The certificate and private key will be used to establish a TLS handshake between the Envoy proxy and the external authorization server. The referenced Secret must contain two keys: tls.crt and tls.key. 
+ If this field is not specified, the Envoy proxy will not present a client certificate to the external authorization server. |
+| `caCertRef` _LocalObjectReference_ | CACertRef is the reference to a Kubernetes ConfigMap that contains a PEM-encoded TLS CA certificate bundle, which is used to validate the certificate presented by the external authorization server. The referenced ConfigMap must contain a key named ca.crt. 
+ If not specified, the proxy will use the system default certificate pool to verify the server certificate. |
 
 
 #### TLSSettings

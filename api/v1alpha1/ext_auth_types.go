@@ -8,7 +8,6 @@ package v1alpha1
 import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // ExtAuthServiceType specifies the types of External Authorization.
@@ -62,7 +61,7 @@ type ExtAuth struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 type GRPCExtAuthService struct {
 	// Host is the hostname of the gRPC External Authorization service.
-	Host gwapiv1a2.Hostname `json:"host"`
+	Host gwapiv1a2.PreciseHostname `json:"host"`
 
 	// Port is the network port of the gRPC External Authorization service.
 	Port gwapiv1a2.PortNumber `json:"port"`
@@ -77,7 +76,7 @@ type GRPCExtAuthService struct {
 // HTTPExtAuthService defines the HTTP External Authorization service
 type HTTPExtAuthService struct {
 	// Host is the hostname of the HTTP External Authorization service.
-	Host gwapiv1a2.Hostname `json:"host"`
+	Host gwapiv1a2.PreciseHostname `json:"host"`
 
 	// Port is the network port of the HTTP External Authorization service.
 	// If port is not specified, 80 for http and 443 for https are assumed.
@@ -111,8 +110,8 @@ type TLSConfig struct {
 	// authorization server.
 	// The referenced Secret must contain two keys: tls.crt and tls.key.
 	//
-	// If this field is not specified, the proxy will not present a client certificate
-	// to the external authorization server.
+	// If this field is not specified, the Envoy proxy will not present a client
+	// certificate to the external authorization server.
 	//
 	// +optional
 	CertificateRef *gwapiv1a2.SecretObjectReference `json:"certificateRef,omitempty"`
@@ -127,12 +126,4 @@ type TLSConfig struct {
 	//
 	// +optional
 	CACertRef *gwapiv1.LocalObjectReference `json:"caCertRef,omitempty"`
-
-	// Hostname is used for two purposes in the connection between Envoy and the
-	// external authorization server:
-	//
-	// 1. Hostname MUST be used as the SNI to connect to the external authorization server (RFC 6066).
-	// 2. Hostname MUST be used for authentication and MUST match the certificate
-	//    served by the external authorization server.
-	Hostname v1beta1.PreciseHostname `json:"hostname"`
 }
