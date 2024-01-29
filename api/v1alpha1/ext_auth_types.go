@@ -6,7 +6,9 @@
 package v1alpha1
 
 import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // ExtAuthServiceType specifies the types of External Authorization.
@@ -103,13 +105,34 @@ type HTTPExtAuthService struct {
 
 // TLSConfig describes a TLS configuration.
 type TLSConfig struct {
-	// CertificateRefs contains a series of references to Kubernetes objects that
-	// contains TLS certificates and private keys. These certificates are used to
-	// establish a TLS handshake with the external authorization server.
+	// CertificateRef is the reference to a Kubernetes Secret that contains the
+	// TLS certificate and private key. The certificate and private key will be
+	// used to establish a TLS handshake between the Envoy proxy and the external
+	// authorization server.
+	// The referenced Secret must contain two keys: tls.crt and tls.key.
 	//
 	// If this field is not specified, the proxy will not present a client certificate
-	// and will use the system default certificate pool to verify the server certificate.
+	// to the external authorization server.
+	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=64
-	CertificateRefs []gwapiv1a2.SecretObjectReference `json:"certificateRefs,omitempty"`
+	CertificateRef *gwapiv1a2.SecretObjectReference `json:"certificateRef,omitempty"`
+
+	// CACertRef is the reference to a Kubernetes ConfigMap that contains a
+	// PEM-encoded TLS CA certificate bundle, which is used to validate the
+	// certificate presented by the external authorization server.
+	// The referenced ConfigMap must contain a key named ca.crt.
+	//
+	// If not specified, the proxy will use the system default certificate pool to
+	// verify the server certificate.
+	//
+	// +optional
+	CACertRef *gwapiv1.LocalObjectReference `json:"caCertRef,omitempty"`
+
+	// Hostname is used for two purposes in the connection between Envoy and the
+	// external authorization server:
+	//
+	// 1. Hostname MUST be used as the SNI to connect to the external authorization server (RFC 6066).
+	// 2. Hostname MUST be used for authentication and MUST match the certificate
+	//    served by the external authorization server.
+	Hostname v1beta1.PreciseHostname `json:"hostname"`
 }
