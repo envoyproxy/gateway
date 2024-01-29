@@ -118,7 +118,8 @@ type JSONPatchOperation struct {
 	// +optional
 	From *string `json:"from,omitempty"`
 	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value"`
+	// +optional
+	Value apiextensionsv1.JSON `json:"value,omitempty"`
 }
 
 // EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy
