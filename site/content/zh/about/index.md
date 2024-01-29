@@ -12,6 +12,4 @@ Gateway API 资源用于动态供应和配置托管 Envoy 代理。
 请继续阅读以了解更多信息，或访问我们的[文档](/zh/latest/)开始使用！
 {{% /blocks/cover %}}
 
-{{% blocks/section color="black" %}}
-
 中文内容正在建设中！
