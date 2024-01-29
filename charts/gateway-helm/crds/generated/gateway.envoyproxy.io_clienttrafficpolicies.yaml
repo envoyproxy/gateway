@@ -66,6 +66,27 @@ spec:
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
                 type: object
+              httpConnectionManager:
+                description: HTTPConnectionManager provides HTTP Connection Manager
+                  configuration on the listener.
+                properties:
+                  useRemoteAddress:
+                    default: true
+                    description: UseRemoteAddress controls whether the connection
+                      manager will use the real remote address of the client connection
+                      when determining internal versus external origin and manipulating
+                      various headers. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+                      for more details. Enabled by default.
+                    type: boolean
+                  xffNumTrustedHops:
+                    description: XffNumTrustedHops controls the number of additional
+                      ingress proxy hops from the right side of XFF HTTP headers to
+                      trust when determining the origin client's IP address. Refer
+                      to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+                      for more details.
+                    format: int32
+                    type: integer
+                type: object
               path:
                 description: Path enables managing how the incoming path set by clients
                   can be normalized.

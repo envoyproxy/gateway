@@ -214,6 +214,14 @@ type HTTPListener struct {
 	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// UseRemoteAddress controls whether the connection manager will use the real remote address of the
+	// client connection when determining internal versus external origin and manipulating various headers.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+	UseRemoteAddress *bool `json:"useRemoteAddress,omitempty" yaml:"useRemoteAddress,omitempty"`
+	// XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
+	// headers to trust when determining the origin client's IP address.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+	XffNumTrustedHops uint32 `json:"xffNumTrustedHops,omitempty" yaml:"xffNumTrustedHops,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
@@ -339,6 +347,8 @@ type PathSettings struct {
 	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
+
+type HTTPConnectionManagerSettings egv1a1.HTTPConnectionManagerSettings
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {

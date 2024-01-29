@@ -221,6 +221,7 @@ _Appears in:_
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `suppressEnvoyHeaders` _boolean_ | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
+| `httpConnectionManager` _[HTTPConnectionManagerSettings](#httpconnectionmanagersettings)_ | HTTPConnectionManager provides HTTP Connection Manager configuration on the listener. |
 | `http3` _[HTTP3Settings](#http3settings)_ | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` _[TLSSettings](#tlssettings)_ | TLS settings configure TLS termination settings with the downstream client. |
 | `path` _[PathSettings](#pathsettings)_ | Path enables managing how the incoming path set by clients can be normalized. |
@@ -995,6 +996,21 @@ HTTP3Settings provides HTTP/3 configuration on the listener.
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
+
+
+#### HTTPConnectionManagerSettings
+
+
+
+HTTPConnectionManagerSettings provides HTTP Connection Manager configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `useRemoteAddress` _boolean_ | UseRemoteAddress controls whether the connection manager will use the real remote address of the client connection when determining internal versus external origin and manipulating various headers. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. Enabled by default. |
+| `xffNumTrustedHops` _integer_ | XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
 
 
 #### HTTPHealthChecker

@@ -285,5 +285,62 @@ You should now expect 200 response status and also see that source IP was preser
 }
 ```
 
+### Configure Number of X-Forwarded-For Trusted Hops
+
+This example configures the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address and determines whether or not `x-forwarded-proto` headers will be trusted. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for details.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http-xff-num-trusted-hops
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  httpConnectionManager:
+    xffNumTrustedHops: 2
+EOF
+```
+
+Verify that ClientTrafficPolicy is Accepted:
+
+```shell
+kubectl get clienttrafficpolicies.gateway.envoyproxy.io -n default
+```
+
+You should see the policy marked as accepted like this:
+
+```shell
+NAME                          STATUS     AGE
+http-xff-num-trusted-hops   Accepted   5s
+```
+
+Open port-forward to the admin interface port:
+
+```shell
+kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
+```
+
+Curl the admin interface port to fetch the configured value for `xff_num_trusted_hops`:
+
+```shell
+curl -s 'http://localhost:19000/config_dump?resource=dynamic_listeners' \
+  | jq -r '.configs[0].active_state.listener.default_filter_chain.filters[0].typed_config 
+      | with_entries(select(.key == "xff_num_trusted_hops"))'
+```
+
+You should expect to see the following:
+
+```json
+{
+  "xff_num_trusted_hops": 2
+}
+```
+
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy

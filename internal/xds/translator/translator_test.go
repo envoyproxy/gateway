@@ -238,6 +238,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "path-settings",
 		},
 		{
+			name: "http-connection-manager-settings",
+		},
+		{
 			name: "http1-trailers",
 		},
 		{
