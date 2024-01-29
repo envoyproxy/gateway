@@ -32,6 +32,7 @@ type CircuitBreaker struct {
 	MaxParallelRequests *int64 `json:"maxParallelRequests,omitempty"`
 
 	// The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.
+	// Default: unlimited.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=4294967295
