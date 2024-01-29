@@ -1088,6 +1088,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `enableTrailers` | _boolean_ |  false  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
 | `preserveHeaderCase` | _boolean_ |  false  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers. By default, Envoy will lowercase all the headers. |
+| `enableHttp10` | _boolean_ |  true  | EnableHTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
+| `defaultHttp10Host` | _string_ |  true  | DefaultHTTP10Host defines a default host to be used for HTTP/1.0 requests sent without a Host header. |
 
 
 #### HTTP3Settings

@@ -258,6 +258,27 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"spec.tls: Invalid value: \"object\": setting ciphers has no effect if the minimum possible TLS version is 1.3",
 			},
 		},
+		{
+			desc: "setting defaultHttp10Host without enabling HTTP/1.0",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						EnableHTTP10:      ptr.To(false),
+						DefaultHTTP10Host: ptr.To("SomeHost"),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http1: Invalid value: \"object\": default HTTP/1.0 host can only be set if HTTP/1.0 is enabled",
+			},
+		},
 	}
 
 	for _, tc := range cases {

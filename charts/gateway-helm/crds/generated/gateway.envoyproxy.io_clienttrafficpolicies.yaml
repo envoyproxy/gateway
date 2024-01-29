@@ -72,6 +72,14 @@ spec:
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
                 properties:
+                  defaultHttp10Host:
+                    description: DefaultHTTP10Host defines a default host to be used
+                      for HTTP/1.0 requests sent without a Host header.
+                    type: string
+                  enableHttp10:
+                    description: EnableHTTP10 turns on support for HTTP/1.0 and HTTP/0.9
+                      requests.
+                    type: boolean
                   enableTrailers:
                     description: EnableTrailers defines if HTTP/1 trailers should
                       be proxied by Envoy.
@@ -82,6 +90,9 @@ spec:
                       all the headers.
                     type: boolean
                 type: object
+                x-kubernetes-validations:
+                - message: default HTTP/1.0 host can only be set if HTTP/1.0 is enabled
+                  rule: 'has(self.defaultHttp10Host) ? self.enableHttp10 : true'
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
                 type: object
