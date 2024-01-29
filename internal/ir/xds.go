@@ -1183,7 +1183,7 @@ type JSONPatchOperation struct {
 	// +optional
 	From *string `json:"from,omitempty" yaml:"from,omitempty"`
 	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value" yaml:"value"`
+	Value *apiextensionsv1.JSON `json:"value,omitempty" yaml:"value,omitempy"`
 }
 
 // Tracing defines the configuration for tracing a Envoy xDS Resource

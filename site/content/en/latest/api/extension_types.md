@@ -1135,7 +1135,7 @@ _Appears in:_
 | `op` _[JSONPatchOperationType](#jsonpatchoperationtype)_ | Op is the type of operation to perform |
 | `path` _string_ | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `from` _string_ | From is the source location of the value to be copied or moved. Only valid for move or copy operations Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `value` _[JSON](#json)_ | Value is the new value of the path location. |
+| `value` _JSON_ | Value is the new value of the path location. |
 
 
 #### JSONPatchOperationType
