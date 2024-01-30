@@ -149,6 +149,117 @@ spec:
                       request can be cached.
                     type: string
                 type: object
+              extAuth:
+                description: ExtAuth defines the configuration for External Authorization.
+                properties:
+                  grpc:
+                    description: GRPC defines the gRPC External Authorization service.
+                      Only one of GRPCService or HTTPService may be specified.
+                    properties:
+                      host:
+                        description: Host is the hostname of the gRPC External Authorization
+                          service.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      port:
+                        description: Port is the network port of the gRPC External
+                          Authorization service.
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                      tls:
+                        description: 'TLS defines the TLS configuration for the gRPC
+                          External Authorization service. Note: If not specified,
+                          the proxy will talk to the gRPC External Authorization service
+                          in plaintext.'
+                        type: object
+                    required:
+                    - host
+                    - port
+                    type: object
+                  headersToExtAuth:
+                    description: 'HeadersToExtAuth defines the client request headers
+                      that will be included in the request to the external authorization
+                      service. Note: If not specified, the default behavior for gRPC
+                      and HTTP external authorization services is different due to
+                      backward compatibility reasons. All headers will be included
+                      in the check request to a gRPC authorization server. Only the
+                      following headers will be included in the check request to an
+                      HTTP authorization server: Host, Method, Path, Content-Length,
+                      and Authorization. And these headers will always be included
+                      to the check request to an HTTP authorization server by default,
+                      no matter whether they are specified in HeadersToExtAuth or
+                      not.'
+                    items:
+                      type: string
+                    type: array
+                  http:
+                    description: HTTP defines the HTTP External Authorization service.
+                      Only one of GRPCService or HTTPService may be specified.
+                    properties:
+                      headersToBackend:
+                        description: HeadersToBackend are the authorization response
+                          headers that will be added to the original client request
+                          before sending it to the backend server. Note that coexisting
+                          headers will be overridden. If not specified, no authorization
+                          response headers will be added to the original client request.
+                        items:
+                          type: string
+                        type: array
+                      host:
+                        description: Host is the hostname of the HTTP External Authorization
+                          service.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      path:
+                        description: Path is the path of the HTTP External Authorization
+                          service. If path is specified, the authorization request
+                          will be sent to that path, or else the authorization request
+                          will be sent to the root path.
+                        type: string
+                      port:
+                        description: Port is the network port of the HTTP External
+                          Authorization service. If port is not specified, 80 for
+                          http and 443 for https are assumed.
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                      tls:
+                        description: 'TLS defines the TLS configuration for the HTTP
+                          External Authorization service. Note: If not specified,
+                          the proxy will talk to the HTTP External Authorization service
+                          in plaintext.'
+                        type: object
+                    required:
+                    - host
+                    type: object
+                  type:
+                    allOf:
+                    - enum:
+                      - GRPC
+                      - HTTP
+                    - enum:
+                      - GRPC
+                      - HTTP
+                    description: Type decides the type of External Authorization.
+                      Valid ExtAuthServiceType values are "GRPC" or "HTTP".
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: http must be specified if type is HTTP
+                  rule: 'self.type == ''HTTP'' ? has(self.http) : true'
+                - message: grpc must be specified if type is GRPC
+                  rule: 'self.type == ''GRPC'' ? has(self.grpc) : true'
+                - message: only one of grpc or http can be specified
+                  rule: '!(has(self.grpc) && has(self.http))'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.

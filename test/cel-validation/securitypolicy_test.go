@@ -345,6 +345,82 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				"spec.cors.allowOrigins[0]: Invalid value: \"grpc://foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|https?:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
+
+		// ExtAuth
+		{
+			desc: "HTTPExtAuthServiceType with GRPC auth service",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						Type: egv1a1.HTTPExtAuthServiceType,
+						GRPC: &egv1a1.GRPCExtAuthService{
+							Host: "foo.bar.com",
+							Port: 15001,
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": http must be specified if type is HTTP",
+			},
+		},
+		{
+			desc: "GRPCExtAuthServiceType with HTTP auth service",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						Type: egv1a1.GRPCExtAuthServiceType,
+						HTTP: &egv1a1.HTTPExtAuthService{
+							Host: "foo.bar.com",
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": grpc must be specified if type is GRPC",
+			},
+		},
+		{
+			desc: "with both extAuth services",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						Type: egv1a1.HTTPExtAuthServiceType,
+						GRPC: &egv1a1.GRPCExtAuthService{
+							Host: "foo.bar.com",
+							Port: 15001,
+						},
+						HTTP: &egv1a1.HTTPExtAuthService{
+							Host: "foo.bar.com",
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": only one of grpc or http can be specified",
+			},
+		},
 	}
 
 	for _, tc := range cases {
