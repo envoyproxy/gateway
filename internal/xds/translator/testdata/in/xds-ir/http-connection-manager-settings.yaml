@@ -13,7 +13,7 @@ http:
       - endpoints:
         - host: "1.1.1.1"
           port: 8080
-  useRemoteAddress: false
+  useRemoteAddress: true
   xffNumTrustedHops: 2
 - name: "second-listener"
   address: "0.0.0.0"
@@ -29,3 +29,4 @@ http:
       - endpoints:
         - host: "2.2.2.2"
           port: 8080
+  useRemoteAddress: true

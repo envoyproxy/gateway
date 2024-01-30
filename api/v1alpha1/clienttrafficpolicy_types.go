@@ -66,10 +66,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
-	// HTTPConnectionManager provides HTTP Connection Manager configuration on the listener.
+	// OriginalIPDetection provides XFF and extension configuration for original IP detection on the listener.
 	//
 	// +optional
-	HTTPConnectionManager *HTTPConnectionManagerSettings `json:"httpConnectionManager,omitempty"`
+	OriginalIPDetection *OriginalIPDetectionSettings `json:"originalIpDetection,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	//
 	// +optional
@@ -88,16 +88,8 @@ type ClientTrafficPolicySpec struct {
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
 }
 
-// HTTPConnectionManagerSettings provides HTTP Connection Manager configuration on the listener.
-type HTTPConnectionManagerSettings struct {
-	// UseRemoteAddress controls whether the connection manager will use the real remote address of the
-	// client connection when determining internal versus external origin and manipulating various headers.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-	// for more details. Enabled by default.
-	//
-	// +optional
-	// +kubebuilder:default=true
-	UseRemoteAddress *bool `json:"useRemoteAddress,omitempty"`
+// OriginalIPDetectionSettings provides XFF and extension configuration for original IP detection on the listener.
+type OriginalIPDetectionSettings struct {
 	// XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
 	// headers to trust when determining the origin client's IP address.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for

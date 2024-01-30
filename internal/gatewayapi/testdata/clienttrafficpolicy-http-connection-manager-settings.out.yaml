@@ -6,8 +6,7 @@ clientTrafficPolicies:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    httpConnectionManager:
-      useRemoteAddress: false
+    originalIpDetection:
       xffNumTrustedHops: 2
     targetRef:
       group: gateway.networking.k8s.io
@@ -130,7 +129,6 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      useRemoteAddress: false
       xffNumTrustedHops: 2
     - address: 0.0.0.0
       hostnames:

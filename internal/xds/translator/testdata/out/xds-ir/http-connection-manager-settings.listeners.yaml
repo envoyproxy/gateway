@@ -26,7 +26,7 @@
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket
-        useRemoteAddress: false
+        useRemoteAddress: true
         xffNumTrustedHops: 2
   name: first-listener
   perConnectionBufferLimitBytes: 32768

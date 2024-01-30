@@ -491,11 +491,6 @@ func (in *HTTPListener) DeepCopyInto(out *HTTPListener) {
 		*out = new(TCPKeepalive)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.UseRemoteAddress != nil {
-		in, out := &in.UseRemoteAddress, &out.UseRemoteAddress
-		*out = new(bool)
-		**out = **in
-	}
 	if in.HTTP3 != nil {
 		in, out := &in.HTTP3, &out.HTTP3
 		*out = new(HTTP3Settings)

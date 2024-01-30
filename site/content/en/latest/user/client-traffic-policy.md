@@ -285,7 +285,7 @@ You should now expect 200 response status and also see that source IP was preser
 }
 ```
 
-### Configure Number of X-Forwarded-For Trusted Hops
+### Configure Original IP Detection
 
 This example configures the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address and determines whether or not `x-forwarded-proto` headers will be trusted. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for details.
 
@@ -302,7 +302,7 @@ spec:
     kind: Gateway
     name: eg
     namespace: default
-  httpConnectionManager:
+  originalIpDetection:
     xffNumTrustedHops: 2
 EOF
 ```

@@ -147,15 +147,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		statPrefix = "http"
 	}
 
-	// HTTP XFF configuration
-	var useRemoteAddress bool
-	if irListener.UseRemoteAddress != nil {
-		useRemoteAddress = *irListener.UseRemoteAddress
-	} else {
-		// Enable UseRemoteAddress by default when ClientTrafficPolicy is not configured
-		useRemoteAddress = true
-	}
-
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -172,7 +163,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress:  &wrappers.BoolValue{Value: useRemoteAddress},
+		UseRemoteAddress:  &wrappers.BoolValue{Value: true},
 		XffNumTrustedHops: irListener.XffNumTrustedHops,
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},
