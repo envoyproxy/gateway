@@ -342,5 +342,71 @@ You should expect to see the following:
 }
 ```
 
+Curl the example app through Envoy proxy:
+
+```shell
+curl -v http://$GATEWAY_HOST/get \
+  -H "Host: www.example.com" \
+  -H "X-Forwarded-Proto: https" \
+  -H "X-Forwarded-For: 1.1.1.1,2.2.2.2"
+```
+
+You should expect 200 response status, see that `X-Forwarded-Proto` was preserved and `X-Envoy-External-Address` was set to the leftmost address in the `X-Forwarded-For` header:
+
+```shell
+*   Trying [::1]:8888...
+* Connected to localhost (::1) port 8888
+> GET /get HTTP/1.1
+> Host: www.example.com
+> User-Agent: curl/8.4.0
+> Accept: */*
+> X-Forwarded-Proto: https
+> X-Forwarded-For: 1.1.1.1,2.2.2.2
+> 
+Handling connection for 8888
+< HTTP/1.1 200 OK
+< content-type: application/json
+< x-content-type-options: nosniff
+< date: Tue, 30 Jan 2024 15:19:22 GMT
+< content-length: 535
+< x-envoy-upstream-service-time: 0
+< server: envoy
+< 
+{
+ "path": "/get",
+ "host": "www.example.com",
+ "method": "GET",
+ "proto": "HTTP/1.1",
+ "headers": {
+  "Accept": [
+   "*/*"
+  ],
+  "User-Agent": [
+   "curl/8.4.0"
+  ],
+  "X-Envoy-Expected-Rq-Timeout-Ms": [
+   "15000"
+  ],
+  "X-Envoy-External-Address": [
+   "1.1.1.1"
+  ],
+  "X-Forwarded-For": [
+   "1.1.1.1,2.2.2.2,10.244.0.9"
+  ],
+  "X-Forwarded-Proto": [
+   "https"
+  ],
+  "X-Request-Id": [
+   "53ccfad7-1899-40fa-9322-ddb833aa1ac3"
+  ]
+ },
+ "namespace": "default",
+ "ingress": "",
+ "service": "",
+ "pod": "backend-58d58f745-8psnc"
+* Connection #0 to host localhost left intact
+}
+```
+
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
