@@ -8,8 +8,6 @@ package kubernetes
 import (
 	"context"
 	"errors"
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,26 +31,16 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	tlsRoutes := tlsRouteList.Items
-	if r.namespaceLabel != nil {
-		var rts []gwapiv1a2.TLSRoute
-		for _, rt := range tlsRoutes {
-			rt := rt
-			ok, err := r.checkObjectNamespaceLabels(&rt)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for TLSRoute %s in namespace %s: %w", rt.GetName(), rt.GetNamespace(), err)
-			}
-
-			if ok {
-				rts = append(rts, rt)
+	for _, tlsRoute := range tlsRouteList.Items {
+		tlsRoute := tlsRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&tlsRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-		tlsRoutes = rts
-	}
-
-	for _, tlsRoute := range tlsRoutes {
-		tlsRoute := tlsRoute
 		r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 
 		for _, rule := range tlsRoute.Spec.Rules {
@@ -114,26 +102,16 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		return err
 	}
 
-	grpcRoutes := grpcRouteList.Items
-	if r.namespaceLabel != nil {
-		var grs []gwapiv1a2.GRPCRoute
-		for _, gr := range grpcRoutes {
-			gr := gr
-			ok, err := r.checkObjectNamespaceLabels(&gr)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for GRPCRoute %s in namespace %s: %w", gr.GetName(), gr.GetNamespace(), err)
-			}
-			if ok {
-				grs = append(grs, gr)
+	for _, grpcRoute := range grpcRouteList.Items {
+		grpcRoute := grpcRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&grpcRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for GRPCRoute %s in namespace %s: %w", grpcRoute.GetName(), grpcRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-
-		grpcRoutes = grs
-	}
-
-	for _, grpcRoute := range grpcRoutes {
-		grpcRoute := grpcRoute
 		r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
 
 		for _, rule := range grpcRoute.Spec.Rules {
@@ -243,26 +221,16 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		return err
 	}
 
-	httpRoutes := httpRouteList.Items
-	if r.namespaceLabel != nil {
-		var hrs []gwapiv1.HTTPRoute
-		for _, hr := range httpRoutes {
-			hr := hr
-			ok, err := r.checkObjectNamespaceLabels(&hr)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for HTTPRoute %s in namespace %s: %w", hr.GetName(), hr.GetNamespace(), err)
-			}
-
-			if ok {
-				hrs = append(hrs, hr)
+	for _, httpRoute := range httpRouteList.Items {
+		httpRoute := httpRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&httpRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for HTTPRoute %s in namespace %s: %w", httpRoute.GetName(), httpRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-		httpRoutes = hrs
-	}
-
-	for _, httpRoute := range httpRoutes {
-		httpRoute := httpRoute
 		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
 		for _, rule := range httpRoute.Spec.Rules {
@@ -416,27 +384,16 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	tcpRoutes := tcpRouteList.Items
-	if r.namespaceLabel != nil {
-		var trs []gwapiv1a2.TCPRoute
-		for _, tr := range tcpRoutes {
-			tr := tr
-			ok, err := r.checkObjectNamespaceLabels(&tr)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for TCPRoute %s in namespace %s: %w", tr.GetName(), tr.GetNamespace(), err)
-			}
-
-			if ok {
-				trs = append(trs, tr)
+	for _, tcpRoute := range tcpRouteList.Items {
+		tcpRoute := tcpRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&tcpRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for TCPRoute %s in namespace %s: %w", tcpRoute.GetName(), tcpRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-
-		tcpRoutes = trs
-	}
-
-	for _, tcpRoute := range tcpRoutes {
-		tcpRoute := tcpRoute
 		r.log.Info("processing TCPRoute", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
 
 		for _, rule := range tcpRoute.Spec.Rules {
@@ -497,27 +454,16 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	udpRoutes := udpRouteList.Items
-	if r.namespaceLabel != nil {
-		var urs []gwapiv1a2.UDPRoute
-		for _, ur := range udpRoutes {
-			ur := ur
-			ok, err := r.checkObjectNamespaceLabels(&ur)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for UDPRoute %s in namespace %s: %w", ur.GetName(), ur.GetNamespace(), err)
-			}
-
-			if ok {
-				urs = append(urs, ur)
+	for _, udpRoute := range udpRouteList.Items {
+		udpRoute := udpRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&udpRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for UDPRoute %s in namespace %s: %w", udpRoute.GetName(), udpRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-
-		udpRoutes = urs
-	}
-
-	for _, udpRoute := range udpRoutes {
-		udpRoute := udpRoute
 		r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
 
 		for _, rule := range udpRoute.Spec.Rules {
