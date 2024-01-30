@@ -89,6 +89,8 @@ type ClientTrafficPolicySpec struct {
 }
 
 // OriginalIPDetectionSettings provides XFF and extension configuration for original IP detection on the listener.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.xffNumTrustedHops) && has(self.extensions))",message="extensions cannot be used in conjunction with xffNumTrustedHops"
 type OriginalIPDetectionSettings struct {
 	// XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
 	// headers to trust when determining the origin client's IP address.
@@ -97,6 +99,60 @@ type OriginalIPDetectionSettings struct {
 	//
 	// +optional
 	XffNumTrustedHops *uint32 `json:"xffNumTrustedHops,omitempty"`
+	// Extensions provides configuration for supported original IP detection extensions. Refer to:
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-original-ip-detection-extensions
+	// for more details.
+	//
+	// +optional
+	Extensions *OriginalIPDetectionExtensions `json:"extensions,omitempty"`
+}
+
+// OriginalIPDetectionExtensions provides a list of extensions to be used for original IP detection.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.customHeader) && has(self.xff))",message="customHeader cannot be used in conjunction with xff"
+type OriginalIPDetectionExtensions struct {
+	// CustomHeader provides the configuration for the custom header original IP detection extension.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+	// for more details.
+	//
+	// +optional
+	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
+	// Xff provides the configuration for the XFF original IP detection extension.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto
+	// for more details.
+	//
+	// +optional
+	Xff *XffExtensionSettings `json:"xff,omitempty"`
+}
+
+// CustomHeaderExtensionSettings provides the configuration for the custom header original IP detection extension.
+type CustomHeaderExtensionSettings struct {
+	// HeaderName of the of the header containing the original downstream remote address, if present.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern="^[A-Za-z0-9-]+$"
+	//
+	HeaderName string `json:"headerName"`
+	// RejectWithStatus is the HTTP response status to use when detection fails, if present. May be
+	// any valid HTTP response status code within the range 400-511 (inclusive).
+	//
+	// +kubebuilder:validation:Minimum=400
+	// +kubebuilder:validation:Maximum=511
+	//
+	// +optional
+	RejectWithStatus *uint32 `json:"rejectWithStatus,omitempty"`
+	// AllowExtensionToSetAddressAsTrusted allows the extension to mark the address as trusted
+	// by the HCM, allowing the address to be used to determine if the request is internal.
+	//
+	// +optional
+	AllowExtensionToSetAddressAsTrusted bool `json:"allowExtensionToSetAddressAsTrusted"`
+}
+
+// XffExtensionSettings provides the configuration for the XFF original IP detection extension.
+type XffExtensionSettings struct {
+	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
+	NumTrustedHops uint32 `json:"numTrustedHops"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.

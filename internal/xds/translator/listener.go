@@ -17,13 +17,17 @@ import (
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
+	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
+	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -79,6 +83,45 @@ func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 			Value: http2InitialConnectionWindowSize,
 		},
 	}
+}
+
+func originalIPDetectionExtensions(originalIpDetection *ir.OriginalIPDetectionSettings) []*corev3.TypedExtensionConfig {
+	// Return early if settings are nil
+	if originalIpDetection == nil || originalIpDetection.Extensions == nil {
+		return nil
+	}
+
+	var extensionConfig []*corev3.TypedExtensionConfig
+
+	if originalIpDetection.Extensions.CustomHeader != nil {
+		var rejectWithStatus *typev3.HttpStatus
+		if originalIpDetection.Extensions.CustomHeader.RejectWithStatus != nil {
+			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode(*originalIpDetection.Extensions.CustomHeader.RejectWithStatus)}
+		}
+
+		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
+			HeaderName:                          originalIpDetection.Extensions.CustomHeader.HeaderName,
+			RejectWithStatus:                    rejectWithStatus,
+			AllowExtensionToSetAddressAsTrusted: originalIpDetection.Extensions.CustomHeader.AllowExtensionToSetAddressAsTrusted,
+		})
+
+		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
+			Name:        "envoy.extensions.http.original_ip_detection.custom_header",
+			TypedConfig: customHeaderConfigAny,
+		})
+	}
+
+	if originalIpDetection.Extensions.Xff != nil {
+		xffAny, _ := anypb.New(&xffv3.XffConfig{
+			XffNumTrustedHops: originalIpDetection.Extensions.Xff.NumTrustedHops,
+		})
+		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
+			Name:        "envoy.extensions.http.original_ip_detection.xff",
+			TypedConfig: xffAny,
+		})
+	}
+
+	return extensionConfig
 }
 
 // buildXdsTCPListener creates a xds Listener resource
@@ -147,6 +190,17 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		statPrefix = "http"
 	}
 
+	// Original IP detection
+	var useRemoteAddress = true
+	var xffNumTrustedHops uint32
+	if irListener.OriginalIPDetection != nil {
+		if irListener.OriginalIPDetection.Extensions != nil {
+			useRemoteAddress = false
+		} else {
+			xffNumTrustedHops = ptr.Deref(irListener.OriginalIPDetection.XffNumTrustedHops, 0)
+		}
+	}
+
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -163,8 +217,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress:  &wrappers.BoolValue{Value: true},
-		XffNumTrustedHops: irListener.XffNumTrustedHops,
+		UseRemoteAddress:              &wrappers.BoolValue{Value: useRemoteAddress},
+		XffNumTrustedHops:             xffNumTrustedHops,
+		OriginalIpDetectionExtensions: originalIPDetectionExtensions(irListener.OriginalIPDetection),
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},
 		MergeSlashes:                 irListener.Path.MergeSlashes,

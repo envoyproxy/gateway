@@ -70,6 +70,59 @@ spec:
                 description: OriginalIPDetection provides XFF and extension configuration
                   for original IP detection on the listener.
                 properties:
+                  extensions:
+                    description: 'Extensions provides configuration for supported
+                      original IP detection extensions. Refer to: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-original-ip-detection-extensions
+                      for more details.'
+                    properties:
+                      customHeader:
+                        description: CustomHeader provides the configuration for the
+                          custom header original IP detection extension. Refer to
+                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+                          for more details.
+                        properties:
+                          allowExtensionToSetAddressAsTrusted:
+                            description: AllowExtensionToSetAddressAsTrusted allows
+                              the extension to mark the address as trusted by the
+                              HCM, allowing the address to be used to determine if
+                              the request is internal.
+                            type: boolean
+                          headerName:
+                            description: HeaderName of the of the header containing
+                              the original downstream remote address, if present.
+                            maxLength: 255
+                            minLength: 1
+                            pattern: ^[A-Za-z0-9-]+$
+                            type: string
+                          rejectWithStatus:
+                            description: RejectWithStatus is the HTTP response status
+                              to use when detection fails, if present. May be any
+                              valid HTTP response status code within the range 400-511
+                              (inclusive).
+                            format: int32
+                            maximum: 511
+                            minimum: 400
+                            type: integer
+                        required:
+                        - headerName
+                        type: object
+                      xff:
+                        description: Xff provides the configuration for the XFF original
+                          IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto
+                          for more details.
+                        properties:
+                          numTrustedHops:
+                            description: NumTrustedHops controls the number of additional
+                              ingress proxy hops from the right side of XFF HTTP
+                            format: int32
+                            type: integer
+                        required:
+                        - numTrustedHops
+                        type: object
+                    type: object
+                    x-kubernetes-validations:
+                    - message: customHeader cannot be used in conjunction with xff
+                      rule: '!(has(self.customHeader) && has(self.xff))'
                   xffNumTrustedHops:
                     description: XffNumTrustedHops controls the number of additional
                       ingress proxy hops from the right side of XFF HTTP headers to
@@ -79,6 +132,9 @@ spec:
                     format: int32
                     type: integer
                 type: object
+                x-kubernetes-validations:
+                - message: extensions cannot be used in conjunction with xffNumTrustedHops
+                  rule: '!(has(self.xffNumTrustedHops) && has(self.extensions))'
               path:
                 description: Path enables managing how the incoming path set by clients
                   can be normalized.

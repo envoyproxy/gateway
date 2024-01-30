@@ -125,11 +125,12 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
+      originalIpDetection:
+        xffNumTrustedHops: 2
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      xffNumTrustedHops: 2
     - address: 0.0.0.0
       hostnames:
       - '*'

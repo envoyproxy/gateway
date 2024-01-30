@@ -298,6 +298,22 @@ _Appears in:_
 
 
 
+#### CustomHeaderExtensionSettings
+
+
+
+CustomHeaderExtensionSettings provides the configuration for the custom header original IP detection extension.
+
+_Appears in:_
+- [OriginalIPDetectionExtensions](#originalipdetectionextensions)
+
+| Field | Description |
+| --- | --- |
+| `headerName` _string_ | HeaderName of the of the header containing the original downstream remote address, if present. |
+| `rejectWithStatus` _integer_ | RejectWithStatus is the HTTP response status to use when detection fails, if present. May be any valid HTTP response status code within the range 400-511 (inclusive). |
+| `allowExtensionToSetAddressAsTrusted` _boolean_ | AllowExtensionToSetAddressAsTrusted allows the extension to mark the address as trusted by the HCM, allowing the address to be used to determine if the request is internal. |
+
+
 #### CustomTag
 
 
@@ -1531,6 +1547,21 @@ _Appears in:_
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
+#### OriginalIPDetectionExtensions
+
+
+
+OriginalIPDetectionExtensions provides a list of extensions to be used for original IP detection.
+
+_Appears in:_
+- [OriginalIPDetectionSettings](#originalipdetectionsettings)
+
+| Field | Description |
+| --- | --- |
+| `customHeader` _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ | CustomHeader provides the configuration for the custom header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
+| `xff` _[XffExtensionSettings](#xffextensionsettings)_ | Xff provides the configuration for the XFF original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto for more details. |
+
+
 #### OriginalIPDetectionSettings
 
 
@@ -1543,6 +1574,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `xffNumTrustedHops` _integer_ | XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
+| `extensions` _[OriginalIPDetectionExtensions](#originalipdetectionextensions)_ | Extensions provides configuration for supported original IP detection extensions. Refer to: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-original-ip-detection-extensions for more details. |
 
 
 #### PathEscapedSlashAction
@@ -2305,5 +2337,19 @@ _Appears in:_
 | --- | --- |
 | `pre` _[XDSTranslatorHook](#xdstranslatorhook) array_ |  |
 | `post` _[XDSTranslatorHook](#xdstranslatorhook) array_ |  |
+
+
+#### XffExtensionSettings
+
+
+
+XffExtensionSettings provides the configuration for the XFF original IP detection extension.
+
+_Appears in:_
+- [OriginalIPDetectionExtensions](#originalipdetectionextensions)
+
+| Field | Description |
+| --- | --- |
+| `numTrustedHops` _integer_ | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP |
 
 

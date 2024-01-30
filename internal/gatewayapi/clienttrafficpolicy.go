@@ -384,7 +384,7 @@ func translateOriginalIPDetection(originalIPDetection *egv1a1.OriginalIPDetectio
 		return
 	}
 
-	httpIR.XffNumTrustedHops = ptr.Deref(originalIPDetection.XffNumTrustedHops, 0)
+	httpIR.OriginalIPDetection = (*ir.OriginalIPDetectionSettings)(originalIPDetection)
 }
 
 func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *ir.HTTPListener) {
