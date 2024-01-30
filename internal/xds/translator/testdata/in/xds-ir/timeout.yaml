@@ -11,12 +11,11 @@ http:
   - name: "first-route"
     hostname: "*"
     timeout:
+      tcp:
+        connectTimeout: "31s"
       http:
-        requestTimeout: 5s
-    headerMatches:
-    - name: user
-      stringMatch:
-      exact: "jason"
+        connectionIdleTimeout: "32s"
+        maxConnectionDuration: "33s"
     destination:
       name: "first-route-dest"
       settings:

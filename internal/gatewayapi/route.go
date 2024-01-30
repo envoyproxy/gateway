@@ -227,12 +227,21 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
+		var rto *ir.Timeout
+
+		// Timeout is translated from multiple resources and may already be partially set
+		if irRoute.Timeout != nil {
+			rto = irRoute.Timeout.DeepCopy()
+		} else {
+			rto = &ir.Timeout{}
+		}
+
 		if rule.Timeouts.Request != nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
+			setRequestTimeout(rto, metav1.Duration{Duration: d})
 		}
 
 		// Also set the IR Route Timeout to the backend request timeout
@@ -242,8 +251,27 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
+			setRequestTimeout(rto, metav1.Duration{Duration: d})
 		}
+
+		irRoute.Timeout = rto
+	}
+}
+
+func setRequestTimeout(irTimeout *ir.Timeout, d metav1.Duration) {
+	switch {
+	case irTimeout == nil:
+		irTimeout = &ir.Timeout{
+			HTTP: &ir.HTTPTimeout{
+				RequestTimeout: ptr.To(d),
+			},
+		}
+	case irTimeout.HTTP == nil:
+		irTimeout.HTTP = &ir.HTTPTimeout{
+			RequestTimeout: ptr.To(d),
+		}
+	default:
+		irTimeout.HTTP.RequestTimeout = ptr.To(d)
 	}
 }
 
@@ -627,8 +655,8 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					DirectResponse:        routeRoute.DirectResponse,
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,
-					Timeout:               routeRoute.Timeout,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
+					Timeout:               routeRoute.Timeout,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
@@ -1050,6 +1078,11 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 
 	routeType := GetRouteType(route)
 	if !t.validateBackendRef(&backendRef, parentRef, route, resources, backendNamespace, routeType) {
+		return nil, weight
+	}
+
+	// Skip processing backends with 0 weight
+	if weight == 0 {
 		return nil, weight
 	}
 

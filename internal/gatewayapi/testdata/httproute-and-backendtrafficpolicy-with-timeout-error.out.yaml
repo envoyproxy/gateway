@@ -1,9 +1,34 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+    timeout:
+      http:
+        maxConnectionDuration: 22s
+      tcp:
+        connectTimeout: 20kib
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Unable to translate TCP Timeout: invalid ConnectTimeout value 20kib'
+      reason: Invalid
+      status: "False"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
-    name: gateway-1
+    name: gateway-2
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
@@ -47,8 +72,10 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
-    - name: gateway-1
+    - name: gateway-2
       namespace: envoy-gateway
       sectionName: http
     rules:
@@ -59,7 +86,7 @@ httpRoutes:
       - path:
           value: /
       timeouts:
-        request: 5s
+        request: 1s
   status:
     parents:
     - conditions:
@@ -75,15 +102,15 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-1
+        name: gateway-2
         namespace: envoy-gateway
         sectionName: http
 infraIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway/gateway-2:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
           name: http
@@ -91,11 +118,11 @@ infraIR:
           servicePort: 80
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway/gateway-1
+      name: envoy-gateway/gateway-2
 xdsIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway/gateway-2:
     accessLog:
       text:
       - path: /dev/stdout
@@ -104,7 +131,7 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
-      name: envoy-gateway/gateway-1/http
+      name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -122,12 +149,12 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: '*'
-        name: httproute/default/httproute-1/rule/0/match/0/*
+        hostname: gateway.envoyproxy.io
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
         timeout:
           http:
-            requestTimeout: 5s
+            requestTimeout: 1s

@@ -79,13 +79,6 @@ type ProxyListener struct {
 type HTTP3Settings struct {
 }
 
-// HTTP1Settings provides HTTP/1 configuration on the listener.
-// +k8s:deepcopy-gen=true
-type HTTP1Settings struct {
-	EnableTrailers     bool `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
-	PreserveHeaderCase bool `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
-}
-
 // ListenerPort defines a network port of a listener.
 // +k8s:deepcopy-gen=true
 type ListenerPort struct {

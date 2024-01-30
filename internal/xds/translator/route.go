@@ -72,8 +72,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil && httpRoute.Timeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.Duration)
+	if router.GetRoute() != nil && httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil &&
+		httpRoute.Timeout.HTTP.RequestTimeout != nil {
+		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.HTTP.RequestTimeout.Duration)
 	}
 
 	// Add per route filter configs to the route, if needed.

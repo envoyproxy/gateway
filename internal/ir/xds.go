@@ -346,6 +346,13 @@ type BackendWeights struct {
 	Invalid uint32 `json:"invalid" yaml:"invalid"`
 }
 
+// HTTP1Settings provides HTTP/1 configuration on the listener.
+// +k8s:deepcopy-gen=true
+type HTTP1Settings struct {
+	EnableTrailers     bool `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase bool `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+}
+
 // HTTPRoute holds the route information associated with the HTTP Route
 // +k8s:deepcopy-gen=true
 type HTTPRoute struct {
@@ -382,8 +389,6 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
-	// Timeout is the time until which entire response is received from the upstream.
-	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// CORS policy for the route.
@@ -404,6 +409,8 @@ type HTTPRoute struct {
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
+	// Request and connection timeout settings
+	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1473,4 +1480,32 @@ func (p *HealthCheckPayload) Validate() error {
 		errs = errors.Join(errs, ErrHealthCheckPayloadInvalid)
 	}
 	return errs
+}
+
+// Backend connection timeout settings
+// +k8s:deepcopy-gen=true
+type Timeout struct {
+	// Timeout settings for TCP.
+	TCP *TCPTimeout `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+
+	// Timeout settings for HTTP.
+	HTTP *HTTPTimeout `json:"http,omitempty" yaml:"tcp,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type TCPTimeout struct {
+	// The timeout for network connection establishment, including TCP and TLS handshakes.
+	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty" yaml:"connectTimeout,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type HTTPTimeout struct {
+	// RequestTimeout is the time until which entire response is received from the upstream.
+	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
+
+	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	ConnectionIdleTimeout *metav1.Duration `json:"connectionIdleTimeout,omitempty" yaml:"connectionIdleTimeout,omitempty"`
+
+	// The maximum duration of an HTTP connection.
+	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
 }
