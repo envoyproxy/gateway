@@ -156,6 +156,7 @@ _Appears in:_
 | `maxConnections` _integer_ | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
 | `maxPendingRequests` _integer_ | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
 | `maxParallelRequests` _integer_ | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
+| `maxRequestsPerConnection` _integer_ | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule. Default: unlimited. |
 
 
 #### ClaimToHeader
@@ -778,6 +779,23 @@ _Appears in:_
 
 
 
+#### ExtAuth
+
+
+
+ExtAuth defines the configuration for External Authorization.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
+| `grpc` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service. Only one of GRPCService or HTTPService may be specified. |
+| `http` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service. Only one of GRPCService or HTTPService may be specified. |
+| `headersToExtAuth` _string array_ | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
+
+
 #### ExtensionAPISettings
 
 
@@ -915,6 +933,22 @@ _Appears in:_
 | `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### GRPCExtAuthService
+
+
+
+GRPCExtAuthService defines the gRPC External Authorization service The authorization request message is defined in https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Description |
+| --- | --- |
+| `host` _PreciseHostname_ | Host is the hostname of the gRPC External Authorization service. |
+| `port` _PortNumber_ | Port is the network port of the gRPC External Authorization service. |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the gRPC External Authorization service. Note: If not specified, the proxy will talk to the gRPC External Authorization service in plaintext. |
+
+
 #### Gateway
 
 
@@ -995,6 +1029,24 @@ HTTP3Settings provides HTTP/3 configuration on the listener.
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
+
+
+#### HTTPExtAuthService
+
+
+
+HTTPExtAuthService defines the HTTP External Authorization service
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Description |
+| --- | --- |
+| `host` _PreciseHostname_ | Host is the hostname of the HTTP External Authorization service. |
+| `port` _PortNumber_ | Port is the network port of the HTTP External Authorization service. If port is not specified, 80 for http and 443 for https are assumed. |
+| `path` _string_ | Path is the path of the HTTP External Authorization service. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. Note: If not specified, the proxy will talk to the HTTP External Authorization service in plaintext. |
+| `headersToBackend` _string array_ | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 
 
 #### HTTPHealthChecker
@@ -2005,6 +2057,7 @@ _Appears in:_
 | `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
+| `extAuth` _[ExtAuth](#extauth)_ | ExtAuth defines the configuration for External Authorization. |
 
 
 
@@ -2126,6 +2179,18 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
+
+
+#### TLSConfig
+
+
+
+TLSConfig describes a TLS configuration.
+
+_Appears in:_
+- [GRPCExtAuthService](#grpcextauthservice)
+- [HTTPExtAuthService](#httpextauthservice)
+
 
 
 #### TLSSettings

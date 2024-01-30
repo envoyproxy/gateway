@@ -469,13 +469,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					CircuitBreaker: &egv1a1.CircuitBreaker{
-						MaxConnections:      valOverMax,
-						MaxPendingRequests:  valUnderMin,
-						MaxParallelRequests: valOverMax,
+						MaxConnections:           valOverMax,
+						MaxPendingRequests:       valUnderMin,
+						MaxParallelRequests:      valOverMax,
+						MaxRequestsPerConnection: valUnderMin,
 					},
 				}
 			},
 			wantErrors: []string{
+				"spec.circuitBreaker.maxRequestsPerConnection: Invalid value: -1: spec.circuitBreaker.maxRequestsPerConnection in body should be greater than or equal to 0",
 				"spec.circuitBreaker.maxParallelRequests: Invalid value: 4294967296: spec.circuitBreaker.maxParallelRequests in body should be less than or equal to 4294967295",
 				"spec.circuitBreaker.maxPendingRequests: Invalid value: -1: spec.circuitBreaker.maxPendingRequests in body should be greater than or equal to 0",
 				"spec.circuitBreaker.maxConnections: Invalid value: 4294967296: spec.circuitBreaker.maxConnections in body should be less than or equal to 4294967295",
