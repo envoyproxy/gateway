@@ -2191,12 +2191,6 @@ _Appears in:_
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
 
-| Field | Description |
-| --- | --- |
-| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef is the reference to a Kubernetes Secret that contains the TLS certificate and private key. The certificate and private key will be used to establish a TLS handshake between the Envoy proxy and the external authorization server. The referenced Secret must contain two keys: tls.crt and tls.key. 
- If this field is not specified, the Envoy proxy will not present a client certificate to the external authorization server. |
-| `caCertRef` _LocalObjectReference_ | CACertRef is the reference to a Kubernetes ConfigMap that contains a PEM-encoded TLS CA certificate bundle, which is used to validate the certificate presented by the external authorization server. The referenced ConfigMap must contain a key named ca.crt. 
- If not specified, the proxy will use the system default certificate pool to verify the server certificate. |
 
 
 #### TLSSettings
