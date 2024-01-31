@@ -38,6 +38,65 @@ _Appears in:_
 
 
 
+#### ActiveHealthCheck
+
+
+
+ActiveHealthCheck defines the active health check configuration. EG supports various types of active health checking including HTTP, TCP.
+
+_Appears in:_
+- [HealthCheck](#healthcheck)
+
+| Field | Description |
+| --- | --- |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Timeout defines the time to wait for a health check response. |
+| `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Interval defines the time between health checks. |
+| `unhealthyThreshold` _integer_ | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
+| `healthyThreshold` _integer_ | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
+| `type` _[ActiveHealthCheckerType](#activehealthcheckertype)_ | Type defines the type of health checker. |
+| `http` _[HTTPActiveHealthChecker](#httpactivehealthchecker)_ | HTTP defines the configuration of http health checker. It's required while the health checker type is HTTP. |
+| `tcp` _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ | TCP defines the configuration of tcp health checker. It's required while the health checker type is TCP. |
+
+
+#### ActiveHealthCheckPayload
+
+
+
+ActiveHealthCheckPayload defines the encoding of the payload bytes in the payload.
+
+_Appears in:_
+- [HTTPActiveHealthChecker](#httpactivehealthchecker)
+- [TCPActiveHealthChecker](#tcpactivehealthchecker)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ActiveHealthCheckPayloadType](#activehealthcheckpayloadtype)_ | Type defines the type of the payload. |
+| `text` _string_ | Text payload in plain text. |
+| `binary` _integer array_ | Binary payload base64 encoded. |
+
+
+#### ActiveHealthCheckPayloadType
+
+_Underlying type:_ _string_
+
+ActiveHealthCheckPayloadType is the type of the payload.
+
+_Appears in:_
+- [ActiveHealthCheckPayload](#activehealthcheckpayload)
+
+
+
+#### ActiveHealthCheckerType
+
+_Underlying type:_ _string_
+
+ActiveHealthCheckerType is the type of health checker.
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+
+
+
 #### BackendTrafficPolicy
 
 
@@ -1037,6 +1096,23 @@ _Appears in:_
 
 
 
+#### HTTPActiveHealthChecker
+
+
+
+HTTPActiveHealthChecker defines the settings of http health check.
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path defines the HTTP path that will be requested during health checking. |
+| `method` _string_ | Method defines the HTTP method used for health checking. Defaults to GET |
+| `expectedStatuses` _[HTTPStatus](#httpstatus) array_ | ExpectedStatuses defines a list of HTTP response statuses considered healthy. Defaults to 200 only |
+| `expectedResponse` _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ | ExpectedResponse defines a list of HTTP expected responses to match. |
+
+
 #### HTTPExtAuthService
 
 
@@ -1055,23 +1131,6 @@ _Appears in:_
 | `headersToBackend` _string array_ | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 
 
-#### HTTPHealthChecker
-
-
-
-HTTPHealthChecker defines the settings of http health check.
-
-_Appears in:_
-- [HealthCheck](#healthcheck)
-
-| Field | Description |
-| --- | --- |
-| `path` _string_ | Path defines the HTTP path that will be requested during health checking. |
-| `method` _string_ | Method defines the HTTP method used for health checking. Defaults to GET |
-| `expectedStatuses` _[HTTPStatus](#httpstatus) array_ | ExpectedStatuses defines a list of HTTP response statuses considered healthy. Defaults to 200 only |
-| `expectedResponse` _[HealthCheckPayload](#healthcheckpayload)_ | ExpectedResponse defines a list of HTTP expected responses to match. |
-
-
 #### HTTPStatus
 
 _Underlying type:_ _integer_
@@ -1079,7 +1138,7 @@ _Underlying type:_ _integer_
 HTTPStatus defines the http status code.
 
 _Appears in:_
-- [HTTPHealthChecker](#httphealthchecker)
+- [HTTPActiveHealthChecker](#httpactivehealthchecker)
 
 
 
@@ -1115,59 +1174,14 @@ _Appears in:_
 
 
 
-HealthCheck defines the health check configuration. EG supports various types of health checking including HTTP, TCP.
+HealthCheck configuration to decide which endpoints are healthy and can be used for routing.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 | Field | Description |
 | --- | --- |
-| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Timeout defines the time to wait for a health check response. |
-| `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Interval defines the time between health checks. |
-| `unhealthyThreshold` _integer_ | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
-| `healthyThreshold` _integer_ | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
-| `type` _[HealthCheckerType](#healthcheckertype)_ | Type defines the type of health checker. |
-| `http` _[HTTPHealthChecker](#httphealthchecker)_ | HTTP defines the configuration of http health checker. It's required while the health checker type is HTTP. |
-| `tcp` _[TCPHealthChecker](#tcphealthchecker)_ | TCP defines the configuration of tcp health checker. It's required while the health checker type is TCP. |
-
-
-#### HealthCheckPayload
-
-
-
-HealthCheckPayload defines the encoding of the payload bytes in the payload.
-
-_Appears in:_
-- [HTTPHealthChecker](#httphealthchecker)
-- [TCPHealthChecker](#tcphealthchecker)
-
-| Field | Description |
-| --- | --- |
-| `type` _[HealthCheckPayloadType](#healthcheckpayloadtype)_ | Type defines the type of the payload. |
-| `text` _string_ | Text payload in plain text. |
-| `binary` _integer array_ | Binary payload base64 encoded. |
-
-
-#### HealthCheckPayloadType
-
-_Underlying type:_ _string_
-
-HealthCheckPayloadType is the type of the payload.
-
-_Appears in:_
-- [HealthCheckPayload](#healthcheckpayload)
-
-
-
-#### HealthCheckerType
-
-_Underlying type:_ _string_
-
-HealthCheckerType is the type of health checker.
-
-_Appears in:_
-- [HealthCheck](#healthcheck)
-
+| `active` _[ActiveHealthCheck](#activehealthcheck)_ | Active health check configuration |
 
 
 #### InfrastructureProviderType
@@ -2154,19 +2168,19 @@ _Appears in:_
 
 
 
-#### TCPHealthChecker
+#### TCPActiveHealthChecker
 
 
 
-TCPHealthChecker defines the settings of tcp health check.
+TCPActiveHealthChecker defines the settings of tcp health check.
 
 _Appears in:_
-- [HealthCheck](#healthcheck)
+- [ActiveHealthCheck](#activehealthcheck)
 
 | Field | Description |
 | --- | --- |
-| `send` _[HealthCheckPayload](#healthcheckpayload)_ | Send defines the request payload. |
-| `receive` _[HealthCheckPayload](#healthcheckpayload)_ | Receive defines the expected response payload. |
+| `send` _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ | Send defines the request payload. |
+| `receive` _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ | Receive defines the expected response payload. |
 
 
 #### TCPKeepalive
