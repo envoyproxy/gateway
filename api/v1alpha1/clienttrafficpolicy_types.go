@@ -111,7 +111,6 @@ type XForwardedForSettings struct {
 type HTTP3Settings struct {
 }
 
-// +kubebuilder:validation:XValidation:rule="has(self.defaultHttp10Host) ? self.enableHttp10 : true",message="default HTTP/1.0 host can only be set if HTTP/1.0 is enabled"
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
@@ -121,11 +120,20 @@ type HTTP1Settings struct {
 	// By default, Envoy will lowercase all the headers.
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
-	// EnableHTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
-	EnableHTTP10 *bool `json:"enableHttp10,omitempty"`
-	// DefaultHTTP10Host defines a default host to be used for HTTP/1.0 requests sent
-	// without a Host header.
-	DefaultHTTP10Host *string `json:"defaultHttp10Host,omitempty"`
+	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+	// +optional
+	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
+}
+
+// HTTP10Settings provides HTTP/1.0 configuration on the listener.
+type HTTP10Settings struct {
+	// SetHostHeader defines if the HTTP/1.0 request is is missing the Host header,
+	// then the hostname associated with the listener should be injected into the
+	// request.
+	// If this is not set and an HTTP/1.0 request arrives without a host, then
+	// it will be rejected.
+	// +optional
+	SetHostHeder *bool `json:"setHostHeader,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy

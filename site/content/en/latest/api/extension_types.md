@@ -1,7 +1,4 @@
-+++
-title = "API Reference"
-+++
-
+# API Reference
 
 ## Packages
 - [gateway.envoyproxy.io/v1alpha1](#gatewayenvoyproxyiov1alpha1)
@@ -1075,6 +1072,20 @@ _Appears in:_
 
 
 
+#### HTTP10Settings
+
+
+
+HTTP10Settings provides HTTP/1.0 configuration on the listener.
+
+_Appears in:_
+- [HTTP1Settings](#http1settings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `setHostHeader` | _boolean_ |  false  | SetHostHeader defines if the HTTP/1.0 request is is missing the Host header, then the hostname associated with the listener should be injected into the request. If this is not set and an HTTP/1.0 request arrives without a host, then it will be rejected. |
+
+
 #### HTTP1Settings
 
 
@@ -1088,8 +1099,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `enableTrailers` | _boolean_ |  false  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
 | `preserveHeaderCase` | _boolean_ |  false  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers. By default, Envoy will lowercase all the headers. |
-| `enableHttp10` | _boolean_ |  true  | EnableHTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
-| `defaultHttp10Host` | _string_ |  true  | DefaultHTTP10Host defines a default host to be used for HTTP/1.0 requests sent without a Host header. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
 #### HTTP3Settings
