@@ -29,7 +29,7 @@ API group.
 
 #### ALPNProtocol
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ALPNProtocol specifies the protocol to be negotiated using ALPN
 
@@ -77,7 +77,7 @@ _Appears in:_
 
 #### ActiveHealthCheckPayloadType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ActiveHealthCheckPayloadType is the type of the payload.
 
@@ -88,7 +88,7 @@ _Appears in:_
 
 #### ActiveHealthCheckerType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ActiveHealthCheckerType is the type of health checker.
 
@@ -166,14 +166,12 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `users` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the username-password pairs in htpasswd format, used to verify user credentials in the "Authorization" header. 
- This is an Opaque secret. The username-password pairs should be stored in the key ".htpasswd". As the key name indicates, the value needs to be the htpasswd format, for example: "user1:{SHA}hashed_user1_password". Right now, only SHA hash algorithm is supported. Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html for more details. 
- Note: The secret must be in the same namespace as the SecurityPolicy. |
+| `users` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the username-password pairs in htpasswd format, used to verify user credentials in the "Authorization" header. <br /><br /> This is an Opaque secret. The username-password pairs should be stored in the key ".htpasswd". As the key name indicates, the value needs to be the htpasswd format, for example: "user1:{SHA}hashed_user1_password". Right now, only SHA hash algorithm is supported. Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html for more details. <br /><br /> Note: The secret must be in the same namespace as the SecurityPolicy. |
 
 
 #### BootstrapType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 BootstrapType defines the types of bootstrap supported by Envoy Gateway.
 
@@ -193,7 +191,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `allowOrigins` _Origin array_ | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowOrigins` _[Origin](#origin) array_ | AllowOrigins defines the origins that are allowed to make requests. |
 | `allowMethods` _string array_ | AllowMethods defines the methods that are allowed to make requests. |
 | `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
 | `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
@@ -300,9 +298,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `caCertificateRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectreference-v1-core) array_ | CACertificateRefs contains one or more references to Kubernetes objects that contain TLS certificates of the Certificate Authorities that can be used as a trust anchor to validate the certificates presented by the client. 
- A single reference to a Kubernetes ConfigMap, with the CA certificate in a key named `ca.crt` is currently supported. 
- References to a resource in different namespace are invalid UNLESS there is a ReferenceGrant in the target namespace that allows the certificate to be attached. |
+| `caCertificateRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectreference-v1-core) array_ | CACertificateRefs contains one or more references to Kubernetes objects that contain TLS certificates of the Certificate Authorities that can be used as a trust anchor to validate the certificates presented by the client. <br /><br /> A single reference to a Kubernetes ConfigMap, with the CA certificate in a key named `ca.crt` is currently supported. <br /><br /> References to a resource in different namespace are invalid UNLESS there is a ReferenceGrant in the target namespace that allows the certificate to be attached. |
 
 
 #### Compression
@@ -322,7 +318,7 @@ _Appears in:_
 
 #### CompressorType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 CompressorType defines the types of compressor library supported by Envoy Gateway.
 
@@ -347,7 +343,7 @@ _Appears in:_
 
 #### ConsistentHashType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ConsistentHashType defines the type of input to hash on.
 
@@ -375,7 +371,7 @@ _Appears in:_
 
 #### CustomTagType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 
 
@@ -527,7 +523,7 @@ _Appears in:_
 
 #### EnvoyGatewayLogComponent
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 EnvoyGatewayLogComponent defines a component that supports a configured logging level.
 
@@ -749,7 +745,7 @@ _Appears in:_
 
 #### EnvoyPatchType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 EnvoyPatchType specifies the types of Envoy patching mechanisms.
 
@@ -829,7 +825,7 @@ _Appears in:_
 
 #### EnvoyResourceType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 EnvoyResourceType specifies the type URL of the Envoy resource.
 
@@ -849,10 +845,21 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _ExtAuthServiceType_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
+| `type` _[ExtAuthServiceType](#extauthservicetype)_ | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
 | `grpc` _[GRPCExtAuthService](#grpcextauthservice)_ | GRPC defines the gRPC External Authorization service. Only one of GRPCService or HTTPService may be specified. |
 | `http` _[HTTPExtAuthService](#httpextauthservice)_ | HTTP defines the HTTP External Authorization service. Only one of GRPCService or HTTPService may be specified. |
 | `headersToExtAuth` _string array_ | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
+
+
+#### ExtAuthServiceType
+
+_Underlying type:_ _string_
+
+ExtAuthServiceType specifies the types of External Authorization.
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
 
 
 #### ExtensionAPISettings
@@ -928,8 +935,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
- CertificateRef can only reference a Kubernetes Secret at this time. |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. <br /><br /> CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
 #### FaultInjection
@@ -1003,8 +1009,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `host` _PreciseHostname_ | Host is the hostname of the gRPC External Authorization service. |
-| `port` _PortNumber_ | Port is the network port of the gRPC External Authorization service. |
+| `host` _[PreciseHostname](#precisehostname)_ | Host is the hostname of the gRPC External Authorization service. |
+| `port` _[PortNumber](#portnumber)_ | Port is the network port of the gRPC External Authorization service. |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the gRPC External Authorization service. Note: If not specified, the proxy will talk to the gRPC External Authorization service in plaintext. |
 
 
@@ -1118,8 +1124,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `host` _PreciseHostname_ | Host is the hostname of the HTTP External Authorization service. |
-| `port` _PortNumber_ | Port is the network port of the HTTP External Authorization service. If port is not specified, 80 for http and 443 for https are assumed. |
+| `host` _[PreciseHostname](#precisehostname)_ | Host is the hostname of the HTTP External Authorization service. |
+| `port` _[PortNumber](#portnumber)_ | Port is the network port of the HTTP External Authorization service. If port is not specified, 80 for http and 443 for https are assumed. |
 | `path` _string_ | Path is the path of the HTTP External Authorization service. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS defines the TLS configuration for the HTTP External Authorization service. Note: If not specified, the proxy will talk to the HTTP External Authorization service in plaintext. |
 | `headersToBackend` _string array_ | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
@@ -1127,7 +1133,7 @@ _Appears in:_
 
 #### HTTPStatus
 
-_Underlying type:_ `integer`
+_Underlying type:_ _integer_
 
 HTTPStatus defines the http status code.
 
@@ -1147,18 +1153,20 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `connectionIdleTimeout` _Duration_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
-| `maxConnectionDuration` _Duration_ | The maximum duration of an HTTP connection. Default: unlimited. |
-
-
-#### HeaderMatch
+| `connectionIdleTimeout` _[Duration](#duration)_ | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `maxConnectionDuration` _[Duration](#duration)_ | The maximum duration of an HTTP connection. Default: unlimited. |
 
 
 
-HeaderMatch defines the match attributes within the HTTP Headers of the request.
+
+#### HeaderMatchType
+
+_Underlying type:_ _string_
+
+HeaderMatchType specifies the semantics of how HTTP header values should be compared. Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
 
 _Appears in:_
-- [RateLimitSelectCondition](#ratelimitselectcondition)
+- [HeaderMatch](#headermatch)
 
 
 
@@ -1178,7 +1186,7 @@ _Appears in:_
 
 #### InfrastructureProviderType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 InfrastructureProviderType defines the types of custom infrastructure providers supported by Envoy Gateway.
 
@@ -1206,7 +1214,7 @@ _Appears in:_
 
 #### JSONPatchOperationType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 JSONPatchOperationType specifies the JSON Patch operations that can be performed.
 
@@ -1404,7 +1412,7 @@ _Appears in:_
 
 #### KubernetesWatchModeType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 KubernetesWatchModeType defines the type of KubernetesWatchMode
 
@@ -1445,7 +1453,7 @@ _Appears in:_
 
 #### LoadBalancerType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 LoadBalancerType specifies the types of LoadBalancer.
 
@@ -1470,7 +1478,7 @@ _Appears in:_
 
 #### LogLevel
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 
@@ -1482,7 +1490,7 @@ _Appears in:_
 
 #### MetricSinkType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 
 
@@ -1505,8 +1513,7 @@ _Appears in:_
 | --- | --- |
 | `provider` _[OIDCProvider](#oidcprovider)_ | The OIDC Provider configuration. |
 | `clientID` _string_ | The client ID to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
-| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
- This is an Opaque secret. The client secret should be stored in the key "client-secret". |
+| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). <br /><br /> This is an Opaque secret. The client secret should be stored in the key "client-secret". |
 | `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
 | `redirectURL` _string_ | The redirect URL to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
 | `logoutPath` _string_ | The path to log a user out, clearing their credential cookies. If not specified, uses a default logout path "/logout" |
@@ -1544,9 +1551,21 @@ _Appears in:_
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
+#### Origin
+
+_Underlying type:_ _string_
+
+Origin is defined by the scheme (protocol), hostname (domain), and port of the URL used to access it. The hostname can be "precise" which is just the domain name or "wildcard" which is a domain name prefixed with a single wildcard label such as "*.example.com". In addition to that a single wildcard (with or without scheme) can be configured to match any origin. 
+ For example, the following are valid origins: - https://foo.example.com - https://*.example.com - http://foo.example.com:8080 - http://*.example.com:8080 - https://*
+
+_Appears in:_
+- [CORS](#cors)
+
+
+
 #### PathEscapedSlashAction
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 PathEscapedSlashAction determines the action for requests that contain %2F, %2f, %5C, or %5c sequences in the URI path.
 
@@ -1572,7 +1591,7 @@ _Appears in:_
 
 #### ProviderType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ProviderType defines the types of providers supported by Envoy Gateway.
 
@@ -1615,7 +1634,7 @@ _Appears in:_
 
 #### ProxyAccessLogFormatType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 
 
@@ -1657,7 +1676,7 @@ _Appears in:_
 
 #### ProxyAccessLogSinkType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 
 
@@ -1683,7 +1702,7 @@ _Appears in:_
 
 #### ProxyLogComponent
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ProxyLogComponent defines a component that supports a configured logging level.
 
@@ -1783,7 +1802,7 @@ _Appears in:_
 
 #### ProxyProtocolVersion
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ProxyProtocolVersion defines the version of the Proxy Protocol to use.
 
@@ -1858,7 +1877,7 @@ _Appears in:_
 
 #### RateLimitDatabaseBackendType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 RateLimitDatabaseBackendType specifies the types of database backend to be used by the rate limit service.
 
@@ -1894,9 +1913,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. 
- If no client selectors are specified, the rule applies to all traffic of the targeted Route. 
- If the policy targets a Gateway, the rule applies to each Route of the Gateway. Please note that each Route has its own rate limit counters. For example, if a Gateway has two Routes, and the policy has a rule with limit 10rps, each Route will have its own 10rps limit. |
+| `clientSelectors` _[RateLimitSelectCondition](#ratelimitselectcondition) array_ | ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. <br /><br /> If no client selectors are specified, the rule applies to all traffic of the targeted Route. <br /><br /> If the policy targets a Gateway, the rule applies to each Route of the Gateway. Please note that each Route has its own rate limit counters. For example, if a Gateway has two Routes, and the policy has a rule with limit 10rps, each Route will have its own 10rps limit. |
 | `limit` _[RateLimitValue](#ratelimitvalue)_ | Limit holds the rate limit values. This limit is applied for traffic flows when the selectors compute to True, causing the request to be counted towards the limit. The limit is enforced and the request is ratelimited, i.e. a response with 429 HTTP status code is sent back to the client when the selected requests have reached the limit. |
 
 
@@ -1933,7 +1950,7 @@ _Appears in:_
 
 #### RateLimitType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 RateLimitType specifies the types of RateLimiting.
 
@@ -1944,7 +1961,7 @@ _Appears in:_
 
 #### RateLimitUnit
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 RateLimitUnit specifies the intervals for setting rate limits. Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
 
@@ -2013,7 +2030,7 @@ _Appears in:_
 
 #### ResourceProviderType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ResourceProviderType defines the types of custom resource providers supported by Envoy Gateway.
 
@@ -2066,7 +2083,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
@@ -2078,7 +2095,7 @@ _Appears in:_
 
 #### ServiceExternalTrafficPolicy
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ServiceExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs.
 
@@ -2089,7 +2106,7 @@ _Appears in:_
 
 #### ServiceType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 ServiceType string describes ingress methods for a service
 
@@ -2112,14 +2129,16 @@ _Appears in:_
 | `window` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Window defines the duration of the warm up period for newly added host. During slow start window, traffic sent to the newly added hosts will gradually increase. Currently only supports linear growth of traffic. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
 
 
-#### SourceMatch
 
 
+#### SourceMatchType
+
+_Underlying type:_ _string_
 
 
 
 _Appears in:_
-- [RateLimitSelectCondition](#ratelimitselectcondition)
+- [SourceMatch](#sourcematch)
 
 
 
@@ -2140,7 +2159,7 @@ _Appears in:_
 
 #### StringMatchType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 StringMatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
@@ -2177,8 +2196,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
-| `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
-| `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
+| `idleTime` _[Duration](#duration)_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
+| `interval` _[Duration](#duration)_ | The duration between keep-alive probes. Defaults to `75s`. |
 
 
 #### TCPTimeout
@@ -2192,7 +2211,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `connectTimeout` _Duration_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
+| `connectTimeout` _[Duration](#duration)_ | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
 
 
 #### TLSConfig
@@ -2220,7 +2239,7 @@ _Appears in:_
 | --- | --- |
 | `minVersion` _[TLSVersion](#tlsversion)_ | Min specifies the minimal TLS protocol version to allow. The default is TLS 1.2 if this is not specified. |
 | `maxVersion` _[TLSVersion](#tlsversion)_ | Max specifies the maximal TLS protocol version to allow The default is TLS 1.3 if this is not specified. |
-| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
+| `ciphers` _string array_ | Ciphers specifies the set of cipher suites supported when negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3. In non-FIPS Envoy Proxy builds the default cipher list is: - [ECDHE-ECDSA-AES128-GCM-SHA256\|ECDHE-ECDSA-CHACHA20-POLY1305] - [ECDHE-RSA-AES128-GCM-SHA256\|ECDHE-RSA-CHACHA20-POLY1305] - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 In builds using BoringSSL FIPS the default cipher list is: - ECDHE-ECDSA-AES128-GCM-SHA256 - ECDHE-RSA-AES128-GCM-SHA256 - ECDHE-ECDSA-AES256-GCM-SHA384 - ECDHE-RSA-AES256-GCM-SHA384 |
 | `ecdhCurves` _string array_ | ECDHCurves specifies the set of supported ECDH curves. In non-FIPS Envoy Proxy builds the default curves are: - X25519 - P-256 In builds using BoringSSL FIPS the default curve is: - P-256 |
 | `signatureAlgorithms` _string array_ | SignatureAlgorithms specifies which signature algorithms the listener should support. |
 | `alpnProtocols` _[ALPNProtocol](#alpnprotocol) array_ | ALPNProtocols supplies the list of ALPN protocols that should be exposed by the listener. By default h2 and http/1.1 are enabled. Supported values are: - http/1.0 - http/1.1 - h2 |
@@ -2229,7 +2248,7 @@ _Appears in:_
 
 #### TLSVersion
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 TLSVersion specifies the TLS version
 
@@ -2271,7 +2290,7 @@ _Appears in:_
 
 #### TracingProviderType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 
 
@@ -2282,7 +2301,7 @@ _Appears in:_
 
 #### XDSTranslatorHook
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support for the xds-translator
 
