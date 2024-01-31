@@ -78,6 +78,7 @@ backendTrafficPolicies:
       maxConnections: 2048
       maxPendingRequests: 1
       maxParallelRequests: 4294967295
+      maxRequestsPerConnection: 1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -93,3 +94,4 @@ backendTrafficPolicies:
       maxConnections: 42
       maxPendingRequests: 42
       maxParallelRequests: 42
+      maxRequestsPerConnection: 42
