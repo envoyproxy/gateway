@@ -46,6 +46,7 @@ docs-api-gen: $(tools/crd-ref-docs)
 	$(tools/crd-ref-docs) \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
+	--templates-dir=tools/crd-ref-docs/templates \
 	--output-path=site/content/en/latest/api/extension_types.md \
 	--max-depth 10 \
 	--renderer=markdown
