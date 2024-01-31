@@ -8,8 +8,10 @@ package ir
 import (
 	"testing"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/pointer"
 )
 
 func TestValidateInfra(t *testing.T) {
@@ -105,6 +107,63 @@ func TestValidateInfra(t *testing.T) {
 								{
 									Name:        "http",
 									ServicePort: int32(80),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		}, {
+			name: "enable-container-use-listener-port-number",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name: "test",
+					Config: &v1alpha1.EnvoyProxy{
+						Spec: v1alpha1.EnvoyProxySpec{
+							Provider: &v1alpha1.EnvoyProxyProvider{
+								Kubernetes: &v1alpha1.EnvoyProxyKubernetesProvider{
+									EnvoyService: &v1alpha1.KubernetesServiceSpec{
+										UseListenerPortAsContainerPort: pointer.Bool(true),
+									},
+								},
+							},
+						},
+					},
+					Listeners: []*ProxyListener{
+						{
+							Ports: []ListenerPort{
+								{
+									Name:          "http",
+									ServicePort:   int32(80),
+									ContainerPort: int32(80),
+								}, {
+									Name:          "https",
+									ServicePort:   int32(443),
+									ContainerPort: int32(443),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		}, {
+			name: "disable-container-use-listener-port-number",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name: "test",
+					Listeners: []*ProxyListener{
+						{
+							Ports: []ListenerPort{
+								{
+									Name:          "http",
+									ServicePort:   int32(80),
+									ContainerPort: int32(80),
+								}, {
+									Name:          "https",
+									ServicePort:   int32(443),
+									ContainerPort: int32(443),
 								},
 							},
 						},
