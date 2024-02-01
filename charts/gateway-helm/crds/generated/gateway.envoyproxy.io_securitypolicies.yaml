@@ -488,7 +488,7 @@ spec:
                 description: TargetRef is the name of the Gateway resource this policy
                   is being attached to. This Policy and the TargetRef MUST be in the
                   same namespace for this Policy to have effect and be applied to
-                  the Gateway. TargetRef
+                  the Gateway.
                 properties:
                   group:
                     description: Group is the group of the target resource.

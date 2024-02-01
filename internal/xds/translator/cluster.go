@@ -324,8 +324,9 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		}
 	}
 
-	requiresCommonHTTPOptions := args.timeout != nil && args.timeout.HTTP != nil &&
-		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)
+	requiresCommonHTTPOptions := (args.timeout != nil && args.timeout.HTTP != nil &&
+		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
+		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
 	requiresHTTP1Options := args.http1Settings != nil && (args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase)
 
@@ -338,14 +339,22 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	if requiresCommonHTTPOptions {
 		protocolOptions.CommonHttpProtocolOptions = &corev3.HttpProtocolOptions{}
 
-		if args.timeout.HTTP.ConnectionIdleTimeout != nil {
-			protocolOptions.CommonHttpProtocolOptions.IdleTimeout =
-				durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
+		if args.timeout != nil && args.timeout.HTTP != nil {
+			if args.timeout.HTTP.ConnectionIdleTimeout != nil {
+				protocolOptions.CommonHttpProtocolOptions.IdleTimeout =
+					durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
+			}
+
+			if args.timeout.HTTP.MaxConnectionDuration != nil {
+				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration =
+					durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
+			}
 		}
 
-		if args.timeout.HTTP.MaxConnectionDuration != nil {
-			protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration =
-				durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
+		if args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil {
+			protocolOptions.CommonHttpProtocolOptions.MaxRequestsPerConnection = &wrapperspb.UInt32Value{
+				Value: *args.circuitBreaker.MaxRequestsPerConnection,
+			}
 		}
 
 	}
