@@ -294,7 +294,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
-  name: http-xff-num-trusted-hops
+  name: http-client-ip-detection
   namespace: default
 spec:
   targetRef:
@@ -317,7 +317,7 @@ You should see the policy marked as accepted like this:
 
 ```shell
 NAME                          STATUS     AGE
-http-xff-num-trusted-hops   Accepted   5s
+http-client-ip-detection   Accepted   5s
 ```
 
 Open port-forward to the admin interface port:
