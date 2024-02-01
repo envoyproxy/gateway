@@ -85,24 +85,25 @@ func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 	}
 }
 
-func originalIPDetectionExtensions(originalIpDetection *ir.OriginalIPDetectionSettings) []*corev3.TypedExtensionConfig {
+func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettings) []*corev3.TypedExtensionConfig {
 	// Return early if settings are nil
-	if originalIpDetection == nil || originalIpDetection.Extensions == nil {
+	if clientIPDetection == nil || clientIPDetection.Extensions == nil {
 		return nil
 	}
 
 	var extensionConfig []*corev3.TypedExtensionConfig
 
-	if originalIpDetection.Extensions.CustomHeader != nil {
+	// Custom header extension
+	if clientIPDetection.Extensions.CustomHeader != nil {
 		var rejectWithStatus *typev3.HttpStatus
-		if originalIpDetection.Extensions.CustomHeader.RejectWithStatus != nil {
-			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode(*originalIpDetection.Extensions.CustomHeader.RejectWithStatus)}
+		if clientIPDetection.Extensions.CustomHeader.RejectWithStatus != nil {
+			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode(*clientIPDetection.Extensions.CustomHeader.RejectWithStatus)}
 		}
 
 		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
-			HeaderName:                          originalIpDetection.Extensions.CustomHeader.HeaderName,
+			HeaderName:                          clientIPDetection.Extensions.CustomHeader.HeaderName,
 			RejectWithStatus:                    rejectWithStatus,
-			AllowExtensionToSetAddressAsTrusted: originalIpDetection.Extensions.CustomHeader.AllowExtensionToSetAddressAsTrusted,
+			AllowExtensionToSetAddressAsTrusted: clientIPDetection.Extensions.CustomHeader.AllowExtensionToSetAddressAsTrusted,
 		})
 
 		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
@@ -111,9 +112,10 @@ func originalIPDetectionExtensions(originalIpDetection *ir.OriginalIPDetectionSe
 		})
 	}
 
-	if originalIpDetection.Extensions.Xff != nil {
+	// XFF extension
+	if clientIPDetection.Extensions.Xff != nil {
 		xffAny, _ := anypb.New(&xffv3.XffConfig{
-			XffNumTrustedHops: originalIpDetection.Extensions.Xff.NumTrustedHops,
+			XffNumTrustedHops: clientIPDetection.Extensions.Xff.NumTrustedHops,
 		})
 		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
 			Name:        "envoy.extensions.http.original_ip_detection.xff",
@@ -193,11 +195,11 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	// Original IP detection
 	var useRemoteAddress = true
 	var xffNumTrustedHops uint32
-	if irListener.OriginalIPDetection != nil {
-		if irListener.OriginalIPDetection.Extensions != nil {
+	if irListener.ClientIPDetection != nil {
+		if irListener.ClientIPDetection.Extensions != nil {
 			useRemoteAddress = false
 		} else {
-			xffNumTrustedHops = ptr.Deref(irListener.OriginalIPDetection.XffNumTrustedHops, 0)
+			xffNumTrustedHops = ptr.Deref(irListener.ClientIPDetection.XffNumTrustedHops, 0)
 		}
 	}
 
@@ -219,7 +221,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress:              &wrappers.BoolValue{Value: useRemoteAddress},
 		XffNumTrustedHops:             xffNumTrustedHops,
-		OriginalIpDetectionExtensions: originalIPDetectionExtensions(irListener.OriginalIPDetection),
+		OriginalIpDetectionExtensions: originalIPDetectionExtensions(irListener.ClientIPDetection),
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},
 		MergeSlashes:                 irListener.Path.MergeSlashes,

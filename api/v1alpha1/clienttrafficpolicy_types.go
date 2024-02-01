@@ -66,10 +66,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
-	// OriginalIPDetection provides XFF and extension configuration for original IP detection on the listener.
+	// ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener.
 	//
 	// +optional
-	OriginalIPDetection *OriginalIPDetectionSettings `json:"originalIpDetection,omitempty"`
+	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	//
 	// +optional
@@ -88,10 +88,10 @@ type ClientTrafficPolicySpec struct {
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
 }
 
-// OriginalIPDetectionSettings provides XFF and extension configuration for original IP detection on the listener.
+// ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.xffNumTrustedHops) && has(self.extensions))",message="extensions cannot be used in conjunction with xffNumTrustedHops"
-type OriginalIPDetectionSettings struct {
+type ClientIPDetectionSettings struct {
 	// XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
 	// headers to trust when determining the origin client's IP address.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
@@ -107,7 +107,7 @@ type OriginalIPDetectionSettings struct {
 	Extensions *OriginalIPDetectionExtensions `json:"extensions,omitempty"`
 }
 
-// OriginalIPDetectionExtensions provides a list of extensions to be used for original IP detection.
+// OriginalIPDetectionExtensions provides a list of extensions to be used for client IP detection.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.customHeader) && has(self.xff))",message="customHeader cannot be used in conjunction with xff"
 type OriginalIPDetectionExtensions struct {

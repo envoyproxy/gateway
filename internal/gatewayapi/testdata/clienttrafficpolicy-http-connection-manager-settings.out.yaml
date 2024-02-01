@@ -6,7 +6,7 @@ clientTrafficPolicies:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    originalIpDetection:
+    clientIPDetection:
       xffNumTrustedHops: 2
     targetRef:
       group: gateway.networking.k8s.io
@@ -125,7 +125,7 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
-      originalIpDetection:
+      clientIPDetection:
         xffNumTrustedHops: 2
       path:
         escapedSlashesAction: UnescapeAndRedirect

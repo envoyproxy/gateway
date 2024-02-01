@@ -5,7 +5,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    originalIpDetection:
+    clientIPDetection:
       xffNumTrustedHops: 2
     targetRef:
       group: gateway.networking.k8s.io

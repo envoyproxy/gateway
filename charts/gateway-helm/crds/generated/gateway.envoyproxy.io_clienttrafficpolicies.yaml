@@ -44,31 +44,9 @@ spec:
           spec:
             description: Spec defines the desired state of ClientTrafficPolicy.
             properties:
-              enableProxyProtocol:
-                description: EnableProxyProtocol interprets the ProxyProtocol header
-                  and adds the Client Address into the X-Forwarded-For header. Note
-                  Proxy Protocol must be present when this field is set, else the
-                  connection is closed.
-                type: boolean
-              http1:
-                description: HTTP1 provides HTTP/1 configuration on the listener.
-                properties:
-                  enableTrailers:
-                    description: EnableTrailers defines if HTTP/1 trailers should
-                      be proxied by Envoy.
-                    type: boolean
-                  preserveHeaderCase:
-                    description: PreserveHeaderCase defines if Envoy should preserve
-                      the letter case of headers. By default, Envoy will lowercase
-                      all the headers.
-                    type: boolean
-                type: object
-              http3:
-                description: HTTP3 provides HTTP/3 configuration on the listener.
-                type: object
-              originalIpDetection:
-                description: OriginalIPDetection provides XFF and extension configuration
-                  for original IP detection on the listener.
+              clientIPDetection:
+                description: ClientIPDetectionSettings provides XFF and extension
+                  configuration for client IP detection on the listener.
                 properties:
                   extensions:
                     description: 'Extensions provides configuration for supported
@@ -135,6 +113,28 @@ spec:
                 x-kubernetes-validations:
                 - message: extensions cannot be used in conjunction with xffNumTrustedHops
                   rule: '!(has(self.xffNumTrustedHops) && has(self.extensions))'
+              enableProxyProtocol:
+                description: EnableProxyProtocol interprets the ProxyProtocol header
+                  and adds the Client Address into the X-Forwarded-For header. Note
+                  Proxy Protocol must be present when this field is set, else the
+                  connection is closed.
+                type: boolean
+              http1:
+                description: HTTP1 provides HTTP/1 configuration on the listener.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  preserveHeaderCase:
+                    description: PreserveHeaderCase defines if Envoy should preserve
+                      the letter case of headers. By default, Envoy will lowercase
+                      all the headers.
+                    type: boolean
+                type: object
+              http3:
+                description: HTTP3 provides HTTP/3 configuration on the listener.
+                type: object
               path:
                 description: Path enables managing how the incoming path set by clients
                   can be normalized.

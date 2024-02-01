@@ -231,6 +231,21 @@ _Appears in:_
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type (eg. "claim.nested.key", "sub"). The nested claim name must use dot "." to separate the JSON name path. |
 
 
+#### ClientIPDetectionSettings
+
+
+
+ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `xffNumTrustedHops` | _integer_ |  false  | XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
+| `extensions` | _[OriginalIPDetectionExtensions](#originalipdetectionextensions)_ |  false  | Extensions provides configuration for supported original IP detection extensions. Refer to: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-original-ip-detection-extensions for more details. |
+
+
 #### ClientTrafficPolicy
 
 
@@ -279,7 +294,7 @@ _Appears in:_
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `suppressEnvoyHeaders` | _boolean_ |  false  | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
-| `originalIpDetection` | _[OriginalIPDetectionSettings](#originalipdetectionsettings)_ |  false  | OriginalIPDetection provides XFF and extension configuration for original IP detection on the listener. |
+| `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` | _[TLSSettings](#tlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
@@ -1584,30 +1599,15 @@ _Appears in:_
 
 
 
-OriginalIPDetectionExtensions provides a list of extensions to be used for original IP detection.
+OriginalIPDetectionExtensions provides a list of extensions to be used for client IP detection.
 
 _Appears in:_
-- [OriginalIPDetectionSettings](#originalipdetectionsettings)
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides the configuration for the custom header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
 | `xff` | _[XffExtensionSettings](#xffextensionsettings)_ |  false  | Xff provides the configuration for the XFF original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto for more details. |
-
-
-#### OriginalIPDetectionSettings
-
-
-
-OriginalIPDetectionSettings provides XFF and extension configuration for original IP detection on the listener.
-
-_Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `xffNumTrustedHops` | _integer_ |  false  | XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
-| `extensions` | _[OriginalIPDetectionExtensions](#originalipdetectionextensions)_ |  false  | Extensions provides configuration for supported original IP detection extensions. Refer to: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-original-ip-detection-extensions for more details. |
 
 
 #### PathEscapedSlashAction

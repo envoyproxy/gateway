@@ -292,8 +292,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		// Translate Proxy Protocol
 		translateListenerProxyProtocol(policySpec.EnableProxyProtocol, httpIR)
 
-		// Translate HTTP Connection Manager
-		translateOriginalIPDetection(policySpec.OriginalIPDetection, httpIR)
+		// Translate Client IP Detection
+		translateClientIPDetection(policySpec.ClientIPDetection, httpIR)
 
 		// Translate Suppress Envoy Headers
 		translateListenerSuppressEnvoyHeaders(policySpec.SuppressEnvoyHeaders, httpIR)
@@ -378,13 +378,13 @@ func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPLi
 	}
 }
 
-func translateOriginalIPDetection(originalIPDetection *egv1a1.OriginalIPDetectionSettings, httpIR *ir.HTTPListener) {
+func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {
 	// Return early if not set
-	if originalIPDetection == nil {
+	if clientIPDetection == nil {
 		return
 	}
 
-	httpIR.OriginalIPDetection = (*ir.OriginalIPDetectionSettings)(originalIPDetection)
+	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
 }
 
 func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *ir.HTTPListener) {
