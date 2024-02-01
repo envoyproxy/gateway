@@ -331,13 +331,14 @@ Curl the admin interface port to fetch the configured value for `xff_num_trusted
 ```shell
 curl -s 'http://localhost:19000/config_dump?resource=dynamic_listeners' \
   | jq -r '.configs[0].active_state.listener.default_filter_chain.filters[0].typed_config 
-      | with_entries(select(.key == "xff_num_trusted_hops"))'
+      | with_entries(select(.key | match("xff|remote|original_ip")))'
 ```
 
 You should expect to see the following:
 
 ```json
 {
+  "use_remote_address": true,
   "xff_num_trusted_hops": 2
 }
 ```

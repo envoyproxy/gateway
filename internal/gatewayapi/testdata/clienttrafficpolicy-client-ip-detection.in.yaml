@@ -1,0 +1,81 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-http-1
+  spec:
+    clientIPDetection:
+      xffNumTrustedHops: 2
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-http-2
+  spec:
+    clientIPDetection:
+      extensions:
+        customHeader:
+          headerName: "x-client-ip-address"
+          rejectWithStatus: 500
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-2
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-http-3
+  spec:
+    clientIPDetection:
+      extensions:
+        xff:
+          numTrustedHops: 1
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-3
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: http-2
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: http-3
+      protocol: HTTP
+      port: 8083
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: http-4
+      protocol: HTTP
+      port: 8084
+      allowedRoutes:
+        namespaces:
+          from: Same

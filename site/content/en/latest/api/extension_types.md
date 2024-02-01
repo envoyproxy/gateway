@@ -372,7 +372,7 @@ _Appears in:_
 
 
 
-CustomHeaderExtensionSettings provides the configuration for the custom header original IP detection extension.
+CustomHeaderExtensionSettings provides configuration for the custom header original IP detection extension.
 
 _Appears in:_
 - [OriginalIPDetectionExtensions](#originalipdetectionextensions)
@@ -1606,8 +1606,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides the configuration for the custom header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
-| `xff` | _[XffExtensionSettings](#xffextensionsettings)_ |  false  | Xff provides the configuration for the XFF original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto for more details. |
+| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for the custom header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
+| `xff` | _[XffExtensionSettings](#xffextensionsettings)_ |  false  | Xff provides configuration for the XFF original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto for more details. |
 
 
 #### PathEscapedSlashAction
@@ -2376,7 +2376,7 @@ _Appears in:_
 
 
 
-XffExtensionSettings provides the configuration for the XFF original IP detection extension.
+XffExtensionSettings provides configuration for the XFF original IP detection extension.
 
 _Appears in:_
 - [OriginalIPDetectionExtensions](#originalipdetectionextensions)

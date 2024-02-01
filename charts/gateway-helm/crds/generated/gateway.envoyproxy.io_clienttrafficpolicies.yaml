@@ -54,9 +54,8 @@ spec:
                       for more details.'
                     properties:
                       customHeader:
-                        description: CustomHeader provides the configuration for the
-                          custom header original IP detection extension. Refer to
-                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+                        description: CustomHeader provides configuration for the custom
+                          header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
                           for more details.
                         properties:
                           allowExtensionToSetAddressAsTrusted:
@@ -85,7 +84,7 @@ spec:
                         - headerName
                         type: object
                       xff:
-                        description: Xff provides the configuration for the XFF original
+                        description: Xff provides configuration for the XFF original
                           IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto
                           for more details.
                         properties:

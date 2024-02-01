@@ -179,6 +179,35 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "clientIPDetection conflicting configuration",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
+						XffNumTrustedHops: ptr.To(uint32(1)),
+						Extensions: &egv1a1.OriginalIPDetectionExtensions{
+							CustomHeader: &egv1a1.CustomHeaderExtensionSettings{
+								HeaderName: "x-client-ip-address",
+							},
+							Xff: &egv1a1.XffExtensionSettings{
+								NumTrustedHops: 2,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.clientIPDetection: Invalid value: \"object\": extensions cannot be used in conjunction with xffNumTrustedHops",
+				"spec.clientIPDetection.extensions: Invalid value: \"object\": customHeader cannot be used in conjunction with xff",
+			},
+		},
+		{
 			desc: "http3 enabled and ALPN protocols set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{

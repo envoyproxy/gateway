@@ -111,13 +111,13 @@ type ClientIPDetectionSettings struct {
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.customHeader) && has(self.xff))",message="customHeader cannot be used in conjunction with xff"
 type OriginalIPDetectionExtensions struct {
-	// CustomHeader provides the configuration for the custom header original IP detection extension.
+	// CustomHeader provides configuration for the custom header original IP detection extension.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 	// for more details.
 	//
 	// +optional
 	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
-	// Xff provides the configuration for the XFF original IP detection extension.
+	// Xff provides configuration for the XFF original IP detection extension.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto
 	// for more details.
 	//
@@ -125,7 +125,7 @@ type OriginalIPDetectionExtensions struct {
 	Xff *XffExtensionSettings `json:"xff,omitempty"`
 }
 
-// CustomHeaderExtensionSettings provides the configuration for the custom header original IP detection extension.
+// CustomHeaderExtensionSettings provides configuration for the custom header original IP detection extension.
 type CustomHeaderExtensionSettings struct {
 	// HeaderName of the of the header containing the original downstream remote address, if present.
 	//
@@ -149,7 +149,7 @@ type CustomHeaderExtensionSettings struct {
 	AllowExtensionToSetAddressAsTrusted bool `json:"allowExtensionToSetAddressAsTrusted"`
 }
 
-// XffExtensionSettings provides the configuration for the XFF original IP detection extension.
+// XffExtensionSettings provides configuration for the XFF original IP detection extension.
 type XffExtensionSettings struct {
 	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
 	NumTrustedHops uint32 `json:"numTrustedHops"`
