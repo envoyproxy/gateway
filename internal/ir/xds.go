@@ -1319,6 +1319,9 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel requests that Envoy will make.
 	MaxParallelRequests *uint32 `json:"maxParallelRequests,omitempty" yaml:"maxParallelRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make.
+	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
 }
 
 // HealthCheck defines health check settings
