@@ -16,15 +16,15 @@ _Appears in:_
 {{- end }}
 
 {{ if $type.Members -}}
-| Field | Type | Description |
-| --- | --- | --- |
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
 {{ if $type.GVK -}}
-| `apiVersion` | _string_ | `{{ $type.GVK.Group }}/{{ $type.GVK.Version }}`
-| `kind` | _string_ | `{{ $type.GVK.Kind }}`
+| `apiVersion` | _string_ | |`{{ $type.GVK.Group }}/{{ $type.GVK.Version }}`
+| `kind` | _string_ | |`{{ $type.GVK.Kind }}`
 {{ end -}}
 
 {{ range $type.Members -}}
-| `{{ .Name  }}` | _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+| `{{ .Name  }}` | _{{ markdownRenderType .Type }}_ | {{ with .Markers.optional }} {{ "false" }} {{ else }} {{ "true" }} {{end}} | {{ template "type_members" . }} |
 {{ end -}}
 
 {{ end -}}
