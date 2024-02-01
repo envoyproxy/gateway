@@ -2041,7 +2041,7 @@ _Appears in:_
 
 #### SecurityPolicy
 
-
+_Release Channel:_ experimental
 
 SecurityPolicy allows the user to configure various security settings for a Gateway.
 
