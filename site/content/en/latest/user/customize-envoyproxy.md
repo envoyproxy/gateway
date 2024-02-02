@@ -349,6 +349,24 @@ EOF
 
 After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is generated. However, upon activating the EnvoyProxy's HPA, the Envoy Gateway will no longer reference the `replicas` field specified in the `envoyDeployment`, as outlined [here](#customize-envoyproxy-deployment-replicas).
 
+## Customize EnvoyProxy Command line options
+
+You can customize the EnvoyProxy Command line options via `spec.extraArgs` in EnvoyProxy Config.
+For example, the following configuration will add `--disable-extensions` arg in order to disable `envoy.access_loggers/envoy.access_loggers.wasm` extension:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  extraArgs:
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+EOF
+```
+
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
 [egctl translate]: ../egctl/#validating-gateway-api-configuration

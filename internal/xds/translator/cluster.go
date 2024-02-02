@@ -14,6 +14,7 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -31,6 +32,7 @@ const (
 	extensionOptionsKey = "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes
 	tcpClusterPerConnectionBufferLimitBytes = 32768
+	tcpClusterPerConnectTimeout             = 10 * time.Second
 )
 
 type xdsClusterArgs struct {
@@ -42,6 +44,8 @@ type xdsClusterArgs struct {
 	proxyProtocol  *ir.ProxyProtocol
 	circuitBreaker *ir.CircuitBreaker
 	healthCheck    *ir.HealthCheck
+	http1Settings  *ir.HTTP1Settings
+	timeout        *ir.Timeout
 }
 
 type EndpointType int
@@ -54,7 +58,6 @@ const (
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
-		ConnectTimeout:  durationpb.New(10 * time.Second),
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
@@ -62,6 +65,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		OutlierDetection:              &clusterv3.OutlierDetection{},
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
 	}
+
+	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
 
 	// Set Proxy Protocol
 	if args.proxyProtocol != nil {
@@ -87,16 +92,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.RespectDnsTtl = true
 	}
 
-	isHTTP2 := false
-	for _, ds := range args.settings {
-		if ds.Protocol == ir.GRPC ||
-			ds.Protocol == ir.HTTP2 {
-			isHTTP2 = true
-			break
-		}
-	}
-	if isHTTP2 {
-		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
+	// build common, HTTP/1 and HTTP/2  protocol options for cluster
+	epo := buildTypedExtensionProtocolOptions(args)
+	if epo != nil {
+		cluster.TypedExtensionProtocolOptions = epo
 	}
 
 	// Set Load Balancer policy
@@ -315,13 +314,91 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
-func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
-	protocolOptions := httpv3.HttpProtocolOptions{
-		UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.Any {
+	requiresHTTP2Options := false
+	for _, ds := range args.settings {
+		if ds.Protocol == ir.GRPC ||
+			ds.Protocol == ir.HTTP2 {
+			requiresHTTP2Options = true
+			break
+		}
+	}
+
+	requiresCommonHTTPOptions := (args.timeout != nil && args.timeout.HTTP != nil &&
+		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
+		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
+
+	requiresHTTP1Options := args.http1Settings != nil && (args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase)
+
+	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options) {
+		return nil
+	}
+
+	protocolOptions := httpv3.HttpProtocolOptions{}
+
+	if requiresCommonHTTPOptions {
+		protocolOptions.CommonHttpProtocolOptions = &corev3.HttpProtocolOptions{}
+
+		if args.timeout != nil && args.timeout.HTTP != nil {
+			if args.timeout.HTTP.ConnectionIdleTimeout != nil {
+				protocolOptions.CommonHttpProtocolOptions.IdleTimeout =
+					durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
+			}
+
+			if args.timeout.HTTP.MaxConnectionDuration != nil {
+				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration =
+					durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
+			}
+		}
+
+		if args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil {
+			protocolOptions.CommonHttpProtocolOptions.MaxRequestsPerConnection = &wrapperspb.UInt32Value{
+				Value: *args.circuitBreaker.MaxRequestsPerConnection,
+			}
+		}
+
+	}
+
+	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory
+	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
+	// Default to http1 otherwise
+	// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
+	// so that when ALPN is supported enabling trailers doesn't force HTTP/1.1
+	switch {
+	case requiresHTTP2Options:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
 			},
-		},
+		}
+	case requiresHTTP1Options:
+		http1opts := &corev3.Http1ProtocolOptions{
+			EnableTrailers: args.http1Settings.EnableTrailers,
+		}
+		if args.http1Settings.PreserveHeaderCase {
+			preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+			http1opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
+				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
+					StatefulFormatter: &corev3.TypedExtensionConfig{
+						Name:        "preserve_case",
+						TypedConfig: preservecaseAny,
+					},
+				},
+			}
+		}
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+					HttpProtocolOptions: http1opts,
+				},
+			},
+		}
+	default:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{},
+			},
+		}
 	}
 
 	anyProtocolOptions, _ := anypb.New(&protocolOptions)
@@ -388,4 +465,11 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 			TypedConfig: ppCtxAny,
 		},
 	}
+}
+
+func buildConnectTimeout(to *ir.Timeout) *durationpb.Duration {
+	if to != nil && to.TCP != nil && to.TCP.ConnectTimeout != nil {
+		return durationpb.New(to.TCP.ConnectTimeout.Duration)
+	}
+	return durationpb.New(tcpClusterPerConnectTimeout)
 }

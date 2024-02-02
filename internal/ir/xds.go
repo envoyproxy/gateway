@@ -13,11 +13,11 @@ import (
 	"reflect"
 
 	"golang.org/x/exp/slices"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -57,6 +57,8 @@ var (
 	ErrHCHTTPExpectedStatusesInvalid        = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
 	ErrHealthCheckPayloadInvalid            = errors.New("one of Text, Binary fields must be set in payload")
 	ErrHTTPStatusInvalid                    = errors.New("HTTPStatus should be in [200,600)")
+
+	redacted = []byte("[redacted]")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -155,20 +157,29 @@ func (x Xds) GetUDPListener(name string) *UDPListener {
 	return nil
 }
 
+func (x Xds) YAMLString() string {
+	y, _ := yaml.Marshal(x.Printable())
+	return string(y)
+}
+
 // Printable returns a deep copy of the resource that can be safely logged.
 func (x Xds) Printable() *Xds {
 	out := x.DeepCopy()
 	for _, listener := range out.HTTP {
 		// Omit field
-		listener.TLS = nil
+		if listener.TLS != nil {
+			for i := range listener.TLS.Certificates {
+				listener.TLS.Certificates[i].PrivateKey = redacted
+			}
+		}
 
 		for _, route := range listener.Routes {
 			// Omit field
 			if route.OIDC != nil {
-				route.OIDC.ClientSecret = []byte{}
+				route.OIDC.ClientSecret = redacted
 			}
 			if route.BasicAuth != nil {
-				route.BasicAuth.Users = []byte{}
+				route.BasicAuth.Users = redacted
 			}
 		}
 	}
@@ -208,6 +219,9 @@ type HTTPListener struct {
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// HTTP1 provides HTTP/1 configuration on the listener
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -332,6 +346,13 @@ type BackendWeights struct {
 	Invalid uint32 `json:"invalid" yaml:"invalid"`
 }
 
+// HTTP1Settings provides HTTP/1 configuration on the listener.
+// +k8s:deepcopy-gen=true
+type HTTP1Settings struct {
+	EnableTrailers     bool `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase bool `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+}
+
 // HTTPRoute holds the route information associated with the HTTP Route
 // +k8s:deepcopy-gen=true
 type HTTPRoute struct {
@@ -368,8 +389,6 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
-	// Timeout is the time until which entire response is received from the upstream.
-	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// CORS policy for the route.
@@ -390,6 +409,8 @@ type HTTPRoute struct {
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
+	// Request and connection timeout settings
+	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1292,6 +1313,9 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel requests that Envoy will make.
 	MaxParallelRequests *uint32 `json:"maxParallelRequests,omitempty" yaml:"maxParallelRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make.
+	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
 }
 
 // HealthCheck defines health check settings
@@ -1459,4 +1483,32 @@ func (p *HealthCheckPayload) Validate() error {
 		errs = errors.Join(errs, ErrHealthCheckPayloadInvalid)
 	}
 	return errs
+}
+
+// Backend connection timeout settings
+// +k8s:deepcopy-gen=true
+type Timeout struct {
+	// Timeout settings for TCP.
+	TCP *TCPTimeout `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+
+	// Timeout settings for HTTP.
+	HTTP *HTTPTimeout `json:"http,omitempty" yaml:"tcp,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type TCPTimeout struct {
+	// The timeout for network connection establishment, including TCP and TLS handshakes.
+	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty" yaml:"connectTimeout,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type HTTPTimeout struct {
+	// RequestTimeout is the time until which entire response is received from the upstream.
+	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
+
+	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	ConnectionIdleTimeout *metav1.Duration `json:"connectionIdleTimeout,omitempty" yaml:"connectionIdleTimeout,omitempty"`
+
+	// The maximum duration of an HTTP connection.
+	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
 }

@@ -93,6 +93,10 @@ type HTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 	// +optional
 	EnableTrailers *bool `json:"enableTrailers,omitempty"`
+	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+	// By default, Envoy will lowercase all the headers.
+	// +optional
+	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy

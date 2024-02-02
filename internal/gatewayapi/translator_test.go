@@ -43,6 +43,16 @@ func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 }
 
 func TestTranslate(t *testing.T) {
+	testCasesConfig := []struct {
+		name                    string
+		EnvoyPatchPolicyEnabled bool
+	}{
+		{
+			name:                    "envoypatchpolicy-invalid-feature-disabled",
+			EnvoyPatchPolicyEnabled: false,
+		},
+	}
+
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
 
@@ -54,15 +64,23 @@ func TestTranslate(t *testing.T) {
 
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
+			envoyPatchPolicyEnabled := true
+
+			for _, config := range testCasesConfig {
+				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
+					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+				}
+			}
 
 			translator := &Translator{
-				GatewayControllerName:  egv1a1.GatewayControllerName,
-				GatewayClassName:       "envoy-gateway-class",
-				GlobalRateLimitEnabled: true,
+				GatewayControllerName:   egv1a1.GatewayControllerName,
+				GatewayClassName:        "envoy-gateway-class",
+				GlobalRateLimitEnabled:  true,
+				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 			}
 
 			// Add common test fixtures
-			for i := 1; i <= 3; i++ {
+			for i := 1; i <= 4; i++ {
 				svcName := "service-" + strconv.Itoa(i)
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,

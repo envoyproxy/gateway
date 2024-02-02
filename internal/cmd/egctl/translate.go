@@ -265,6 +265,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
+		EnvoyPatchPolicyEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
@@ -296,6 +297,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
+		EnvoyPatchPolicyEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 

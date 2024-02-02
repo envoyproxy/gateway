@@ -12,6 +12,7 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -248,6 +249,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		hc *ir.HealthCheck
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
+		to *ir.Timeout
 	)
 
 	// Build IR
@@ -283,6 +285,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.HealthCheck = hc
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
+
+					// some timeout setting originate from the route
+					if policy.Spec.Timeout != nil {
+						to = t.buildTimeout(policy, r)
+						r.Timeout = to
+					}
 				}
 			}
 		}
@@ -298,6 +306,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		hc *ir.HealthCheck
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
+		ct *ir.Timeout
 	)
 
 	// Build IR
@@ -347,6 +356,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.FaultInjection == nil {
 				r.FaultInjection = fi
+			}
+
+			if policy.Spec.Timeout != nil {
+				ct = t.buildTimeout(policy, r)
+				if r.Timeout == nil {
+					r.Timeout = ct
+				}
 			}
 		}
 
@@ -671,11 +687,11 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 }
 
 func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
-	if policy.Spec.HealthCheck == nil {
+	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Active == nil {
 		return nil
 	}
 
-	hc := policy.Spec.HealthCheck
+	hc := policy.Spec.HealthCheck.Active
 	irHC := &ir.HealthCheck{
 		Timeout:            hc.Timeout,
 		Interval:           hc.Interval,
@@ -683,16 +699,16 @@ func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.H
 		HealthyThreshold:   hc.HealthyThreshold,
 	}
 	switch hc.Type {
-	case egv1a1.HealthCheckerTypeHTTP:
-		irHC.HTTP = t.buildHTTPHealthChecker(hc.HTTP)
-	case egv1a1.HealthCheckerTypeTCP:
-		irHC.TCP = t.buildTCPHealthChecker(hc.TCP)
+	case egv1a1.ActiveHealthCheckerTypeHTTP:
+		irHC.HTTP = t.buildHTTPActiveHealthChecker(hc.HTTP)
+	case egv1a1.ActiveHealthCheckerTypeTCP:
+		irHC.TCP = t.buildTCPActiveHealthChecker(hc.TCP)
 	}
 
 	return irHC
 }
 
-func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTTPHealthChecker {
+func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHealthChecker {
 	if h == nil {
 		return nil
 	}
@@ -716,32 +732,32 @@ func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTT
 	}
 	irHTTP.ExpectedStatuses = irStatuses
 
-	irHTTP.ExpectedResponse = translateHealthCheckPayload(h.ExpectedResponse)
+	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
 }
 
-func (t *Translator) buildTCPHealthChecker(h *egv1a1.TCPHealthChecker) *ir.TCPHealthChecker {
+func (t *Translator) buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealthChecker {
 	if h == nil {
 		return nil
 	}
 
 	irTCP := &ir.TCPHealthChecker{
-		Send:    translateHealthCheckPayload(h.Send),
-		Receive: translateHealthCheckPayload(h.Receive),
+		Send:    translateActiveHealthCheckPayload(h.Send),
+		Receive: translateActiveHealthCheckPayload(h.Receive),
 	}
 	return irTCP
 }
 
-func translateHealthCheckPayload(p *egv1a1.HealthCheckPayload) *ir.HealthCheckPayload {
+func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {
 	if p == nil {
 		return nil
 	}
 
 	irPayload := &ir.HealthCheckPayload{}
 	switch p.Type {
-	case egv1a1.HealthCheckPayloadTypeText:
+	case egv1a1.ActiveHealthCheckPayloadTypeText:
 		irPayload.Text = p.Text
-	case egv1a1.HealthCheckPayloadTypeBinary:
+	case egv1a1.ActiveHealthCheckPayloadTypeBinary:
 		irPayload.Binary = make([]byte, len(p.Binary))
 		copy(irPayload.Binary, p.Binary)
 	}
@@ -776,7 +792,7 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
 				cb.MaxConnections = &ui32
 			} else {
-				setCircuitBreakerPolicyErrorCondition(policy, fmt.Sprintf("invalid MaxConnections value %d", *pcb.MaxConnections))
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxConnections value %d", *pcb.MaxConnections))
 				return nil
 			}
 		}
@@ -785,7 +801,7 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
 				cb.MaxParallelRequests = &ui32
 			} else {
-				setCircuitBreakerPolicyErrorCondition(policy, fmt.Sprintf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests))
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests))
 				return nil
 			}
 		}
@@ -794,7 +810,7 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
 				cb.MaxPendingRequests = &ui32
 			} else {
-				setCircuitBreakerPolicyErrorCondition(policy, fmt.Sprintf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests))
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests))
 				return nil
 			}
 		}
@@ -803,8 +819,86 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 	return cb
 }
 
-func setCircuitBreakerPolicyErrorCondition(policy *egv1a1.BackendTrafficPolicy, errMsg string) {
-	message := fmt.Sprintf("Unable to translate Circuit Breaker: %s", errMsg)
+func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTTPRoute) *ir.Timeout {
+	var tto *ir.TCPTimeout
+	var hto *ir.HTTPTimeout
+	terr := false
+
+	pto := policy.Spec.Timeout
+
+	if pto.TCP != nil && pto.TCP.ConnectTimeout != nil {
+		d, err := time.ParseDuration(string(*pto.TCP.ConnectTimeout))
+		if err != nil {
+			setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Timeout", fmt.Sprintf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
+			terr = true
+		} else {
+			tto = &ir.TCPTimeout{
+				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+			}
+		}
+	}
+
+	if pto.HTTP != nil {
+		var cit *metav1.Duration
+		var mcd *metav1.Duration
+
+		if pto.HTTP.ConnectionIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "HTTP Timeout", fmt.Sprintf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
+				terr = true
+			} else {
+				cit = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
+		if pto.HTTP.MaxConnectionDuration != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.MaxConnectionDuration))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "HTTP Timeout", fmt.Sprintf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
+				terr = true
+			} else {
+				mcd = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
+		hto = &ir.HTTPTimeout{
+			ConnectionIdleTimeout: cit,
+			MaxConnectionDuration: mcd,
+		}
+	}
+
+	// if backendtrafficpolicy is not translatable, return the original timeout if it's initialized
+	if terr {
+		if r.Timeout != nil {
+			return r.Timeout.DeepCopy()
+		}
+	} else {
+		// http request timeout is translated during the gateway-api route resource translation
+		// merge route timeout setting with backendtrafficpolicy timeout settings
+		if r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
+			if hto == nil {
+				hto = &ir.HTTPTimeout{
+					RequestTimeout: r.Timeout.HTTP.RequestTimeout,
+				}
+			} else {
+				hto.RequestTimeout = r.Timeout.HTTP.RequestTimeout
+			}
+		}
+
+		if hto != nil || tto != nil {
+			return &ir.Timeout{
+				TCP:  tto,
+				HTTP: hto,
+			}
+		}
+	}
+
+	return nil
+}
+
+func setBackendTrafficPolicyTranslationErrorCondition(policy *egv1a1.BackendTrafficPolicy, field, errMsg string) {
+	message := fmt.Sprintf("Unable to translate %s: %s", field, errMsg)
 	status.SetBackendTrafficPolicyCondition(policy,
 		gwv1a2.PolicyConditionAccepted,
 		metav1.ConditionFalse,

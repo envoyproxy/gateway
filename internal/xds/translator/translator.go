@@ -259,7 +259,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
-				if err = processXdsCluster(tCtx, httpRoute); err != nil {
+				if err = processXdsCluster(tCtx, httpRoute, httpListener.HTTP1); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -484,7 +484,7 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
-func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute) error {
+func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
 	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
 	// since there's no Mixed AddressType among all the DestinationSettings.
 	addrTypeState := httpRoute.Destination.Settings[0].AddressType
@@ -505,6 +505,8 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		proxyProtocol:  httpRoute.ProxyProtocol,
 		circuitBreaker: httpRoute.CircuitBreaker,
 		healthCheck:    httpRoute.HealthCheck,
+		http1Settings:  http1Settings,
+		timeout:        httpRoute.Timeout,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
