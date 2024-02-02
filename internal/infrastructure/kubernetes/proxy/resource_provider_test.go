@@ -505,7 +505,6 @@ func TestService(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	svcType := egv1a1.ServiceTypeClusterIP
 	cases := []struct {
 		caseName string
 		infra    *ir.Infra
@@ -523,7 +522,15 @@ func TestService(t *testing.T) {
 				Annotations: map[string]string{
 					"key1": "value1",
 				},
-				Type: &svcType,
+				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+			},
+		},
+		{
+			caseName: "headless-service",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Type:      egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+				ClusterIP: ptr.To("None"),
 			},
 		},
 		{

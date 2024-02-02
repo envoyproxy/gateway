@@ -187,6 +187,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"loadBalancerIP must be a valid IPv4 address"},
 		},
 		{
+			desc: "ServiceTypeLoadBalancer-with-clusterIP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:      ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								ClusterIP: ptr.To("None"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"clusterIP can only be set for ClusterIP type"},
+		},
+		{
 			desc: "ServiceTypeClusterIP-with-empty-IP",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -201,6 +218,74 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "ServiceTypeClusterIP-with-clusterIP-valid-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:      ptr.To(egv1a1.ServiceTypeClusterIP),
+								ClusterIP: ptr.To("20.205.243.166"), // github ip for test only
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ServiceTypeClusterIP-with-clusterIP-None",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:      ptr.To(egv1a1.ServiceTypeClusterIP),
+								ClusterIP: ptr.To("None"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ServiceTypeClusterIP-with-clusterIP-invalid-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:      ptr.To(egv1a1.ServiceTypeClusterIP),
+								ClusterIP: ptr.To("1.2.3.4."),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"clusterIP must be a valid IPv4 address"},
+		},
+		{
+			desc: "ServiceTypeClusterIP-with-clusterIP-invalid-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:      ptr.To(egv1a1.ServiceTypeClusterIP),
+								ClusterIP: ptr.To("a.b.c.d"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"clusterIP must be a valid IPv4 address"},
 		},
 		{
 			desc: "ServiceTypeClusterIP-with-LoadBalancerIP",

@@ -212,6 +212,7 @@ const (
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="clusterIP can only be set for ClusterIP type",rule="!has(self.clusterIP) || self.type == 'ClusterIP'"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -227,6 +228,14 @@ type KubernetesServiceSpec struct {
 	// +kubebuilder:default:="LoadBalancer"
 	// +optional
 	Type *ServiceType `json:"type,omitempty"`
+
+	// ClusterIP may only be configured when Type is set to ClusterIP. This can be used to specify
+	// your own cluster IP from the service-cluster-ip-range CIDR configured for the API server, or
+	// can be set to "None" to create a headless service without a cluster IP.
+	//
+	// +kubebuilder:validation:XValidation:message="clusterIP must be a valid IPv4 address or \"None\"",rule="self.matches(r\"^(None|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\")"
+	// +optional
+	ClusterIP *string `json:"clusterIP,omitempty"`
 
 	// LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider
 	// implementation if more than one are available or is otherwise expected to be specified

@@ -100,6 +100,18 @@ func TestExpectedServiceSpec(t *testing.T) {
 				SessionAffinity: corev1.ServiceAffinityNone,
 			},
 		},
+		{
+			name: "ClusterIPHeadlessService",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:      egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+				ClusterIP: ptr.To("None"),
+			}},
+			want: corev1.ServiceSpec{
+				Type:            corev1.ServiceTypeClusterIP,
+				ClusterIP:       "None",
+				SessionAffinity: corev1.ServiceAffinityNone,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -15,10 +15,12 @@ package status
 
 import (
 	"fmt"
+	"strings"
 	"time"
 	"unicode"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -73,8 +75,8 @@ func computeGatewayAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) metav1.
 
 // computeGatewayProgrammedCondition computes the Gateway Programmed status condition.
 // Programmed condition surfaces true when the Envoy Deployment status is ready.
-func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
-	if len(gw.Status.Addresses) == 0 {
+func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment) metav1.Condition {
+	if len(gw.Status.Addresses) == 0 && (svc == nil || svc.Spec.ClusterIP != "None") {
 		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
 			string(gwapiv1.GatewayReasonAddressNotAssigned),
 			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
@@ -89,10 +91,18 @@ func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.D
 			"Deployment replicas unavailable", time.Now(), gw.Generation)
 	}
 
-	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy Deployment replicas available",
-		deployment.Status.AvailableReplicas, deployment.Status.Replicas)
+	var messages []string
+	if len(gw.Status.Addresses) > 0 {
+		messages = append(messages, "Address assigned to the Gateway")
+	}
+
+	messages = append(messages,
+		fmt.Sprintf("%d/%d envoy Deployment replicas available",
+			deployment.Status.AvailableReplicas, deployment.Status.Replicas),
+	)
+
 	return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue,
-		string(gwapiv1.GatewayConditionProgrammed), message, time.Now(), gw.Generation)
+		string(gwapiv1.GatewayConditionProgrammed), strings.Join(messages, ", "), time.Now(), gw.Generation)
 }
 
 // MergeConditions adds or updates matching conditions, and updates the transition

@@ -52,7 +52,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 
 			if svc.Spec.Type == corev1.ServiceTypeClusterIP {
 				for i := range svc.Spec.ClusterIPs {
-					if svc.Spec.ClusterIPs[i] != "" {
+					if svc.Spec.ClusterIPs[i] != "" && svc.Spec.ClusterIPs[i] != "None" {
 						addresses = append(addresses, svc.Spec.ClusterIPs[i])
 					}
 				}
@@ -85,5 +85,5 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 		gw.Status.Addresses = nil
 	}
 	// Update the programmed condition.
-	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, deployment))
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, svc, deployment))
 }

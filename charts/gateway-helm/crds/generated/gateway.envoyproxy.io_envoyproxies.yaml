@@ -6550,6 +6550,16 @@ spec:
                             description: Annotations that should be appended to the
                               service. By default, no annotations are appended.
                             type: object
+                          clusterIP:
+                            description: ClusterIP may only be configured when Type
+                              is set to ClusterIP. This can be used to specify your
+                              own cluster IP from the service-cluster-ip-range CIDR
+                              configured for the API server, or can be set to "None"
+                              to create a headless service without a cluster IP.
+                            type: string
+                            x-kubernetes-validations:
+                            - message: clusterIP must be a valid IPv4 address or "None"
+                              rule: self.matches(r"^(None|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$")
                           externalTrafficPolicy:
                             default: Local
                             description: ExternalTrafficPolicy determines the externalTrafficPolicy
@@ -6603,6 +6613,8 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                        - message: clusterIP can only be set for ClusterIP type
+                          rule: '!has(self.clusterIP) || self.type == ''ClusterIP'''
                     type: object
                   type:
                     description: Type is the type of resource provider to use. A resource

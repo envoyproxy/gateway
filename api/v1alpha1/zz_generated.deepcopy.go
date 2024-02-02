@@ -2111,6 +2111,11 @@ func (in *KubernetesServiceSpec) DeepCopyInto(out *KubernetesServiceSpec) {
 		*out = new(ServiceType)
 		**out = **in
 	}
+	if in.ClusterIP != nil {
+		in, out := &in.ClusterIP, &out.ClusterIP
+		*out = new(string)
+		**out = **in
+	}
 	if in.LoadBalancerClass != nil {
 		in, out := &in.LoadBalancerClass, &out.LoadBalancerClass
 		*out = new(string)

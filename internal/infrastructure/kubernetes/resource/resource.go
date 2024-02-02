@@ -30,6 +30,11 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	if service.ExternalTrafficPolicy == nil {
 		service.ExternalTrafficPolicy = egv1a1.DefaultKubernetesServiceExternalTrafficPolicy()
 	}
+	if *service.Type == egv1a1.ServiceTypeClusterIP {
+		if service.ClusterIP != nil {
+			serviceSpec.ClusterIP = *service.ClusterIP
+		}
+	}
 	if *service.Type == egv1a1.ServiceTypeLoadBalancer {
 		if service.LoadBalancerClass != nil {
 			serviceSpec.LoadBalancerClass = service.LoadBalancerClass

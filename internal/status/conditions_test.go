@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilclock "k8s.io/utils/clock"
 	fakeclock "k8s.io/utils/clock/testing"
@@ -285,12 +286,26 @@ func TestGatewayReadyCondition(t *testing.T) {
 		name             string
 		serviceAddress   bool
 		deploymentStatus appsv1.DeploymentStatus
+		serviceSpec      corev1.ServiceSpec
 		expect           metav1.Condition
 	}{
 		{
 			name:             "ready gateway",
 			serviceAddress:   true,
 			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 1},
+			expect: metav1.Condition{
+				Status: metav1.ConditionTrue,
+				Reason: string(gwapiv1.GatewayConditionProgrammed),
+			},
+		},
+		{
+			name:             "ready gateway without address when headless service",
+			serviceAddress:   false,
+			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 1},
+			serviceSpec: corev1.ServiceSpec{
+				Type:      corev1.ServiceTypeClusterIP,
+				ClusterIP: corev1.ClusterIPNone,
+			},
 			expect: metav1.Condition{
 				Status: metav1.ConditionTrue,
 				Reason: string(gwapiv1.GatewayConditionProgrammed),
@@ -332,8 +347,9 @@ func TestGatewayReadyCondition(t *testing.T) {
 				}
 			}
 
+			svc := &corev1.Service{Spec: tc.serviceSpec}
 			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
-			got := computeGatewayProgrammedCondition(gtw, deployment)
+			got := computeGatewayProgrammedCondition(gtw, svc, deployment)
 
 			assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed), got.Type)
 			assert.Equal(t, tc.expect.Status, got.Status)
