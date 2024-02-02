@@ -3,7 +3,7 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: target-gateway-1-http-1
+    name: target-gateway-1
     namespace: envoy-gateway
   spec:
     clientIPDetection:
@@ -14,32 +14,6 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-1
       namespace: envoy-gateway
-      sectionName: http-1
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: ClientTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: target-gateway-1-http-2
-    namespace: envoy-gateway
-  spec:
-    clientIPDetection:
-      customHeader:
-        allowExtensionToSetAddressAsTrusted: false
-        headerName: x-client-ip-address
-        rejectWithStatus: 403
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http-2
   status:
     conditions:
     - lastTransitionTime: null
@@ -63,18 +37,6 @@ gateways:
       name: http-1
       port: 8081
       protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http-2
-      port: 8082
-      protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http-3
-      port: 8083
-      protocol: HTTP
   status:
     listeners:
     - attachedRoutes: 0
@@ -100,52 +62,6 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-    - attachedRoutes: 0
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http-2
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-    - attachedRoutes: 0
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http-3
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -157,20 +73,6 @@ infraIR:
           name: http-1
           protocol: HTTP
           servicePort: 8081
-      - address: null
-        name: envoy-gateway/gateway-1/http-2
-        ports:
-        - containerPort: 8082
-          name: http-2
-          protocol: HTTP
-          servicePort: 8082
-      - address: null
-        name: envoy-gateway/gateway-1/http-3
-        ports:
-        - containerPort: 8083
-          name: http-3
-          protocol: HTTP
-          servicePort: 8083
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -194,26 +96,3 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8081
-    - address: 0.0.0.0
-      clientIPDetection:
-        customHeader:
-          allowExtensionToSetAddressAsTrusted: false
-          headerName: x-client-ip-address
-          rejectWithStatus: 403
-      hostnames:
-      - '*'
-      isHTTP2: false
-      name: envoy-gateway/gateway-1/http-2
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 8082
-    - address: 0.0.0.0
-      hostnames:
-      - '*'
-      isHTTP2: false
-      name: envoy-gateway/gateway-1/http-3
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 8083
