@@ -91,7 +91,9 @@ type ClientTrafficPolicySpec struct {
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
-	XForwardedFor XForwardedForSettings `json:"xForwardedFor,omitempty"`
+	//
+	// +optional
+	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
 }
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
@@ -100,7 +102,9 @@ type XForwardedForSettings struct {
 	// headers to trust when determining the origin client's IP address.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 	// for more details.
-	NumTrustedHops uint32 `json:"numTrustedHops"`
+	//
+	// +optional
+	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.

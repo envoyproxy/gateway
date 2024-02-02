@@ -61,8 +61,6 @@ spec:
                           for more details.
                         format: int32
                         type: integer
-                    required:
-                    - numTrustedHops
                     type: object
                 type: object
               enableProxyProtocol:

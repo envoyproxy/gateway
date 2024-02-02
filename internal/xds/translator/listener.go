@@ -24,6 +24,7 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -149,8 +150,8 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 
 	// Client IP detection
 	var xffNumTrustedHops uint32
-	if irListener.ClientIPDetection != nil {
-		xffNumTrustedHops = irListener.ClientIPDetection.XForwardedFor.NumTrustedHops
+	if irListener.ClientIPDetection != nil && irListener.ClientIPDetection.XForwardedFor != nil {
+		xffNumTrustedHops = ptr.Deref(irListener.ClientIPDetection.XForwardedFor.NumTrustedHops, 0)
 	}
 
 	mgr := &hcmv3.HttpConnectionManager{

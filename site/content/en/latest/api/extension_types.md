@@ -242,7 +242,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  true  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
+| `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
 
 
 #### ClientTrafficPolicy
@@ -2351,6 +2351,6 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `numTrustedHops` | _integer_ |  true  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
+| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
 
 
