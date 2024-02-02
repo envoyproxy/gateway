@@ -845,21 +845,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ExtAuthServiceType](#extauthservicetype)_ |  true  | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
-| `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Only one of GRPCService or HTTPService may be specified. |
-| `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Only one of GRPCService or HTTPService may be specified. |
+| `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
+| `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
-
-
-#### ExtAuthServiceType
-
-_Underlying type:_ _string_
-
-ExtAuthServiceType specifies the types of External Authorization.
-
-_Appears in:_
-- [ExtAuth](#extauth)
-
 
 
 #### ExtensionAPISettings

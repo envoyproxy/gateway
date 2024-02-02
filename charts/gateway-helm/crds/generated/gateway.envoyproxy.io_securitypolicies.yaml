@@ -154,7 +154,8 @@ spec:
                 properties:
                   grpc:
                     description: GRPC defines the gRPC External Authorization service.
-                      Only one of GRPCService or HTTPService may be specified.
+                      Either GRPCService or HTTPService must be specified, and only
+                      one of them can be provided.
                     properties:
                       group:
                         default: ""
@@ -233,7 +234,8 @@ spec:
                     type: array
                   http:
                     description: HTTP defines the HTTP External Authorization service.
-                      Only one of GRPCService or HTTPService may be specified.
+                      Either GRPCService or HTTPService must be specified, and only
+                      one of them can be provided.
                     properties:
                       group:
                         default: ""
@@ -309,27 +311,13 @@ spec:
                     - message: Must have port for Service reference
                       rule: '(size(self.group) == 0 && self.kind == ''Service'') ?
                         has(self.port) : true'
-                  type:
-                    allOf:
-                    - enum:
-                      - GRPC
-                      - HTTP
-                    - enum:
-                      - GRPC
-                      - HTTP
-                    description: Type decides the type of External Authorization.
-                      Valid ExtAuthServiceType values are "GRPC" or "HTTP".
-                    type: string
-                required:
-                - type
                 type: object
                 x-kubernetes-validations:
-                - message: http must be specified if type is HTTP
-                  rule: 'self.type == ''HTTP'' ? has(self.http) : true'
-                - message: grpc must be specified if type is GRPC
-                  rule: 'self.type == ''GRPC'' ? has(self.grpc) : true'
+                - message: one of grpc or http must be specified
+                  rule: (has(self.grpc) || has(self.http))
                 - message: only one of grpc or http can be specified
-                  rule: '!(has(self.grpc) && has(self.http))'
+                  rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
+                    has(self.http))
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
