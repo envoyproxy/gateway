@@ -752,6 +752,7 @@ display the latest condition, or add `--verbose` to display more details about c
 Some examples of this command after installing [Multi-tenancy][] example manifest:
 
 - Show the summary of GatewayClass.
+
 ```console
 ~ egctl x status gatewayclass
 
@@ -761,6 +762,7 @@ eg-product     Accepted   True      Accepted
 ```
 
 - Show the summary of all the Gateways with details under all namespace.
+
 ```console
 ~ egctl x status gateway --verbose --all-namespaces
 
@@ -772,6 +774,7 @@ product     eg        Programmed   True      Programmed   Address assigned to th
 ```
 
 - Show the summary of latest Gateways condition under `product` namespace.
+
 ```console
 ~ egctl x status gateway --quiet -n product
 
@@ -780,6 +783,7 @@ eg        Programmed   True      Programmed
 ```
 
 - Show the summary of latest HTTPRoutes condition under all namespace.
+
 ```console
 ~ egctl x status httproute --quiet --all-namespaces
 
@@ -787,6 +791,7 @@ NAMESPACE   NAME      TYPE           STATUS    REASON
 marketing   backend   ResolvedRefs   True      ResolvedRefs
 product     backend   ResolvedRefs   True      ResolvedRefs
 ```
+
 
 [Multi-tenancy]: ../deployment-mode#multi-tenancy
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
