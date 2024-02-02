@@ -1,0 +1,59 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    extAuth:
+      http:
+        authority: http-backend.envoy-gateway:80
+        headersToBackend:
+        - header1
+        - header2
+        name: securitypolicy/default/policy-for-first-route/http-backend
+        path: /auth
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.7.7.7
+            port: 80
+          protocol: HTTP
+          weight: 1
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      exact: "bar"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    extAuth:
+      grpc:
+        authority: grpc-backend.default:9000
+        name: securitypolicy/default/policy-for-second-route/grpc-backend
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 8.8.8.8
+            port: 9000
+          protocol: GRPC
+          weight: 1
+      headersToExtAuth:
+      - header1
+      - header2

@@ -189,6 +189,7 @@ xds:
                 validationContext:
                   trustedCa:
                     filename: /etc/ssl/certs/ca-certificates.crt
+              sni: raw.githubusercontent.com
           type: STRICT_DNS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
@@ -244,7 +245,7 @@ xds:
                             cacheDuration: 300s
                             httpUri:
                               cluster: raw_githubusercontent_com_443
-                              timeout: 5s
+                              timeout: 10s
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                             retryPolicy: {}
                       requirementMap:

@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	oauth2Filter                = "envoy.filters.http.oauth2"
-	defaultTokenEndpointTimeout = 10
+	oauth2Filter = "envoy.filters.http.oauth2"
 )
 
 func init() {
@@ -123,7 +122,7 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 					Cluster: cluster.name,
 				},
 				Timeout: &duration.Duration{
-					Seconds: defaultTokenEndpointTimeout,
+					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
 			AuthorizationEndpoint: route.OIDC.Provider.AuthorizationEndpoint,
@@ -230,20 +229,11 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		tlsContext := &tlsv3.UpstreamTlsContext{
-			Sni: cluster.hostname,
-		}
-
-		tlsContextAny, err := anypb.New(tlsContext)
+		// TODO huabing: add support for custom CA and client certificate.
+		tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
-		}
-		tSocket = &corev3.TransportSocket{
-			Name: "envoy.transport_sockets.tls",
-			ConfigType: &corev3.TransportSocket_TypedConfig{
-				TypedConfig: tlsContextAny,
-			},
 		}
 
 		ds = &ir.DestinationSetting{

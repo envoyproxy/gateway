@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -269,6 +270,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
+		extAuth   *ir.ExtAuth
 		err, errs error
 	)
 
@@ -288,6 +290,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.ExtAuth != nil {
+		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -307,6 +315,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					r.JWT = jwt
 					r.OIDC = oidc
 					r.BasicAuth = basicAuth
+					r.ExtAuth = extAuth
 				}
 			}
 		}
@@ -323,6 +332,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
+		extAuth   *ir.ExtAuth
 		err, errs error
 	)
 
@@ -342,6 +352,12 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.ExtAuth != nil {
+		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -370,6 +386,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			if r.BasicAuth == nil {
 				r.BasicAuth = basicAuth
+			}
+			if r.ExtAuth == nil {
+				r.ExtAuth = extAuth
 			}
 		}
 	}
@@ -625,4 +644,221 @@ func (t *Translator) buildBasicAuth(
 	}
 
 	return &ir.BasicAuth{Users: usersSecretBytes}, nil
+}
+
+func (t *Translator) buildExtAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *Resources) (*ir.ExtAuth, error) {
+	var (
+		http       = policy.Spec.ExtAuth.HTTP
+		grpc       = policy.Spec.ExtAuth.GRPC
+		backendRef *gwapiv1.BackendObjectReference
+		protocol   ir.AppProtocol
+		ds         *ir.DestinationSetting
+		authority  string
+		err        error
+	)
+
+	switch {
+	// These are sanity checks, they should never happen because the API server
+	// should have caught them
+	case http == nil && grpc == nil:
+		return nil, errors.New("one of grpc or http must be specified")
+	case http != nil && grpc != nil:
+		return nil, errors.New("only one of grpc or http can be specified")
+	case http != nil:
+		backendRef = &http.BackendObjectReference
+		protocol = ir.HTTP
+	case grpc != nil:
+		backendRef = &grpc.BackendObjectReference
+		protocol = ir.GRPC
+	}
+
+	if err = t.validateExtServiceBackendReference(
+		backendRef,
+		policy.Namespace,
+		resources); err != nil {
+		return nil, err
+	}
+	authority = fmt.Sprintf(
+		"%s.%s:%d",
+		backendRef.Name,
+		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
+		*backendRef.Port)
+
+	if ds, err = t.processExtServiceDestination(
+		backendRef,
+		policy.Namespace,
+		protocol,
+		resources); err != nil {
+		return nil, err
+	}
+	rd := ir.RouteDestination{
+		Name:     irExtServiceDestinationName(policy, string(backendRef.Name)),
+		Settings: []*ir.DestinationSetting{ds},
+	}
+
+	extAuth := &ir.ExtAuth{
+		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
+	}
+
+	if http != nil {
+		extAuth.HTTP = &ir.HTTPExtAuthService{
+			RouteDestination: rd,
+			Authority:        authority,
+			Path:             ptr.Deref(http.Path, ""),
+			HeadersToBackend: http.HeadersToBackend,
+		}
+	} else {
+		extAuth.GRPC = &ir.GRPCExtAuthService{
+			RouteDestination: rd,
+			Authority:        authority,
+		}
+	}
+	return extAuth, nil
+}
+
+// TODO: zhaohuabing this can also be used for the other external services, such
+// as the external processing filter, gRPC Access Log Service, etc.
+// TODO: zhaohuabing combine this function with the one in the route translator
+// validateExtServiceBackendReference validates the backend reference for an
+// external service referenced by an EG policy.
+// It checks:
+//  1. The group is nil or empty, indicating the core API group.
+//  2. The kind is Service.
+//  3. The port is specified.
+//  4. The service exists and the specified port is found.
+//  5. The cross-namespace reference is permitted by the ReferenceGrants if the
+//     namespace is different from the policy's namespace.
+func (t *Translator) validateExtServiceBackendReference(
+	backendRef *gwapiv1.BackendObjectReference,
+	ownerNamespace string,
+	resources *Resources) error {
+	// TODO: zhaohuabing add CEL validation
+	if backendRef.Group != nil && *backendRef.Group != "" {
+		return errors.New(
+			"group is invalid, only the core API group (specified by omitting" +
+				" the group field or setting it to an empty string) is supported")
+	}
+	// TODO: zhaohuabing add CEL validation
+	if backendRef.Kind != nil && *backendRef.Kind != KindService {
+		return errors.New("kind is invalid, only Service is supported")
+	}
+	// TODO: zhaohuabing add CEL validation
+	if backendRef.Port == nil {
+		return errors.New("a valid port number corresponding to a port on the Service must be specified")
+	}
+
+	// check if the service is valid
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	if service == nil {
+		return fmt.Errorf("service %s/%s not found", serviceNamespace, backendRef.Name)
+	}
+	var portFound bool
+	for _, port := range service.Spec.Ports {
+		portProtocol := port.Protocol
+		if port.Protocol == "" { // Default protocol is TCP
+			portProtocol = v1.ProtocolTCP
+		}
+		// currently only HTTP and GRPC are supported, both of which are TCP
+		if port.Port == int32(*backendRef.Port) && portProtocol == v1.ProtocolTCP {
+			portFound = true
+			break
+		}
+	}
+
+	if !portFound {
+		return fmt.Errorf(
+			"TCP Port %d not found on service %s/%s",
+			*backendRef.Port, serviceNamespace, string(backendRef.Name),
+		)
+	}
+
+	// check if the cross-namespace reference is permitted
+	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" &&
+		string(*backendRef.Namespace) != ownerNamespace {
+		if !t.validateCrossNamespaceRef(
+			crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      KindSecurityPolicy,
+				namespace: ownerNamespace,
+			},
+			crossNamespaceTo{
+				group:     GroupDerefOr(backendRef.Group, ""),
+				kind:      KindDerefOr(backendRef.Kind, KindService),
+				namespace: string(*backendRef.Namespace),
+				name:      string(backendRef.Name),
+			},
+			resources.ReferenceGrants,
+		) {
+			return fmt.Errorf(
+				"backend ref to %s %s/%s not permitted by any ReferenceGrant",
+				KindService, *backendRef.Namespace, backendRef.Name)
+		}
+	}
+	return nil
+}
+
+// TODO: zhaohuabing combine this function with the one in the route translator
+func (t *Translator) processExtServiceDestination(
+	backendRef *gwapiv1.BackendObjectReference,
+	ownerNamespace string,
+	protocol ir.AppProtocol,
+	resources *Resources) (*ir.DestinationSetting, error) {
+	var (
+		endpoints   []*ir.DestinationEndpoint
+		addrType    *ir.DestinationAddressType
+		servicePort v1.ServicePort
+	)
+
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	if servicePort.AppProtocol != nil &&
+		*servicePort.AppProtocol == "kubernetes.io/h2c" {
+		protocol = ir.HTTP2
+	}
+
+	// Route to endpoints by default
+	if !t.EndpointRoutingDisabled {
+		endpointSlices := resources.GetEndpointSlicesForBackend(
+			serviceNamespace, string(backendRef.Name), KindService)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(
+			endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		ep := ir.NewDestEndpoint(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port))
+		endpoints = append(endpoints, ep)
+	}
+
+	// TODO: support mixed endpointslice address type for the same backendRef
+	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
+		return nil, errors.New(
+			"mixed endpointslice address type for the same backendRef is not supported")
+	}
+
+	return &ir.DestinationSetting{
+		Weight:      ptr.To(uint32(1)),
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+	}, nil
+}
+
+func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, service string) string {
+	return strings.ToLower(fmt.Sprintf(
+		"%s/%s/%s/%s",
+		KindSecurityPolicy,
+		policy.GetNamespace(),
+		policy.GetName(),
+		service))
 }

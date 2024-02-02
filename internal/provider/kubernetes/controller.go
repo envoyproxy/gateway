@@ -43,20 +43,21 @@ import (
 )
 
 const (
-	classGatewayIndex         = "classGatewayIndex"
-	gatewayTLSRouteIndex      = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex     = "gatewayHTTPRouteIndex"
-	gatewayGRPCRouteIndex     = "gatewayGRPCRouteIndex"
-	gatewayTCPRouteIndex      = "gatewayTCPRouteIndex"
-	gatewayUDPRouteIndex      = "gatewayUDPRouteIndex"
-	secretGatewayIndex        = "secretGatewayIndex"
-	targetRefGrantRouteIndex  = "targetRefGrantRouteIndex"
-	backendHTTPRouteIndex     = "backendHTTPRouteIndex"
-	backendGRPCRouteIndex     = "backendGRPCRouteIndex"
-	backendTLSRouteIndex      = "backendTLSRouteIndex"
-	backendTCPRouteIndex      = "backendTCPRouteIndex"
-	backendUDPRouteIndex      = "backendUDPRouteIndex"
-	secretSecurityPolicyIndex = "secretSecurityPolicyIndex"
+	classGatewayIndex          = "classGatewayIndex"
+	gatewayTLSRouteIndex       = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex      = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex      = "gatewayGRPCRouteIndex"
+	gatewayTCPRouteIndex       = "gatewayTCPRouteIndex"
+	gatewayUDPRouteIndex       = "gatewayUDPRouteIndex"
+	secretGatewayIndex         = "secretGatewayIndex"
+	targetRefGrantRouteIndex   = "targetRefGrantRouteIndex"
+	backendHTTPRouteIndex      = "backendHTTPRouteIndex"
+	backendGRPCRouteIndex      = "backendGRPCRouteIndex"
+	backendTLSRouteIndex       = "backendTLSRouteIndex"
+	backendTCPRouteIndex       = "backendTCPRouteIndex"
+	backendUDPRouteIndex       = "backendUDPRouteIndex"
+	secretSecurityPolicyIndex  = "secretSecurityPolicyIndex"
+	backendSecurityPolicyIndex = "backendSecurityPolicyIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -1384,11 +1385,29 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	return serviceImportFound
 }
 
-// addSecurityPolicyIndexers adds indexing on SecurityPolicy, for Secret objects that are
-// referenced in SecurityPolicy objects. This helps in querying for SecurityPolicies that are
-// affected by a particular Secret CRUD.
+// addSecurityPolicyIndexers adds indexing on SecurityPolicy.
+//   - For Secret objects that are referenced in SecurityPolicy objects via
+//     `.spec.OIDC.clientSecret` and `.spec.basicAuth.users`. This helps in
+//     querying for SecurityPolicies that are affected by a particular Secret CRUD.
+//   - For Service objects that are referenced in SecurityPolicy objects via
+//     `.spec.extAuth.http.backendObjectReference`. This helps in querying for
+//     SecurityPolicies that are affected by a particular Service CRUD.
 func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc)
+	var err error
+
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex,
+		secretSecurityPolicyIndexFunc); err != nil {
+		return err
+	}
+
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &v1alpha1.SecurityPolicy{}, backendSecurityPolicyIndex,
+		backendSecurityPolicyIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
@@ -1415,4 +1434,28 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 		)
 	}
 	return values
+}
+
+func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
+	securityPolicy := rawObj.(*v1alpha1.SecurityPolicy)
+
+	var backendRef *gwapiv1.BackendObjectReference
+
+	if securityPolicy.Spec.ExtAuth.HTTP != nil {
+		backendRef = &securityPolicy.Spec.ExtAuth.HTTP.BackendObjectReference
+	} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
+		backendRef = &securityPolicy.Spec.ExtAuth.GRPC.BackendObjectReference
+	}
+
+	if backendRef != nil {
+		return []string{
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, securityPolicy.Namespace),
+				Name:      string(backendRef.Name),
+			}.String(),
+		}
+	}
+
+	// This should not happen because the CEL validation should catch it.
+	return []string{}
 }
