@@ -243,6 +243,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
+| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on a trusted custom HTTP header. This uses the the custom_header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
 
 
 #### ClientTrafficPolicy
@@ -365,6 +366,21 @@ ConsistentHashType defines the type of input to hash on.
 _Appears in:_
 - [ConsistentHash](#consistenthash)
 
+
+
+#### CustomHeaderExtensionSettings
+
+
+
+CustomHeader provides configuration for determining the client IP address for a request based on a trusted custom HTTP header. This uses the the custom_header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details.
+
+_Appears in:_
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `headerName` | _string_ |  true  | HeaderName of the of the header containing the original downstream remote address, if present. |
+| `rejectWithStatus` | _integer_ |  false  | RejectWithStatus is the HTTP response status to use when detection fails, if present. May be any valid HTTP response status code within the range 400-511 (inclusive). |
 
 
 #### CustomTag

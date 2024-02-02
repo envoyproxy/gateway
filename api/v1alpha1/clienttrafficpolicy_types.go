@@ -89,11 +89,20 @@ type ClientTrafficPolicySpec struct {
 }
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction xForwardedFor"
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
 	// +optional
 	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
+	// CustomHeader provides configuration for determining the client IP address for a request based on
+	// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+	// for more details.
+	//
+	// +optional
+	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
 }
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
@@ -105,6 +114,28 @@ type XForwardedForSettings struct {
 	//
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
+}
+
+// CustomHeader provides configuration for determining the client IP address for a request based on
+// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+// for more details.
+type CustomHeaderExtensionSettings struct {
+	// HeaderName of the of the header containing the original downstream remote address, if present.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern="^[A-Za-z0-9-]+$"
+	//
+	HeaderName string `json:"headerName"`
+	// RejectWithStatus is the HTTP response status to use when detection fails, if present. May be
+	// any valid HTTP response status code within the range 400-511 (inclusive).
+	//
+	// +kubebuilder:validation:Minimum=400
+	// +kubebuilder:validation:Maximum=511
+	//
+	// +optional
+	RejectWithStatus *uint32 `json:"rejectWithStatus,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
