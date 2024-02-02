@@ -6,7 +6,7 @@
 package v1alpha1
 
 import (
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // ExtAuthServiceType specifies the types of External Authorization.
@@ -59,38 +59,23 @@ type ExtAuth struct {
 // The authorization request message is defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 type GRPCExtAuthService struct {
-	// Host is the hostname of the gRPC External Authorization service.
-	Host gwapiv1a2.PreciseHostname `json:"host"`
-
-	// Port is the network port of the gRPC External Authorization service.
-	Port gwapiv1a2.PortNumber `json:"port"`
-
-	// TLS defines the TLS configuration for the gRPC External Authorization service.
-	// Note: If not specified, the proxy will talk to the gRPC External Authorization
-	// service in plaintext.
-	// +optional
-	TLS *TLSConfig `json:"tls,omitempty"`
+	// BackendObjectReference references a Kubernetes object that represents the
+	// backend server to which the authorization request will be sent.
+	// Only service Kind is supported for now.
+	gwapiv1.BackendObjectReference `json:",inline"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
 type HTTPExtAuthService struct {
-	// Host is the hostname of the HTTP External Authorization service.
-	Host gwapiv1a2.PreciseHostname `json:"host"`
-
-	// Port is the network port of the HTTP External Authorization service.
-	// If port is not specified, 80 for http and 443 for https are assumed.
-	Port *gwapiv1a2.PortNumber `json:"port,omitempty"`
+	// BackendObjectReference references a Kubernetes object that represents the
+	// backend server to which the authorization request will be sent.
+	// Only service Kind is supported for now.
+	gwapiv1.BackendObjectReference `json:",inline"`
 
 	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,
 	// or else the authorization request will be sent to the root path.
 	Path *string `json:"path,omitempty"`
-
-	// TLS defines the TLS configuration for the HTTP External Authorization service.
-	// Note: If not specified, the proxy will talk to the HTTP External Authorization
-	// service in plaintext.
-	// +optional
-	TLS *TLSConfig `json:"tls,omitempty"`
 
 	// HeadersToBackend are the authorization response headers that will be added
 	// to the original client request before sending it to the backend server.
@@ -99,8 +84,4 @@ type HTTPExtAuthService struct {
 	// original client request.
 	// +optional
 	HeadersToBackend []string `json:"headersToBackend,omitempty"`
-}
-
-// TLSConfig describes a TLS configuration.
-type TLSConfig struct {
 }

@@ -16,6 +16,8 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -354,8 +356,10 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					ExtAuth: &egv1a1.ExtAuth{
 						Type: egv1a1.HTTPExtAuthServiceType,
 						GRPC: &egv1a1.GRPCExtAuthService{
-							Host: "foo.bar.com",
-							Port: 15001,
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: "grpc-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(80)),
+							},
 						},
 					},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -378,7 +382,10 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					ExtAuth: &egv1a1.ExtAuth{
 						Type: egv1a1.GRPCExtAuthServiceType,
 						HTTP: &egv1a1.HTTPExtAuthService{
-							Host: "foo.bar.com",
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
 						},
 					},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -401,11 +408,16 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					ExtAuth: &egv1a1.ExtAuth{
 						Type: egv1a1.HTTPExtAuthServiceType,
 						GRPC: &egv1a1.GRPCExtAuthService{
-							Host: "foo.bar.com",
-							Port: 15001,
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: "grpc-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(80)),
+							},
 						},
 						HTTP: &egv1a1.HTTPExtAuthService{
-							Host: "foo.bar.com",
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
 						},
 					},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
