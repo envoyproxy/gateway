@@ -845,21 +845,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ExtAuthServiceType](#extauthservicetype)_ |  true  | Type decides the type of External Authorization. Valid ExtAuthServiceType values are "GRPC" or "HTTP". |
-| `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Only one of GRPCService or HTTPService may be specified. |
-| `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Only one of GRPCService or HTTPService may be specified. |
+| `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
+| `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
-
-
-#### ExtAuthServiceType
-
-_Underlying type:_ _string_
-
-ExtAuthServiceType specifies the types of External Authorization.
-
-_Appears in:_
-- [ExtAuth](#extauth)
-
 
 
 #### ExtensionAPISettings
@@ -1009,9 +997,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _[PreciseHostname](#precisehostname)_ |  true  | Host is the hostname of the gRPC External Authorization service. |
-| `port` | _[PortNumber](#portnumber)_ |  true  | Port is the network port of the gRPC External Authorization service. |
-| `tls` | _[TLSConfig](#tlsconfig)_ |  false  | TLS defines the TLS configuration for the gRPC External Authorization service. Note: If not specified, the proxy will talk to the gRPC External Authorization service in plaintext. |
+| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io". When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example "Service". <br /><br /> Defaults to "Service" when not specified. <br /><br /> ExternalName services can refer to CNAME DNS records that may live outside of the cluster and as such are difficult to reason about in terms of conformance. They also may not be safe to forward to (see CVE-2021-25740 for more information). Implementations SHOULD NOT support ExternalName Services. <br /><br /> Support: Core (Services with a type other than ExternalName) <br /><br /> Support: Implementation-specific (Services with type ExternalName) |
+| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
+| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local namespace is inferred. <br /><br /> Note that when a namespace different than the local namespace is specified, a ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details. <br /><br /> Support: Core |
+| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource. Port is required when the referent is a Kubernetes Service. In this case, the port number is the service port number, not the target port. For other resources, destination port might be derived from the referent resource or this field. |
 
 
 #### Gateway
@@ -1124,10 +1114,12 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _[PreciseHostname](#precisehostname)_ |  true  | Host is the hostname of the HTTP External Authorization service. |
-| `port` | _[PortNumber](#portnumber)_ |  true  | Port is the network port of the HTTP External Authorization service. If port is not specified, 80 for http and 443 for https are assumed. |
+| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io". When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example "Service". <br /><br /> Defaults to "Service" when not specified. <br /><br /> ExternalName services can refer to CNAME DNS records that may live outside of the cluster and as such are difficult to reason about in terms of conformance. They also may not be safe to forward to (see CVE-2021-25740 for more information). Implementations SHOULD NOT support ExternalName Services. <br /><br /> Support: Core (Services with a type other than ExternalName) <br /><br /> Support: Implementation-specific (Services with type ExternalName) |
+| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
+| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local namespace is inferred. <br /><br /> Note that when a namespace different than the local namespace is specified, a ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details. <br /><br /> Support: Core |
+| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource. Port is required when the referent is a Kubernetes Service. In this case, the port number is the service port number, not the target port. For other resources, destination port might be derived from the referent resource or this field. |
 | `path` | _string_ |  true  | Path is the path of the HTTP External Authorization service. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
-| `tls` | _[TLSConfig](#tlsconfig)_ |  false  | TLS defines the TLS configuration for the HTTP External Authorization service. Note: If not specified, the proxy will talk to the HTTP External Authorization service in plaintext. |
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 
 
@@ -2212,18 +2204,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `connectTimeout` | _[Duration](#duration)_ |  false  | The timeout for network connection establishment, including TCP and TLS handshakes. Default: 10 seconds. |
-
-
-#### TLSConfig
-
-
-
-TLSConfig describes a TLS configuration.
-
-_Appears in:_
-- [GRPCExtAuthService](#grpcextauthservice)
-- [HTTPExtAuthService](#httpextauthservice)
-
 
 
 #### TLSSettings

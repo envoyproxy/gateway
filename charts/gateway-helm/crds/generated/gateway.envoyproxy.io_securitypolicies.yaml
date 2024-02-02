@@ -154,32 +154,68 @@ spec:
                 properties:
                   grpc:
                     description: GRPC defines the gRPC External Authorization service.
-                      Only one of GRPCService or HTTPService may be specified.
+                      Either GRPCService or HTTPService must be specified, and only
+                      one of them can be provided.
                     properties:
-                      host:
-                        description: Host is the hostname of the gRPC External Authorization
-                          service.
+                      group:
+                        default: ""
+                        description: Group is the group of the referent. For example,
+                          "gateway.networking.k8s.io". When unspecified or empty string,
+                          core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Service
+                        description: "Kind is the Kubernetes resource kind of the
+                          referent. For example \"Service\". \n Defaults to \"Service\"
+                          when not specified. \n ExternalName services can refer to
+                          CNAME DNS records that may live outside of the cluster and
+                          as such are difficult to reason about in terms of conformance.
+                          They also may not be safe to forward to (see CVE-2021-25740
+                          for more information). Implementations SHOULD NOT support
+                          ExternalName Services. \n Support: Core (Services with a
+                          type other than ExternalName) \n Support: Implementation-specific
+                          (Services with type ExternalName)"
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
                         maxLength: 253
                         minLength: 1
-                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      namespace:
+                        description: "Namespace is the namespace of the backend. When
+                          unspecified, the local namespace is inferred. \n Note that
+                          when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace
+                          to allow that namespace's owner to accept the reference.
+                          See the ReferenceGrant documentation for details. \n Support:
+                          Core"
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         type: string
                       port:
-                        description: Port is the network port of the gRPC External
-                          Authorization service.
+                        description: Port specifies the destination port number to
+                          use for this resource. Port is required when the referent
+                          is a Kubernetes Service. In this case, the port number is
+                          the service port number, not the target port. For other
+                          resources, destination port might be derived from the referent
+                          resource or this field.
                         format: int32
                         maximum: 65535
                         minimum: 1
                         type: integer
-                      tls:
-                        description: 'TLS defines the TLS configuration for the gRPC
-                          External Authorization service. Note: If not specified,
-                          the proxy will talk to the gRPC External Authorization service
-                          in plaintext.'
-                        type: object
                     required:
-                    - host
-                    - port
+                    - name
                     type: object
+                    x-kubernetes-validations:
+                    - message: Must have port for Service reference
+                      rule: '(size(self.group) == 0 && self.kind == ''Service'') ?
+                        has(self.port) : true'
                   headersToExtAuth:
                     description: 'HeadersToExtAuth defines the client request headers
                       that will be included in the request to the external authorization
@@ -198,8 +234,17 @@ spec:
                     type: array
                   http:
                     description: HTTP defines the HTTP External Authorization service.
-                      Only one of GRPCService or HTTPService may be specified.
+                      Either GRPCService or HTTPService must be specified, and only
+                      one of them can be provided.
                     properties:
+                      group:
+                        default: ""
+                        description: Group is the group of the referent. For example,
+                          "gateway.networking.k8s.io". When unspecified or empty string,
+                          core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
                       headersToBackend:
                         description: HeadersToBackend are the authorization response
                           headers that will be added to the original client request
@@ -209,12 +254,38 @@ spec:
                         items:
                           type: string
                         type: array
-                      host:
-                        description: Host is the hostname of the HTTP External Authorization
-                          service.
+                      kind:
+                        default: Service
+                        description: "Kind is the Kubernetes resource kind of the
+                          referent. For example \"Service\". \n Defaults to \"Service\"
+                          when not specified. \n ExternalName services can refer to
+                          CNAME DNS records that may live outside of the cluster and
+                          as such are difficult to reason about in terms of conformance.
+                          They also may not be safe to forward to (see CVE-2021-25740
+                          for more information). Implementations SHOULD NOT support
+                          ExternalName Services. \n Support: Core (Services with a
+                          type other than ExternalName) \n Support: Implementation-specific
+                          (Services with type ExternalName)"
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
                         maxLength: 253
                         minLength: 1
-                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      namespace:
+                        description: "Namespace is the namespace of the backend. When
+                          unspecified, the local namespace is inferred. \n Note that
+                          when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace
+                          to allow that namespace's owner to accept the reference.
+                          See the ReferenceGrant documentation for details. \n Support:
+                          Core"
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         type: string
                       path:
                         description: Path is the path of the HTTP External Authorization
@@ -223,43 +294,30 @@ spec:
                           will be sent to the root path.
                         type: string
                       port:
-                        description: Port is the network port of the HTTP External
-                          Authorization service. If port is not specified, 80 for
-                          http and 443 for https are assumed.
+                        description: Port specifies the destination port number to
+                          use for this resource. Port is required when the referent
+                          is a Kubernetes Service. In this case, the port number is
+                          the service port number, not the target port. For other
+                          resources, destination port might be derived from the referent
+                          resource or this field.
                         format: int32
                         maximum: 65535
                         minimum: 1
                         type: integer
-                      tls:
-                        description: 'TLS defines the TLS configuration for the HTTP
-                          External Authorization service. Note: If not specified,
-                          the proxy will talk to the HTTP External Authorization service
-                          in plaintext.'
-                        type: object
                     required:
-                    - host
+                    - name
                     type: object
-                  type:
-                    allOf:
-                    - enum:
-                      - GRPC
-                      - HTTP
-                    - enum:
-                      - GRPC
-                      - HTTP
-                    description: Type decides the type of External Authorization.
-                      Valid ExtAuthServiceType values are "GRPC" or "HTTP".
-                    type: string
-                required:
-                - type
+                    x-kubernetes-validations:
+                    - message: Must have port for Service reference
+                      rule: '(size(self.group) == 0 && self.kind == ''Service'') ?
+                        has(self.port) : true'
                 type: object
                 x-kubernetes-validations:
-                - message: http must be specified if type is HTTP
-                  rule: 'self.type == ''HTTP'' ? has(self.http) : true'
-                - message: grpc must be specified if type is GRPC
-                  rule: 'self.type == ''GRPC'' ? has(self.grpc) : true'
+                - message: one of grpc or http must be specified
+                  rule: (has(self.grpc) || has(self.http))
                 - message: only one of grpc or http can be specified
-                  rule: '!(has(self.grpc) && has(self.http))'
+                  rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
+                    has(self.http))
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
