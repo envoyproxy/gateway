@@ -26,8 +26,7 @@
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket
-        useRemoteAddress: true
-        xffNumTrustedHops: 2
+        useRemoteAddress: false
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -50,11 +49,6 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
         normalizePath: true
-        originalIpDetectionExtensions:
-        - name: envoy.extensions.http.original_ip_detection.custom_header
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.custom_header.v3.CustomHeaderConfig
-            headerName: x-my-custom-header
         rds:
           configSource:
             ads: {}
@@ -86,11 +80,6 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
         normalizePath: true
-        originalIpDetectionExtensions:
-        - name: envoy.extensions.http.original_ip_detection.xff
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
-            xffNumTrustedHops: 1
         rds:
           configSource:
             ads: {}

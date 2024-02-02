@@ -18,7 +18,6 @@ import (
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
-	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -27,7 +26,6 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -87,39 +85,28 @@ func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 
 func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettings) []*corev3.TypedExtensionConfig {
 	// Return early if settings are nil
-	if clientIPDetection == nil || clientIPDetection.Extensions == nil {
+	if clientIPDetection == nil {
 		return nil
 	}
 
 	var extensionConfig []*corev3.TypedExtensionConfig
 
 	// Custom header extension
-	if clientIPDetection.Extensions.CustomHeader != nil {
+	if clientIPDetection.CustomHeader != nil {
 		var rejectWithStatus *typev3.HttpStatus
-		if clientIPDetection.Extensions.CustomHeader.RejectWithStatus != nil {
-			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode(*clientIPDetection.Extensions.CustomHeader.RejectWithStatus)}
+		if clientIPDetection.CustomHeader.RejectWithStatus != nil {
+			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode(*clientIPDetection.CustomHeader.RejectWithStatus)}
 		}
 
 		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
-			HeaderName:                          clientIPDetection.Extensions.CustomHeader.HeaderName,
+			HeaderName:                          clientIPDetection.CustomHeader.HeaderName,
 			RejectWithStatus:                    rejectWithStatus,
-			AllowExtensionToSetAddressAsTrusted: clientIPDetection.Extensions.CustomHeader.AllowExtensionToSetAddressAsTrusted,
+			AllowExtensionToSetAddressAsTrusted: clientIPDetection.CustomHeader.AllowExtensionToSetAddressAsTrusted,
 		})
 
 		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
 			Name:        "envoy.extensions.http.original_ip_detection.custom_header",
 			TypedConfig: customHeaderConfigAny,
-		})
-	}
-
-	// XFF extension
-	if clientIPDetection.Extensions.Xff != nil {
-		xffAny, _ := anypb.New(&xffv3.XffConfig{
-			XffNumTrustedHops: clientIPDetection.Extensions.Xff.NumTrustedHops,
-		})
-		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
-			Name:        "envoy.extensions.http.original_ip_detection.xff",
-			TypedConfig: xffAny,
 		})
 	}
 
@@ -196,10 +183,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	var useRemoteAddress = true
 	var xffNumTrustedHops uint32
 	if irListener.ClientIPDetection != nil {
-		if irListener.ClientIPDetection.Extensions != nil {
-			useRemoteAddress = false
+		if irListener.ClientIPDetection.XForwardedFor != nil && irListener.ClientIPDetection.XForwardedFor.NumTrustedHops != nil {
+			xffNumTrustedHops = *irListener.ClientIPDetection.XForwardedFor.NumTrustedHops
 		} else {
-			xffNumTrustedHops = ptr.Deref(irListener.ClientIPDetection.XffNumTrustedHops, 0)
+			useRemoteAddress = false
 		}
 	}
 

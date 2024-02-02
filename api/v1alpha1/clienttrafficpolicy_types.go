@@ -66,7 +66,7 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
-	// ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener.
+	// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 	//
 	// +optional
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty"`
@@ -88,44 +88,36 @@ type ClientTrafficPolicySpec struct {
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
 }
 
-// ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener.
+// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
-// +kubebuilder:validation:XValidation:rule="!(has(self.xffNumTrustedHops) && has(self.extensions))",message="extensions cannot be used in conjunction with xffNumTrustedHops"
+// +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction xForwardedFor"
 type ClientIPDetectionSettings struct {
-	// XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-	// headers to trust when determining the origin client's IP address.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-	// for more details.
+	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
 	// +optional
-	XffNumTrustedHops *uint32 `json:"xffNumTrustedHops,omitempty"`
-	// Extensions provides configuration for supported original IP detection extensions. Refer to:
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-original-ip-detection-extensions
-	// for more details.
-	//
-	// +optional
-	Extensions *OriginalIPDetectionExtensions `json:"extensions,omitempty"`
-}
-
-// OriginalIPDetectionExtensions provides a list of extensions to be used for client IP detection.
-//
-// +kubebuilder:validation:XValidation:rule="!(has(self.customHeader) && has(self.xff))",message="customHeader cannot be used in conjunction with xff"
-type OriginalIPDetectionExtensions struct {
-	// CustomHeader provides configuration for the custom header original IP detection extension.
+	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
+	// CustomHeader provides configuration for determining the client IP address for a request based on
+	// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 	// for more details.
 	//
 	// +optional
 	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
-	// Xff provides configuration for the XFF original IP detection extension.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto
-	// for more details.
-	//
-	// +optional
-	Xff *XffExtensionSettings `json:"xff,omitempty"`
 }
 
-// CustomHeaderExtensionSettings provides configuration for the custom header original IP detection extension.
+// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+type XForwardedForSettings struct {
+	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
+	// headers to trust when determining the origin client's IP address.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+	// for more details.
+	NumTrustedHops *uint32 `json:"numTrustedHops"`
+}
+
+// CustomHeader provides configuration for determining the client IP address for a request based on
+// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+// for more details.
 type CustomHeaderExtensionSettings struct {
 	// HeaderName of the of the header containing the original downstream remote address, if present.
 	//
@@ -147,12 +139,6 @@ type CustomHeaderExtensionSettings struct {
 	//
 	// +optional
 	AllowExtensionToSetAddressAsTrusted bool `json:"allowExtensionToSetAddressAsTrusted"`
-}
-
-// XffExtensionSettings provides configuration for the XFF original IP detection extension.
-type XffExtensionSettings struct {
-	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-	NumTrustedHops uint32 `json:"numTrustedHops"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.

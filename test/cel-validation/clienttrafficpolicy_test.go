@@ -179,7 +179,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "clientIPDetection conflicting configuration",
+			desc: "clientIPDetection xForwardedFor and customHeader set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -190,21 +190,17 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
-						XffNumTrustedHops: ptr.To(uint32(1)),
-						Extensions: &egv1a1.OriginalIPDetectionExtensions{
-							CustomHeader: &egv1a1.CustomHeaderExtensionSettings{
-								HeaderName: "x-client-ip-address",
-							},
-							Xff: &egv1a1.XffExtensionSettings{
-								NumTrustedHops: 2,
-							},
+						XForwardedFor: &egv1a1.XForwardedForSettings{
+							NumTrustedHops: ptr.To(uint32(1)),
+						},
+						CustomHeader: &egv1a1.CustomHeaderExtensionSettings{
+							HeaderName: "x-client-ip-address",
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.clientIPDetection: Invalid value: \"object\": extensions cannot be used in conjunction with xffNumTrustedHops",
-				"spec.clientIPDetection.extensions: Invalid value: \"object\": customHeader cannot be used in conjunction with xff",
+				"spec.clientIPDetection: Invalid value: \"object\": customHeader cannot be used in conjunction xForwardedFor",
 			},
 		},
 		{

@@ -235,15 +235,15 @@ _Appears in:_
 
 
 
-ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener.
+ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `xffNumTrustedHops` | _integer_ |  false  | XffNumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
-| `extensions` | _[OriginalIPDetectionExtensions](#originalipdetectionextensions)_ |  false  | Extensions provides configuration for supported original IP detection extensions. Refer to: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-original-ip-detection-extensions for more details. |
+| `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
+| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on a trusted custom HTTP header. This uses the the custom_header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
 
 
 #### ClientTrafficPolicy
@@ -294,7 +294,7 @@ _Appears in:_
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `suppressEnvoyHeaders` | _boolean_ |  false  | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
-| `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides XFF and extension configuration for client IP detection on the listener. |
+| `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` | _[TLSSettings](#tlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
@@ -372,10 +372,10 @@ _Appears in:_
 
 
 
-CustomHeaderExtensionSettings provides configuration for the custom header original IP detection extension.
+CustomHeader provides configuration for determining the client IP address for a request based on a trusted custom HTTP header. This uses the the custom_header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details.
 
 _Appears in:_
-- [OriginalIPDetectionExtensions](#originalipdetectionextensions)
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1595,21 +1595,6 @@ _Appears in:_
 
 
 
-#### OriginalIPDetectionExtensions
-
-
-
-OriginalIPDetectionExtensions provides a list of extensions to be used for client IP detection.
-
-_Appears in:_
-- [ClientIPDetectionSettings](#clientipdetectionsettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for the custom header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
-| `xff` | _[XffExtensionSettings](#xffextensionsettings)_ |  false  | Xff provides configuration for the XFF original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/xff/v3/xff.proto for more details. |
-
-
 #### PathEscapedSlashAction
 
 _Underlying type:_ _string_
@@ -2372,17 +2357,17 @@ _Appears in:_
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
 
 
-#### XffExtensionSettings
+#### XForwardedForSettings
 
 
 
-XffExtensionSettings provides configuration for the XFF original IP detection extension.
+XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 
 _Appears in:_
-- [OriginalIPDetectionExtensions](#originalipdetectionextensions)
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `numTrustedHops` | _integer_ |  true  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP |
+| `numTrustedHops` | _integer_ |  true  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
 
 
