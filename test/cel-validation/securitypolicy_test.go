@@ -417,7 +417,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
-						Type: egv1a1.HTTPExtAuthServiceType,
 						GRPC: &egv1a1.GRPCExtAuthService{
 							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: "grpc-auth-service",
