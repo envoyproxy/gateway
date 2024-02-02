@@ -399,6 +399,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			desc: "no extAuth",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{},
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
