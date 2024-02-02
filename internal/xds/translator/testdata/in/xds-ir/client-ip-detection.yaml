@@ -13,7 +13,6 @@ http:
       - endpoints:
         - host: "1.1.1.1"
           port: 8081
-  useRemoteAddress: true
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
