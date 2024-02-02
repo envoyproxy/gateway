@@ -513,13 +513,10 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 		var rgs []gwapiv1b1.ReferenceGrant
 		for _, refGrant := range refGrants {
 			refGrant := refGrant
-			ok, err := r.checkObjectNamespaceLabels(&refGrant)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return nil, fmt.Errorf("failed to check namespace labels for ReferenceGrant %s in namespace %s: %w", refGrant.GetName(), refGrant.GetNamespace(), err)
-			}
-			if !ok {
-				// TODO: should log?
+			if ok, err := r.checkObjectNamespaceLabels(&refGrant); err != nil {
+				r.log.Error(err, "failed to check namespace labels for ReferenceGrant %s in namespace %s: %w", refGrant.GetName(), refGrant.GetNamespace())
+				continue
+			} else if !ok {
 				continue
 			}
 			rgs = append(rgs, refGrant)
@@ -552,26 +549,16 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 		return err
 	}
 
-	gateways := gatewayList.Items
-	if r.namespaceLabel != nil {
-		var gtws []gwapiv1.Gateway
-		for _, gtw := range gateways {
-			gtw := gtw
-			ok, err := r.checkObjectNamespaceLabels(&gtw)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for gateway %s in namespace %s: %w", gtw.GetName(), gtw.GetNamespace(), err)
-			}
-
-			if ok {
-				gtws = append(gtws, gtw)
+	for _, gtw := range gatewayList.Items {
+		gtw := gtw
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&gtw); err != nil {
+				r.log.Error(err, "failed to check namespace labels for gateway %s in namespace %s: %w", gtw.GetName(), gtw.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-		gateways = gtws
-	}
-
-	for _, gtw := range gateways {
-		gtw := gtw
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces[gtw.Namespace] = struct{}{}
 
