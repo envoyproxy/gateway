@@ -15,7 +15,8 @@ http:
           port: 8081
   useRemoteAddress: true
   clientIPDetection:
-    xffNumTrustedHops: 2
+    xForwardedFor:
+      numTrustedHops: 2
 - name: "second-listener"
   address: "0.0.0.0"
   port: 8082
@@ -32,9 +33,9 @@ http:
           port: 8082
   useRemoteAddress: true
   clientIPDetection:
-    extensions:
-      customHeader:
-        headerName: "x-my-custom-header"
+    customHeader:
+      headerName: "x-my-custom-header"
+      rejectWithStatus: 403
 - name: "third-listener"
   address: "0.0.0.0"
   port: 8083
@@ -50,7 +51,3 @@ http:
         - host: "3.3.3.3"
           port: 8083
   useRemoteAddress: true
-  clientIPDetection:
-    extensions:
-      xff:
-        numTrustedHops: 1

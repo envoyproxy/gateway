@@ -179,7 +179,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		statPrefix = "http"
 	}
 
-	// Original IP detection
+	// Client IP detection
 	var useRemoteAddress = true
 	var xffNumTrustedHops uint32
 	if irListener.ClientIPDetection != nil {
