@@ -350,11 +350,10 @@ func TestSecurityPolicyTarget(t *testing.T) {
 
 		// ExtAuth
 		{
-			desc: "HTTPExtAuthServiceType with GRPC auth service",
+			desc: "GRPC external auth service",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
-						Type: egv1a1.HTTPExtAuthServiceType,
 						GRPC: &egv1a1.GRPCExtAuthService{
 							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: "grpc-auth-service",
@@ -371,16 +370,13 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.extAuth: Invalid value: \"object\": http must be specified if type is HTTP",
-			},
+			wantErrors: []string{},
 		},
 		{
-			desc: "GRPCExtAuthServiceType with HTTP auth service",
+			desc: "HTTP external auth service",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
-						Type: egv1a1.GRPCExtAuthServiceType,
 						HTTP: &egv1a1.HTTPExtAuthService{
 							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: "http-auth-service",
@@ -397,8 +393,23 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "no extAuth",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
 			wantErrors: []string{
-				"spec.extAuth: Invalid value: \"object\": grpc must be specified if type is GRPC",
+				"spec.extAuth: Invalid value: \"object\": one of grpc or http must be specified",
 			},
 		},
 		{
