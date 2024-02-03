@@ -42,11 +42,11 @@ func newStatusCommand() *cobra.Command {
   # Show the status of gateway resources with details under default namespace.
   egctl x status gateway -v
 
-  # Show the status of httproutes resources with details under a specific namespace.
-  egctl x status httproutes -v -n foobar
+  # Show the status of httproute resources with details under a specific namespace.
+  egctl x status httproute -v -n foobar
 
-  # Show the status of httproutes resources under all namespaces.
-  egctl x status httproutes -A
+  # Show the status of httproute resources under all namespaces.
+  egctl x status httproute -A
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -90,84 +90,84 @@ func runStatus(ctx context.Context, cli client.Client, table *tabwriter.Writer, 
 	}
 
 	switch strings.ToLower(resourceType) {
-	case "gc", "gcs", "gatewayclass", "gatewayclasses":
+	case "gc", "gatewayclass":
 		gc := gwv1.GatewayClassList{}
 		if err := cli.List(ctx, &gc, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &gc
 
-	case "gtw", "gtws", "gateway", "gateways":
+	case "gtw", "gateway":
 		gtw := gwv1.GatewayList{}
 		if err := cli.List(ctx, &gtw, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &gtw
 
-	case "httproute", "httproutes":
+	case "httproute":
 		httproute := gwv1.HTTPRouteList{}
 		if err := cli.List(ctx, &httproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &httproute
 
-	case "grpcroute", "grpcroutes":
+	case "grpcroute":
 		grpcroute := gwv1a2.GRPCRouteList{}
 		if err := cli.List(ctx, &grpcroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &grpcroute
 
-	case "tcproute", "tcproutes":
+	case "tcproute":
 		tcproute := gwv1a2.TCPRouteList{}
 		if err := cli.List(ctx, &tcproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &tcproute
 
-	case "udproute", "udproutes":
+	case "udproute":
 		udproute := gwv1a2.UDPRouteList{}
 		if err := cli.List(ctx, &udproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &udproute
 
-	case "tlsroute", "tlsroutes":
+	case "tlsroute":
 		tlsroute := gwv1a2.TLSRouteList{}
 		if err := cli.List(ctx, &tlsroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &tlsroute
 
-	case "btlspolicy", "btlspolicies", "backendtlspolicy", "backendtlspolicies":
+	case "btlspolicy", "backendtlspolicy":
 		btlspolicy := gwv1a2.BackendTLSPolicyList{}
 		if err := cli.List(ctx, &btlspolicy, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &btlspolicy
 
-	case "btp", "btps", "backendtrafficpolicy", "backendtrafficpolicies":
+	case "btp", "backendtrafficpolicy":
 		btp := egv1a1.BackendTrafficPolicyList{}
 		if err := cli.List(ctx, &btp, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &btp
 
-	case "ctp", "ctps", "clienttrafficpolicy", "clienttrafficpolicies":
+	case "ctp", "clienttrafficpolicy":
 		ctp := egv1a1.ClientTrafficPolicyList{}
 		if err := cli.List(ctx, &ctp, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &ctp
 
-	case "epp", "epps", "enovypatchpolicy", "envoypatchpolicies":
+	case "epp", "enovypatchpolicy":
 		epp := egv1a1.EnvoyPatchPolicyList{}
 		if err := cli.List(ctx, &epp, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &epp
 
-	case "sp", "sps", "securitypolicy", "secruitypolicies":
+	case "sp", "securitypolicy":
 		sp := egv1a1.SecurityPolicyList{}
 		if err := cli.List(ctx, &sp, client.InNamespace(namespace)); err != nil {
 			return err
@@ -253,7 +253,7 @@ func writeStatusBodies(table *tabwriter.Writer, resourcesList client.ObjectList,
 				}
 			}
 
-		case strings.Contains(resourceType, "btls") || strings.Contains(resourceType, "backendtls"):
+		case resourceType == "btlspolicy" || resourceType == "backendtlspolicy":
 			// Scrape conditions from `Resource.Status.Ancestors[i].Conditions` field
 			ancestorsField := statusField.FieldByName("Ancestors")
 			if !ancestorsField.IsValid() {

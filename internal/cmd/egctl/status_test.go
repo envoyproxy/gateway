@@ -294,7 +294,7 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 			expect: true,
 		},
 		{
-			name: "egctl x status httproutes -A",
+			name: "egctl x status httproute -A",
 			resourceList: &gwv1.HTTPRouteList{
 				Items: []gwv1.HTTPRoute{
 					{
@@ -377,7 +377,7 @@ default2    http2     foobar4   test-status-4   test reason 4
 			expect: true,
 		},
 		{
-			name: "egctl x status httproutes -q -n default1",
+			name: "egctl x status httproute -q -n default1",
 			resourceList: &gwv1.HTTPRouteList{
 				Items: []gwv1.HTTPRoute{
 					{
