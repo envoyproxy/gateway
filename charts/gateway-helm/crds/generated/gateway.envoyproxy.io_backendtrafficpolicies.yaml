@@ -380,7 +380,7 @@ spec:
                         format: int32
                         type: integer
                       splitExternalLocalOriginErrors:
-                        default: "false"
+                        default: false
                         description: SplitExternalLocalOriginErrors enables splitting
                           of errors between external and local origin.
                         type: boolean

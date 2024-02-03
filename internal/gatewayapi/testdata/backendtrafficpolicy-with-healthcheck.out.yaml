@@ -23,7 +23,7 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 150s
+        baseEjectionTime: 2m30s
         interval: 1s
         maxEjectionPercent: 100
     targetRef:
@@ -60,7 +60,7 @@ backendTrafficPolicies:
         type: TCP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 180s
+        baseEjectionTime: 3m0s
         interval: 1s
         maxEjectionPercent: 100
     targetRef:
@@ -97,7 +97,7 @@ backendTrafficPolicies:
         type: TCP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 160s
+        baseEjectionTime: 2m40s
         interval: 8ms
         maxEjectionPercent: 11
     targetRef:
@@ -136,7 +136,7 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 160s
+        baseEjectionTime: 2m40s
         interval: 2s
         maxEjectionPercent: 100
     targetRef:
@@ -455,7 +455,7 @@ xdsIR:
             timeout: 500ms
             unhealthyThreshold: 3
           passive:
-            baseEjectionTime: 160s
+            baseEjectionTime: 2m40s
             interval: 2s
             maxEjectionPercent: 100
         hostname: '*'
@@ -499,7 +499,7 @@ xdsIR:
             timeout: 1s
             unhealthyThreshold: 3
           passive:
-            baseEjectionTime: 180s
+            baseEjectionTime: 3m0s
             interval: 1s
             maxEjectionPercent: 100
         hostname: gateway.envoyproxy.io
@@ -532,7 +532,7 @@ xdsIR:
             timeout: 1s
             unhealthyThreshold: 3
           passive:
-            baseEjectionTime: 160s
+            baseEjectionTime: 2m40s
             interval: 8ms
             maxEjectionPercent: 11
         hostname: gateway.envoyproxy.io
@@ -568,7 +568,7 @@ xdsIR:
             timeout: 1s
             unhealthyThreshold: 3
           passive:
-            baseEjectionTime: 150s
+            baseEjectionTime: 2m30s
             interval: 1s
             maxEjectionPercent: 100
         hostname: gateway.envoyproxy.io

@@ -25,7 +25,7 @@ type PassiveHealthCheck struct {
 
 	// SplitExternalLocalOriginErrors enables splitting of errors between external and local origin.
 	//
-	// +kubebuilder:default="false"
+	// +kubebuilder:default=false
 	// +optional
 	SplitExternalLocalOriginErrors bool `json:"splitExternalLocalOriginErrors,omitempty"`
 
