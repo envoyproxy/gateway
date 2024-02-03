@@ -24,6 +24,7 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -146,6 +147,13 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	} else {
 		statPrefix = "http"
 	}
+
+	// Client IP detection
+	var xffNumTrustedHops uint32
+	if irListener.ClientIPDetection != nil && irListener.ClientIPDetection.XForwardedFor != nil {
+		xffNumTrustedHops = ptr.Deref(irListener.ClientIPDetection.XForwardedFor.NumTrustedHops, 0)
+	}
+
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -162,7 +170,8 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress: &wrappers.BoolValue{Value: true},
+		UseRemoteAddress:  &wrappers.BoolValue{Value: true},
+		XffNumTrustedHops: xffNumTrustedHops,
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},
 		MergeSlashes:                 irListener.Path.MergeSlashes,

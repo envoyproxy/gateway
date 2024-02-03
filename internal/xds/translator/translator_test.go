@@ -238,6 +238,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "path-settings",
 		},
 		{
+			name: "client-ip-detection",
+		},
+		{
 			name: "http1-trailers",
 		},
 		{

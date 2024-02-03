@@ -231,6 +231,20 @@ _Appears in:_
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type (eg. "claim.nested.key", "sub"). The nested claim name must use dot "." to separate the JSON name path. |
 
 
+#### ClientIPDetectionSettings
+
+
+
+ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
+
+
 #### ClientTrafficPolicy
 
 
@@ -279,6 +293,7 @@ _Appears in:_
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `suppressEnvoyHeaders` | _boolean_ |  false  | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
+| `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` | _[TLSSettings](#tlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
@@ -2303,5 +2318,19 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `pre` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
+
+
+#### XForwardedForSettings
+
+
+
+XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+
+_Appears in:_
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for more details. |
 
 
