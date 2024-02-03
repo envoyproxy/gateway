@@ -23,8 +23,8 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
+        baseEjectionTime: 150s
         interval: 1s
-        baseEjectionTime: 3m
         maxEjectionPercent: 100
     targetRef:
       group: gateway.networking.k8s.io
@@ -60,8 +60,8 @@ backendTrafficPolicies:
         type: TCP
         unhealthyThreshold: 3
       passive:
+        baseEjectionTime: 180s
         interval: 1s
-        baseEjectionTime: 3m
         maxEjectionPercent: 100
     targetRef:
       group: gateway.networking.k8s.io
@@ -97,8 +97,8 @@ backendTrafficPolicies:
         type: TCP
         unhealthyThreshold: 3
       passive:
+        baseEjectionTime: 160s
         interval: 8ms
-        baseEjectionTime: 1m
         maxEjectionPercent: 11
     targetRef:
       group: gateway.networking.k8s.io
@@ -136,8 +136,8 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        interval: 1s
-        baseEjectionTime: 3m
+        baseEjectionTime: 160s
+        interval: 2s
         maxEjectionPercent: 100
     targetRef:
       group: gateway.networking.k8s.io
@@ -455,8 +455,8 @@ xdsIR:
             timeout: 500ms
             unhealthyThreshold: 3
           passive:
-            interval: 1s
-            baseEjectionTime: 3m
+            baseEjectionTime: 160s
+            interval: 2s
             maxEjectionPercent: 100
         hostname: '*'
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
@@ -499,8 +499,8 @@ xdsIR:
             timeout: 1s
             unhealthyThreshold: 3
           passive:
+            baseEjectionTime: 180s
             interval: 1s
-            baseEjectionTime: 3m
             maxEjectionPercent: 100
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
@@ -532,8 +532,8 @@ xdsIR:
             timeout: 1s
             unhealthyThreshold: 3
           passive:
+            baseEjectionTime: 160s
             interval: 8ms
-            baseEjectionTime: 1m
             maxEjectionPercent: 11
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
@@ -568,8 +568,8 @@ xdsIR:
             timeout: 1s
             unhealthyThreshold: 3
           passive:
+            baseEjectionTime: 150s
             interval: 1s
-            baseEjectionTime: 3m
             maxEjectionPercent: 100
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
