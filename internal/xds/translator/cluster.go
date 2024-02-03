@@ -134,50 +134,82 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 	}
 
-	if args.healthCheck != nil {
-		hc := &corev3.HealthCheck{
-			Timeout:  durationpb.New(args.healthCheck.Timeout.Duration),
-			Interval: durationpb.New(args.healthCheck.Interval.Duration),
-		}
-		if args.healthCheck.UnhealthyThreshold != nil {
-			hc.UnhealthyThreshold = wrapperspb.UInt32(*args.healthCheck.UnhealthyThreshold)
-		}
-		if args.healthCheck.HealthyThreshold != nil {
-			hc.HealthyThreshold = wrapperspb.UInt32(*args.healthCheck.HealthyThreshold)
-		}
-		if args.healthCheck.HTTP != nil {
-			httpChecker := &corev3.HealthCheck_HttpHealthCheck{
-				Path: args.healthCheck.HTTP.Path,
-			}
-			if args.healthCheck.HTTP.Method != nil {
-				httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*args.healthCheck.HTTP.Method])
-			}
-			httpChecker.ExpectedStatuses = buildHTTPStatusRange(args.healthCheck.HTTP.ExpectedStatuses)
-			if receive := buildHealthCheckPayload(args.healthCheck.HTTP.ExpectedResponse); receive != nil {
-				httpChecker.Receive = append(httpChecker.Receive, receive)
-			}
-			hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
-				HttpHealthCheck: httpChecker,
-			}
-		}
-		if args.healthCheck.TCP != nil {
-			tcpChecker := &corev3.HealthCheck_TcpHealthCheck{
-				Send: buildHealthCheckPayload(args.healthCheck.TCP.Send),
-			}
-			if receive := buildHealthCheckPayload(args.healthCheck.TCP.Receive); receive != nil {
-				tcpChecker.Receive = append(tcpChecker.Receive, receive)
-			}
-			hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
-				TcpHealthCheck: tcpChecker,
-			}
-		}
-		cluster.HealthChecks = []*corev3.HealthCheck{hc}
+	if args.healthCheck != nil && args.healthCheck.Active != nil {
+		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active)
+	}
+
+	if args.healthCheck != nil && args.healthCheck.Passive != nil {
+		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
+
 	}
 	if args.circuitBreaker != nil {
 		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
 	}
 
 	return cluster
+}
+
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
+	hc := &corev3.HealthCheck{
+		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
+		Interval: durationpb.New(healthcheck.Interval.Duration),
+	}
+	if healthcheck.UnhealthyThreshold != nil {
+		hc.UnhealthyThreshold = wrapperspb.UInt32(*healthcheck.UnhealthyThreshold)
+	}
+	if healthcheck.HealthyThreshold != nil {
+		hc.HealthyThreshold = wrapperspb.UInt32(*healthcheck.HealthyThreshold)
+	}
+	if healthcheck.HTTP != nil {
+		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
+			Path: healthcheck.HTTP.Path,
+		}
+		if healthcheck.HTTP.Method != nil {
+			httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*healthcheck.HTTP.Method])
+		}
+		httpChecker.ExpectedStatuses = buildHTTPStatusRange(healthcheck.HTTP.ExpectedStatuses)
+		if receive := buildHealthCheckPayload(healthcheck.HTTP.ExpectedResponse); receive != nil {
+			httpChecker.Receive = append(httpChecker.Receive, receive)
+		}
+		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
+			HttpHealthCheck: httpChecker,
+		}
+	}
+	if healthcheck.TCP != nil {
+		tcpChecker := &corev3.HealthCheck_TcpHealthCheck{
+			Send: buildHealthCheckPayload(healthcheck.TCP.Send),
+		}
+		if receive := buildHealthCheckPayload(healthcheck.TCP.Receive); receive != nil {
+			tcpChecker.Receive = append(tcpChecker.Receive, receive)
+		}
+		hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
+			TcpHealthCheck: tcpChecker,
+		}
+	}
+	return []*corev3.HealthCheck{hc}
+}
+
+func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.OutlierDetection {
+	od := &clusterv3.OutlierDetection{
+		BaseEjectionTime:               durationpb.New(outlierDetection.BaseEjectionTime.Duration),
+		Interval:                       durationpb.New(outlierDetection.Interval.Duration),
+		SplitExternalLocalOriginErrors: outlierDetection.SplitExternalLocalOriginErrors,
+	}
+
+	if outlierDetection.MaxEjectionPercent != nil && *outlierDetection.MaxEjectionPercent > 0 {
+		od.MaxEjectionPercent = wrapperspb.UInt32(uint32(*outlierDetection.MaxEjectionPercent))
+	}
+
+	if outlierDetection.ConsecutiveLocalOriginFailures != nil {
+		od.ConsecutiveLocalOriginFailure = wrapperspb.UInt32(*outlierDetection.ConsecutiveLocalOriginFailures)
+	}
+	if outlierDetection.Consecutive5xxErrors != nil {
+		od.Consecutive_5Xx = wrapperspb.UInt32(*outlierDetection.Consecutive5xxErrors)
+	}
+	if outlierDetection.ConsecutiveGatewayErrors != nil {
+		od.ConsecutiveGatewayFailure = wrapperspb.UInt32(*outlierDetection.ConsecutiveGatewayErrors)
+	}
+	return od
 }
 
 // buildHTTPStatusRange converts an array of http status to an array of the range of http status.

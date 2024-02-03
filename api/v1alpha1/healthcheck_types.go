@@ -13,6 +13,60 @@ type HealthCheck struct {
 	// Active health check configuration
 	// +optional
 	Active *ActiveHealthCheck `json:"active,omitempty"`
+
+	// Passive passive check configuration
+	// +optional
+	Passive *PassiveHealthCheck `json:"passive,omitempty"`
+}
+
+// PassiveHealthCheck defines the configuration for passive health checks in the context of Envoy's Outlier Detection,
+// see https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier
+type PassiveHealthCheck struct {
+
+	// SplitExternalLocalOriginErrors enables splitting of errors between external and local origin.
+	//
+	// +kubebuilder:default="false"
+	// +optional
+	SplitExternalLocalOriginErrors bool `json:"splitExternalLocalOriginErrors,omitempty"`
+
+	// Interval defines the time between passive health checks.
+	//
+	// +kubebuilder:validation:Format=duration
+	// +kubebuilder:default="3s"
+	// +optional
+	Interval *metav1.Duration `json:"interval,omitempty"`
+
+	// ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
+	// Parameter takes effect only when split_external_local_origin_errors is set to true.
+	//
+	// +kubebuilder:default=5
+	// +optional
+	ConsecutiveLocalOriginFailures *uint32 `json:"consecutiveLocalOriginFailures,omitempty"`
+
+	// ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection.
+	//
+	// +kubebuilder:default=0
+	// +optional
+	ConsecutiveGatewayErrors *uint32 `json:"consecutiveGatewayErrors,omitempty"`
+
+	// Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection.
+	//
+	// +kubebuilder:default=5
+	// +optional
+	Consecutive5xxErrors *uint32 `json:"consecutive5XxErrors,omitempty"`
+
+	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
+	//
+	// +kubebuilder:validation:Format=duration
+	// +kubebuilder:default="30s"
+	// +optional
+	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty"`
+
+	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
+	//
+	// +kubebuilder:default=10
+	// +optional
+	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty"`
 }
 
 // ActiveHealthCheck defines the active health check configuration.
@@ -29,7 +83,7 @@ type ActiveHealthCheck struct {
 	// +optional
 	Timeout *metav1.Duration `json:"timeout"`
 
-	// Interval defines the time between health checks.
+	// Interval defines the time between active health checks.
 	//
 	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="3s"

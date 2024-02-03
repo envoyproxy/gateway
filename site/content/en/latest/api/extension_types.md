@@ -50,7 +50,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout defines the time to wait for a health check response. |
-| `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Interval defines the time between health checks. |
+| `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Interval defines the time between active health checks. |
 | `unhealthyThreshold` | _integer_ |  false  | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  | Type defines the type of health checker. |
@@ -1189,6 +1189,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
+| `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
 #### InfrastructureProviderType
@@ -1568,6 +1569,26 @@ Origin is defined by the scheme (protocol), hostname (domain), and port of the U
 _Appears in:_
 - [CORS](#cors)
 
+
+
+#### PassiveHealthCheck
+
+
+
+PassiveHealthCheck defines the configuration for passive health checks in the context of Envoy's Outlier Detection, see https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier
+
+_Appears in:_
+- [HealthCheck](#healthcheck)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `splitExternalLocalOriginErrors` | _boolean_ |  false  | SplitExternalLocalOriginErrors enables splitting of errors between external and local origin. |
+| `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Interval defines the time between passive health checks. |
+| `consecutiveLocalOriginFailures` | _integer_ |  false  | ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection. Parameter takes effect only when split_external_local_origin_errors is set to true. |
+| `consecutiveGatewayErrors` | _integer_ |  false  | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
+| `consecutive5XxErrors` | _integer_ |  false  | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
+| `baseEjectionTime` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
+| `maxEjectionPercent` | _integer_ |  false  | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
 
 
 #### PathEscapedSlashAction

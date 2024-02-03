@@ -128,6 +128,10 @@ backendTrafficPolicies:
           expectedResponse:
             type: Binary
             binary: RXZlcnl0aGluZyBPSw==
+      passive:
+        interval: 1s
+        baseEjectionTime: 3m
+        maxEjectionPercent: 100
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -155,6 +159,10 @@ backendTrafficPolicies:
           expectedResponse:
             type: Text
             text: pong
+      passive:
+        interval: 1s
+        baseEjectionTime: 3m
+        maxEjectionPercent: 100
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -180,6 +188,10 @@ backendTrafficPolicies:
           receive:
             type: Text
             text: pong
+      passive:
+        interval: 1s
+        baseEjectionTime: 3m
+        maxEjectionPercent: 100
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -205,3 +217,7 @@ backendTrafficPolicies:
           receive:
             type: Binary
             binary: RXZlcnl0aGluZyBPSw==
+      passive:
+        interval: 8ms
+        baseEjectionTime: 1m
+        maxEjectionPercent: 11

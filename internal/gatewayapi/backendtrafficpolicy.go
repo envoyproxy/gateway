@@ -687,12 +687,44 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 }
 
 func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
+	if policy.Spec.HealthCheck == nil {
+		return nil
+	}
+	irhc := &ir.HealthCheck{}
+	if policy.Spec.HealthCheck.Passive != nil {
+		irhc.Passive = t.buildPassiveHealthCheck(policy)
+	}
+	if policy.Spec.HealthCheck.Active != nil {
+		irhc.Active = t.buildActiveHealthCheck(policy)
+	}
+	return irhc
+}
+
+func (t *Translator) buildPassiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.OutlierDetection {
+	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Passive == nil {
+		return nil
+	}
+
+	hc := policy.Spec.HealthCheck.Passive
+	irOD := &ir.OutlierDetection{
+		Interval:                       hc.Interval,
+		SplitExternalLocalOriginErrors: hc.SplitExternalLocalOriginErrors,
+		ConsecutiveLocalOriginFailures: hc.ConsecutiveLocalOriginFailures,
+		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
+		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
+		BaseEjectionTime:               hc.BaseEjectionTime,
+		MaxEjectionPercent:             hc.MaxEjectionPercent,
+	}
+	return irOD
+}
+
+func (t *Translator) buildActiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.ActiveHealthCheck {
 	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Active == nil {
 		return nil
 	}
 
 	hc := policy.Spec.HealthCheck.Active
-	irHC := &ir.HealthCheck{
+	irHC := &ir.ActiveHealthCheck{
 		Timeout:            hc.Timeout,
 		Interval:           hc.Interval,
 		UnhealthyThreshold: hc.UnhealthyThreshold,
