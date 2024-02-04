@@ -27,7 +27,7 @@ type PassiveHealthCheck struct {
 	//
 	// +kubebuilder:default=false
 	// +optional
-	SplitExternalLocalOriginErrors bool `json:"splitExternalLocalOriginErrors,omitempty"`
+	SplitExternalLocalOriginErrors *bool `json:"splitExternalLocalOriginErrors,omitempty"`
 
 	// Interval defines the time between passive health checks.
 	//

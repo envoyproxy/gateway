@@ -191,9 +191,11 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 
 func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.OutlierDetection {
 	od := &clusterv3.OutlierDetection{
-		BaseEjectionTime:               durationpb.New(outlierDetection.BaseEjectionTime.Duration),
-		Interval:                       durationpb.New(outlierDetection.Interval.Duration),
-		SplitExternalLocalOriginErrors: outlierDetection.SplitExternalLocalOriginErrors,
+		BaseEjectionTime: durationpb.New(outlierDetection.BaseEjectionTime.Duration),
+		Interval:         durationpb.New(outlierDetection.Interval.Duration),
+	}
+	if outlierDetection.SplitExternalLocalOriginErrors != nil {
+		od.SplitExternalLocalOriginErrors = *outlierDetection.SplitExternalLocalOriginErrors
 	}
 
 	if outlierDetection.MaxEjectionPercent != nil && *outlierDetection.MaxEjectionPercent > 0 {
@@ -203,12 +205,15 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 	if outlierDetection.ConsecutiveLocalOriginFailures != nil {
 		od.ConsecutiveLocalOriginFailure = wrapperspb.UInt32(*outlierDetection.ConsecutiveLocalOriginFailures)
 	}
+
 	if outlierDetection.Consecutive5xxErrors != nil {
 		od.Consecutive_5Xx = wrapperspb.UInt32(*outlierDetection.Consecutive5xxErrors)
 	}
+
 	if outlierDetection.ConsecutiveGatewayErrors != nil {
 		od.ConsecutiveGatewayFailure = wrapperspb.UInt32(*outlierDetection.ConsecutiveGatewayErrors)
 	}
+
 	return od
 }
 

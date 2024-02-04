@@ -1340,7 +1340,7 @@ type OutlierDetection struct {
 	// Interval defines the time between passive health checks.
 	Interval *metav1.Duration `json:"interval,omitempty"`
 	// SplitExternalLocalOriginErrors enables splitting of errors between external and local origin.
-	SplitExternalLocalOriginErrors bool `json:"splitExternalLocalOriginErrors,omitempty" yaml:"splitExternalLocalOriginErrors,omitempty"`
+	SplitExternalLocalOriginErrors *bool `json:"splitExternalLocalOriginErrors,omitempty" yaml:"splitExternalLocalOriginErrors,omitempty"`
 	// ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
 	ConsecutiveLocalOriginFailures *uint32 `json:"consecutiveLocalOriginFailures,omitempty" yaml:"consecutiveLocalOriginFailures,omitempty"`
 	// ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection.

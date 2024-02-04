@@ -1164,6 +1164,11 @@ func (in *OutlierDetection) DeepCopyInto(out *OutlierDetection) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.SplitExternalLocalOriginErrors != nil {
+		in, out := &in.SplitExternalLocalOriginErrors, &out.SplitExternalLocalOriginErrors
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ConsecutiveLocalOriginFailures != nil {
 		in, out := &in.ConsecutiveLocalOriginFailures, &out.ConsecutiveLocalOriginFailures
 		*out = new(uint32)
