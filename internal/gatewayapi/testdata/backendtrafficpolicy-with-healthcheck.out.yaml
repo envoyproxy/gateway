@@ -7,20 +7,21 @@ backendTrafficPolicies:
     namespace: default
   spec:
     healthCheck:
-      healthyThreshold: 3
-      http:
-        expectedResponse:
-          text: pong
-          type: Text
-        expectedStatuses:
-        - 200
-        - 201
-        method: GET
-        path: /healthz
-      interval: 5s
-      timeout: 1s
-      type: HTTP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 3
+        http:
+          expectedResponse:
+            text: pong
+            type: Text
+          expectedStatuses:
+          - 200
+          - 201
+          method: GET
+          path: /healthz
+        interval: 5s
+        timeout: 1s
+        type: HTTP
+        unhealthyThreshold: 3
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -41,18 +42,19 @@ backendTrafficPolicies:
     namespace: default
   spec:
     healthCheck:
-      healthyThreshold: 3
-      interval: 5s
-      tcp:
-        receive:
-          text: pong
-          type: Text
-        send:
-          text: ping
-          type: Text
-      timeout: 1s
-      type: TCP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 3
+        interval: 5s
+        tcp:
+          receive:
+            text: pong
+            type: Text
+          send:
+            text: ping
+            type: Text
+        timeout: 1s
+        type: TCP
+        unhealthyThreshold: 3
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -73,18 +75,19 @@ backendTrafficPolicies:
     namespace: default
   spec:
     healthCheck:
-      healthyThreshold: 1
-      interval: 3s
-      tcp:
-        receive:
-          binary: RXZlcnl0aGluZyBPSw==
-          type: Binary
-        send:
-          binary: cGluZw==
-          type: Binary
-      timeout: 1s
-      type: TCP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 1
+        interval: 3s
+        tcp:
+          receive:
+            binary: RXZlcnl0aGluZyBPSw==
+            type: Binary
+          send:
+            binary: cGluZw==
+            type: Binary
+        timeout: 1s
+        type: TCP
+        unhealthyThreshold: 3
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -105,20 +108,21 @@ backendTrafficPolicies:
     namespace: envoy-gateway
   spec:
     healthCheck:
-      healthyThreshold: 1
-      http:
-        expectedResponse:
-          binary: RXZlcnl0aGluZyBPSw==
-          type: Binary
-        expectedStatuses:
-        - 200
-        - 300
-        method: GET
-        path: /healthz
-      interval: 3s
-      timeout: 500ms
-      type: HTTP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 1
+        http:
+          expectedResponse:
+            binary: RXZlcnl0aGluZyBPSw==
+            type: Binary
+          expectedStatuses:
+          - 200
+          - 300
+          method: GET
+          path: /healthz
+        interval: 3s
+        timeout: 500ms
+        type: HTTP
+        unhealthyThreshold: 3
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

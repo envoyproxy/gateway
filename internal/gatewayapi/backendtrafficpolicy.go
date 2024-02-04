@@ -687,11 +687,11 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 }
 
 func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
-	if policy.Spec.HealthCheck == nil {
+	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Active == nil {
 		return nil
 	}
 
-	hc := policy.Spec.HealthCheck
+	hc := policy.Spec.HealthCheck.Active
 	irHC := &ir.HealthCheck{
 		Timeout:            hc.Timeout,
 		Interval:           hc.Interval,
@@ -699,16 +699,16 @@ func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.H
 		HealthyThreshold:   hc.HealthyThreshold,
 	}
 	switch hc.Type {
-	case egv1a1.HealthCheckerTypeHTTP:
-		irHC.HTTP = t.buildHTTPHealthChecker(hc.HTTP)
-	case egv1a1.HealthCheckerTypeTCP:
-		irHC.TCP = t.buildTCPHealthChecker(hc.TCP)
+	case egv1a1.ActiveHealthCheckerTypeHTTP:
+		irHC.HTTP = t.buildHTTPActiveHealthChecker(hc.HTTP)
+	case egv1a1.ActiveHealthCheckerTypeTCP:
+		irHC.TCP = t.buildTCPActiveHealthChecker(hc.TCP)
 	}
 
 	return irHC
 }
 
-func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTTPHealthChecker {
+func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHealthChecker {
 	if h == nil {
 		return nil
 	}
@@ -732,32 +732,32 @@ func (t *Translator) buildHTTPHealthChecker(h *egv1a1.HTTPHealthChecker) *ir.HTT
 	}
 	irHTTP.ExpectedStatuses = irStatuses
 
-	irHTTP.ExpectedResponse = translateHealthCheckPayload(h.ExpectedResponse)
+	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
 }
 
-func (t *Translator) buildTCPHealthChecker(h *egv1a1.TCPHealthChecker) *ir.TCPHealthChecker {
+func (t *Translator) buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealthChecker {
 	if h == nil {
 		return nil
 	}
 
 	irTCP := &ir.TCPHealthChecker{
-		Send:    translateHealthCheckPayload(h.Send),
-		Receive: translateHealthCheckPayload(h.Receive),
+		Send:    translateActiveHealthCheckPayload(h.Send),
+		Receive: translateActiveHealthCheckPayload(h.Receive),
 	}
 	return irTCP
 }
 
-func translateHealthCheckPayload(p *egv1a1.HealthCheckPayload) *ir.HealthCheckPayload {
+func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {
 	if p == nil {
 		return nil
 	}
 
 	irPayload := &ir.HealthCheckPayload{}
 	switch p.Type {
-	case egv1a1.HealthCheckPayloadTypeText:
+	case egv1a1.ActiveHealthCheckPayloadTypeText:
 		irPayload.Text = p.Text
-	case egv1a1.HealthCheckPayloadTypeBinary:
+	case egv1a1.ActiveHealthCheckPayloadTypeBinary:
 		irPayload.Binary = make([]byte, len(p.Binary))
 		copy(irPayload.Binary, p.Binary)
 	}

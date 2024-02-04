@@ -214,6 +214,8 @@ type HTTPListener struct {
 	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// ClientIPDetection controls how the original client IP address is determined for requests.
+	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
@@ -339,6 +341,10 @@ type PathSettings struct {
 	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
+
+// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+// +k8s:deepcopy-gen=true
+type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
