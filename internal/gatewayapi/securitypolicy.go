@@ -734,17 +734,18 @@ func (t *Translator) validateExtServiceBackendReference(
 	backendRef *gwapiv1.BackendObjectReference,
 	ownerNamespace string,
 	resources *Resources) error {
-	// TODO: zhaohuabing add CEL validation
+
+	// These are sanity checks, they should never happen because the API server
+	// should have caught them
 	if backendRef.Group != nil && *backendRef.Group != "" {
 		return errors.New(
 			"group is invalid, only the core API group (specified by omitting" +
 				" the group field or setting it to an empty string) is supported")
 	}
-	// TODO: zhaohuabing add CEL validation
 	if backendRef.Kind != nil && *backendRef.Kind != KindService {
-		return errors.New("kind is invalid, only Service is supported")
+		return errors.New("kind is invalid, only Service (specified by omitting " +
+			"the kind field or setting it to 'Service') is supported")
 	}
-	// TODO: zhaohuabing add CEL validation
 	if backendRef.Port == nil {
 		return errors.New("a valid port number corresponding to a port on the Service must be specified")
 	}

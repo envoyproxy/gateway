@@ -444,6 +444,110 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				"spec.extAuth: Invalid value: \"object\": only one of grpc or http can be specified",
 			},
 		},
+		{
+			desc: "http extAuth service invalid Group",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Group: ptr.To(gwapiv1.Group("unsupported")),
+								Name:  "http-auth-service",
+								Port:  ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+			},
+		},
+		{
+			desc: "http extAuth service invalid Kind",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Kind: ptr.To(gwapiv1.Kind("unsupported")),
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported",
+			},
+		},
+		{
+			desc: "grpc extAuth service invalid Group",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Group: ptr.To(gwapiv1.Group("unsupported")),
+								Name:  "http-auth-service",
+								Port:  ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+			},
+		},
+		{
+			desc: "grpc extAuth service invalid Kind",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Kind: ptr.To(gwapiv1.Kind("unsupported")),
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported",
+			},
+		},
 	}
 
 	for _, tc := range cases {

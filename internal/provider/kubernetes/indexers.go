@@ -405,10 +405,12 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 
 	var backendRef *gwapiv1.BackendObjectReference
 
-	if securityPolicy.Spec.ExtAuth.HTTP != nil {
-		backendRef = &securityPolicy.Spec.ExtAuth.HTTP.BackendObjectReference
-	} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
-		backendRef = &securityPolicy.Spec.ExtAuth.GRPC.BackendObjectReference
+	if securityPolicy.Spec.ExtAuth != nil {
+		if securityPolicy.Spec.ExtAuth.HTTP != nil {
+			backendRef = &securityPolicy.Spec.ExtAuth.HTTP.BackendObjectReference
+		} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
+			backendRef = &securityPolicy.Spec.ExtAuth.GRPC.BackendObjectReference
+		}
 	}
 
 	if backendRef != nil {

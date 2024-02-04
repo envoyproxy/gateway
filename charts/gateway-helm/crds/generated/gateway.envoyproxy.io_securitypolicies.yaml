@@ -318,6 +318,24 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
+                - message: group is invalid, only the core API group (specified by
+                    omitting the group field or setting it to an empty string) is
+                    supported
+                  rule: 'has(self.grpc) ? (!has(self.grpc.group) || self.grpc.group
+                    == "") : true'
+                - message: kind is invalid, only Service (specified by omitting the
+                    kind field or setting it to 'Service') is supported
+                  rule: 'has(self.grpc) ? (!has(self.grpc.kind) || self.grpc.kind
+                    == ''Service'') : true'
+                - message: group is invalid, only the core API group (specified by
+                    omitting the group field or setting it to an empty string) is
+                    supported
+                  rule: 'has(self.http) ? (!has(self.http.group) || self.http.group
+                    == "") : true'
+                - message: kind is invalid, only Service (specified by omitting the
+                    kind field or setting it to 'Service') is supported
+                  rule: 'has(self.http) ? (!has(self.http.kind) || self.http.kind
+                    == ''Service'') : true'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
