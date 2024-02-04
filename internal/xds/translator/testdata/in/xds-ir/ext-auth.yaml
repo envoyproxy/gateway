@@ -3,20 +3,20 @@ http:
   address: "0.0.0.0"
   port: 10080
   hostnames:
-  - "*"
+  - "www.example.com"
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   routes:
-  - name: "first-route"
+  - name: httproute/default/httproute-1/rule/0/match/0/www_example_com
     hostname: "*"
     pathMatch:
       exact: "foo"
     destination:
-      name: "first-route-dest"
+      name: httproute/default/httproute-1/rule/0
       settings:
       - endpoints:
-        - host: "1.2.3.4"
+        - host: "10.0.0.1"
           port: 50000
     extAuth:
       http:
@@ -33,16 +33,16 @@ http:
             port: 80
           protocol: HTTP
           weight: 1
-  - name: "second-route"
+  - name: httproute/default/httproute-2/rule/0/match/0/www_example_com
     hostname: "*"
     pathMatch:
       exact: "bar"
     destination:
-      name: "second-route-dest"
+      name: httproute/default/httproute-2/rule/0
       settings:
       - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
+        - host: "10.0.0.2"
+          port: 60000
     extAuth:
       grpc:
         authority: grpc-backend.default:9000

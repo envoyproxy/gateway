@@ -6,9 +6,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-dest
+    serviceName: httproute/default/httproute-1/rule/0
   lbPolicy: LEAST_REQUEST
-  name: first-route-dest
+  name: httproute/default/httproute-1/rule/0
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -20,9 +20,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-dest
+    serviceName: httproute/default/httproute-2/rule/0
   lbPolicy: LEAST_REQUEST
-  name: second-route-dest
+  name: httproute/default/httproute-2/rule/0
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

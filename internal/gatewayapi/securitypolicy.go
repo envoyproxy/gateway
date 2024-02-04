@@ -718,11 +718,11 @@ func (t *Translator) buildExtAuth(
 	return extAuth, nil
 }
 
-// TODO: zhaohuabing this can also be used for the other external services, such
-// as the external processing filter, gRPC Access Log Service, etc.
 // TODO: zhaohuabing combine this function with the one in the route translator
 // validateExtServiceBackendReference validates the backend reference for an
 // external service referenced by an EG policy.
+// This can also be used for the other external services deployed in the cluster,
+// such as the external processing filter, gRPC Access Log Service, etc.
 // It checks:
 //  1. The group is nil or empty, indicating the core API group.
 //  2. The kind is Service.

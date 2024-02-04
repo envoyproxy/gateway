@@ -1,10 +1,10 @@
 - ignorePortInHostMatching: true
   name: first-listener
   typedPerFilterConfig:
-    envoy.filters.http.ext_authz_first-route:
+    envoy.filters.http.ext_authz_httproute/default/httproute-1/rule/0/match/0/www_example_com:
       '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
       disabled: true
-    envoy.filters.http.ext_authz_second-route:
+    envoy.filters.http.ext_authz_httproute/default/httproute-2/rule/0/match/0/www_example_com:
       '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
       disabled: true
   virtualHosts:
@@ -14,19 +14,19 @@
     routes:
     - match:
         path: foo
-      name: first-route
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
       route:
-        cluster: first-route-dest
+        cluster: httproute/default/httproute-1/rule/0
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz_first-route:
+        envoy.filters.http.ext_authz_httproute/default/httproute-1/rule/0/match/0/www_example_com:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
     - match:
         path: bar
-      name: second-route
+      name: httproute/default/httproute-2/rule/0/match/0/www_example_com
       route:
-        cluster: second-route-dest
+        cluster: httproute/default/httproute-2/rule/0
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz_second-route:
+        envoy.filters.http.ext_authz_httproute/default/httproute-2/rule/0/match/0/www_example_com:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
