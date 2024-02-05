@@ -1216,7 +1216,7 @@ _Appears in:_
 | `op` | _[JSONPatchOperationType](#jsonpatchoperationtype)_ |  true  | Op is the type of operation to perform |
 | `path` | _string_ |  true  | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `from` | _string_ |  false  | From is the source location of the value to be copied or moved. Only valid for move or copy operations Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `value` | _[JSON](#json)_ |  false  | Value is the new value of the path location. The value is only used by the operations of add and replace. |
+| `value` | _[JSON](#json)_ |  false  | Value is the new value of the path location. The value is only used by the operations of `add` and `replace`. |
 
 
 #### JSONPatchOperationType
