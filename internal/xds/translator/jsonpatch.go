@@ -58,12 +58,14 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			switch p.Operation.Op {
 			case AddOperation, ReplaceOperation:
 				if p.Operation.Value == nil {
-					status.SetEnvoyPatchPolicyInvalid(e.Status, "The add/replace operation required a value")
+					msg := fmt.Sprintf("The %s operation required a value", p.Operation.Op)
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
 			default:
 				if p.Operation.Value != nil {
-					status.SetEnvoyPatchPolicyInvalid(e.Status, "The remove/replace/copy/move operation needn't the value field specified")
+					msg := fmt.Sprintf("The value field can not be set for the %s operation", p.Operation.Op)
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
 			}

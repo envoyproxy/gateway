@@ -118,7 +118,7 @@ type JSONPatchOperation struct {
 	// +optional
 	From *string `json:"from,omitempty"`
 	// Value is the new value of the path location. The value is only used by
-	// the operations of `add` and `replace`.
+	// the `add` and `replace` operations.
 	// +optional
 	Value *apiextensionsv1.JSON `json:"value,omitempty"`
 }
