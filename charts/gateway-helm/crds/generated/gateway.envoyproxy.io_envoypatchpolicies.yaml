@@ -79,8 +79,7 @@ spec:
                           type: string
                         value:
                           description: Value is the new value of the path location.
-                            The value is only used by the operations of `add` and
-                            `replace`.
+                            The value is only used by the `add` and `replace` operations.
                           x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
