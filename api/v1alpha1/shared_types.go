@@ -246,7 +246,7 @@ type KubernetesServiceSpec struct {
 	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
 	// providers such as GCP.
 	//
-	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="self.matches(r\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4})\")"
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="self.matches(r\"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$\")"
 	// +optional
 	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
