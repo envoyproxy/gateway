@@ -135,7 +135,9 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 	if err := i.Client.Get(ctx, key, current); err == nil {
 		if svc.Spec.ClusterIP != current.Spec.ClusterIP && (svc.Spec.ClusterIP != "" || current.Spec.ClusterIP == "None") {
 			i.Logger.Info("recreating service to force clusterIP update", "current", current.Spec.ClusterIP, "configured", svc.Spec.ClusterIP)
-			i.Client.Delete(ctx, current)
+			if err := i.Client.Delete(ctx, current); err != nil {
+				return err
+			}
 			current = &corev1.Service{}
 		}
 	}
