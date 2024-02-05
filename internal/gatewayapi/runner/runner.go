@@ -15,6 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -76,10 +77,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 			// Translate to IR
 			result := t.Translate(val)
-
 			var curKeys, newKeys []string
 			// Get current IR keys
-			for key := range r.InfraIR.LoadAll() {
+			filteredInfra := r.InfraIR.LoadAllMatching(func(_ string, ir *ir.Infra) bool {
+				return string(t.GatewayClassName) == ir.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel]
+			})
+			for key := range filteredInfra {
 				curKeys = append(curKeys, key)
 			}
 

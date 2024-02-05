@@ -396,6 +396,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
       name: envoy-gateway/gateway-1
   envoy-gateway/gateway-2:
     proxy:
@@ -411,6 +412,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
       name: envoy-gateway/gateway-2
 xdsIR:
   envoy-gateway/gateway-1:

@@ -345,6 +345,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
+		// The Store is triggered even when there are no Gateways associated to the
+		// GatewayClass. This would happen in case the last Gateway is removed and the
+		// Store will be required to trigger a cleanup of envoy infra resources.
+		r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourcesMap[acceptedGC.Name])
+
 		// Update finalizer on the gateway class based on the resource tree.
 		if len(resourcesMap[acceptedGC.Name].Gateways) == 0 {
 			r.log.Info("No gateways found for accepted gatewayclass")
@@ -363,10 +368,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				}
 			}
 		}
-		// The Store is triggered even when there are no Gateways associated to the
-		// GatewayClass. This would happen in case the last Gateway is removed and the
-		// Store will be required to trigger a cleanup of envoy infra resources.
-		r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourcesMap[acceptedGC.Name])
 	}
 
 	r.log.Info("reconciled gateways successfully")
