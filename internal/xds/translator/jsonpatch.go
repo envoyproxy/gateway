@@ -27,8 +27,12 @@ import (
 )
 
 const (
-	AddOperation = "add"
-	EmptyPath    = ""
+	AddOperation     = "add"
+	RemoveOperation  = "remove"
+	ReplaceOperation = "replace"
+	CopyOperation    = "copy"
+	MoveOperation    = "move"
+	EmptyPath        = ""
 )
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
@@ -50,6 +54,19 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				resourceJSON []byte
 				err          error
 			)
+
+			switch p.Operation.Op {
+			case AddOperation, ReplaceOperation:
+				if p.Operation.Value == nil {
+					status.SetEnvoyPatchPolicyInvalid(e.Status, "The add/replace operation required a value")
+					continue
+				}
+			default:
+				if p.Operation.Value != nil {
+					status.SetEnvoyPatchPolicyInvalid(e.Status, "The remove/replace/copy/move operation needn't the value field specified")
+					continue
+				}
+			}
 
 			// If Path is "" and op is "add", unmarshal and add the patch as a complete
 			// resource
