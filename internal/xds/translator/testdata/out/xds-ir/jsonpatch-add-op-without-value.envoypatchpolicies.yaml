@@ -3,7 +3,7 @@
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'The add/replace operation required a value'
+      message: The add/replace operation required a value
       reason: Invalid
       status: "False"
       type: Programmed

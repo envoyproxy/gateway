@@ -3,7 +3,7 @@
   status:
     conditions:
     - lastTransitionTime: null
-      message: "The remove/replace/copy/move operation needn't the value field specified"
+      message: The remove/replace/copy/move operation needn't the value field specified
       reason: Invalid
       status: "False"
       type: Programmed
