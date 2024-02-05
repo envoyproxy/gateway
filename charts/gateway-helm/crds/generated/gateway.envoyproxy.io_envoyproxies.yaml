@@ -5981,6 +5981,9 @@ spec:
                               cannot be less that minReplicas.
                             format: int32
                             type: integer
+                            x-kubernetes-validations:
+                            - message: maxReplicas must be greater than 0
+                              rule: self > 0
                           metrics:
                             description: metrics contains the specifications for which
                               to use to calculate the desired replica count (the maximum
@@ -6516,14 +6519,13 @@ spec:
                               It defaults to 1 replica.
                             format: int32
                             type: integer
+                            x-kubernetes-validations:
+                            - message: minReplicas must be greater than 0
+                              rule: self > 0
                         required:
                         - maxReplicas
                         type: object
                         x-kubernetes-validations:
-                        - message: minReplicas must be greater than 0
-                          rule: '!has(self.minReplicas) || self.minReplicas > 0'
-                        - message: maxReplicas must be greater than 0
-                          rule: '!has(self.maxReplicas) || self.maxReplicas > 0'
                         - message: maxReplicas cannot be less than minReplicas
                           rule: '!has(self.minReplicas) || self.maxReplicas >= self.minReplicas'
                       envoyService:
@@ -6574,6 +6576,9 @@ spec:
                               but it is still used for setting the IP Address in some
                               cloud providers such as GCP.
                             type: string
+                            x-kubernetes-validations:
+                            - message: loadBalancerIP must be a valid IPv4 address
+                              rule: self.matches(r"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})")
                           type:
                             default: LoadBalancer
                             description: Type determines how the Service is exposed.
@@ -6598,8 +6603,6 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
-                        - message: loadBalancerIP must be a valid IPv4 address
-                          rule: '!has(self.loadBalancerIP) || self.loadBalancerIP.matches(r"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})")'
                     type: object
                   type:
                     description: Type is the type of resource provider to use. A resource

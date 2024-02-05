@@ -210,6 +210,8 @@ const (
 )
 
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
+// +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -243,6 +245,8 @@ type KubernetesServiceSpec struct {
 	// may be ignored if the load balancer provider does not support this feature.
 	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
 	// providers such as GCP.
+	//
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="self.matches(r\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4})\")"
 	// +optional
 	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
@@ -328,16 +332,20 @@ const (
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
 // See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
+//
+// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
 type KubernetesHorizontalPodAutoscalerSpec struct {
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler
 	// can scale down. It defaults to 1 replica.
 	//
+	// +kubebuilder:validation:XValidation:message="minReplicas must be greater than 0",rule="self > 0"
 	// +optional
 	MinReplicas *int32 `json:"minReplicas,omitempty"`
 
 	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
 	// It cannot be less that minReplicas.
 	//
+	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="self > 0"
 	MaxReplicas *int32 `json:"maxReplicas"`
 
 	// metrics contains the specifications for which to use to calculate the
