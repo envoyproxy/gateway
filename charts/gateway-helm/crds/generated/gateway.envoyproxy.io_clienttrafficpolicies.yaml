@@ -44,6 +44,25 @@ spec:
           spec:
             description: Spec defines the desired state of ClientTrafficPolicy.
             properties:
+              clientIPDetection:
+                description: ClientIPDetectionSettings provides configuration for
+                  determining the original client IP address for requests.
+                properties:
+                  xForwardedFor:
+                    description: XForwardedForSettings provides configuration for
+                      using X-Forwarded-For headers for determining the client IP
+                      address.
+                    properties:
+                      numTrustedHops:
+                        description: NumTrustedHops controls the number of additional
+                          ingress proxy hops from the right side of XFF HTTP headers
+                          to trust when determining the origin client's IP address.
+                          Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+                          for more details.
+                        format: int32
+                        type: integer
+                    type: object
+                type: object
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header
                   and adds the Client Address into the X-Forwarded-For header. Note

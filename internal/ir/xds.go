@@ -214,6 +214,8 @@ type HTTPListener struct {
 	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// ClientIPDetection controls how the original client IP address is determined for requests.
+	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
@@ -340,6 +342,10 @@ type PathSettings struct {
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
 
+// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+// +k8s:deepcopy-gen=true
+type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
+
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
 	Valid   uint32 `json:"valid" yaml:"valid"`
@@ -389,8 +395,6 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
-	// Timeout is the time until which entire response is received from the upstream.
-	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// CORS policy for the route.
@@ -411,6 +415,8 @@ type HTTPRoute struct {
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
+	// Request and connection timeout settings
+	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1313,6 +1319,9 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel requests that Envoy will make.
 	MaxParallelRequests *uint32 `json:"maxParallelRequests,omitempty" yaml:"maxParallelRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make.
+	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
 }
 
 // HealthCheck defines health check settings
@@ -1480,4 +1489,32 @@ func (p *HealthCheckPayload) Validate() error {
 		errs = errors.Join(errs, ErrHealthCheckPayloadInvalid)
 	}
 	return errs
+}
+
+// Backend connection timeout settings
+// +k8s:deepcopy-gen=true
+type Timeout struct {
+	// Timeout settings for TCP.
+	TCP *TCPTimeout `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+
+	// Timeout settings for HTTP.
+	HTTP *HTTPTimeout `json:"http,omitempty" yaml:"tcp,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type TCPTimeout struct {
+	// The timeout for network connection establishment, including TCP and TLS handshakes.
+	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty" yaml:"connectTimeout,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type HTTPTimeout struct {
+	// RequestTimeout is the time until which entire response is received from the upstream.
+	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
+
+	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	ConnectionIdleTimeout *metav1.Duration `json:"connectionIdleTimeout,omitempty" yaml:"connectionIdleTimeout,omitempty"`
+
+	// The maximum duration of an HTTP connection.
+	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
 }

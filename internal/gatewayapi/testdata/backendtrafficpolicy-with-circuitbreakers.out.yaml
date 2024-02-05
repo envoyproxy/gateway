@@ -10,6 +10,7 @@ backendTrafficPolicies:
       maxConnections: 42
       maxParallelRequests: 42
       maxPendingRequests: 42
+      maxRequestsPerConnection: 42
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -33,6 +34,7 @@ backendTrafficPolicies:
       maxConnections: 2048
       maxParallelRequests: 4294967295
       maxPendingRequests: 1
+      maxRequestsPerConnection: 1
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

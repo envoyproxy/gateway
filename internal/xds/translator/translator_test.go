@@ -246,10 +246,16 @@ func TestTranslateXds(t *testing.T) {
 			name: "path-settings",
 		},
 		{
+			name: "client-ip-detection",
+		},
+		{
 			name: "http1-trailers",
 		},
 		{
 			name: "http1-preserve-case",
+		},
+		{
+			name: "timeout",
 		},
 	}
 

@@ -66,6 +66,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
+	// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+	//
+	// +optional
+	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	//
 	// +optional
@@ -82,6 +86,25 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
+}
+
+// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+type ClientIPDetectionSettings struct {
+	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+	//
+	// +optional
+	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
+}
+
+// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+type XForwardedForSettings struct {
+	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
+	// headers to trust when determining the origin client's IP address.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+	// for more details.
+	//
+	// +optional
+	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.

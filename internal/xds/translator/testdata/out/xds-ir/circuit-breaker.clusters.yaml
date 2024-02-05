@@ -17,3 +17,10 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        maxRequestsPerConnection: 10
+      explicitHttpConfig:
+        httpProtocolOptions: {}

@@ -128,4 +128,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout: 5s
+        timeout:
+          http:
+            requestTimeout: 5s
