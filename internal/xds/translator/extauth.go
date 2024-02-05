@@ -38,6 +38,7 @@ var _ httpFilter = &extAuth{}
 // patchHCM builds and appends the ext_authz Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
 // Note: this method creates an ext_authz filter for each route that contains an ExtAuthz config.
+// TODO: zhaohuabing avoid duplicated HTTP filters
 func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 
@@ -60,20 +61,13 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		// skip if the filter already exists
-		for _, existingFilter := range mgr.HttpFilters {
-			if filter.Name == existingFilter.Name {
-				continue
-			}
-		}
-
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
 	return nil
 }
 
-// buildHCMExtAuthFilter returns a ext_authz HTTP filter from the provided IR HTTPRoute.
+// buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	extAuthProto := extAuthConfig(route.ExtAuth)
 	if err := extAuthProto.ValidateAll(); err != nil {
@@ -198,6 +192,7 @@ func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
 	return false
 }
 
+// patchResources patches the cluster resources for the external auth services.
 func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 	routes []*ir.HTTPRoute) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
