@@ -22,8 +22,9 @@ func newExperimentalCommand() *cobra.Command {
 	  `,
 	}
 
-	experimentalCommand.AddCommand(NewTranslateCommand())
-	experimentalCommand.AddCommand(statsCommand())
+	experimentalCommand.AddCommand(newTranslateCommand())
+	experimentalCommand.AddCommand(newStatsCommand())
+	experimentalCommand.AddCommand(newStatusCommand())
 
 	return experimentalCommand
 }
