@@ -746,3 +746,55 @@ func loadHPA(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	_ = yaml.Unmarshal(hpaYAML, hpa)
 	return hpa, nil
 }
+
+func TestOwningGatewayLabelsAbsent(t *testing.T) {
+
+	cases := []struct {
+		caseName string
+		labels   map[string]string
+		expect   bool
+	}{
+		{
+			caseName: "OwningGatewayClassLabel exist, but lack OwningGatewayNameLabel or OwningGatewayNamespaceLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gatewayclass": "eg-class",
+			},
+			expect: false,
+		},
+		{
+			caseName: "OwningGatewayNameLabel and OwningGatewayNamespaceLabel exist, but lack OwningGatewayClassLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-name":      "eg",
+				"gateway.envoyproxy.io/owning-gateway-namespace": "default",
+			},
+			expect: false,
+		},
+		{
+			caseName: "OwningGatewayNameLabel exist, but lack OwningGatewayClassLabel and OwningGatewayNamespaceLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-name": "eg",
+			},
+			expect: true,
+		},
+		{
+			caseName: "OwningGatewayNamespaceLabel exist, but lack OwningGatewayClassLabel and OwningGatewayNameLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-namespace": "default",
+			},
+			expect: true,
+		},
+		{
+			caseName: "lack all labels",
+			labels:   map[string]string{},
+			expect:   true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			actual := OwningGatewayLabelsAbsent(tc.labels)
+			require.Equal(t, tc.expect, actual)
+		})
+	}
+
+}
