@@ -157,7 +157,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		ServerUri: &corev3.HttpUri{
 			Uri: uri,
 			HttpUpstreamType: &corev3.HttpUri_Cluster{
-				Cluster: http.Name,
+				Cluster: http.Destination.Name,
 			},
 			Timeout: &duration.Duration{
 				Seconds: defaultExtServiceRequestTimeout,
@@ -173,7 +173,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 
 func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
 	return &corev3.GrpcService_EnvoyGrpc{
-		ClusterName: grpc.Name,
+		ClusterName: grpc.Destination.Name,
 		Authority:   grpc.Authority,
 	}
 }
@@ -206,13 +206,13 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		}
 		if route.ExtAuth.HTTP != nil {
 			if err := createExtServiceXDSCluster(
-				&route.ExtAuth.HTTP.RouteDestination, tCtx); err != nil && !errors.Is(
+				&route.ExtAuth.HTTP.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
 		} else {
 			if err := createExtServiceXDSCluster(
-				&route.ExtAuth.GRPC.RouteDestination, tCtx); err != nil && !errors.Is(
+				&route.ExtAuth.GRPC.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}

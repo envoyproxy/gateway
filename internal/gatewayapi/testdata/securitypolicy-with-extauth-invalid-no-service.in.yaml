@@ -47,9 +47,10 @@ securityPolicies:
         namespace: default
       extAuth:
         http:
-          Name: http-backend
-          Namespace: default
-          Port: 80
+          backendRef:
+            Name: http-backend
+            Namespace: default
+            Port: 80
           headersToBackend:
             - header1
             - header2

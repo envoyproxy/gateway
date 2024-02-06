@@ -136,9 +136,10 @@ securityPolicies:
         namespace: default
       extAuth:
         http:
-          Name: http-backend
-          Namespace: envoy-gateway
-          Port: 80
+          backendRef:
+            Name: http-backend
+            Namespace: envoy-gateway
+            Port: 80
           Path: /auth
           headersToBackend:
             - header1
@@ -159,5 +160,6 @@ securityPolicies:
           - header1
           - header2
         grpc:
-          name: grpc-backend
-          port: 9000
+          backendRef:
+            name: grpc-backend
+            port: 9000

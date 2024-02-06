@@ -56,9 +56,10 @@ securityPolicies:
         namespace: default
       extAuth:
         http:
-          Name: http-backend
-          Namespace: envoy-gateway
-          Port: 80
+          backendRef:
+            Name: http-backend
+            Namespace: envoy-gateway
+            Port: 80
           headersToBackend:
             - header1
             - header2

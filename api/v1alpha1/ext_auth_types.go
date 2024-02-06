@@ -46,19 +46,19 @@ type ExtAuth struct {
 // The authorization request message is defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 type GRPCExtAuthService struct {
-	//
-	// BackendObjectReference references a Kubernetes object that represents the
+
+	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
 	// Only service Kind is supported for now.
-	gwapiv1.BackendObjectReference `json:",inline"`
+	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
 type HTTPExtAuthService struct {
-	// BackendObjectReference references a Kubernetes object that represents the
+	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
 	// Only service Kind is supported for now.
-	gwapiv1.BackendObjectReference `json:",inline"`
+	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
 
 	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,

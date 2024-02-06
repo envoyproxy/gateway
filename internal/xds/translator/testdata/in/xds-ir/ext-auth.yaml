@@ -24,15 +24,16 @@ http:
         headersToBackend:
         - header1
         - header2
-        name: securitypolicy/default/policy-for-first-route/http-backend
         path: /auth
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.7.7.7
-            port: 80
-          protocol: HTTP
-          weight: 1
+        destination:
+          name: securitypolicy/default/policy-for-first-route/http-backend
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 80
+            protocol: HTTP
+            weight: 1
   - name: httproute/default/httproute-2/rule/0/match/0/www_example_com
     hostname: "*"
     pathMatch:
@@ -46,14 +47,15 @@ http:
     extAuth:
       grpc:
         authority: grpc-backend.default:9000
-        name: securitypolicy/default/policy-for-second-route/grpc-backend
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 8.8.8.8
-            port: 9000
-          protocol: GRPC
-          weight: 1
+        destination:
+          name: securitypolicy/default/policy-for-second-route/grpc-backend
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.8.8
+              port: 9000
+            protocol: GRPC
+            weight: 1
       headersToExtAuth:
       - header1
       - header2

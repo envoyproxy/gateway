@@ -536,8 +536,8 @@ type ExtAuth struct {
 // HTTPExtAuthService defines the HTTP External Authorization service
 // +k8s:deepcopy-gen=true
 type HTTPExtAuthService struct {
-	// RouteDestination defines the destination for the HTTP External Authorization service.
-	RouteDestination `json:",inline"`
+	// Destination defines the destination for the HTTP External Authorization service.
+	Destination RouteDestination `json:"destination"`
 
 	// Authority is the hostname:port of the HTTP External Authorization service.
 	Authority string `json:"authority"`
@@ -561,8 +561,8 @@ type HTTPExtAuthService struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 // +k8s:deepcopy-gen=true
 type GRPCExtAuthService struct {
-	// RouteDestination defines the destination for the gRPC External Authorization service.
-	RouteDestination `json:",inline"`
+	// Destination defines the destination for the gRPC External Authorization service.
+	Destination RouteDestination `json:"destination"`
 
 	// Authority is the hostname:port of the gRPC External Authorization service.
 	Authority string `json:"authority"`

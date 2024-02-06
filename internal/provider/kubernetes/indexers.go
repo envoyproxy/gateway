@@ -407,9 +407,9 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 
 	if securityPolicy.Spec.ExtAuth != nil {
 		if securityPolicy.Spec.ExtAuth.HTTP != nil {
-			backendRef = &securityPolicy.Spec.ExtAuth.HTTP.BackendObjectReference
+			backendRef = &securityPolicy.Spec.ExtAuth.HTTP.BackendRef
 		} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
-			backendRef = &securityPolicy.Spec.ExtAuth.GRPC.BackendObjectReference
+			backendRef = &securityPolicy.Spec.ExtAuth.GRPC.BackendRef
 		}
 	}
 

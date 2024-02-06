@@ -157,65 +157,80 @@ spec:
                       Either GRPCService or HTTPService must be specified, and only
                       one of them can be provided.
                     properties:
-                      group:
-                        default: ""
-                        description: Group is the group of the referent. For example,
-                          "gateway.networking.k8s.io". When unspecified or empty string,
-                          core API group is inferred.
-                        maxLength: 253
-                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                        type: string
-                      kind:
-                        default: Service
-                        description: "Kind is the Kubernetes resource kind of the
-                          referent. For example \"Service\". \n Defaults to \"Service\"
-                          when not specified. \n ExternalName services can refer to
-                          CNAME DNS records that may live outside of the cluster and
-                          as such are difficult to reason about in terms of conformance.
-                          They also may not be safe to forward to (see CVE-2021-25740
-                          for more information). Implementations SHOULD NOT support
-                          ExternalName Services. \n Support: Core (Services with a
-                          type other than ExternalName) \n Support: Implementation-specific
-                          (Services with type ExternalName)"
-                        maxLength: 63
-                        minLength: 1
-                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                        type: string
-                      name:
-                        description: Name is the name of the referent.
-                        maxLength: 253
-                        minLength: 1
-                        type: string
-                      namespace:
-                        description: "Namespace is the namespace of the backend. When
-                          unspecified, the local namespace is inferred. \n Note that
-                          when a namespace different than the local namespace is specified,
-                          a ReferenceGrant object is required in the referent namespace
-                          to allow that namespace's owner to accept the reference.
-                          See the ReferenceGrant documentation for details. \n Support:
-                          Core"
-                        maxLength: 63
-                        minLength: 1
-                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                        type: string
-                      port:
-                        description: Port specifies the destination port number to
-                          use for this resource. Port is required when the referent
-                          is a Kubernetes Service. In this case, the port number is
-                          the service port number, not the target port. For other
-                          resources, destination port might be derived from the referent
-                          resource or this field.
-                        format: int32
-                        maximum: 65535
-                        minimum: 1
-                        type: integer
+                      backendRef:
+                        allOf:
+                        - x-kubernetes-validations:
+                          - message: Must have port for Service reference
+                            rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                              ? has(self.port) : true'
+                        - x-kubernetes-validations:
+                          - message: kind is invalid, only Service (specified by omitting
+                              the kind field or setting it to 'Service') is supported
+                            rule: '!has(self.kind) || self.kind == ''Service'''
+                        description: BackendRef references a Kubernetes object that
+                          represents the backend server to which the authorization
+                          request will be sent. Only service Kind is supported for
+                          now.
+                        properties:
+                          group:
+                            default: ""
+                            description: Group is the group of the referent. For example,
+                              "gateway.networking.k8s.io". When unspecified or empty
+                              string, core API group is inferred.
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            default: Service
+                            description: "Kind is the Kubernetes resource kind of
+                              the referent. For example \"Service\". \n Defaults to
+                              \"Service\" when not specified. \n ExternalName services
+                              can refer to CNAME DNS records that may live outside
+                              of the cluster and as such are difficult to reason about
+                              in terms of conformance. They also may not be safe to
+                              forward to (see CVE-2021-25740 for more information).
+                              Implementations SHOULD NOT support ExternalName Services.
+                              \n Support: Core (Services with a type other than ExternalName)
+                              \n Support: Implementation-specific (Services with type
+                              ExternalName)"
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            description: Name is the name of the referent.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            description: "Namespace is the namespace of the backend.
+                              When unspecified, the local namespace is inferred. \n
+                              Note that when a namespace different than the local
+                              namespace is specified, a ReferenceGrant object is required
+                              in the referent namespace to allow that namespace's
+                              owner to accept the reference. See the ReferenceGrant
+                              documentation for details. \n Support: Core"
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                          port:
+                            description: Port specifies the destination port number
+                              to use for this resource. Port is required when the
+                              referent is a Kubernetes Service. In this case, the
+                              port number is the service port number, not the target
+                              port. For other resources, destination port might be
+                              derived from the referent resource or this field.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        required:
+                        - name
+                        type: object
                     required:
-                    - name
+                    - backendRef
                     type: object
-                    x-kubernetes-validations:
-                    - message: Must have port for Service reference
-                      rule: '(size(self.group) == 0 && self.kind == ''Service'') ?
-                        has(self.port) : true'
                   headersToExtAuth:
                     description: 'HeadersToExtAuth defines the client request headers
                       that will be included in the request to the external authorization
@@ -237,14 +252,72 @@ spec:
                       Either GRPCService or HTTPService must be specified, and only
                       one of them can be provided.
                     properties:
-                      group:
-                        default: ""
-                        description: Group is the group of the referent. For example,
-                          "gateway.networking.k8s.io". When unspecified or empty string,
-                          core API group is inferred.
-                        maxLength: 253
-                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                        type: string
+                      backendRef:
+                        description: BackendRef references a Kubernetes object that
+                          represents the backend server to which the authorization
+                          request will be sent. Only service Kind is supported for
+                          now.
+                        properties:
+                          group:
+                            default: ""
+                            description: Group is the group of the referent. For example,
+                              "gateway.networking.k8s.io". When unspecified or empty
+                              string, core API group is inferred.
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            default: Service
+                            description: "Kind is the Kubernetes resource kind of
+                              the referent. For example \"Service\". \n Defaults to
+                              \"Service\" when not specified. \n ExternalName services
+                              can refer to CNAME DNS records that may live outside
+                              of the cluster and as such are difficult to reason about
+                              in terms of conformance. They also may not be safe to
+                              forward to (see CVE-2021-25740 for more information).
+                              Implementations SHOULD NOT support ExternalName Services.
+                              \n Support: Core (Services with a type other than ExternalName)
+                              \n Support: Implementation-specific (Services with type
+                              ExternalName)"
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            description: Name is the name of the referent.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            description: "Namespace is the namespace of the backend.
+                              When unspecified, the local namespace is inferred. \n
+                              Note that when a namespace different than the local
+                              namespace is specified, a ReferenceGrant object is required
+                              in the referent namespace to allow that namespace's
+                              owner to accept the reference. See the ReferenceGrant
+                              documentation for details. \n Support: Core"
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                          port:
+                            description: Port specifies the destination port number
+                              to use for this resource. Port is required when the
+                              referent is a Kubernetes Service. In this case, the
+                              port number is the service port number, not the target
+                              port. For other resources, destination port might be
+                              derived from the referent resource or this field.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        required:
+                        - name
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Must have port for Service reference
+                          rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                            ? has(self.port) : true'
                       headersToBackend:
                         description: HeadersToBackend are the authorization response
                           headers that will be added to the original client request
@@ -254,63 +327,15 @@ spec:
                         items:
                           type: string
                         type: array
-                      kind:
-                        default: Service
-                        description: "Kind is the Kubernetes resource kind of the
-                          referent. For example \"Service\". \n Defaults to \"Service\"
-                          when not specified. \n ExternalName services can refer to
-                          CNAME DNS records that may live outside of the cluster and
-                          as such are difficult to reason about in terms of conformance.
-                          They also may not be safe to forward to (see CVE-2021-25740
-                          for more information). Implementations SHOULD NOT support
-                          ExternalName Services. \n Support: Core (Services with a
-                          type other than ExternalName) \n Support: Implementation-specific
-                          (Services with type ExternalName)"
-                        maxLength: 63
-                        minLength: 1
-                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                        type: string
-                      name:
-                        description: Name is the name of the referent.
-                        maxLength: 253
-                        minLength: 1
-                        type: string
-                      namespace:
-                        description: "Namespace is the namespace of the backend. When
-                          unspecified, the local namespace is inferred. \n Note that
-                          when a namespace different than the local namespace is specified,
-                          a ReferenceGrant object is required in the referent namespace
-                          to allow that namespace's owner to accept the reference.
-                          See the ReferenceGrant documentation for details. \n Support:
-                          Core"
-                        maxLength: 63
-                        minLength: 1
-                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                        type: string
                       path:
                         description: Path is the path of the HTTP External Authorization
                           service. If path is specified, the authorization request
                           will be sent to that path, or else the authorization request
                           will be sent to the root path.
                         type: string
-                      port:
-                        description: Port specifies the destination port number to
-                          use for this resource. Port is required when the referent
-                          is a Kubernetes Service. In this case, the port number is
-                          the service port number, not the target port. For other
-                          resources, destination port might be derived from the referent
-                          resource or this field.
-                        format: int32
-                        maximum: 65535
-                        minimum: 1
-                        type: integer
                     required:
-                    - name
+                    - backendRef
                     type: object
-                    x-kubernetes-validations:
-                    - message: Must have port for Service reference
-                      rule: '(size(self.group) == 0 && self.kind == ''Service'') ?
-                        has(self.port) : true'
                 type: object
                 x-kubernetes-validations:
                 - message: one of grpc or http must be specified

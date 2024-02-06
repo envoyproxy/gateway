@@ -667,10 +667,10 @@ func (t *Translator) buildExtAuth(
 	case http != nil && grpc != nil:
 		return nil, errors.New("only one of grpc or http can be specified")
 	case http != nil:
-		backendRef = &http.BackendObjectReference
+		backendRef = &http.BackendRef
 		protocol = ir.HTTP
 	case grpc != nil:
-		backendRef = &grpc.BackendObjectReference
+		backendRef = &grpc.BackendRef
 		protocol = ir.GRPC
 	}
 
@@ -704,15 +704,15 @@ func (t *Translator) buildExtAuth(
 
 	if http != nil {
 		extAuth.HTTP = &ir.HTTPExtAuthService{
-			RouteDestination: rd,
+			Destination:      rd,
 			Authority:        authority,
 			Path:             ptr.Deref(http.Path, ""),
 			HeadersToBackend: http.HeadersToBackend,
 		}
 	} else {
 		extAuth.GRPC = &ir.GRPCExtAuthService{
-			RouteDestination: rd,
-			Authority:        authority,
+			Destination: rd,
+			Authority:   authority,
 		}
 	}
 	return extAuth, nil

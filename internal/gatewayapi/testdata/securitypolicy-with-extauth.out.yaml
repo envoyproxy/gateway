@@ -142,8 +142,9 @@ securityPolicies:
   spec:
     extAuth:
       grpc:
-        name: grpc-backend
-        port: 9000
+        BackendRef:
+          name: grpc-backend
+          port: 9000
       headersToExtAuth:
       - header1
       - header2
@@ -168,13 +169,14 @@ securityPolicies:
   spec:
     extAuth:
       http:
+        BackendRef:
+          name: http-backend
+          namespace: envoy-gateway
+          port: 80
         headersToBackend:
         - header1
         - header2
-        name: http-backend
-        namespace: envoy-gateway
         path: /auth
-        port: 80
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

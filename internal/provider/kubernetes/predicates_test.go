@@ -501,7 +501,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtAuth: &v1alpha1.ExtAuth{
 							HTTP: &v1alpha1.HTTPExtAuthService{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
+								BackendRef: gwapiv1.BackendObjectReference{
 									Name: "ext-auth-http-service",
 								},
 							},
