@@ -1012,7 +1012,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `BackendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
 
 
 #### Gateway
@@ -1125,7 +1125,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `BackendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
 | `path` | _string_ |  true  | Path is the path of the HTTP External Authorization service. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 

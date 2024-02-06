@@ -142,7 +142,7 @@ securityPolicies:
   spec:
     extAuth:
       grpc:
-        BackendRef:
+        backendRef:
           name: grpc-backend
           port: 9000
       headersToExtAuth:
@@ -169,7 +169,7 @@ securityPolicies:
   spec:
     extAuth:
       http:
-        BackendRef:
+        backendRef:
           name: http-backend
           namespace: envoy-gateway
           port: 80
@@ -220,14 +220,15 @@ xdsIR:
         extAuth:
           grpc:
             authority: grpc-backend.default:9000
-            name: securitypolicy/default/policy-for-http-route/grpc-backend
-            settings:
-            - addressType: IP
-              endpoints:
-              - host: 8.8.8.8
-                port: 9000
-              protocol: GRPC
-              weight: 1
+            destination:
+              name: securitypolicy/default/policy-for-http-route/grpc-backend
+              settings:
+              - addressType: IP
+                endpoints:
+                - host: 8.8.8.8
+                  port: 9000
+                protocol: GRPC
+                weight: 1
           headersToExtAuth:
           - header1
           - header2
@@ -252,18 +253,19 @@ xdsIR:
         extAuth:
           http:
             authority: http-backend.envoy-gateway:80
+            destination:
+              name: securitypolicy/default/policy-for-gateway/http-backend
+              settings:
+              - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 80
+                protocol: HTTP
+                weight: 1
             headersToBackend:
             - header1
             - header2
-            name: securitypolicy/default/policy-for-gateway/http-backend
             path: /auth
-            settings:
-            - addressType: IP
-              endpoints:
-              - host: 7.7.7.7
-                port: 80
-              protocol: HTTP
-              weight: 1
         hostname: www.bar.com
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
         pathMatch:

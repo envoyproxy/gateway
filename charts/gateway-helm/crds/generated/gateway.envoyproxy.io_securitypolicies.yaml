@@ -158,15 +158,6 @@ spec:
                       one of them can be provided.
                     properties:
                       backendRef:
-                        allOf:
-                        - x-kubernetes-validations:
-                          - message: Must have port for Service reference
-                            rule: '(size(self.group) == 0 && self.kind == ''Service'')
-                              ? has(self.port) : true'
-                        - x-kubernetes-validations:
-                          - message: kind is invalid, only Service (specified by omitting
-                              the kind field or setting it to 'Service') is supported
-                            rule: '!has(self.kind) || self.kind == ''Service'''
                         description: BackendRef references a Kubernetes object that
                           represents the backend server to which the authorization
                           request will be sent. Only service Kind is supported for
@@ -228,6 +219,10 @@ spec:
                         required:
                         - name
                         type: object
+                        x-kubernetes-validations:
+                        - message: Must have port for Service reference
+                          rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                            ? has(self.port) : true'
                     required:
                     - backendRef
                     type: object
@@ -346,20 +341,20 @@ spec:
                 - message: group is invalid, only the core API group (specified by
                     omitting the group field or setting it to an empty string) is
                     supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.group) || self.grpc.group
+                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef.group) || self.grpc.backendRef.group
                     == "") : true'
                 - message: kind is invalid, only Service (specified by omitting the
                     kind field or setting it to 'Service') is supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.kind) || self.grpc.kind
+                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef.kind) || self.grpc.backendRef.kind
                     == ''Service'') : true'
                 - message: group is invalid, only the core API group (specified by
                     omitting the group field or setting it to an empty string) is
                     supported
-                  rule: 'has(self.http) ? (!has(self.http.group) || self.http.group
+                  rule: 'has(self.http) ? (!has(self.http.backendRef.group) || self.http.backendRef.group
                     == "") : true'
                 - message: kind is invalid, only Service (specified by omitting the
                     kind field or setting it to 'Service') is supported
-                  rule: 'has(self.http) ? (!has(self.http.kind) || self.http.kind
+                  rule: 'has(self.http) ? (!has(self.http.backendRef.kind) || self.http.backendRef.kind
                     == ''Service'') : true'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)

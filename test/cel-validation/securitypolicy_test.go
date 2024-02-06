@@ -355,7 +355,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Name: "grpc-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(80)),
 							},
@@ -378,7 +378,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),
 							},
@@ -419,13 +419,13 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Name: "grpc-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(80)),
 							},
 						},
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),
 							},
@@ -450,7 +450,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Group: ptr.To(gwapiv1.Group("unsupported")),
 								Name:  "http-auth-service",
 								Port:  ptr.To(gwapiv1.PortNumber(15001)),
@@ -476,7 +476,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Kind: ptr.To(gwapiv1.Kind("unsupported")),
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),
@@ -502,7 +502,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Group: ptr.To(gwapiv1.Group("unsupported")),
 								Name:  "http-auth-service",
 								Port:  ptr.To(gwapiv1.PortNumber(15001)),
@@ -528,7 +528,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendObjectReference: gwapiv1.BackendObjectReference{
+							BackendRef: gwapiv1.BackendObjectReference{
 								Kind: ptr.To(gwapiv1.Kind("unsupported")),
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),

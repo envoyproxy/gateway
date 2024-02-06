@@ -104,7 +104,7 @@ securityPolicies:
   spec:
     extAuth:
       http:
-        BackendRef:
+        backendRef:
           name: http-backend
           namespace: envoy-gateway
           port: 80

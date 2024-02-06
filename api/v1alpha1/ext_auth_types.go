@@ -11,10 +11,10 @@ import (
 
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) || has(self.http))",message="one of grpc or http must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) && !has(self.http)) || (!has(self.grpc) && has(self.http))",message="only one of grpc or http can be specified"
-// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.group) || self.grpc.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.kind) || self.grpc.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.group) || self.http.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.kind) || self.http.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.backendRef.group) || self.grpc.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.backendRef.kind) || self.grpc.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.backendRef.group) || self.http.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.backendRef.kind) || self.http.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
 //
 // ExtAuth defines the configuration for External Authorization.
 type ExtAuth struct {
@@ -46,7 +46,6 @@ type ExtAuth struct {
 // The authorization request message is defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 type GRPCExtAuthService struct {
-
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
 	// Only service Kind is supported for now.
