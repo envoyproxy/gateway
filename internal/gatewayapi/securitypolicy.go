@@ -474,6 +474,10 @@ func (t *Translator) buildOIDC(
 	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
 	}
+	var hmacSecret string
+	if oidc.HmacSecret != nil {
+		hmacSecret = *oidc.HmacSecret
+	}
 
 	return &ir.OIDC{
 		Provider:     *provider,
@@ -483,6 +487,7 @@ func (t *Translator) buildOIDC(
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,
+		HmacSecret:   hmacSecret,
 	}, nil
 }
 

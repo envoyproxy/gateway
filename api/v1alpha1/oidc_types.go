@@ -45,6 +45,14 @@ type OIDC struct {
 	// The path to log a user out, clearing their credential cookies.
 	// If not specified, uses a default logout path "/logout"
 	LogoutPath *string `json:"logoutPath,omitempty"`
+
+	// The hmac secret check if request should skip oauth flow
+	// [HMAC Secret](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/oauth2/v3/oauth.proto#envoy-v3-api-field-extensions-filters-http-oauth2-v3-oauth2credentials-hmac-secret)
+	// If not specified, uses the random generated
+	// +kubebuilder:validation:MinLength=32
+	// +kubebuilder:validation:MaxLength=32
+	// +optional
+	HmacSecret *string `json:"hmacSecret"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.

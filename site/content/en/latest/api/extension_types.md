@@ -1524,6 +1524,7 @@ _Appears in:_
 | `scopes` | _string array_ |  false  | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
 | `redirectURL` | _string_ |  true  | The redirect URL to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
 | `logoutPath` | _string_ |  true  | The path to log a user out, clearing their credential cookies. If not specified, uses a default logout path "/logout" |
+| `hmacSecret` | _string_ |  false  | The hmac secret check if request should skip oauth flow [HMAC Secret](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/oauth2/v3/oauth.proto#envoy-v3-api-field-extensions-filters-http-oauth2-v3-oauth2credentials-hmac-secret) If not specified, uses the random generated |
 
 
 #### OIDCProvider

@@ -487,6 +487,10 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// The hmac secret check if request should skip oauth flow
+	// [HMAC Secret](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/oauth2/v3/oauth.proto#envoy-v3-api-field-extensions-filters-http-oauth2-v3-oauth2credentials-hmac-secret)
+	HmacSecret string `json:"hmacSecret,omitempty"`
 }
 
 // BasicAuth defines the schema for the HTTP Basic Authentication.
