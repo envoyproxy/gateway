@@ -33,9 +33,9 @@ func Test_sortHTTPFilters(t *testing.T) {
 			},
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(wellknown.CORS),
+				httpFilterForTest(extAuthFilter + "-route1"),
 				httpFilterForTest(basicAuthFilter + "-route1"),
 				httpFilterForTest(oauth2Filter + "-route1"),
-				httpFilterForTest(extAuthFilter + "-route1"),
 				httpFilterForTest(jwtAuthn),
 				httpFilterForTest(wellknown.Fault),
 				httpFilterForTest(wellknown.HTTPRateLimit),
