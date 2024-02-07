@@ -2114,8 +2114,6 @@ _Appears in:_
 
 
 
-
-
 #### ServiceExternalTrafficPolicy
 
 _Underlying type:_ _string_

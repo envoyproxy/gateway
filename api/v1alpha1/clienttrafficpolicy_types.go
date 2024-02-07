@@ -86,21 +86,6 @@ type ClientTrafficPolicySpec struct {
 	Headers *HeaderSettings `json:"headers,omitempty"`
 }
 
-// ServerHeaderTransformation specifies the transformation required for the Server header
-// +kubebuilder:validation:Enum=Overwrite;AppendIfAbsent;PassThrough
-type ServerHeaderTransformation string
-
-const (
-	// ServerHeaderOverwrite causes the Server header to be overwritten with the configured
-	// ServerName
-	ServerHeaderOverwrite ServerHeaderTransformation = "Overwrite"
-	// ServerHeaderAppendIfAbsent causes the ServerName value to be used only if there is no
-	// Server header
-	ServerHeaderAppendIfAbsent ServerHeaderTransformation = "AppendIfAbsent"
-	// ServerHeaderPassThrough will not modify the value of the Server header.
-	ServerHeaderPassThrough ServerHeaderTransformation = "PassThrough"
-)
-
 // HeaderSettings providess configuration options for headers on the listener.
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
