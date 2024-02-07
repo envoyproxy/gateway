@@ -26,6 +26,7 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -101,8 +102,8 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 	// Custom header extension
 	if clientIPDetection.CustomHeader != nil {
 		var rejectWithStatus *typev3.HttpStatus
-		if clientIPDetection.CustomHeader.RejectWithStatus != nil {
-			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode(*clientIPDetection.CustomHeader.RejectWithStatus)}
+		if ptr.Deref(clientIPDetection.CustomHeader.FailClosed, false) {
+			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
 		}
 
 		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{

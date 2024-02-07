@@ -380,7 +380,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name of the header containing the original downstream remote address, if present. |
-| `rejectWithStatus` | _integer_ |  false  | RejectWithStatus is the HTTP response status to use when detection fails, if present. May be any valid HTTP response status code within the range 400-511 (inclusive). |
+| `failClosed` | _boolean_ |  false  | FailClosed is a switch used to control the flow of traffic when client IP detection fails. If set to true, the listener will respond with 403 Forbidden when the client IP address cannot be determined. |
 
 
 #### CustomTag

@@ -55,6 +55,12 @@ spec:
                       extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
                       for more details.
                     properties:
+                      failClosed:
+                        description: FailClosed is a switch used to control the flow
+                          of traffic when client IP detection fails. If set to true,
+                          the listener will respond with 403 Forbidden when the client
+                          IP address cannot be determined.
+                        type: boolean
                       name:
                         description: Name of the header containing the original downstream
                           remote address, if present.
@@ -62,14 +68,6 @@ spec:
                         minLength: 1
                         pattern: ^[A-Za-z0-9-]+$
                         type: string
-                      rejectWithStatus:
-                        description: RejectWithStatus is the HTTP response status
-                          to use when detection fails, if present. May be any valid
-                          HTTP response status code within the range 400-511 (inclusive).
-                        format: int32
-                        maximum: 511
-                        minimum: 400
-                        type: integer
                     required:
                     - name
                     type: object
@@ -89,7 +87,7 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-validations:
-                - message: customHeader cannot be used in conjunction xForwardedFor
+                - message: customHeader cannot be used in conjunction with xForwardedFor
                   rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header

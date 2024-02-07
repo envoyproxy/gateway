@@ -200,7 +200,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.clientIPDetection: Invalid value: \"object\": customHeader cannot be used in conjunction xForwardedFor",
+				"spec.clientIPDetection: Invalid value: \"object\": customHeader cannot be used in conjunction with xForwardedFor",
 			},
 		},
 		{

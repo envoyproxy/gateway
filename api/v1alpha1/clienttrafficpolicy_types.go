@@ -90,7 +90,7 @@ type ClientTrafficPolicySpec struct {
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
-// +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction xForwardedFor"
+// +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction with xForwardedFor"
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
@@ -128,14 +128,12 @@ type CustomHeaderExtensionSettings struct {
 	// +kubebuilder:validation:Pattern="^[A-Za-z0-9-]+$"
 	//
 	Name string `json:"name"`
-	// RejectWithStatus is the HTTP response status to use when detection fails, if present. May be
-	// any valid HTTP response status code within the range 400-511 (inclusive).
-	//
-	// +kubebuilder:validation:Minimum=400
-	// +kubebuilder:validation:Maximum=511
+	// FailClosed is a switch used to control the flow of traffic when client IP detection
+	// fails. If set to true, the listener will respond with 403 Forbidden when the client
+	// IP address cannot be determined.
 	//
 	// +optional
-	RejectWithStatus *uint32 `json:"rejectWithStatus,omitempty"`
+	FailClosed *bool `json:"failClosed,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
