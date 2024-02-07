@@ -55,9 +55,9 @@ spec:
                       extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
                       for more details.
                     properties:
-                      headerName:
-                        description: HeaderName of the of the header containing the
-                          original downstream remote address, if present.
+                      name:
+                        description: Name of the header containing the original downstream
+                          remote address, if present.
                         maxLength: 255
                         minLength: 1
                         pattern: ^[A-Za-z0-9-]+$
@@ -71,7 +71,7 @@ spec:
                         minimum: 400
                         type: integer
                     required:
-                    - headerName
+                    - name
                     type: object
                   xForwardedFor:
                     description: XForwardedForSettings provides configuration for

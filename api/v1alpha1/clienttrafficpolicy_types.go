@@ -121,13 +121,13 @@ type XForwardedForSettings struct {
 // Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 // for more details.
 type CustomHeaderExtensionSettings struct {
-	// HeaderName of the of the header containing the original downstream remote address, if present.
+	// Name of the header containing the original downstream remote address, if present.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
 	// +kubebuilder:validation:Pattern="^[A-Za-z0-9-]+$"
 	//
-	HeaderName string `json:"headerName"`
+	Name string `json:"name"`
 	// RejectWithStatus is the HTTP response status to use when detection fails, if present. May be
 	// any valid HTTP response status code within the range 400-511 (inclusive).
 	//

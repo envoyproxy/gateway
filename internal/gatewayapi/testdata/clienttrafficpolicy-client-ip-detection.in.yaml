@@ -22,7 +22,7 @@ clientTrafficPolicies:
   spec:
     clientIPDetection:
       customHeader:
-        headerName: "x-client-ip-address"
+        name: "x-client-ip-address"
         rejectWithStatus: 403
     targetRef:
       group: gateway.networking.k8s.io

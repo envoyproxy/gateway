@@ -194,7 +194,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 							NumTrustedHops: ptr.To(uint32(1)),
 						},
 						CustomHeader: &egv1a1.CustomHeaderExtensionSettings{
-							HeaderName: "x-client-ip-address",
+							Name: "x-client-ip-address",
 						},
 					},
 				}

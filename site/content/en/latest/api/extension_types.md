@@ -379,7 +379,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `headerName` | _string_ |  true  | HeaderName of the of the header containing the original downstream remote address, if present. |
+| `name` | _string_ |  true  | Name of the header containing the original downstream remote address, if present. |
 | `rejectWithStatus` | _integer_ |  false  | RejectWithStatus is the HTTP response status to use when detection fails, if present. May be any valid HTTP response status code within the range 400-511 (inclusive). |
 
 

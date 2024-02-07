@@ -32,5 +32,5 @@ http:
           port: 8082
   clientIPDetection:
     customHeader:
-      headerName: "x-my-custom-header"
+      name: "x-my-custom-header"
       rejectWithStatus: 403

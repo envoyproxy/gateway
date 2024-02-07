@@ -106,7 +106,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 		}
 
 		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
-			HeaderName:       clientIPDetection.CustomHeader.HeaderName,
+			HeaderName:       clientIPDetection.CustomHeader.Name,
 			RejectWithStatus: rejectWithStatus,
 
 			AllowExtensionToSetAddressAsTrusted: true,

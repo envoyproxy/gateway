@@ -31,7 +31,7 @@ clientTrafficPolicies:
   spec:
     clientIPDetection:
       customHeader:
-        headerName: x-client-ip-address
+        name: x-client-ip-address
         rejectWithStatus: 403
     targetRef:
       group: gateway.networking.k8s.io
@@ -196,7 +196,7 @@ xdsIR:
     - address: 0.0.0.0
       clientIPDetection:
         customHeader:
-          headerName: x-client-ip-address
+          name: x-client-ip-address
           rejectWithStatus: 403
       hostnames:
       - '*'
