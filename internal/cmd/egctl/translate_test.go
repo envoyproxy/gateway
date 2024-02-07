@@ -284,7 +284,7 @@ func TestTranslate(t *testing.T) {
 
 		t.Run(tc.name+"|"+tc.resourceType, func(t *testing.T) {
 			b := bytes.NewBufferString("")
-			root := NewTranslateCommand()
+			root := newTranslateCommand()
 			root.SetOut(b)
 			root.SetErr(b)
 			args := []string{
