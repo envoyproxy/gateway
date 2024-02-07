@@ -743,11 +743,19 @@ xds:
 
 ## egctl experimental status
 
-This subcommand allows users to show the summary of the status of specific resource type, in order to quickly find
+This subcommand allows users to show the summary of the status of specific or all resource types, in order to quickly find
 out the status of any resources.
 
 By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only
 display the latest condition, or add `--verbose` to display more details about current status.
+
+{{% alert title="Note" color="primary" %}}
+
+Currently, this subcommand only supports: `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`,
+`TLSRoute`, `TCPRoute`, `UDPRoute`, `BackendTLSPolicy`, 
+`BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy` resource types and `all`.
+
+{{% /alert %}}
 
 Some examples of this command after installing [Multi-tenancy][] example manifest:
 
@@ -761,7 +769,28 @@ eg-marketing   Accepted   True      Accepted
 eg-product     Accepted   True      Accepted
 ```
 
-- Show the summary of all the Gateways with details under all namespace.
+- Show the summary of all resource types under all namespaces, the resource type with empty status will be ignored.
+
+```console
+~ egctl x status all -A
+
+Status of GatewayClass:
+NAME           TYPE       STATUS    REASON
+eg-marketing   Accepted   True      Accepted
+eg-product     Accepted   True      Accepted
+
+Status of Gateway:
+NAMESPACE   NAME      TYPE         STATUS    REASON
+marketing   eg        Programmed   True      Programmed
+product     eg        Programmed   True      Programmed
+
+Status of HTTPRoute:
+NAMESPACE   NAME      TYPE           STATUS    REASON
+marketing   backend   ResolvedRefs   True      ResolvedRefs
+product     backend   ResolvedRefs   True      ResolvedRefs
+```
+
+- Show the summary of all the Gateways with details under all namespaces.
 
 ```console
 ~ egctl x status gateway --verbose --all-namespaces
@@ -782,7 +811,7 @@ NAME      TYPE         STATUS    REASON
 eg        Programmed   True      Programmed
 ```
 
-- Show the summary of latest HTTPRoutes condition under all namespace.
+- Show the summary of latest HTTPRoutes condition under all namespaces.
 
 ```console
 ~ egctl x status httproute --quiet --all-namespaces

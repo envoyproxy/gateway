@@ -513,18 +513,19 @@ btls      foobar2   test-status-2   test reason 2
 			tab := newStatusTableWriter(&out)
 
 			needNamespace := tc.allNamespaces && tc.resourceNamespaced
-			writeStatusHeaders(tab, tc.verbose, needNamespace)
-			err := writeStatusBodies(tab, tc.resourceList, tc.resourceType, tc.quiet, tc.verbose, needNamespace)
+			headers := fetchStatusHeaders(tc.verbose, needNamespace)
+			bodies, err := fetchStatusBodies(tc.resourceList, tc.resourceType, tc.quiet, tc.verbose, needNamespace)
 			if tc.expect {
 				require.NoError(t, err)
+
+				writeStatusTable(tab, headers, bodies)
+				err = tab.Flush()
+				require.NoError(t, err)
+
+				require.Equal(t, tc.outputs, out.String())
 			} else {
-				require.Error(t, err)
+				require.EqualError(t, err, tc.outputs)
 			}
-
-			err = tab.Flush()
-			require.NoError(t, err)
-
-			require.Equal(t, tc.outputs, out.String())
 		})
 	}
 }
