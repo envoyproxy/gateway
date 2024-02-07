@@ -80,9 +80,9 @@ spec:
                     description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
                       requests.
                     properties:
-                      setHostHeader:
-                        description: SetHostHeader defines if the HTTP/1.0 request
-                          is is missing the Host header, then the hostname associated
+                      useDefaultHost:
+                        description: UseDefaultHost defines if the HTTP/1.0 request
+                          is missing the Host header, then the hostname associated
                           with the listener should be injected into the request. If
                           this is not set and an HTTP/1.0 request arrives without
                           a host, then it will be rejected.

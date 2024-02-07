@@ -1,4 +1,7 @@
-# API Reference
++++
+title = "API Reference"
++++
+
 
 ## Packages
 - [gateway.envoyproxy.io/v1alpha1](#gatewayenvoyproxyiov1alpha1)
@@ -1083,7 +1086,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `setHostHeader` | _boolean_ |  false  | SetHostHeader defines if the HTTP/1.0 request is is missing the Host header, then the hostname associated with the listener should be injected into the request. If this is not set and an HTTP/1.0 request arrives without a host, then it will be rejected. |
+| `useDefaultHost` | _boolean_ |  false  | UseDefaultHost defines if the HTTP/1.0 request is missing the Host header, then the hostname associated with the listener should be injected into the request. If this is not set and an HTTP/1.0 request arrives without a host, then it will be rejected. |
 
 
 #### HTTP1Settings

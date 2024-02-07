@@ -127,13 +127,13 @@ type HTTP1Settings struct {
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
 type HTTP10Settings struct {
-	// SetHostHeader defines if the HTTP/1.0 request is is missing the Host header,
+	// UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
 	// then the hostname associated with the listener should be injected into the
 	// request.
 	// If this is not set and an HTTP/1.0 request arrives without a host, then
 	// it will be rejected.
 	// +optional
-	SetHostHeder *bool `json:"setHostHeader,omitempty"`
+	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy
