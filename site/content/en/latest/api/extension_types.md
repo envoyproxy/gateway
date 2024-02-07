@@ -1,4 +1,7 @@
-# API Reference
++++
+title = "API Reference"
++++
+
 
 ## Packages
 - [gateway.envoyproxy.io/v1alpha1](#gatewayenvoyproxyiov1alpha1)
@@ -1185,9 +1188,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `suppressEnvoyHeaders` | _boolean_ |  false  | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
-| `serverName` | _string_ |  false  | ServerName is the value to be used if the server header transformation requested is Overwrite or AppendIfAbsent. Defaults to "envoy" if not specified. |
-| `serverHeaderTransformation` | _[ServerHeaderTransformation](#serverheadertransformation)_ |  false  | ServerHeaderTransformation defines how the Server header should be handled for proxied traffic. Defaults to "Overwrite". |
+| `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests and responses. |
 
 
 #### HealthCheck
@@ -2112,15 +2113,6 @@ _Appears in:_
 
 
 
-
-#### ServerHeaderTransformation
-
-_Underlying type:_ _string_
-
-ServerHeaderTransformation specifies the transformation required for the Server header
-
-_Appears in:_
-- [HeaderSettings](#headersettings)
 
 
 

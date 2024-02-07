@@ -72,24 +72,9 @@ spec:
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
-                  serverHeaderTransformation:
-                    description: ServerHeaderTransformation defines how the Server
-                      header should be handled for proxied traffic. Defaults to "Overwrite".
-                    enum:
-                    - Overwrite
-                    - AppendIfAbsent
-                    - PassThrough
-                    type: string
-                  serverName:
-                    description: ServerName is the value to be used if the server
-                      header transformation requested is Overwrite or AppendIfAbsent.
-                      Defaults to "envoy" if not specified.
-                    type: string
-                  suppressEnvoyHeaders:
-                    description: SuppressEnvoyHeaders configures the Envoy Router
-                      filter to suppress the "x-envoy-' headers from both requests
-                      and responses. By default these headers are added to both requests
-                      and responses.
+                  enableEnvoyHeaders:
+                    description: EnableEnvoyHeaders configures Envoy Proxy to add
+                      the "X-Envoy-" headers to requests and responses.
                     type: boolean
                 type: object
               http1:

@@ -103,22 +103,10 @@ const (
 
 // HeaderSettings providess configuration options for headers on the listener.
 type HeaderSettings struct {
-	// SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-'
-	// headers from both requests and responses.
-	// By default these headers are added to both requests and responses.
-	//
+	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
+	// and responses.
 	// +optional
-	SuppressEnvoyHeaders *bool `json:"suppressEnvoyHeaders,omitempty"`
-	// ServerName is the value to be used if the server header transformation
-	// requested is Overwrite or AppendIfAbsent. Defaults to "envoy" if not specified.
-	//
-	// +optional
-	ServerName *string `json:"serverName,omitempty"`
-	// ServerHeaderTransformation defines how the Server header should be handled for
-	// proxied traffic. Defaults to "Overwrite".
-	//
-	// +optional
-	ServerHeaderTransformation *ServerHeaderTransformation `json:"serverHeaderTransformation,omitempty"`
+	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 }
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
