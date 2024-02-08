@@ -178,6 +178,14 @@ func TestTranslateXds(t *testing.T) {
 			requireEnvoyPatchPolicies: true,
 		},
 		{
+			name:                      "jsonpatch-add-op-without-value",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-move-op-with-value",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
 			name: "listener-tcp-keepalive",
 		},
 		{
