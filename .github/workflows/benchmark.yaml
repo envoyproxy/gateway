@@ -25,7 +25,8 @@ jobs:
         run: kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
       
       - name: Get the name of the Envoy service created the by the example Gateway
-        run: echo $(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}') >> $ENVOY_SERVICE
+        run: |
+          echo $(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}') >> $ENVOY_SERVICE
 
       - name: Echo ENVOY_SERVICE 
         run: echo $ENVOY_SERVICE
