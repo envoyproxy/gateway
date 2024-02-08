@@ -23,6 +23,9 @@ jobs:
         
       - name: Install the GatewayClass, Gateway, HTTPRoute and example app
         run: kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
+        
+      - name: Wait for example app to become available
+        run: kubectl wait --timeout=5m -n default deployment/backend --for=condition=Available
       
       - name: Get the name of the Envoy service created the by the example Gateway
         run: |
