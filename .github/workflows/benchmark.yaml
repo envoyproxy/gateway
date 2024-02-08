@@ -14,16 +14,13 @@ jobs:
       
       - name: Setup Kubernetes
         uses: medyagh/setup-minikube@master
-    
-      #https://github.com/Azure/setup-kubectl
-      #- uses: azure/setup-kubectl@v3
-      #  id: install
 
-      - name: Try the cluster !
-        run: kubectl get pods -A
+      - name: Install Envoy Gateway Pods via Kubernetes Yaml
+        run: kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
 
-      # - name: Setup Envoy Gateway Pods
-
+      - name: Wait for Envoy Gateway to become available
+        run: kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+        
       #- name: Apply Gateway Configurations
       #  
       #- name: Setup Test Server Pods
