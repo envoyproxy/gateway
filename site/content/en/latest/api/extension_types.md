@@ -1012,11 +1012,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io". When unspecified or empty string, core API group is inferred. |
-| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example "Service". <br /><br /> Defaults to "Service" when not specified. <br /><br /> ExternalName services can refer to CNAME DNS records that may live outside of the cluster and as such are difficult to reason about in terms of conformance. They also may not be safe to forward to (see CVE-2021-25740 for more information). Implementations SHOULD NOT support ExternalName Services. <br /><br /> Support: Core (Services with a type other than ExternalName) <br /><br /> Support: Implementation-specific (Services with type ExternalName) |
-| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
-| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local namespace is inferred. <br /><br /> Note that when a namespace different than the local namespace is specified, a ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details. <br /><br /> Support: Core |
-| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource. Port is required when the referent is a Kubernetes Service. In this case, the port number is the service port number, not the target port. For other resources, destination port might be derived from the referent resource or this field. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
 
 
 #### Gateway
@@ -1129,11 +1125,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io". When unspecified or empty string, core API group is inferred. |
-| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example "Service". <br /><br /> Defaults to "Service" when not specified. <br /><br /> ExternalName services can refer to CNAME DNS records that may live outside of the cluster and as such are difficult to reason about in terms of conformance. They also may not be safe to forward to (see CVE-2021-25740 for more information). Implementations SHOULD NOT support ExternalName Services. <br /><br /> Support: Core (Services with a type other than ExternalName) <br /><br /> Support: Implementation-specific (Services with type ExternalName) |
-| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
-| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local namespace is inferred. <br /><br /> Note that when a namespace different than the local namespace is specified, a ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details. <br /><br /> Support: Core |
-| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource. Port is required when the referent is a Kubernetes Service. In this case, the port number is the service port number, not the target port. For other resources, destination port might be derived from the referent resource or this field. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
 | `path` | _string_ |  true  | Path is the path of the HTTP External Authorization service. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 

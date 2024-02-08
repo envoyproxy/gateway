@@ -54,7 +54,7 @@
                   cacheDuration: 300s
                   httpUri:
                     cluster: localhost_443
-                    timeout: 5s
+                    timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
               second-route/example:
@@ -68,7 +68,7 @@
                   cacheDuration: 300s
                   httpUri:
                     cluster: localhost_443
-                    timeout: 5s
+                    timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
             requirementMap:

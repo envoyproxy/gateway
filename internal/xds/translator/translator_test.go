@@ -249,6 +249,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "timeout",
 		},
+		{
+			name: "ext-auth",
+		},
 	}
 
 	for _, tc := range testCases {
