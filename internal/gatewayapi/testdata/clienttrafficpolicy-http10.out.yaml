@@ -86,8 +86,8 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: Same
-      name: http-2
       hostname: www.example.com
+      name: http-2
       port: 8080
       protocol: HTTP
     - allowedRoutes:
@@ -216,10 +216,10 @@ xdsIR:
       port: 10080
     - address: 0.0.0.0
       hostnames:
-      - 'www.example.com'
+      - www.example.com
       http1:
         http10:
-          defaultHost: 'www.example.com'
+          defaultHost: www.example.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
       path:

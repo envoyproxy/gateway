@@ -430,7 +430,9 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
 			for _, hostname := range httpIR.Hostnames {
 				if !strings.Contains(hostname, "*") {
-					defaultHost = &hostname
+					// make linter happy
+					theHost := hostname
+					defaultHost = &theHost
 					break
 				}
 			}
