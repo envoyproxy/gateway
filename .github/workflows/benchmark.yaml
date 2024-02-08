@@ -34,9 +34,8 @@ jobs:
         run: kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
       
       - name: Curl the example app through Envoy proxy
-        run: curl --verbose --header "Host: www.example.com" http://localhost:8888/get
-
-
+        run: |
+        curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 
       #- name: Apply Gateway Configurations
       #  
