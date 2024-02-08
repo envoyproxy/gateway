@@ -58,7 +58,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			switch p.Operation.Op {
 			case AddOperation, ReplaceOperation:
 				if p.Operation.Value == nil {
-					msg := fmt.Sprintf("The %s operation required a value", p.Operation.Op)
+					msg := fmt.Sprintf("The %s operation requires a value", p.Operation.Op)
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
