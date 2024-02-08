@@ -260,6 +260,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "ext-auth",
 		},
+		{
+			name: "http10",
+		},
 	}
 
 	for _, tc := range testCases {

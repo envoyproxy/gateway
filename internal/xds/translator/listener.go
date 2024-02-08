@@ -46,7 +46,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts == nil {
 		return nil
 	}
-	if !opts.EnableTrailers && !opts.PreserveHeaderCase {
+	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HTTP10 == nil {
 		return nil
 	}
 	// If PreserveHeaderCase is true and EnableTrailers is false then setting the EnableTrailers field to false
@@ -64,6 +64,10 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 				},
 			},
 		}
+	}
+	if opts.HTTP10 != nil {
+		r.AcceptHttp_10 = true
+		r.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
 	}
 	return r
 }

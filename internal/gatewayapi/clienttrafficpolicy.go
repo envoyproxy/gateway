@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,19 +90,29 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 			policyMap[key].Insert(section)
 
 			// Translate for listener matching section name
+			var err error
 			for _, l := range gateway.listeners {
 				if string(l.Name) == section {
-					t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
+					err = t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
 					break
 				}
 			}
-			// Set Accepted=True
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"ClientTrafficPolicy has been accepted.",
-			)
+			if err != nil {
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					status.Error2ConditionMsg(err),
+				)
+			} else {
+				// Set Accepted=True
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionTrue,
+					gwv1a2.PolicyReasonAccepted,
+					"ClientTrafficPolicy has been accepted.",
+				)
+			}
 		}
 	}
 
@@ -162,22 +173,32 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 			policyMap[key].Insert(AllSections)
 
 			// Translate sections that have not yet been targeted
+			var err error
 			for _, l := range gateway.listeners {
 				// Skip if section has already been targeted
 				if s != nil && s.Has(string(l.Name)) {
 					continue
 				}
 
-				t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
+				err = t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
 			}
 
-			// Set Accepted=True
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"ClientTrafficPolicy has been accepted.",
-			)
+			if err != nil {
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					status.Error2ConditionMsg(err),
+				)
+			} else {
+				// Set Accepted=True
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionTrue,
+					gwv1a2.PolicyReasonAccepted,
+					"ClientTrafficPolicy has been accepted.",
+				)
+			}
 		}
 	}
 
@@ -265,7 +286,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 	return gateway
 }
 
-func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap, infraIR InfraIRMap) {
+func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap, infraIR InfraIRMap) error {
 	// Find IR
 	irKey := irStringKey(l.gateway.Namespace, l.gateway.Name)
 	// It must exist since we've already finished processing the gateways
@@ -302,7 +323,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		translatePathSettings(policySpec.Path, httpIR)
 
 		// Translate HTTP1 Settings
-		translateHTTP1Settings(policySpec.HTTP1, httpIR)
+		if err := translateHTTP1Settings(policySpec.HTTP1, httpIR); err != nil {
+			return err
+		}
 
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policySpec.HTTP3 != nil {
@@ -322,6 +345,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		// Translate TLS parameters
 		translateListenerTLSParameters(policySpec.TLS, httpIR)
 	}
+	return nil
 }
 
 func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir.HTTPListener) {
@@ -393,14 +417,34 @@ func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *i
 	}
 }
 
-func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) {
+func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {
 	if http1Settings == nil {
-		return
+		return nil
 	}
 	httpIR.HTTP1 = &ir.HTTP1Settings{
 		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
 		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
 	}
+	if http1Settings.HTTP10 != nil {
+		var defaultHost *string
+		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
+			for _, hostname := range httpIR.Hostnames {
+				if !strings.Contains(hostname, "*") {
+					defaultHost = &hostname
+					break
+				}
+			}
+			if defaultHost == nil {
+				return fmt.Errorf("can't set http10 default host on listener with only wildcard hostnames")
+			}
+		}
+		// If useDefaultHost was set, then defaultHost will have the hostname to use.
+		// If no good hostname was found, an error would have been returned.
+		httpIR.HTTP1.HTTP10 = &ir.HTTP10Settings{
+			DefaultHost: defaultHost,
+		}
+	}
+	return nil
 }
 
 func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HTTPListener) {
