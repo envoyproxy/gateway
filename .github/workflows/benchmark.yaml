@@ -1,0 +1,37 @@
+name: Benchmarking Tests at Scale
+on:
+  pull_request:
+    branches:
+    - "main"
+    - "release/v*"
+
+jobs:
+  benchmark-test:
+    name: Benchmark Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Kubernetes
+        uses: medyagh/setup-minikube@master
+    
+      #https://github.com/Azure/setup-kubectl
+      #- uses: azure/setup-kubectl@v3
+      #  id: install
+
+      - name: Try the cluster !
+        run: kubectl get pods -A
+
+      # - name: Setup Envoy Gateway Pods
+
+      #- name: Apply Gateway Configurations
+      #  
+      #- name: Setup Test Server Pods
+
+      #- name: Setup Prometheus Pods
+
+      #- name: Setup Load Gernerator
+
+      #- name: Run Performance Tests
+
+      #- name: Collect Test Results
