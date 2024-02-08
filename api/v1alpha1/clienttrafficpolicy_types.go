@@ -120,6 +120,20 @@ type HTTP1Settings struct {
 	// By default, Envoy will lowercase all the headers.
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
+	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+	// +optional
+	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
+}
+
+// HTTP10Settings provides HTTP/1.0 configuration on the listener.
+type HTTP10Settings struct {
+	// UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
+	// then the hostname associated with the listener should be injected into the
+	// request.
+	// If this is not set and an HTTP/1.0 request arrives without a host, then
+	// it will be rejected.
+	// +optional
+	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy
