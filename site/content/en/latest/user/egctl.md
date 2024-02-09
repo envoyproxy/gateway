@@ -774,20 +774,21 @@ eg-product     Accepted   True      Accepted
 ```console
 ~ egctl x status all -A
 
-Status of GatewayClass:
-NAME           TYPE       STATUS    REASON
-eg-marketing   Accepted   True      Accepted
-eg-product     Accepted   True      Accepted
+NAME                        TYPE       STATUS    REASON
+GatewayClass/eg-marketing   Accepted   True      Accepted
+GatewayClass/eg-product     Accepted   True      Accepted
 
-Status of Gateway:
-NAMESPACE   NAME      TYPE         STATUS    REASON
-marketing   eg        Programmed   True      Programmed
-product     eg        Programmed   True      Programmed
+NAMESPACE   NAME         TYPE         STATUS    REASON
+marketing   Gateway/eg   Programmed   True      Programmed
+                         Accepted     True      Accepted
+product     Gateway/eg   Programmed   True      Programmed
+                         Accepted     True      Accepted
 
-Status of HTTPRoute:
-NAMESPACE   NAME      TYPE           STATUS    REASON
-marketing   backend   ResolvedRefs   True      ResolvedRefs
-product     backend   ResolvedRefs   True      ResolvedRefs
+NAMESPACE   NAME                TYPE           STATUS    REASON
+marketing   HTTPRoute/backend   ResolvedRefs   True      ResolvedRefs
+                                Accepted       True      Accepted
+product     HTTPRoute/backend   ResolvedRefs   True      ResolvedRefs
+                                Accepted       True      Accepted
 ```
 
 - Show the summary of all the Gateways with details under all namespaces.

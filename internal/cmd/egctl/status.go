@@ -76,13 +76,13 @@ func newStatusCommand() *cobra.Command {
 
 			if resourceType == "all" {
 				for _, rt := range supportedTypes {
-					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true); err != nil {
+					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
 			} else {
-				return runStatus(ctx, k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false)
+				return runStatus(ctx, k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false, false)
 			}
 		},
 	}
@@ -107,7 +107,7 @@ func writeStatusTable(table *tabwriter.Writer, headers []string, bodies [][]stri
 }
 
 // runStatus find and write the summary table of status for a specific resource type.
-func runStatus(ctx context.Context, cli client.Client, resourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty bool) error {
+func runStatus(ctx context.Context, cli client.Client, resourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
 	var (
 		resourcesList client.ObjectList
 		table         = newStatusTableWriter(os.Stdout)
@@ -213,7 +213,7 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 
 	needNamespaceHeader := allNamespaces && namespaced
 	headers := fetchStatusHeaders(verbose, needNamespaceHeader)
-	bodies, err := fetchStatusBodies(resourcesList, resourceType, quiet, verbose, needNamespaceHeader)
+	bodies, err := fetchStatusBodies(resourcesList, resourceType, quiet, verbose, needNamespaceHeader, typedName)
 	if err != nil {
 		return err
 	}
@@ -222,13 +222,17 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 		return nil
 	}
 
-	if ignoreEmpty {
-		fmt.Printf("\nStatus of %s:\n", resourceType)
+	writeStatusTable(table, headers, bodies)
+	if err = table.Flush(); err != nil {
+		return err
 	}
 
-	writeStatusTable(table, headers, bodies)
+	// Separate tables by newline if there are multiple tables.
+	if ignoreEmpty && typedName {
+		fmt.Print("\n")
+	}
 
-	return table.Flush()
+	return nil
 }
 
 func fetchStatusHeaders(verbose, needNamespace bool) []string {
@@ -244,7 +248,7 @@ func fetchStatusHeaders(verbose, needNamespace bool) []string {
 	return headers
 }
 
-func fetchStatusBodies(resourcesList client.ObjectList, resourceType string, quiet, verbose, needNamespace bool) ([][]string, error) {
+func fetchStatusBodies(resourcesList client.ObjectList, resourceType string, quiet, verbose, needNamespace, typedName bool) ([][]string, error) {
 	v := reflect.ValueOf(resourcesList).Elem()
 
 	itemsField := v.FieldByName("Items")
@@ -256,18 +260,19 @@ func fetchStatusBodies(resourcesList client.ObjectList, resourceType string, qui
 	for i := 0; i < itemsField.Len(); i++ {
 		item := itemsField.Index(i)
 
+		// There's no need to check whether Name, Namespace and Kind field is valid,
+		// since all the objects in ObjectList are implemented k8s Object interface.
 		var name, namespace string
 		nameField := item.FieldByName("Name")
-		if !nameField.IsValid() {
-			return nil, fmt.Errorf("failed to find `.Items[i].Name` field from %s", resourceType)
+		if typedName {
+			kindField := item.FieldByName("Kind")
+			name = kindField.String() + "/" + nameField.String()
+		} else {
+			name = nameField.String()
 		}
-		name = nameField.String()
 
 		if needNamespace {
 			namespaceField := item.FieldByName("Namespace")
-			if !namespaceField.IsValid() {
-				return nil, fmt.Errorf("failed to find `.Items[i].Namespace` field from %s", resourceType)
-			}
 			namespace = namespaceField.String()
 		}
 
@@ -332,9 +337,12 @@ func fetchConditionsField(parent reflect.Value, resourceType, name, namespace st
 		return nil, fmt.Errorf("failed to find `Conditions` field for %s", resourceType)
 	}
 
-	conditions := conditionsField.Interface().([]metav1.Condition)
-	rows := fetchConditions(conditions, name, namespace, quiet, verbose, needNamespace)
+	conditions, ok := conditionsField.Interface().([]metav1.Condition)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert `Conditions` field to type `[]metav1.Condtion`")
+	}
 
+	rows := fetchConditions(conditions, name, namespace, quiet, verbose, needNamespace)
 	return rows, nil
 }
 
