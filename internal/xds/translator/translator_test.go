@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"os"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -42,286 +43,47 @@ var (
 )
 
 func TestTranslateXds(t *testing.T) {
-	testCases := []struct {
-		name                      string
-		dnsDomain                 string
-		requireSecrets            bool
-		requireEnvoyPatchPolicies bool
-	}{
-		{
-			name: "empty",
-		},
-		{
-			name: "http-route",
-		},
-		{
-			name: "http-route-regex",
-		},
-		{
-			name: "http-route-redirect",
-		},
-		{
-			name: "http-route-mirror",
-		},
-		{
-			name: "http-route-multiple-mirrors",
-		},
-		{
-			name: "http-route-multiple-matches",
-		},
-		{
-			name: "http-route-direct-response",
-		},
-		{
-			name: "http-route-request-headers",
-		},
-		{
-			name: "http-route-response-add-headers",
-		},
-		{
-			name: "http-route-response-remove-headers",
-		},
-		{
-			name: "http-route-response-add-remove-headers",
-		},
-		{
-			name: "http-route-weighted-invalid-backend",
-		},
-		{
-			name: "http-route-dns-cluster",
-		},
-		{
-			name:           "simple-tls",
-			requireSecrets: true,
-		},
-		{
-			name:           "http3",
-			requireSecrets: true,
-		},
-		{
-			name: "tls-route-passthrough",
-		},
-		{
-			name: "tcp-route-simple",
-		},
-		{
-			name: "tcp-route-complex",
-		},
-		{
-			name: "tcp-route-tls-terminate",
-		},
-		{
-			name: "multiple-simple-tcp-route-same-port",
-		},
-		{
-			name: "http-route-weighted-backend",
-		},
-		{
-			name: "tcp-route-weighted-backend",
-		},
-		{
-			name:           "multiple-listeners-same-port",
-			requireSecrets: true,
-		},
-		{
-			name: "udp-route",
-		},
-		{
-			name: "http2-route",
-		},
-		{
-			name: "http-route-rewrite-url-prefix",
-		},
-		{
-			name: "http-route-rewrite-root-path-url-prefix",
-		},
-		{
-			name: "http-route-rewrite-url-fullpath",
-		},
-		{
-			name: "http-route-rewrite-url-host",
-		},
-		{
-			name: "http-route-timeout",
-		},
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "xds-ir", "*.yaml"))
+	require.NoError(t, err)
 
-		{
-			name: "ratelimit",
-		},
-		{
-			name:      "ratelimit-custom-domain",
-			dnsDomain: "example-cluster.local",
-		},
-		{
-			name: "ratelimit-sourceip",
-		},
-		{
-			name: "accesslog",
-		},
-		{
-			name: "tracing",
-		},
-		{
-			name: "metrics-virtual-host",
-		},
-		{
-			name:                      "jsonpatch",
-			requireEnvoyPatchPolicies: true,
-			requireSecrets:            true,
-		},
-		{
-			name:                      "jsonpatch-missing-resource",
-			requireEnvoyPatchPolicies: true,
-		},
-		{
-			name:                      "jsonpatch-invalid-patch",
-			requireEnvoyPatchPolicies: true,
-		},
-		{
-			name:                      "jsonpatch-add-op-without-value",
-			requireEnvoyPatchPolicies: true,
-		},
-		{
-			name:                      "jsonpatch-move-op-with-value",
-			requireEnvoyPatchPolicies: true,
-		},
-		{
-			name: "listener-tcp-keepalive",
-		},
-		{
-			name: "load-balancer",
-		},
-		{
-			name: "cors",
-		},
-		{
-			name: "jwt-multi-route-multi-provider",
-		},
-		{
-			name: "jwt-multi-route-single-provider",
-		},
-		{
-			name: "jwt-ratelimit",
-		},
-		{
-			name: "jwt-single-route-single-match",
-		},
-		{
-			name: "oidc",
-		},
-		{
-			name: "http-route-partial-invalid",
-		},
-		{
-			name: "listener-proxy-protocol",
-		},
-		{
-			name: "jwt-custom-extractor",
-		},
-		{
-			name: "proxy-protocol-upstream",
-		},
-		{
-			name: "basic-auth",
-		},
-		{
-			name: "health-check",
-		},
-		{
-			name: "local-ratelimit",
-		},
-		{
-			name: "circuit-breaker",
-		},
-		{
-			name: "suppress-envoy-headers",
-		},
-		{
-			name: "fault-injection",
-		},
-		{
-			name: "tls-with-ciphers-versions-alpn",
-		},
-		{
-			name: "path-settings",
-		},
-		{
-			name: "client-ip-detection",
-		},
-		{
-			name: "http1-trailers",
-		},
-		{
-			name: "http1-preserve-case",
-		},
-		{
-			name: "timeout",
-		},
-		{
-			name: "ext-auth",
-		},
-	}
+	for _, inputFile := range inputFiles {
+		inputFile := inputFile
+		t.Run(testName(inputFile), func(t *testing.T) {
+			input, err := os.ReadFile(inputFile)
+			require.NoError(t, err)
 
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			dnsDomain := tc.dnsDomain
-			if dnsDomain == "" {
-				dnsDomain = "cluster.local"
-			}
-			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
+			ir := &XdsIR{}
+			mustUnmarshal(t, input, ir)
+
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
 
 			tCtx, err := tr.Translate(ir)
-			if !strings.HasSuffix(tc.name, "partial-invalid") {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 
-			listeners := tCtx.XdsResources[resourcev3.ListenerType]
-			routes := tCtx.XdsResources[resourcev3.RouteType]
-			clusters := tCtx.XdsResources[resourcev3.ClusterType]
-			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+			outputFilePath := strings.ReplaceAll(inputFile, ".yaml", ".out.yaml")
+			out, err := yaml.Marshal(tCtx)
+			require.NoError(t, err)
+
 			if *overrideTestData {
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "xds-ir", tc.name+".listeners.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "xds-ir", tc.name+".routes.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "xds-ir", tc.name+".clusters.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "xds-ir", tc.name+".endpoints.yaml")))
+				overrideOutputConfig(t, string(out), outputFilePath)
 			}
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
-			if tc.requireSecrets {
-				secrets := tCtx.XdsResources[resourcev3.SecretType]
-				if *overrideTestData {
-					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", tc.name+".secrets.yaml")))
-				}
-				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
-			}
-			if tc.requireEnvoyPatchPolicies {
-				got := tCtx.EnvoyPatchPolicyStatuses
-				for _, e := range got {
-					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
-				}
-				if *overrideTestData {
-					out, err := yaml.Marshal(got)
-					require.NoError(t, err)
-					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", tc.name+".envoypatchpolicies.yaml")))
-				}
 
-				in := requireTestDataOutFile(t, "xds-ir", tc.name+".envoypatchpolicies.yaml")
-				want := xtypes.EnvoyPatchPolicyStatuses{}
-				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
-				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-				require.Empty(t, cmp.Diff(want, got, opts))
-			}
+			output, err := os.ReadFile(outputFilePath)
+			require.NoError(t, err)
+
+			want := &TranslateResult{}
+			mustUnmarshal(t, output, want)
+
+			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+			require.Empty(t, cmp.Diff(want, tCtx, opts))
 		})
 	}
 }
+
 
 func TestTranslateXdsNegative(t *testing.T) {
 	testCases := []struct {
