@@ -1349,12 +1349,27 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 func GetTargetBackendReference(backendRef gwapiv1a1.BackendRef, namespace string) gwapiv1a1.PolicyTargetReferenceWithSectionName {
 	ref := gwapiv1a1.PolicyTargetReferenceWithSectionName{
 		PolicyTargetReference: gwapiv1a1.PolicyTargetReference{
-			Group:     *backendRef.Group,
-			Kind:      *backendRef.Kind,
+			Group: func() gwapiv1a1.Group {
+				if backendRef.Group == nil {
+					return ""
+				}
+				return *backendRef.Group
+			}(),
+			Kind: func() gwapiv1.Kind {
+				if backendRef.Kind == nil {
+					return "Service"
+				}
+				return *backendRef.Kind
+			}(),
 			Name:      backendRef.Name,
 			Namespace: NamespacePtr(NamespaceDerefOr(backendRef.Namespace, namespace)),
 		},
-		SectionName: SectionNamePtr(strconv.Itoa(int(*backendRef.Port))),
+		SectionName: func() *gwapiv1.SectionName {
+			if backendRef.Port != nil {
+				return SectionNamePtr(strconv.Itoa(int(*backendRef.Port)))
+			}
+			return nil
+		}(),
 	}
 	return ref
 }
