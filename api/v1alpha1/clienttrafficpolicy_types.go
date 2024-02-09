@@ -53,12 +53,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-	// SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-'
-	// headers from both requests and responses.
-	// By default these headers are added to both requests and responses.
-	//
-	// +optional
-	SuppressEnvoyHeaders *bool `json:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
 	// Client Address into the X-Forwarded-For header.
 	// Note Proxy Protocol must be present when this field is set, else the connection
@@ -86,6 +80,18 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
+	// HeaderSettings provides configuration for header management.
+	//
+	// +optional
+	Headers *HeaderSettings `json:"headers,omitempty"`
+}
+
+// HeaderSettings providess configuration options for headers on the listener.
+type HeaderSettings struct {
+	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
+	// and responses.
+	// +optional
+	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 }
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.

@@ -69,6 +69,14 @@ spec:
                   Proxy Protocol must be present when this field is set, else the
                   connection is closed.
                 type: boolean
+              headers:
+                description: HeaderSettings provides configuration for header management.
+                properties:
+                  enableEnvoyHeaders:
+                    description: EnableEnvoyHeaders configures Envoy Proxy to add
+                      the "X-Envoy-" headers to requests and responses.
+                    type: boolean
+                type: object
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
                 properties:
@@ -118,11 +126,6 @@ spec:
                     - UnescapeAndRedirect
                     type: string
                 type: object
-              suppressEnvoyHeaders:
-                description: SuppressEnvoyHeaders configures the Envoy Router filter
-                  to suppress the "x-envoy-' headers from both requests and responses.
-                  By default these headers are added to both requests and responses.
-                type: boolean
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy
                   is being attached to. This Policy and the TargetRef MUST be in the
