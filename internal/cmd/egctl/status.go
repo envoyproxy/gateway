@@ -339,7 +339,7 @@ func fetchConditionsField(parent reflect.Value, resourceType, name, namespace st
 
 	conditions, ok := conditionsField.Interface().([]metav1.Condition)
 	if !ok {
-		return nil, fmt.Errorf("failed to convert `Conditions` field to type `[]metav1.Condtion`")
+		return nil, fmt.Errorf("failed to convert `Conditions` field to type `[]metav1.Condition`")
 	}
 
 	rows := fetchConditions(conditions, name, namespace, quiet, verbose, needNamespace)
