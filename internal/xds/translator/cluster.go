@@ -47,6 +47,7 @@ type xdsClusterArgs struct {
 	healthCheck    *ir.HealthCheck
 	http1Settings  *ir.HTTP1Settings
 	timeout        *ir.Timeout
+	tcpkeepalive   *ir.TCPKeepalive
 }
 
 type EndpointType int
@@ -177,7 +178,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	if args.circuitBreaker != nil {
 		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
 	}
-
+	if args.tcpkeepalive != nil {
+		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
+	}
 	return cluster
 }
 
@@ -477,4 +480,29 @@ func buildConnectTimeout(to *ir.Timeout) *durationpb.Duration {
 		return durationpb.New(to.TCP.ConnectTimeout.Duration)
 	}
 	return durationpb.New(tcpClusterPerConnectTimeout)
+}
+
+func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.UpstreamConnectionOptions {
+	if tcpkeepalive == nil {
+		return nil
+	}
+
+	ka := &clusterv3.UpstreamConnectionOptions{
+		TcpKeepalive: &corev3.TcpKeepalive{},
+	}
+
+	if tcpkeepalive.Probes != nil {
+		ka.TcpKeepalive.KeepaliveProbes = wrapperspb.UInt32(*tcpkeepalive.Probes)
+	}
+
+	if tcpkeepalive.Probes != nil {
+		ka.TcpKeepalive.KeepaliveTime = wrapperspb.UInt32(*tcpkeepalive.IdleTime)
+	}
+
+	if tcpkeepalive.Interval != nil {
+		ka.TcpKeepalive.KeepaliveInterval = wrapperspb.UInt32(*tcpkeepalive.Interval)
+	}
+
+	return ka
+
 }
