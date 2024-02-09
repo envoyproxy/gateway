@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -328,7 +329,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
-	requiresHTTP1Options := args.http1Settings != nil && (args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase)
+	requiresHTTP1Options := args.http1Settings != nil && (args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
 	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options) {
 		return nil
@@ -363,7 +364,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
 	// Default to http1 otherwise
 	// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
-	// so that when ALPN is supported enabling trailers doesn't force HTTP/1.1
+	// so that when ALPN is supported then enabling http1 options doesn't force HTTP/1.1
 	switch {
 	case requiresHTTP2Options:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
@@ -385,6 +386,10 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 					},
 				},
 			}
+		}
+		if args.http1Settings.HTTP10 != nil {
+			http1opts.AcceptHttp_10 = true
+			http1opts.DefaultHostForHttp_10 = ptr.Deref(args.http1Settings.HTTP10.DefaultHost, "")
 		}
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
