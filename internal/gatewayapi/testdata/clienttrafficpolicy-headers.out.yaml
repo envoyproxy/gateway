@@ -120,10 +120,10 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      hostnames:
-      - '*'
       headers:
         enableEnvoyHeaders: true
+      hostnames:
+      - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
       path:
@@ -131,10 +131,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
-      hostnames:
-      - '*'
       headers:
         enableEnvoyHeaders: true
+      hostnames:
+      - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
       path:
