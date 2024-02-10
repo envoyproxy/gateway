@@ -430,7 +430,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -444,6 +445,7 @@
                             },
                             "routeConfigName": "envoy-gateway-system/eg/http"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
                           "upgradeConfigs": [
                             {

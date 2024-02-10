@@ -17,6 +17,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -25,6 +26,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
         upgradeConfigs:
         - upgradeType: websocket
