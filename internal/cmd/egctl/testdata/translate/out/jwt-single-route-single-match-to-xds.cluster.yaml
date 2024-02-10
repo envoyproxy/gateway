@@ -51,4 +51,5 @@ xds:
               validationContext:
                 trustedCa:
                   filename: /etc/ssl/certs/ca-certificates.crt
+            sni: raw.githubusercontent.com
         type: STRICT_DNS

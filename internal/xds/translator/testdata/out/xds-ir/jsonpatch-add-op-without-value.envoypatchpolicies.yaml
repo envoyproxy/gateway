@@ -1,0 +1,9 @@
+- name: first-policy
+  namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The add operation requires a value
+      reason: Invalid
+      status: "False"
+      type: Programmed

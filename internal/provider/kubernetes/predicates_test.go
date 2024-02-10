@@ -485,6 +485,33 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
 		},
+		{
+			name: "service referenced by SecurityPolicy ExtAuth HTTP service",
+			configs: []client.Object{
+				&v1alpha1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http",
+					},
+					Spec: v1alpha1.SecurityPolicySpec{
+						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtAuth: &v1alpha1.ExtAuth{
+							HTTP: &v1alpha1.HTTPExtAuthService{
+								BackendRef: gwapiv1.BackendObjectReference{
+									Name: "ext-auth-http-service",
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service"}, nil, nil),
+			expect:  true,
+		},
 	}
 
 	// Create the reconciler.
@@ -505,6 +532,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
+			WithIndex(&v1alpha1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)

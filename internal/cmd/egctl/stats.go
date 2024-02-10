@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func statsCommand() *cobra.Command {
+func newStatsCommand() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "stats",
 		Long:  "Retrieve statistics from envoy proxy.",

@@ -52,7 +52,7 @@ type TranslationResult struct {
 	Xds map[string]interface{} `json:"xds,omitempty"`
 }
 
-func NewTranslateCommand() *cobra.Command {
+func newTranslateCommand() *cobra.Command {
 	var (
 		inFile, inType, output, resourceType string
 		addMissingResources                  bool
