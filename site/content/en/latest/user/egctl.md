@@ -775,19 +775,19 @@ eg-product     Accepted   True      Accepted
 ~ egctl x status all -A
 
 NAME                        TYPE       STATUS    REASON
-GatewayClass/eg-marketing   Accepted   True      Accepted
-GatewayClass/eg-product     Accepted   True      Accepted
+gatewayclass/eg-marketing   Accepted   True      Accepted
+gatewayclass/eg-product     Accepted   True      Accepted
 
 NAMESPACE   NAME         TYPE         STATUS    REASON
-marketing   Gateway/eg   Programmed   True      Programmed
+marketing   gateway/eg   Programmed   True      Programmed
                          Accepted     True      Accepted
-product     Gateway/eg   Programmed   True      Programmed
+product     gateway/eg   Programmed   True      Programmed
                          Accepted     True      Accepted
 
 NAMESPACE   NAME                TYPE           STATUS    REASON
-marketing   HTTPRoute/backend   ResolvedRefs   True      ResolvedRefs
+marketing   httproute/backend   ResolvedRefs   True      ResolvedRefs
                                 Accepted       True      Accepted
-product     HTTPRoute/backend   ResolvedRefs   True      ResolvedRefs
+product     httproute/backend   ResolvedRefs   True      ResolvedRefs
                                 Accepted       True      Accepted
 ```
 

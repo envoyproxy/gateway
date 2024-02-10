@@ -266,7 +266,7 @@ func fetchStatusBodies(resourcesList client.ObjectList, resourceType string, qui
 		nameField := item.FieldByName("Name")
 		if typedName {
 			kindField := item.FieldByName("Kind")
-			name = kindField.String() + "/" + nameField.String()
+			name = strings.ToLower(kindField.String()) + "/" + nameField.String()
 		} else {
 			name = nameField.String()
 		}

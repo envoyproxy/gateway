@@ -560,7 +560,7 @@ btls      foobar2   test-status-2   test reason 2
 			allNamespaces:      false,
 			typedName:          true,
 			outputs: `NAME                   TYPE      STATUS          REASON
-EnvoyPatchPolicy/epp   foobar2   test-status-2   test reason 2
+envoypatchpolicy/epp   foobar2   test-status-2   test reason 2
                        foobar1   test-status-1   test reason 1
 `,
 			expect: true,
