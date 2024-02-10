@@ -54,7 +54,7 @@ xds:
                           cacheDuration: 300s
                           httpUri:
                             cluster: raw_githubusercontent_com_443
-                            timeout: 5s
+                            timeout: 10s
                             uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                           retryPolicy: {}
                     requirementMap:

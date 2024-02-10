@@ -138,21 +138,23 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return false
 	}
 
-	if r.secretReferencedByGateway(secret) {
+	nsName := utils.NamespacedName(secret)
+
+	if r.isGatewayReferencingSecret(&nsName) {
 		return true
 	}
 
-	if r.secretReferencedBySecurityPolicy(secret) {
+	if r.isSecurityPolicyReferencingSecret(&nsName) {
 		return true
 	}
 
 	return false
 }
 
-func (r *gatewayAPIReconciler) secretReferencedByGateway(secret *corev1.Secret) bool {
+func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.NamespacedName) bool {
 	gwList := &gwapiv1.GatewayList{}
 	if err := r.client.List(context.Background(), gwList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, utils.NamespacedName(secret).String()),
+		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated Gateways")
 		return false
@@ -171,10 +173,10 @@ func (r *gatewayAPIReconciler) secretReferencedByGateway(secret *corev1.Secret) 
 	return true
 }
 
-func (r *gatewayAPIReconciler) secretReferencedBySecurityPolicy(secret *corev1.Secret) bool {
+func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
 	spList := &v1alpha1.SecurityPolicyList{}
 	if err := r.client.List(context.Background(), spList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, utils.NamespacedName(secret).String()),
+		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated SecurityPolicies")
 		return false
@@ -217,7 +219,23 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	nsName := utils.NamespacedName(svc)
-	return r.isRouteReferencingBackend(&nsName)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isSecurityPolicyReferencingBackend(&nsName)
+}
+
+func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
+	spList := &v1alpha1.SecurityPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendSecurityPolicyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated SecurityPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
 }
 
 // validateServiceImportForReconcile tries finding the owning Gateway of the ServiceImport
@@ -313,7 +331,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		nsName.Name = multiClusterSvcName
 	}
 
-	return r.isRouteReferencingBackend(&nsName)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isSecurityPolicyReferencingBackend(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment

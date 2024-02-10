@@ -357,8 +357,17 @@ type BackendWeights struct {
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 // +k8s:deepcopy-gen=true
 type HTTP1Settings struct {
-	EnableTrailers     bool `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
-	PreserveHeaderCase bool `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+	EnableTrailers     bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+	HTTP10             *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
+}
+
+// HTTP10Settings provides HTTP/1.0 configuration on the listener.
+// +k8s:deepcopy-gen=true
+type HTTP10Settings struct {
+	// defaultHost is set to the default host that should be injected for HTTP10. If the hostname shouldn't
+	// be set, then defaultHost will be nil
+	DefaultHost *string `json:"defaultHost,omitempty" yaml:"defaultHost,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
@@ -409,6 +418,8 @@ type HTTPRoute struct {
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// BasicAuth defines the schema for the HTTP Basic Authentication.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	// ExtAuth defines the schema for the external authorization.
+	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
@@ -491,6 +502,14 @@ type OIDC struct {
 	LogoutPath string `json:"logoutPath,omitempty"`
 }
 
+type OIDCProvider struct {
+	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
+	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+
+	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
+	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+}
+
 // BasicAuth defines the schema for the HTTP Basic Authentication.
 //
 // +k8s:deepcopy-gen=true
@@ -499,12 +518,65 @@ type BasicAuth struct {
 	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
 }
 
-type OIDCProvider struct {
-	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
-	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+// ExtAuth defines the schema for the external authorization.
+//
+// +k8s:deepcopy-gen=true
+type ExtAuth struct {
+	// GRPC defines the gRPC External Authorization service.
+	// Only one of GRPCService or HTTPService may be specified.
+	GRPC *GRPCExtAuthService `json:"grpc,omitempty"`
 
-	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
-	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+	// HTTP defines the HTTP External Authorization service.
+	// Only one of GRPCService or HTTPService may be specified.
+	HTTP *HTTPExtAuthService `json:"http,omitempty"`
+
+	// HeadersToExtAuth defines the client request headers that will be included
+	// in the request to the external authorization service.
+	// Note: If not specified, the default behavior for gRPC and HTTP external
+	// authorization services is different due to backward compatibility reasons.
+	// All headers will be included in the check request to a gRPC authorization server.
+	// Only the following headers will be included in the check request to an HTTP
+	// authorization server: Host, Method, Path, Content-Length, and Authorization.
+	// And these headers will always be included to the check request to an HTTP
+	// authorization server by default, no matter whether they are specified
+	// in HeadersToExtAuth or not.
+	// +optional
+	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
+}
+
+// HTTPExtAuthService defines the HTTP External Authorization service
+// +k8s:deepcopy-gen=true
+type HTTPExtAuthService struct {
+	// Destination defines the destination for the HTTP External Authorization service.
+	Destination RouteDestination `json:"destination"`
+
+	// Authority is the hostname:port of the HTTP External Authorization service.
+	Authority string `json:"authority"`
+
+	// Path is the path of the HTTP External Authorization service.
+	// If path is not empty, the authorization request will be sent to that path,
+	// or else the authorization request will be sent to the root path.
+	Path string `json:"path"`
+
+	// HeadersToBackend are the authorization response headers that will be added
+	// to the original client request before sending it to the backend server.
+	// Note that coexisting headers will be overridden.
+	// If not specified, no authorization response headers will be added to the
+	// original client request.
+	// +optional
+	HeadersToBackend []string `json:"headersToBackend,omitempty"`
+}
+
+// GRPCExtAuthService defines the gRPC External Authorization service
+// The authorization request message is defined in
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
+// +k8s:deepcopy-gen=true
+type GRPCExtAuthService struct {
+	// Destination defines the destination for the gRPC External Authorization service.
+	Destination RouteDestination `json:"destination"`
+
+	// Authority is the hostname:port of the gRPC External Authorization service.
+	Authority string `json:"authority"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
@@ -1191,7 +1263,7 @@ type JSONPatchOperation struct {
 	// +optional
 	From *string `json:"from,omitempty" yaml:"from,omitempty"`
 	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value" yaml:"value"`
+	Value *apiextensionsv1.JSON `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 // Tracing defines the configuration for tracing a Envoy xDS Resource

@@ -291,13 +291,13 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
-| `suppressEnvoyHeaders` | _boolean_ |  false  | SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-' headers from both requests and responses. By default these headers are added to both requests and responses. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` | _[TLSSettings](#tlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
+| `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 
 
 
@@ -1012,11 +1012,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io". When unspecified or empty string, core API group is inferred. |
-| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example "Service". <br /><br /> Defaults to "Service" when not specified. <br /><br /> ExternalName services can refer to CNAME DNS records that may live outside of the cluster and as such are difficult to reason about in terms of conformance. They also may not be safe to forward to (see CVE-2021-25740 for more information). Implementations SHOULD NOT support ExternalName Services. <br /><br /> Support: Core (Services with a type other than ExternalName) <br /><br /> Support: Implementation-specific (Services with type ExternalName) |
-| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
-| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local namespace is inferred. <br /><br /> Note that when a namespace different than the local namespace is specified, a ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details. <br /><br /> Support: Core |
-| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource. Port is required when the referent is a Kubernetes Service. In this case, the port number is the service port number, not the target port. For other resources, destination port might be derived from the referent resource or this field. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
 
 
 #### Gateway
@@ -1075,6 +1071,20 @@ _Appears in:_
 
 
 
+#### HTTP10Settings
+
+
+
+HTTP10Settings provides HTTP/1.0 configuration on the listener.
+
+_Appears in:_
+- [HTTP1Settings](#http1settings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `useDefaultHost` | _boolean_ |  false  | UseDefaultHost defines if the HTTP/1.0 request is missing the Host header, then the hostname associated with the listener should be injected into the request. If this is not set and an HTTP/1.0 request arrives without a host, then it will be rejected. |
+
+
 #### HTTP1Settings
 
 
@@ -1088,6 +1098,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `enableTrailers` | _boolean_ |  false  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
 | `preserveHeaderCase` | _boolean_ |  false  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers. By default, Envoy will lowercase all the headers. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
 #### HTTP3Settings
@@ -1129,11 +1140,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io". When unspecified or empty string, core API group is inferred. |
-| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example "Service". <br /><br /> Defaults to "Service" when not specified. <br /><br /> ExternalName services can refer to CNAME DNS records that may live outside of the cluster and as such are difficult to reason about in terms of conformance. They also may not be safe to forward to (see CVE-2021-25740 for more information). Implementations SHOULD NOT support ExternalName Services. <br /><br /> Support: Core (Services with a type other than ExternalName) <br /><br /> Support: Implementation-specific (Services with type ExternalName) |
-| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
-| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local namespace is inferred. <br /><br /> Note that when a namespace different than the local namespace is specified, a ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details. <br /><br /> Support: Core |
-| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource. Port is required when the referent is a Kubernetes Service. In this case, the port number is the service port number, not the target port. For other resources, destination port might be derived from the referent resource or this field. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the backend server to which the authorization request will be sent. Only service Kind is supported for now. |
 | `path` | _string_ |  true  | Path is the path of the HTTP External Authorization service. If path is specified, the authorization request will be sent to that path, or else the authorization request will be sent to the root path. |
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added to the original client request before sending it to the backend server. Note that coexisting headers will be overridden. If not specified, no authorization response headers will be added to the original client request. |
 
@@ -1177,6 +1184,20 @@ _Appears in:_
 
 
 
+#### HeaderSettings
+
+
+
+HeaderSettings providess configuration options for headers on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests and responses. |
+
+
 #### HealthCheck
 
 
@@ -1217,7 +1238,7 @@ _Appears in:_
 | `op` | _[JSONPatchOperationType](#jsonpatchoperationtype)_ |  true  | Op is the type of operation to perform |
 | `path` | _string_ |  true  | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `from` | _string_ |  false  | From is the source location of the value to be copied or moved. Only valid for move or copy operations Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `value` | _[JSON](#json)_ |  true  | Value is the new value of the path location. |
+| `value` | _[JSON](#json)_ |  false  | Value is the new value of the path location. The value is only used by the `add` and `replace` operations. |
 
 
 #### JSONPatchOperationType
