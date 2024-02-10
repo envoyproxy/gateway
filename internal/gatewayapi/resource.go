@@ -109,6 +109,16 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 	return nil
 }
 
+func (r *Resources) GetConfigMap(namespace, name string) *v1.ConfigMap {
+	for _, configMap := range r.ConfigMaps {
+		if configMap.Namespace == namespace && configMap.Name == name {
+			return configMap
+		}
+	}
+
+	return nil
+}
+
 func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, backendKind string) []*discoveryv1.EndpointSlice {
 	var endpointSlices []*discoveryv1.EndpointSlice
 	for _, endpointSlice := range r.EndpointSlices {

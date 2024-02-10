@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -395,8 +394,8 @@ func irTLSListenerConfigName(secret *v1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
 }
 
-func irTLSCACertName(obj client.Object) string {
-	return fmt.Sprintf("%s/%s/%s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName(), caCertKey)
+func irTLSCACertName(namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
 func isMergeGatewaysEnabled(resources *Resources) bool {
