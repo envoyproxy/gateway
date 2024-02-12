@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: envoy
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    gateway.envoyproxy.io/owning-gateway-name: default
+    gateway.envoyproxy.io/owning-gateway-namespace: default
+  name: envoy-default-37a8eec1
+  namespace: envoy-gateway-system
+spec:
+  clusterIP: 10.102.168.100
+  clusterIPs:
+    - 10.102.168.100
+  ports:
+    - name: envoy-EnvoyHTTPPort-d76a15e2
+      port: 0
+      protocol: TCP
+      targetPort: 8080
+    - name: envoy-EnvoyHTTPSPort-6658f727
+      port: 0
+      protocol: TCP
+      targetPort: 8443
+  selector:
+    app.kubernetes.io/name: envoy
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    gateway.envoyproxy.io/owning-gateway-name: default
+    gateway.envoyproxy.io/owning-gateway-namespace: default
+  sessionAffinity: None
+  type: ClusterIP
