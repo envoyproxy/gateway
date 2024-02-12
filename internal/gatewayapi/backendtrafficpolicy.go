@@ -250,6 +250,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
 		to *ir.Timeout
+		ka *ir.TCPKeepalive
 	)
 
 	// Build IR
@@ -272,6 +273,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
 	}
+	if policy.Spec.TCPKeepalive != nil {
+		ka = t.buildTCPKeepAlive(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -285,6 +289,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.HealthCheck = hc
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
+					r.TCPKeepalive = ka
 
 					// some timeout setting originate from the route
 					if policy.Spec.Timeout != nil {
@@ -307,6 +312,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
 		ct *ir.Timeout
+		ka *ir.TCPKeepalive
 	)
 
 	// Build IR
@@ -327,6 +333,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
+	}
+	if policy.Spec.TCPKeepalive != nil {
+		ka = t.buildTCPKeepAlive(policy)
 	}
 
 	// Apply IR to all the routes within the specific Gateway
@@ -356,6 +365,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.FaultInjection == nil {
 				r.FaultInjection = fi
+			}
+			if r.TCPKeepalive == nil {
+				r.TCPKeepalive = ka
 			}
 
 			if policy.Spec.Timeout != nil {
@@ -939,4 +951,36 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 		}
 	}
 	return fi
+}
+
+func (t *Translator) buildTCPKeepAlive(policy *egv1a1.BackendTrafficPolicy) *ir.TCPKeepalive {
+	var ka *ir.TCPKeepalive
+	if policy.Spec.TCPKeepalive != nil {
+		pka := policy.Spec.TCPKeepalive
+		ka = &ir.TCPKeepalive{}
+
+		if pka.Probes != nil {
+			ka.Probes = pka.Probes
+		}
+
+		if pka.IdleTime != nil {
+			d, err := time.ParseDuration(string(*pka.IdleTime))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Keep Alive", fmt.Sprintf("invalid IdleTime value %s", *pka.IdleTime))
+				return nil
+			}
+			ka.IdleTime = ptr.To(uint32(d.Seconds()))
+		}
+
+		if pka.Interval != nil {
+			d, err := time.ParseDuration(string(*pka.Interval))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Keep Alive", fmt.Sprintf("invalid Interval value %s", *pka.Interval))
+				return nil
+			}
+			ka.Interval = ptr.To(uint32(d.Seconds()))
+		}
+
+	}
+	return ka
 }
