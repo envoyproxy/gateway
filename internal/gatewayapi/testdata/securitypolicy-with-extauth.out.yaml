@@ -272,3 +272,25 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        directResponse:
+          statusCode: 404
+        hostname: www.foo.com
+        name: catch-all
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        directResponse:
+          statusCode: 404
+        hostname: www.bar.com
+        name: catch-all
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
