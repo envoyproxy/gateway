@@ -13,16 +13,16 @@
         rateLimits:
         - actions:
           - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
+              descriptorKey: first-route-ratelimit-single-rule-key-rule-0-match-0
+              descriptorValue: first-route-ratelimit-single-rule-value-rule-0-match-0
               expectMatch: true
               headers:
               - name: x-user-id
                 stringMatch:
                   exact: one
           - headerValueMatch:
-              descriptorKey: rule-0-match-1
-              descriptorValue: rule-0-match-1
+              descriptorKey: first-route-ratelimit-single-rule-key-rule-0-match-1
+              descriptorValue: first-route-ratelimit-single-rule-value-rule-0-match-1
               expectMatch: true
               headers:
               - name: x-org-id
@@ -34,10 +34,10 @@
           alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
-            - key: rule-0-match-0
-              value: rule-0-match-0
-            - key: rule-0-match-1
-              value: rule-0-match-1
+            - key: first-route-ratelimit-single-rule-key-rule-0-match-0
+              value: first-route-ratelimit-single-rule-value-rule-0-match-0
+            - key: first-route-ratelimit-single-rule-key-rule-0-match-1
+              value: first-route-ratelimit-single-rule-value-rule-0-match-1
             tokenBucket:
               fillInterval: 3600s
               maxTokens: 10
@@ -61,16 +61,16 @@
         rateLimits:
         - actions:
           - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-0-match-0
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-0-match-0
               expectMatch: true
               headers:
               - name: x-user-id
                 stringMatch:
                   exact: one
           - headerValueMatch:
-              descriptorKey: rule-0-match-1
-              descriptorValue: rule-0-match-1
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-0-match-1
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-0-match-1
               expectMatch: true
               headers:
               - name: x-org-id
@@ -78,16 +78,16 @@
                   exact: foo
         - actions:
           - headerValueMatch:
-              descriptorKey: rule-1-match-0
-              descriptorValue: rule-1-match-0
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-1-match-0
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-1-match-0
               expectMatch: true
               headers:
               - name: x-user-id
                 stringMatch:
                   exact: two
           - headerValueMatch:
-              descriptorKey: rule-1-match-1
-              descriptorValue: rule-1-match-1
+              descriptorKey: second-route-ratelimit-multiple-rules-key-rule-1-match-1
+              descriptorValue: second-route-ratelimit-multiple-rules-value-rule-1-match-1
               expectMatch: true
               headers:
               - name: x-org-id
@@ -101,19 +101,19 @@
           alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
-            - key: rule-0-match-0
-              value: rule-0-match-0
-            - key: rule-0-match-1
-              value: rule-0-match-1
+            - key: second-route-ratelimit-multiple-rules-key-rule-0-match-0
+              value: second-route-ratelimit-multiple-rules-value-rule-0-match-0
+            - key: second-route-ratelimit-multiple-rules-key-rule-0-match-1
+              value: second-route-ratelimit-multiple-rules-value-rule-0-match-1
             tokenBucket:
               fillInterval: 3600s
               maxTokens: 10
               tokensPerFill: 10
           - entries:
-            - key: rule-1-match-0
-              value: rule-1-match-0
-            - key: rule-1-match-1
-              value: rule-1-match-1
+            - key: second-route-ratelimit-multiple-rules-key-rule-1-match-0
+              value: second-route-ratelimit-multiple-rules-value-rule-1-match-0
+            - key: second-route-ratelimit-multiple-rules-key-rule-1-match-1
+              value: second-route-ratelimit-multiple-rules-value-rule-1-match-1
             - key: masked_remote_address
               value: 192.168.0.0/16
             tokenBucket:
