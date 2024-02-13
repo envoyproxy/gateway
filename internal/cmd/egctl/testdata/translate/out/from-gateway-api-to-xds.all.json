@@ -553,7 +553,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -567,6 +568,7 @@
                             },
                             "routeConfigName": "default/eg/http"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
                           "upgradeConfigs": [
                             {
@@ -660,7 +662,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -674,6 +677,7 @@
                             },
                             "routeConfigName": "default/eg/grpc"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
                           "useRemoteAddress": true
                         }
