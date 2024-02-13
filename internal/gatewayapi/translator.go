@@ -225,7 +225,7 @@ func addCatchAllRoute(xdsIR map[string]*ir.Xds) {
 			}
 
 			// skip if there is already a catch-all route
-			for host, _ := range needCatchAllRoutePerHost {
+			for host := range needCatchAllRoutePerHost {
 				for _, r := range http.Routes {
 					if (r.Hostname == host &&
 						r.PathMatch != nil &&
