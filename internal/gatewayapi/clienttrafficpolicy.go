@@ -415,7 +415,9 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	if headerSettings == nil {
 		return
 	}
-	httpIR.SuppressEnvoyHeaders = true
+	httpIR.Headers = &ir.HeaderSettings{
+		EnableEnvoyHeaders: ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+	}
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {

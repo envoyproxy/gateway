@@ -211,9 +211,8 @@ type HTTPListener struct {
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
-	// SuppressEnvoyHeaders controls if "x-envoy-" headers are suppressed by the HTTP Router filter
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
-	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
+	// Headers configures special header management for the listener
+	Headers *HeaderSettings `json:"headers,omitempty" yaml:"headers,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
@@ -368,6 +367,15 @@ type HTTP10Settings struct {
 	// defaultHost is set to the default host that should be injected for HTTP10. If the hostname shouldn't
 	// be set, then defaultHost will be nil
 	DefaultHost *string `json:"defaultHost,omitempty" yaml:"defaultHost,omitempty"`
+}
+
+// HeaderSettings provides configuration related to header processing on the listener.
+// +k8s:deepcopy-gen=true
+type HeaderSettings struct {
+	// EnableEnvoyHeaders controls if "x-envoy-" headers are added by the HTTP Router filter.
+	// The default is to suppress these headers.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
+	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route

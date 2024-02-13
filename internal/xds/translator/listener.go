@@ -170,6 +170,8 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
+		// Hide the Envoy proxy in the Server header by default
+		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),
