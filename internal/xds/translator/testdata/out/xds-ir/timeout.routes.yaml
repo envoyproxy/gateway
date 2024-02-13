@@ -10,3 +10,4 @@
       name: first-route
       route:
         cluster: first-route-dest
+        idleTimeout: 30s

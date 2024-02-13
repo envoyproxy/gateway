@@ -13,6 +13,7 @@ backendTrafficPolicies:
       namespace: default
     timeout:
       http:
+        idleTimeout: 23s
         maxConnectionDuration: 22s
       tcp:
         connectTimeout: 20s
@@ -38,6 +39,7 @@ backendTrafficPolicies:
     timeout:
       http:
         connectionIdleTimeout: 16s
+        idleTimeout: 18s
         maxConnectionDuration: 17s
       tcp:
         connectTimeout: 15s
@@ -268,6 +270,7 @@ xdsIR:
         timeout:
           http:
             connectionIdleTimeout: 16s
+            idleTimeout: 18s
             maxConnectionDuration: 17s
           tcp:
             connectTimeout: 15s
@@ -306,6 +309,7 @@ xdsIR:
           prefix: /
         timeout:
           http:
+            idleTimeout: 23s
             maxConnectionDuration: 22s
             requestTimeout: 1s
           tcp:

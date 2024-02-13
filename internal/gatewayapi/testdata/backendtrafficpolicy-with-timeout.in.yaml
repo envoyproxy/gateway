@@ -78,6 +78,7 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 15s
       http:
+        idleTimeout: 18s
         connectionIdleTimeout: 16s
         maxConnectionDuration: 17s
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -95,5 +96,6 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 20s
       http:
+        idleTimeout: 23s
         connectionIdleTimeout: 21s
         maxConnectionDuration: 22s

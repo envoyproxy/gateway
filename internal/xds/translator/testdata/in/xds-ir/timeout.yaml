@@ -14,6 +14,7 @@ http:
       tcp:
         connectTimeout: "31s"
       http:
+        idleTimeout: "30s"
         connectionIdleTimeout: "32s"
         maxConnectionDuration: "33s"
     destination:

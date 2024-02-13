@@ -14,6 +14,7 @@ backendTrafficPolicies:
     timeout:
       http:
         connectionIdleTimeout: 21s
+        idleTimeout: 23s
         maxConnectionDuration: 22mib
       tcp:
         connectTimeout: 20s

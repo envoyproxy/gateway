@@ -42,8 +42,8 @@ backendTrafficPolicies:
       namespace: envoy-gateway
     timeout:
       http:
+        idleTimeout: 23s
         connectionIdleTimeout: 21s
         maxConnectionDuration: 22mib
       tcp:
         connectTimeout: 20s
-

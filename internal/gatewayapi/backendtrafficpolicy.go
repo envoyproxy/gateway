@@ -883,8 +883,19 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 	}
 
 	if pto.HTTP != nil {
+		var it *metav1.Duration
 		var cit *metav1.Duration
 		var mcd *metav1.Duration
+
+		if pto.HTTP.IdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.IdleTimeout))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "HTTP Timeout", fmt.Sprintf("invalid IdleTimeout value %s", *pto.HTTP.IdleTimeout))
+				terr = true
+			} else {
+				it = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
 
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
@@ -907,6 +918,7 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 		}
 
 		hto = &ir.HTTPTimeout{
+			IdleTimeout:           it,
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 		}

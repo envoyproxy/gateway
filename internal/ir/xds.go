@@ -225,6 +225,9 @@ type HTTPListener struct {
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
+	// Timeout settings for the listener
+	// +optional
+	Timeouts *Timeout `json:"timeouts,omitempty" yaml:"timeouts,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -1644,6 +1647,9 @@ type TCPTimeout struct {
 type HTTPTimeout struct {
 	// RequestTimeout is the time until which entire response is received from the upstream.
 	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
+
+	// The maximum duration of an idle HTTP stream.
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 
 	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	ConnectionIdleTimeout *metav1.Duration `json:"connectionIdleTimeout,omitempty" yaml:"connectionIdleTimeout,omitempty"`
