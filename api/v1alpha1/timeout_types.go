@@ -41,3 +41,18 @@ type HTTPTimeout struct {
 	// +optional
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
 }
+
+type ClientTimeout struct {
+	// Timeout settings for HTTP.
+	//
+	// +optional
+	HTTP *HTTPClientTimeout `json:"http,omitempty"`
+}
+
+type HTTPClientTimeout struct {
+	// The timeout for processing the client request. starting upon request initiation and ending when the last byte is sent to backend
+	// Default: 300 seconds.
+	//
+	// +optional
+	RequestProcessTimeout *gwapiv1.Duration `json:"requestProcessTimeout"`
+}

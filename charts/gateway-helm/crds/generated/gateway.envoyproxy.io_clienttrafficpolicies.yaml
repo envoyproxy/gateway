@@ -204,6 +204,20 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              timeout:
+                description: Timeout settings for the client connections.
+                properties:
+                  http:
+                    description: Timeout settings for HTTP.
+                    properties:
+                      requestProcessTimeout:
+                        description: 'The timeout for processing the client request.
+                          starting upon request initiation and ending when the last
+                          byte is sent to backend Default: 300 seconds.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                type: object
               tls:
                 description: TLS settings configure TLS termination settings with
                   the downstream client.
