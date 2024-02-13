@@ -105,7 +105,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
-          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
           infra-label1: infra-val1
           infra-label2: infra-val2
       name: default/gateway-1

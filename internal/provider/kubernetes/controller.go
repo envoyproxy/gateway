@@ -171,8 +171,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		return reconcile.Result{}, nil
 	}
 
-	resourcesMap := make(gatewayapi.ResourcesMap)
-
+	resourcesMap := make(gatewayapi.GatewayClassResources)
 	for _, acceptedGC := range acceptedGCs {
 		// Initialize resource types.
 		acceptedGC := acceptedGC
@@ -348,9 +347,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// The Store is triggered even when there are no Gateways associated to the
 		// GatewayClass. This would happen in case the last Gateway is removed and the
 		// Store will be required to trigger a cleanup of envoy infra resources.
-		r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourcesMap[acceptedGC.Name])
+		r.resources.GatewayAPIResources.Store(string(r.classController), resourcesMap.DeepCopy())
 
-		// Update finalizer on the gateway class based on the resource tree.
 		if len(resourcesMap[acceptedGC.Name].Gateways) == 0 {
 			r.log.Info("No gateways found for accepted gatewayclass")
 

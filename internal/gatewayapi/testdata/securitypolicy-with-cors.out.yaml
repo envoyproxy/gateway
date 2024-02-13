@@ -245,7 +245,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
       name: envoy-gateway/gateway-1
   envoy-gateway/gateway-2:
     proxy:
@@ -261,7 +260,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
       name: envoy-gateway/gateway-2
   envoy-gateway/gateway-3:
     proxy:
@@ -277,7 +275,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-3
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
       name: envoy-gateway/gateway-3
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1

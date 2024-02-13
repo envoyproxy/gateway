@@ -20,7 +20,7 @@ import (
 
 type XdsIRMap map[string]*ir.Xds
 type InfraIRMap map[string]*ir.Infra
-type ResourcesMap map[string]*Resources
+type GatewayClassResources map[string]*Resources
 
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
@@ -68,6 +68,15 @@ func NewResources() *Resources {
 		BackendTrafficPolicies: []*egv1a1.BackendTrafficPolicy{},
 		SecurityPolicies:       []*egv1a1.SecurityPolicy{},
 	}
+}
+
+func (g *GatewayClassResources) DeepCopy() *GatewayClassResources {
+	n := make(GatewayClassResources)
+	for k, v := range *g {
+		newValue := *v
+		n[k] = &newValue
+	}
+	return &n
 }
 
 func (r *Resources) GetNamespace(name string) *v1.Namespace {
