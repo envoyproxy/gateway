@@ -1251,7 +1251,7 @@ func TestValidateHealthCheck(t *testing.T) {
 	}{
 		{
 			name: "invalid timeout",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Duration(0)},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To[uint32](3),
@@ -1261,11 +1261,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHealthCheckTimeoutInvalid,
 		},
 		{
 			name: "invalid interval",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Duration(0)},
 				UnhealthyThreshold: ptr.To[uint32](3),
@@ -1276,11 +1278,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHealthCheckIntervalInvalid,
 		},
 		{
 			name: "invalid unhealthy threshold",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To[uint32](0),
@@ -1291,11 +1295,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHealthCheckUnhealthyThresholdInvalid,
 		},
 		{
 			name: "invalid healthy threshold",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To[uint32](3),
@@ -1306,11 +1312,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
 		{
 			name: "http-health-check: invalid path",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To[uint32](3),
@@ -1321,11 +1329,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHCHTTPPathInvalid,
 		},
 		{
 			name: "http-health-check: invalid method",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To(uint32(3)),
@@ -1336,11 +1346,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHCHTTPMethodInvalid,
 		},
 		{
 			name: "http-health-check: invalid expected-statuses",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To(uint32(3)),
@@ -1351,11 +1363,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHCHTTPExpectedStatusesInvalid,
 		},
 		{
 			name: "http-health-check: invalid range",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To(uint32(3)),
@@ -1366,11 +1380,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					ExpectedStatuses: []HTTPStatus{100, 600},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHTTPStatusInvalid,
 		},
 		{
 			name: "http-health-check: invalid expected-responses",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To(uint32(3)),
@@ -1385,11 +1401,13 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
 			name: "tcp-health-check: invalid send payload",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To(uint32(3)),
@@ -1403,12 +1421,14 @@ func TestValidateHealthCheck(t *testing.T) {
 						Text: ptr.To("foo"),
 					},
 				},
+			},
+				&OutlierDetection{},
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
 			name: "tcp-health-check: invalid receive payload",
-			input: HealthCheck{
+			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
 				Interval:           &metav1.Duration{Duration: time.Second},
 				UnhealthyThreshold: ptr.To(uint32(3)),
@@ -1423,7 +1443,29 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 			},
+				&OutlierDetection{},
+			},
 			want: ErrHealthCheckPayloadInvalid,
+		},
+		{
+			name: "OutlierDetection invalid interval",
+			input: HealthCheck{&ActiveHealthCheck{},
+				&OutlierDetection{
+					Interval:         &metav1.Duration{Duration: time.Duration(0)},
+					BaseEjectionTime: &metav1.Duration{Duration: time.Second},
+				},
+			},
+			want: ErrOutlierDetectionIntervalInvalid,
+		},
+		{
+			name: "OutlierDetection invalid BaseEjectionTime",
+			input: HealthCheck{&ActiveHealthCheck{},
+				&OutlierDetection{
+					Interval:         &metav1.Duration{Duration: time.Second},
+					BaseEjectionTime: &metav1.Duration{Duration: time.Duration(0)},
+				},
+			},
+			want: ErrOutlierDetectionBaseEjectionTimeInvalid,
 		},
 	}
 	for i := range tests {

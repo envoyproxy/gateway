@@ -263,6 +263,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "http10",
 		},
+		{
+			name: "upstream-tcpkeepalive",
+		},
 	}
 
 	for _, tc := range testCases {
