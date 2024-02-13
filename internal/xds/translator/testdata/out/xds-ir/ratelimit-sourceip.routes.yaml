@@ -12,9 +12,6 @@
         cluster: first-route-dest
         rateLimits:
         - actions:
-          - genericKey:
-              descriptorKey: first-route
-              descriptorValue: first-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
     - match:
@@ -24,9 +21,6 @@
         cluster: second-route-dest
         rateLimits:
         - actions:
-          - genericKey:
-              descriptorKey: second-route
-              descriptorValue: second-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 24
     - match:
@@ -37,11 +31,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: third-route
-              descriptorValue: third-route
-          - genericKey:
-              descriptorKey: rule-0-match--1
-              descriptorValue: rule-0-match--1
+              descriptorKey: third-route-key-rule-0-match--1
+              descriptorValue: third-route-value-rule-0-match--1
     - match:
         path: distinct
       name: fourth-route
@@ -49,9 +40,6 @@
         cluster: fourth-route-dest
         rateLimits:
         - actions:
-          - genericKey:
-              descriptorKey: fourth-route
-              descriptorValue: fourth-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
           - remoteAddress: {}

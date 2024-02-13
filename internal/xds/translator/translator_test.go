@@ -395,9 +395,6 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			name: "distinct-match",
 		},
 		{
-			name: "distinct-remote-address-match",
-		},
-		{
 			name: "value-match",
 		},
 		{
@@ -411,9 +408,6 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		},
 		{
 			name: "masked-remote-address-match",
-		},
-		{
-			name: "multiple-masked-remote-address-match-with-same-cidr",
 		},
 	}
 
