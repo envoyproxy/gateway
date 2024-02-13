@@ -29,7 +29,7 @@ jobs:
       
       - name: Get the name of the Envoy service created the by the example Gateway
         run: |
-          echo $(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}') >> $ENVOY_SERVICE
+          echo $(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}') >> "${ENVOY_SERVICE}"
 
       - name: Echo ENVOY_SERVICE 
         run: echo $ENVOY_SERVICE
