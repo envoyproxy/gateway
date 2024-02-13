@@ -29,10 +29,10 @@ jobs:
       
       - name: Get the name of the Envoy service created the by the example Gateway
         run: |
-          echo $(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}') >> "${ENVOY_SERVICE}"
+          echo "ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')" >> $GITHUB_ENV
 
       - name: Echo ENVOY_SERVICE 
-        run: echo $ENVOY_SERVICE
+        run: echo ${{ env.ENVOY_SERVICE }}
       
       - name: Port forward to the Envoy service
         run: kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
