@@ -170,6 +170,8 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
+		// Hide the Envoy proxy in the Server header by default
+		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),
@@ -387,7 +389,6 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 				TlsParams:     buildTLSParams(tlsConfig),
 				AlpnProtocols: buildALPNProtocols(tlsConfig.ALPNProtocols),
 			},
-			RequireClientCertificate: &wrappers.BoolValue{Value: false},
 		},
 	}
 
@@ -398,6 +399,16 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 				Name:      tlsConfig.Name,
 				SdsConfig: makeConfigSource(),
 			})
+	}
+
+	if tlsConfig.CACertificate != nil {
+		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.DownstreamTlsContext.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+				Name:      tlsConfig.CACertificate.Name,
+				SdsConfig: makeConfigSource(),
+			},
+		}
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -428,6 +439,16 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 				Name:      tlsConfig.Name,
 				SdsConfig: makeConfigSource(),
 			})
+	}
+
+	if tlsConfig.CACertificate != nil {
+		tlsCtx.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+				Name:      tlsConfig.CACertificate.Name,
+				SdsConfig: makeConfigSource(),
+			},
+		}
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -492,8 +513,7 @@ func buildALPNProtocols(alpn []string) []string {
 	return alpn
 }
 
-func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
-	// Build the tls secret
+func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
@@ -503,6 +523,19 @@ func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 				},
 				PrivateKey: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+				},
+			},
+		},
+	}
+}
+
+func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate) *tlsv3.Secret {
+	return &tlsv3.Secret{
+		Name: caCertificate.Name,
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: &tlsv3.CertificateValidationContext{
+				TrustedCa: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
 				},
 			},
 		},

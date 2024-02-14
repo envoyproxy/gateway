@@ -19,19 +19,21 @@ import (
 )
 
 const (
-	KindEnvoyProxy     = "EnvoyProxy"
-	KindGateway        = "Gateway"
-	KindGatewayClass   = "GatewayClass"
-	KindGRPCRoute      = "GRPCRoute"
-	KindHTTPRoute      = "HTTPRoute"
-	KindNamespace      = "Namespace"
-	KindTLSRoute       = "TLSRoute"
-	KindTCPRoute       = "TCPRoute"
-	KindUDPRoute       = "UDPRoute"
-	KindService        = "Service"
-	KindServiceImport  = "ServiceImport"
-	KindSecret         = "Secret"
-	KindSecurityPolicy = "SecurityPolicy"
+	KindConfigMap           = "ConfigMap"
+	KindClientTrafficPolicy = "ClientTrafficPolicy"
+	KindEnvoyProxy          = "EnvoyProxy"
+	KindGateway             = "Gateway"
+	KindGatewayClass        = "GatewayClass"
+	KindGRPCRoute           = "GRPCRoute"
+	KindHTTPRoute           = "HTTPRoute"
+	KindNamespace           = "Namespace"
+	KindTLSRoute            = "TLSRoute"
+	KindTCPRoute            = "TCPRoute"
+	KindUDPRoute            = "UDPRoute"
+	KindService             = "Service"
+	KindServiceImport       = "ServiceImport"
+	KindSecret              = "Secret"
+	KindSecurityPolicy      = "SecurityPolicy"
 
 	GroupMultiClusterService = "multicluster.x-k8s.io"
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
@@ -156,7 +158,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR, infraIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
