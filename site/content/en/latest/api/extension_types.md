@@ -1155,7 +1155,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `requestProcessTimeout` | _[Duration](#duration)_ |  false  | The timeout for processing the client request. starting upon request initiation and ending when the last byte is sent to backend Default: 300 seconds. |
+| `requestProcessTimeout` | _[Duration](#duration)_ |  false  | The timeout for processing the client request. Starting upon request initiation and ending when the last byte is sent to backend. Default: 300 seconds. |
 
 
 #### HTTPExtAuthService
