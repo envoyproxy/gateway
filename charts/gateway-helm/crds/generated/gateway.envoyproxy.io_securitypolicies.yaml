@@ -397,6 +397,11 @@ spec:
                                 description: Header defines the name of the HTTP request
                                   header that the JWT Claim will be saved into.
                                 type: string
+                              useForRouting:
+                                description: UseForRouting must be enabled if this
+                                  header generated from the claim should be used for
+                                  route matching decisions
+                                type: boolean
                             required:
                             - claim
                             - header
