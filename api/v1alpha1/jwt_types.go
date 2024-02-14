@@ -85,6 +85,10 @@ type ClaimToHeader struct {
 	// (eg. "claim.nested.key", "sub"). The nested claim name must use dot "."
 	// to separate the JSON name path.
 	Claim string `json:"claim"`
+
+	// UseForRouting must be enabled if this header generated from the claim should be used for
+	// route matching decisions
+	UseForRouting *bool `json:"useForRouting,omitempty"`
 }
 
 // JWTExtractor defines a custom JWT token extraction from HTTP request.
