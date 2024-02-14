@@ -17,14 +17,14 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-        mergeSlashes: true
+            suppressEnvoyHeaders: true
         normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-btls/http
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket

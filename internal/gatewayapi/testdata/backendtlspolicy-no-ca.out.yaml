@@ -26,7 +26,7 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: No ca found in referred configmaps.
+        message: No ca found in referred configmaps
         reason: Invalid
         status: "False"
         type: Accepted
@@ -115,7 +115,8 @@ infraIR:
   envoy-gateway/gateway-btls:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-btls/http
         ports:
         - containerPort: 10080
           name: http
@@ -137,6 +138,9 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-btls/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -145,7 +149,8 @@ xdsIR:
         destination:
           name: httproute/envoy-gateway/httproute-btls/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 10.244.0.11
               port: 8080
             protocol: HTTP
