@@ -1167,7 +1167,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `idleTimeout` | _[Duration](#duration)_ |  false  | The idle timeout for an HTTP request stream. This bounds the amount of time a request’s stream may be idle. If not specified, there is no per-route timeout, although the connection manager wide stream_idle_timeout will still apply. A value of 0 will completely disable the route’s idle timeout, even if a connection manager stream idle timeout is configured. |
+| `idleTimeout` | _[Duration](#duration)_ |  false  | The idle timeout for an HTTP request stream. This bounds the amount of time a request’s stream may be idle. If not specified, this will default to the request timeout configured on the HTTPRoute plus 30 seconds so that it does not interfere with the request timeout. If neither the request timeout nor the idle timeout are specified, there is no per-route timeout, although the connection manager wide stream_idle_timeout will still apply. A value of 0 will completely disable the route’s idle timeout, even if a connection manager stream idle timeout is configured. |
 | `connectionIdleTimeout` | _[Duration](#duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](#duration)_ |  false  | The maximum duration of an HTTP connection. Default: unlimited. |
 

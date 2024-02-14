@@ -29,8 +29,10 @@ type TCPTimeout struct {
 }
 
 type HTTPTimeout struct {
-	// The idle timeout for an HTTP request stream. This bounds the amount of time a request’s stream
-	// may be idle. If not specified, there is no per-route timeout, although the connection manager wide
+	// The idle timeout for an HTTP request stream. This bounds the amount of time a request’s stream may be
+	// idle. If not specified, this will default to the request timeout configured on the HTTPRoute plus 30
+	// seconds so that it does not interfere with the request timeout. If neither the request timeout nor the
+	// idle timeout are specified, there is no per-route timeout, although the connection manager wide
 	// stream_idle_timeout will still apply. A value of 0 will completely disable the route’s idle timeout,
 	// even if a connection manager stream idle timeout is configured.
 	//

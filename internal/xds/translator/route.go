@@ -7,6 +7,7 @@ package translator
 
 import (
 	"strings"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -223,8 +224,14 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 }
 
 func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
-	if httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil && httpRoute.Timeout.HTTP.IdleTimeout != nil {
-		return durationpb.New(httpRoute.Timeout.HTTP.IdleTimeout.Duration)
+	if httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil {
+		if httpRoute.Timeout.HTTP.IdleTimeout != nil {
+			return durationpb.New(httpRoute.Timeout.HTTP.IdleTimeout.Duration)
+		} else if httpRoute.Timeout.HTTP.RequestTimeout != nil {
+			// If idle timeout is not set, use request timeout + 30 seconds so that
+			// idle timeout will not interfere with the configured request timeout.
+			return durationpb.New(httpRoute.Timeout.HTTP.RequestTimeout.Duration + time.Second*30)
+		}
 	}
 	return nil
 }
