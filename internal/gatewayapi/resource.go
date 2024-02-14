@@ -40,6 +40,7 @@ type Resources struct {
 	ServiceImports         []*mcsapi.ServiceImport        `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
 	EndpointSlices         []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
 	Secrets                []*v1.Secret                   `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	ConfigMaps             []*v1.ConfigMap                `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
 	EnvoyProxy             *egv1a1.EnvoyProxy             `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
 	ExtensionRefFilters    []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies     []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
@@ -57,6 +58,7 @@ func NewResources() *Resources {
 		Services:               []*v1.Service{},
 		EndpointSlices:         []*discoveryv1.EndpointSlice{},
 		Secrets:                []*v1.Secret{},
+		ConfigMaps:             []*v1.ConfigMap{},
 		ReferenceGrants:        []*gwapiv1b1.ReferenceGrant{},
 		Namespaces:             []*v1.Namespace{},
 		ExtensionRefFilters:    []unstructured.Unstructured{},
@@ -101,6 +103,16 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 	for _, secret := range r.Secrets {
 		if secret.Namespace == namespace && secret.Name == name {
 			return secret
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetConfigMap(namespace, name string) *v1.ConfigMap {
+	for _, configMap := range r.ConfigMaps {
+		if configMap.Namespace == namespace && configMap.Name == name {
+			return configMap
 		}
 	}
 

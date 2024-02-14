@@ -29,6 +29,7 @@ Namespaced
 apiGroups:
 - ""
 resources:
+- configmaps
 - secrets
 - services
 verbs:

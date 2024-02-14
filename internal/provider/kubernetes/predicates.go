@@ -21,7 +21,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -148,6 +148,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isCtpReferencingSecret(&nsName) {
+		return true
+	}
+
 	return false
 }
 
@@ -174,7 +178,7 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
-	spList := &v1alpha1.SecurityPolicyList{}
+	spList := &egv1a1.SecurityPolicyList{}
 	if err := r.client.List(context.Background(), spList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, nsName.String()),
 	}); err != nil {
@@ -183,6 +187,18 @@ func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.N
 	}
 
 	return len(spList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedName) bool {
+	ctpList := &egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretCtpIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ClientTrafficPolicies")
+		return false
+	}
+
+	return len(ctpList.Items) > 0
 }
 
 // validateServiceForReconcile tries finding the owning Gateway of the Service
@@ -227,7 +243,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
-	spList := &v1alpha1.SecurityPolicyList{}
+	spList := &egv1a1.SecurityPolicyList{}
 	if err := r.client.List(context.Background(), spList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendSecurityPolicyIndex, nsName.String()),
 	}); err != nil {
@@ -450,5 +466,28 @@ func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	}
 
 	r.store.addNode(node)
+	return true
+}
+
+// validateConfigMapForReconcile checks whether the ConfigMap belongs to a valid ClientTrafficPolicy.
+func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) bool {
+	configMap, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	ctpList := &egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapCtpIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ClientTrafficPolicy")
+		return false
+	}
+
+	if len(ctpList.Items) == 0 {
+		return false
+	}
+
 	return true
 }
