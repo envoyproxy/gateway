@@ -54,5 +54,5 @@ type HTTPClientTimeout struct {
 	// Default: 300 seconds.
 	//
 	// +optional
-	RequestProcessTimeout *gwapiv1.Duration `json:"requestProcessTimeout"`
+	RequestProcessTimeout *gwapiv1.Duration `json:"requestProcessTimeout,omitempty"`
 }
