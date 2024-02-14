@@ -19,19 +19,19 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, RateLimitAllRequestTest)
-	ConformanceTests = append(ConformanceTests, RateLimitHeadersTest)
+	ConformanceTests = append(ConformanceTests, RateLimitCIDRMatchTest)
+	ConformanceTests = append(ConformanceTests, RateLimitHeaderMatchTest)
 	ConformanceTests = append(ConformanceTests, RateLimitBasedJwtClaimsTest)
 }
 
-var RateLimitAllRequestTest = suite.ConformanceTest{
-	ShortName:   "RateLimitAllRequest",
-	Description: "Limit all requests",
-	Manifests:   []string{"testdata/ratelimit-block-all-ips.yaml"},
+var RateLimitCIDRMatchTest = suite.ConformanceTest{
+	ShortName:   "RateLimitCIDRMatch",
+	Description: "Limit all requests that match CIDR",
+	Manifests:   []string{"testdata/ratelimit-cidr-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("block all ips", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-ratelimit", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			ratelimitHeader := make(map[string]string)
@@ -75,10 +75,10 @@ var RateLimitAllRequestTest = suite.ConformanceTest{
 	},
 }
 
-var RateLimitHeadersTest = suite.ConformanceTest{
-	ShortName:   "RateLimitHeaders",
-	Description: "Limit header requests",
-	Manifests:   []string{"testdata/ratelimit-headers.yaml"},
+var RateLimitHeaderMatchTest = suite.ConformanceTest{
+	ShortName:   "RateLimitHeaderMatch",
+	Description: "Limit all requests that match headers",
+	Manifests:   []string{"testdata/ratelimit-header-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
