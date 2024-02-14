@@ -278,7 +278,7 @@ xdsIR:
         directResponse:
           statusCode: 404
         hostname: www.foo.com
-        name: catch-all
+        name: www_foo_com/catch_all
         pathMatch:
           distinct: false
           name: ""
@@ -289,7 +289,7 @@ xdsIR:
         directResponse:
           statusCode: 404
         hostname: www.bar.com
-        name: catch-all
+        name: www_bar_com/catch_all
         pathMatch:
           distinct: false
           name: ""

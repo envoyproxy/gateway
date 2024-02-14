@@ -161,7 +161,7 @@ xdsIR:
         directResponse:
           statusCode: 404
         hostname: gateway.envoyproxy.io
-        name: catch-all
+        name: gateway_envoyproxy_io/catch_all
         pathMatch:
           distinct: false
           name: ""

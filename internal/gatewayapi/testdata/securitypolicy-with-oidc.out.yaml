@@ -86,7 +86,7 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - www.example.com
+    - www.foo.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -97,7 +97,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /bar
+          value: /
   status:
     parents:
     - conditions:
@@ -256,8 +256,8 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: www.example.com
-        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+        hostname: www.foo.com
+        name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
         oidc:
           clientID: client1.apps.googleusercontent.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
@@ -272,14 +272,14 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /bar
+          prefix: /
       - backendWeights:
           invalid: 0
           valid: 0
         directResponse:
           statusCode: 404
         hostname: www.example.com
-        name: catch-all
+        name: www_example_com/catch_all
         pathMatch:
           distinct: false
           name: ""

@@ -6,6 +6,9 @@
 package gatewayapi
 
 import (
+	"fmt"
+	"strings"
+
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
@@ -240,8 +243,9 @@ func addCatchAllRoute(xdsIR map[string]*ir.Xds) {
 
 			for host, needCatchAllRoute := range needCatchAllRoutePerHost {
 				if needCatchAllRoute {
+					underscoredHost := strings.ReplaceAll(host, ".", "_")
 					http.Routes = append(http.Routes, &ir.HTTPRoute{
-						Name: "catch-all",
+						Name: fmt.Sprintf("%s/catch_all", underscoredHost),
 						PathMatch: &ir.StringMatch{
 							Prefix: ptr.To("/"),
 						},
