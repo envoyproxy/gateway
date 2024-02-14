@@ -12,26 +12,18 @@ import (
 	"net/netip"
 	"reflect"
 
+	"fmt"
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/yaml"
-	"fmt"
-	"github.com/tetratelabs/multierror"
-	"golang.org/x/exp/slices"
 	"strings"
-
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	k8sValidate "k8s.io/apimachinery/pkg/util/validation"
-	"net"
-	"reflect"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	k8sValidate "k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (

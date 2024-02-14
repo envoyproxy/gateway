@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"fmt"
-	"github.com/envoyproxy/gateway/internal/status"
 	"strconv"
 	"strings"
 	"time"

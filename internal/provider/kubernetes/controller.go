@@ -1074,7 +1074,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch BackendTLSPolicy
 	btlsPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
-	if len(r.namespaceLabels) != 0 {
+	if r.namespaceLabel != nil {
 		btlsPredicates = append(btlsPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
