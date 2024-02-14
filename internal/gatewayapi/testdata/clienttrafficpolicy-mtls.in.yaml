@@ -1,0 +1,118 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - name: tls-secret-1
+          namespace: envoy-gateway
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      namespace: envoy-gateway
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - kind: ConfigMap
+          name: ca-configmap
+          namespace: envoy-gateway
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - name: tls-secret-1
+          namespace: envoy-gateway
+    - name: http-2
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - name: tls-secret-1
+          namespace: envoy-gateway
+configMaps:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ca-configmap
+    namespace: envoy-gateway
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDOzCCAiOgAwIBAgIUc41kpE9wK+NHgRGvBIgw8SCaz/8wDQYJKoZIhvcNAQEL
+      BQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv
+      bTAeFw0yNDAxMjYyMzE1MzFaFw0yNTAxMjUyMzE1MzFaMC0xFTATBgNVBAoMDGV4
+      YW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB
+      AQUAA4IBDwAwggEKAoIBAQDCLhZ5DnCVE5JJ97yOocpRwclbl0UwX3cI+1ZZNltl
+      W6jRgy1GuN6Vr7CBmI/mPtgGs9T7DNRMl5gJJkNHSZomI6GjuP1KUhuvlfbZPWNo
+      p45T235Z82Gg8ORJHT5mn1QRK+bz9ruJfyldMMlicUJv/Yft6zNURxQ7BU9ciGe1
+      tM+UMSxkop3dovVptELnkTDJSwt5dn+nj6j/Gr95z90/e2gjfVTtmArAG3xh/2B1
+      /D6NXhwPMzYrplnM3lOpxzflOVgjMUloL1oI7sm6c+2A14NeBrW/ofB9RD7DWBHd
+      76j+hcAWFsxYmsHo5Ox/tFeTk7GRdkHEELLWFBvYG0BTAgMBAAGjUzBRMB0GA1Ud
+      DgQWBBSrLbcQPpEx+Dt+hYE/yrjt6rOV6TAfBgNVHSMEGDAWgBSrLbcQPpEx+Dt+
+      hYE/yrjt6rOV6TAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCF
+      4jltqxVaKZaVML7HNQSwegy+gZ1xalymMNo7Ipc8zOyUUI47weEf/p+nkq8oxi/m
+      mLZoeMSdXg+gebYMMcURgtl9QfuF0aYCB3AlCxlpdH4Lk3uXNTLQXJiLQRTNsBu/
+      LJ6UYvLFKPwodvRKL8KWKEgLVJmrTe3g8iL3SSnw00hWieuCdSsxNl/47ThgYXrg
+      u1PRBUt5g+XoWpUSOCMOFWlBJqwJYKfRA3E6ff44IUJsb7qUHHAe1wa1YDfuD+T5
+      At9/m+M7GyW9oEbSQsPTGfYqP59QE+1iei6qiG+7kn4iRxJqhgm5N5o86QSk0Maz
+      Cz4jTEKdNvXYVFfh6Zqr
+      -----END CERTIFICATE-----
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: tls-secret-1
+  type: kubernetes.io/tls
+  data:
+    ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURPekNDQWlPZ0F3SUJBZ0lVYzQxa3BFOXdLK05IZ1JHdkJJZ3c4U0Nhei84d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5EQXhNall5TXpFMU16RmFGdzB5TlRBeE1qVXlNekUxTXpGYU1DMHhGVEFUQmdOVkJBb01ER1Y0CllXMXdiR1VnU1c1akxqRVVNQklHQTFVRUF3d0xaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUURDTGhaNURuQ1ZFNUpKOTd5T29jcFJ3Y2xibDBVd1gzY0krMVpaTmx0bApXNmpSZ3kxR3VONlZyN0NCbUkvbVB0Z0dzOVQ3RE5STWw1Z0pKa05IU1pvbUk2R2p1UDFLVWh1dmxmYlpQV05vCnA0NVQyMzVaODJHZzhPUkpIVDVtbjFRUksrYno5cnVKZnlsZE1NbGljVUp2L1lmdDZ6TlVSeFE3QlU5Y2lHZTEKdE0rVU1TeGtvcDNkb3ZWcHRFTG5rVERKU3d0NWRuK25qNmovR3I5NXo5MC9lMmdqZlZUdG1BckFHM3hoLzJCMQovRDZOWGh3UE16WXJwbG5NM2xPcHh6ZmxPVmdqTVVsb0wxb0k3c202YysyQTE0TmVCclcvb2ZCOVJEN0RXQkhkCjc2aitoY0FXRnN4WW1zSG81T3gvdEZlVGs3R1Jka0hFRUxMV0ZCdllHMEJUQWdNQkFBR2pVekJSTUIwR0ExVWQKRGdRV0JCU3JMYmNRUHBFeCtEdCtoWUUveXJqdDZyT1Y2VEFmQmdOVkhTTUVHREFXZ0JTckxiY1FQcEV4K0R0KwpoWUUveXJqdDZyT1Y2VEFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUNGCjRqbHRxeFZhS1phVk1MN0hOUVN3ZWd5K2daMXhhbHltTU5vN0lwYzh6T3lVVUk0N3dlRWYvcCtua3E4b3hpL20KbUxab2VNU2RYZytnZWJZTU1jVVJndGw5UWZ1RjBhWUNCM0FsQ3hscGRINExrM3VYTlRMUVhKaUxRUlROc0J1LwpMSjZVWXZMRktQd29kdlJLTDhLV0tFZ0xWSm1yVGUzZzhpTDNTU253MDBoV2lldUNkU3N4TmwvNDdUaGdZWHJnCnUxUFJCVXQ1ZytYb1dwVVNPQ01PRldsQkpxd0pZS2ZSQTNFNmZmNDRJVUpzYjdxVUhIQWUxd2ExWURmdUQrVDUKQXQ5L20rTTdHeVc5b0ViU1FzUFRHZllxUDU5UUUrMWllaTZxaUcrN2tuNGlSeEpxaGdtNU41bzg2UVNrME1hegpDejRqVEVLZE52WFlWRmZoNlpxcgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM0RENDQWNnQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5EQXhNall5TXpFMU16RmFGdzB5TlRBeApNalV5TXpFMU16RmFNRDh4R1RBWEJnTlZCQU1NRUdWa1oyVXVaWGhoYlhCc1pTNWpiMjB4SWpBZ0JnTlZCQW9NCkdXVmtaMlVnWlhoaGJYQnNaU0J2Y21kaGJtbDZZWFJwYjI0d2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFDNzdodkFQQWVGUm5xL3RwR1ZkSk5lY2Fhaks2a1F5Q2pZNXIvcFh4TkJhOXZXVlFIVQpuQ1dWT3lscEVkaDZPZlltR2dvSmF0TVRUWUFYK1ZpdkxTOVhwSDhuUENZYVpvQmRpMlA0MWRrbmsyUnpGWm1sCi9YUjVIWnREWmplRE8zd3ZCSm9ubStNeFA3Qms1TGdlOWhGSFJ3akViTGNZN3crN3pxOEJEQXlJSHY3T0ozYTcKeDkvalgyUlpGdTdPNXI1eWZFUTZGc0tjelREb29DeGRVa05JZ3RwVkNvRExLdmJMNjFuZE51bGUzL21EbS92MgpTeVRIdWQxUzVkcXNwOGtKZHU4WFVSZmMyWUVsRktXdkJ0bmpoL2pyTE1YRmNhaFYvb3hKckNIdXQvUENMYkJUCkFqVGV1U0RhdVM3T0hiSlJES3dtSDdvVnZ5SUNhSXlhWWNaTkFnTUJBQUV3RFFZSktvWklodmNOQVFFTEJRQUQKZ2dFQkFHeW5yNGNPMWFZbjRNQk90aVJ2WHFJdllHNnpxZXNrNGpQbU96TjdiUTdyRzdNUngzSVQ2SW4zVFI4RApHbFAxVE54TTg5cXZRcXp4VERsdER3bXluTlV1SEdEUW4yV1Z1OFEyK0RqRnFoc3B1WHp0NnhVK2RoVVBxUnV1Ckt6c1l4TDNpMVlWZ2pDQWtBUmp4SGhMWHYwdkFUWUVRMlJ6Uko5c2ZGcWVCMHVxSk5WL0lHamJFSzQ2eTQ5QU0KNzU4TUY4T0R6cVR2Q3hMRjJYd3BScjdjSDFuZ2J4eUJ6cEdlbkpsVTI2Q2hJT1BMZUV1NTUyUVJYVGwrU2JlQQpXUzNpS01Pb3F5NGV0b0ExNWFueW43Zm01YnpINEcyZ3Yxd1pWYlBkT1dNQWRZU2I5NDIvR09CSWUzSnIyVHo3CjRJdDRROWFERnF1aG9iOTVQMUhHQkxSQ2Y5QT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQzc3aHZBUEFlRlJucS8KdHBHVmRKTmVjYWFqSzZrUXlDalk1ci9wWHhOQmE5dldWUUhVbkNXVk95bHBFZGg2T2ZZbUdnb0phdE1UVFlBWAorVml2TFM5WHBIOG5QQ1lhWm9CZGkyUDQxZGtuazJSekZabWwvWFI1SFp0RFpqZURPM3d2Qkpvbm0rTXhQN0JrCjVMZ2U5aEZIUndqRWJMY1k3dys3enE4QkRBeUlIdjdPSjNhN3g5L2pYMlJaRnU3TzVyNXlmRVE2RnNLY3pURG8Kb0N4ZFVrTklndHBWQ29ETEt2Ykw2MW5kTnVsZTMvbURtL3YyU3lUSHVkMVM1ZHFzcDhrSmR1OFhVUmZjMllFbApGS1d2QnRuamgvanJMTVhGY2FoVi9veEpyQ0h1dC9QQ0xiQlRBalRldVNEYXVTN09IYkpSREt3bUg3b1Z2eUlDCmFJeWFZY1pOQWdNQkFBRUNnZ0VBSG1McVd4NHZCbk9ybHFLMGVNLzM5c1lLOEVpTTlra0c5eHRJWGVSTGxCWnIKM2dTeUNSTStXRzk2ZGZkaFkxSDFPa1ZDUGpJOFNEQzRkMzA2Ymw0Ris2RW93TXFrUytjcTlrcDYzYTg3aE5TbQpOMGdxSnl3TGV5YzRXdll2ZFA2c25scnd6MXE3Vk5QbXpQUXJ6b1hIQVc2N2tpeHA1cFF3OG1oVzVQcHlidkp5Clo2TERCZGRSZkVma2ZXVnZUUk5YWUVDUEllUStST05jR3JvVzZ5RXRrbk1BWUJjdjRlNUhCQkkrcHdyYmsrOVMKY2FQYUVjdm4vS0lyT3NpVW1FT2wwb3JXVnhkbjRmMy9MNmlFZFgyZHhIdXlwYkFiL0Qwak1MSzBwb3kyaXYyTApyOGI5VUQrRVZFNmFTVnp0MFRHbVpJYUdRVVZDQnVDTDhodlYwSU9PV1FLQmdRRGplL3JXdmk4Rndia3BRNDA0CnFQcitBaEFwaG1pV3l1a1B1VmJLN2Q5ZkdURzRHOW9Bd2wzYlFoRGVUNHhjMzd0cjlkcCtpamJuWnpKWHczL1cKcm5xTDlGWkZsVXZCYXN6c05VK1lRNmJVOE9zTXl6cURSdGJaaytVWEowUEx6QzZKWHFkNTFZdVVDM3NwL2lmNwpqWEZrME55aHcrdkY3VU51N0ZFSzVuWEUwd0tCZ1FEVGZOT0RLYmZyalNkZEhkV05iOHhkN2pGMlZSY3hTTnRUCit0L0FmbkRjZG8zK1NBUnJaRi9TM0hZWUxxL0l4dmZ5ZHdIblUxdC9INkxDZjBnQ2RXS2NXL1hway93ZUo1QXYKWmdaZjBPTXZsOXF0THJhTU44OG1HblV4K2IxdHZLWm4xQVcySFNuYXd2Z0kvMWVjSldNRUJiYkREbkx4cUpMegowTHJhT2pYVVh3S0JnRGlBbE44OXdjUTJSOTFkNy9mQTBRYkNVRzFmK3g1cEs5WkIvTExPdm9xS1lYVVBSZWltClhsV1ZaVWN5anZTS2hhemRGZllVTW1ycmtPK0htWHNqUDBELzRXWExIVlBmU1NMcVl1aTQ5UGt6RmM3SnM3RGoKcVgzRlpFT0o5eWJwZ2kyUW14eUIwL2RqbXFYbGdOelVWdlBwaE1PUlBFQ2ZHLzZ6SjdZRFpBRU5Bb0dBSElVcQo2UGRKVEVTKzJEbmJ3TFVnOUZIWTdjSlAzRitjNUZoaXNFemMzMzVGYTlNK2RWVVY3eE80QVU3YWVkTUxRUEYzCm1rQ05pRGsxODlEQ1gwS0JSK0RHNnZiLyt2a080clY1aXBaYTdPSW5wVTgxWXZkcndoR3pXRWY3bWI3bEdmOW4KdmNWMURZRlpmYTBoblhjVlFVZWIrL1lJM2pvRGgwblF5UGtzcFRVQ2dZRUF0NERNajdZbStRS2J2bTJXaWNlcAo1Q2s3YWFMSUxuVHZqbGRLMkdjM2loOGVGRlE2Vy9pcUc1UUEzeHMwem8xVnhlUkhPWGkrK01xWjVWTVZMZFRWCjMxWXZOeUdPbVByTitZemVINmlTYXd5VXo2dW1UN1ZkMXRuUEJ1SmdPMFM3RnRlb01BckE3TGtDcUVhMDc4bS8KRXNxNzZjYW1WdW5kRXFTRWhGMllYNkU9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K

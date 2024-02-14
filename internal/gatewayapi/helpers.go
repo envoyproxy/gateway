@@ -26,6 +26,8 @@ const (
 
 	L4Protocol = "L4"
 	L7Protocol = "L7"
+
+	caCertKey = "ca.crt"
 )
 
 type protocolPort struct {
@@ -389,7 +391,11 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
 }
 
 func irTLSListenerConfigName(secret *v1.Secret) string {
-	return fmt.Sprintf("%s-%s", secret.Namespace, secret.Name)
+	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+}
+
+func irTLSCACertName(namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
 func isMergeGatewaysEnabled(resources *Resources) bool {

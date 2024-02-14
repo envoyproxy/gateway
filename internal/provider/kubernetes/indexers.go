@@ -35,6 +35,8 @@ const (
 	backendUDPRouteIndex       = "backendUDPRouteIndex"
 	secretSecurityPolicyIndex  = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex = "backendSecurityPolicyIndex"
+	configMapCtpIndex          = "configMapCtpIndex"
+	secretCtpIndex             = "secretCtpIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -424,4 +426,58 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 
 	// This should not happen because the CEL validation should catch it.
 	return []string{}
+}
+
+// addCtpIndexers adds indexing on ClientTrafficPolicy, for ConfigMap or Secret objects that are
+// referenced in ClientTrafficPolicy objects. This helps in querying for ClientTrafficPolicies that are
+// affected by a particular ConfigMap or Secret CRUD.
+func addCtpIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.ClientTrafficPolicy{}, configMapCtpIndex, configMapCtpIndexFunc); err != nil {
+		return err
+	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.ClientTrafficPolicy{}, secretCtpIndex, secretCtpIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configMapCtpIndexFunc(rawObj client.Object) []string {
+	ctp := rawObj.(*v1alpha1.ClientTrafficPolicy)
+	var configMapReferences []string
+	if ctp.Spec.TLS != nil && ctp.Spec.TLS.ClientValidation != nil {
+		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
+			if caCertRef.Kind != nil && string(*caCertRef.Kind) == gatewayapi.KindConfigMap {
+				// If an explicit configmap namespace is not provided, use the ctp namespace to
+				// lookup the provided config map Name.
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(caCertRef.Namespace, ctp.Namespace),
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
+}
+
+func secretCtpIndexFunc(rawObj client.Object) []string {
+	ctp := rawObj.(*v1alpha1.ClientTrafficPolicy)
+	var secretReferences []string
+	if ctp.Spec.TLS != nil && ctp.Spec.TLS.ClientValidation != nil {
+		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
+			if caCertRef.Kind == nil || (string(*caCertRef.Kind) == gatewayapi.KindSecret) {
+				// If an explicit namespace is not provided, use the ctp namespace to
+				// lookup the provided secrent Name.
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(caCertRef.Namespace, ctp.Namespace),
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
 }

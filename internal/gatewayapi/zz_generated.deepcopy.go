@@ -160,6 +160,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.ConfigMaps != nil {
+		in, out := &in.ConfigMaps, &out.ConfigMaps
+		*out = make([]*corev1.ConfigMap, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(corev1.ConfigMap)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.EnvoyProxy != nil {
 		in, out := &in.EnvoyProxy, &out.EnvoyProxy
 		*out = new(apiv1alpha1.EnvoyProxy)
