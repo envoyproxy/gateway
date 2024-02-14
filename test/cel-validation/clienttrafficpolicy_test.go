@@ -15,12 +15,11 @@ import (
 	"testing"
 	"time"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestClientTrafficPolicyTarget(t *testing.T) {
@@ -257,6 +256,27 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec.tls: Invalid value: \"object\": setting ciphers has no effect if the minimum possible TLS version is 1.3",
 			},
+		},
+		{
+			desc: "valid timeout",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				d := gwapiv1.Duration("300s")
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					Timeout: &egv1a1.ClientTimeout{
+						HTTP: &egv1a1.HTTPClientTimeout{
+							RequestProcessTimeout: &d,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 	}
 
