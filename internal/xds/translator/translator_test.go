@@ -95,6 +95,10 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "mutual-tls",
+			requireSecrets: true,
+		},
+		{
 			name:           "http3",
 			requireSecrets: true,
 		},
@@ -262,6 +266,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "http10",
+		},
+		{
+			name: "upstream-tcpkeepalive",
 		},
 	}
 
