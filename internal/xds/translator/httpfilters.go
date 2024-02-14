@@ -12,6 +12,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -170,7 +171,8 @@ func (t *Translator) patchHCMWithFilters(
 	t.patchHCMWithRateLimit(mgr, irListener)
 
 	// Add the router filter
-	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(irListener.SuppressEnvoyHeaders))
+	headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
+	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)

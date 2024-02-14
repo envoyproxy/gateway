@@ -42,6 +42,13 @@ func newTestInfraWithAnnotations(annotations map[string]string) *ir.Infra {
 	return newTestInfraWithAnnotationsAndLabels(annotations, nil)
 }
 
+func newTestInfraWithAddresses(addresses []string) *ir.Infra {
+	infra := newTestInfraWithAnnotationsAndLabels(nil, nil)
+	infra.Proxy.Addresses = addresses
+
+	return infra
+}
+
 func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string) *ir.Infra {
 	i := ir.NewInfra()
 
@@ -546,6 +553,15 @@ func TestService(t *testing.T) {
 				Annotations: map[string]string{
 					"anno1": "value1-override",
 				},
+			},
+		},
+		{
+			caseName: "clusterIP-custom-addresses",
+			infra: newTestInfraWithAddresses([]string{
+				"10.102.168.100",
+			}),
+			service: &egv1a1.KubernetesServiceSpec{
+				Type: &svcType,
 			},
 		},
 	}
