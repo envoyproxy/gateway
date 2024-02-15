@@ -50,7 +50,7 @@ type ClientTimeout struct {
 }
 
 type HTTPClientTimeout struct {
-	// This timeout defines the duration envoy waits for the complete request reception. This timer starts upon request
+	// The duration envoy waits for the complete request reception. This timer starts upon request
 	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
 	//
 	// +optional
