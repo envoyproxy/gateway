@@ -1155,7 +1155,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `requestProcessTimeout` | _[Duration](#duration)_ |  false  | The timeout for processing the client request. Starting upon request initiation and ending when the last byte is sent to backend. Default: 300 seconds. |
+| `requestRecievedTimeout` | _[Duration](#duration)_ |  false  | This timeout defines the duration envoy waits for the complete request reception. This timer starts upon request initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
 
 
 #### HTTPExtAuthService

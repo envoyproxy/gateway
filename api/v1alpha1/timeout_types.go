@@ -50,9 +50,9 @@ type ClientTimeout struct {
 }
 
 type HTTPClientTimeout struct {
-	// The timeout for processing the client request. Starting upon request initiation and ending when the last byte is sent to backend.
-	// Default: 300 seconds.
+	// This timeout defines the duration envoy waits for the complete request reception. This timer starts upon request
+	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
 	//
 	// +optional
-	RequestProcessTimeout *gwapiv1.Duration `json:"requestProcessTimeout,omitempty"`
+	RequestRecievedTimeout *gwapiv1.Duration `json:"requestRecievedTimeout,omitempty"`
 }
