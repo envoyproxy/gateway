@@ -156,6 +156,35 @@ var BasicAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
+
+		// https://github.com/envoyproxy/gateway/issues/2507
+		t.Run("request without matching routes ", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/not-matching-route",
+				},
+				Response: http.Response{
+					StatusCode: 404,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+
+			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+		})
 	},
 }
 
