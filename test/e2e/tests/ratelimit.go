@@ -64,12 +64,12 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 			// keep sending requests till get 200 first, that will cost one 200
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 
-			// fire the rest request
+			// fire the rest of requests
 			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("fail to get expected response at first three request: %v", err)
+				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("fail to get expected response at last fourth request: %v", err)
+				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
 		})
 	},
@@ -94,7 +94,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			ratelimitHeader := make(map[string]string)
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path:    "/",
+					Path:    "/get",
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
@@ -108,7 +108,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 
 			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path:    "/",
+					Path:    "/get",
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
@@ -118,17 +118,17 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			}
 			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
 
-			// should just send exactly 4 requests, and expect 429
+			// send exactly 4 requests, and expect 429
 
 			// keep sending requests till get 200 first, that will cost one 200
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 
-			// fire the rest request
+			// fire the rest of the requests
 			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("fail to get expected response at first three request: %v", err)
+				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("fail to get expected response at last fourth request: %v", err)
+				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
 		})
 
@@ -140,7 +140,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			ratelimitHeader := make(map[string]string)
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path:    "/",
+					Path:    "/get",
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
@@ -157,9 +157,9 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			// keep sending requests till get 200 first, that will cost one 200
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 
-			// fire the rest request
+			// fire the rest of the requests
 			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("fail to get expected response: %v", err)
+				t.Errorf("failed to get expected responses for the request: %v", err)
 			}
 		})
 	},
@@ -255,7 +255,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			// keep sending requests till get 200 first, that will cost one 200
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, JwtOkResp)
 
-			// fire the rest request
+			// fire the rest of requests
 			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, JwtReq, JwtOkResp); err != nil {
 				t.Errorf("failed to get expected response at third request: %v", err)
 			}
