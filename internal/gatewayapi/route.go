@@ -180,6 +180,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					"UnsupportedRefValue",
 					"The filters field within BackendRef is not supported",
 				)
+				continue
 			}
 
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
@@ -484,6 +485,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					"UnsupportedRefValue",
 					"The filters field within BackendRef is not supported",
 				)
+				continue
 			}
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
