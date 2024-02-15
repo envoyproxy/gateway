@@ -238,7 +238,7 @@ func addCatchAllRoute(xdsIR map[string]*ir.Xds) {
 						*r.PathMatch.Prefix == "/") &&
 						len(r.HeaderMatches) == 0 &&
 						len(r.QueryParamMatches) == 0 {
-						needCatchAllRoutePerHost[host] = false
+						delete(needCatchAllRoutePerHost, host)
 					}
 				}
 			}

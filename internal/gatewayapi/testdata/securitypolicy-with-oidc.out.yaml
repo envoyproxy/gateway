@@ -279,7 +279,7 @@ xdsIR:
         directResponse:
           statusCode: 404
         hostname: www.example.com
-        name: www_example_com/catch_all
+        name: www_example_com/catch-all-return-404
         pathMatch:
           distinct: false
           name: ""
