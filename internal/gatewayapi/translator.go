@@ -247,7 +247,7 @@ func addCatchAllRoute(xdsIR map[string]*ir.Xds) {
 				if needCatchAllRoute {
 					underscoredHost := strings.ReplaceAll(host, ".", "_")
 					http.Routes = append(http.Routes, &ir.HTTPRoute{
-						Name: fmt.Sprintf("%s/catch_all", underscoredHost),
+						Name: fmt.Sprintf("%s/catch-all-return-404", underscoredHost),
 						PathMatch: &ir.StringMatch{
 							Prefix: ptr.To("/"),
 						},
