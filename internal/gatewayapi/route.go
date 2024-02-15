@@ -1433,8 +1433,11 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 		if kind, ok := caRefMap[secret.Name]; ok && kind == secret.Kind {
 			if tls, tlsOk := secret.Data["tls.crt"]; tlsOk {
 				if key, keyOk := secret.Data["tls.key"]; keyOk {
-					tlsBundle.CertificateByte = tls
-					tlsBundle.PrivateKeyByte = key
+					tlsBundle.TLSCert = &ir.TLSCertificate{
+						Name:              "",
+						ServerCertificate: tls,
+						PrivateKey:        key,
+					}
 				} else {
 					return fmt.Errorf("no tls key found in secret %s", secret.Name), nil
 				}
@@ -1450,9 +1453,12 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 		return fmt.Errorf("no ca found in referred configmaps"), nil
 	}
 
-	tlsBundle.CaCertificate = []byte(ca)
+	tlsBundle.CACert.Certificate = []byte(ca)
 
-	tlsBundle.Name = fmt.Sprintf("%s/%s", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
+	if tlsBundle.TLSCert != nil {
+		tlsBundle.TLSCert.Name = fmt.Sprintf("%s/%s-tls", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
+	}
+	tlsBundle.CACert.Name = fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
 
 	tlsBundle.Hostname = string(backendTLSPolicy.Spec.TLS.Hostname)
 

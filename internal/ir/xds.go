@@ -12,18 +12,14 @@ import (
 	"net/netip"
 	"reflect"
 
-	"fmt"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/yaml"
-	"strings"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
-	k8sValidate "k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (
@@ -1742,36 +1738,34 @@ type BackOffPolicy struct {
 // TLSBundle contains tls certificate, private key and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSBundle struct {
-	Name            string
-	Hostname        string
-	CertificateByte []byte
-	PrivateKeyByte  []byte
-	CaCertificate   []byte
+	Hostname string
+	CACert   TLSCACertificate
+	TLSCert  *TLSCertificate
 }
 
-func (b TLSBundle) GetXdsCertSecretName() string {
-	return NameWithSuffix(b.Name, "tls")
-}
+//func (b TLSBundle) GetXdsCertSecretName() string {
+//	return NameWithSuffix(b.TLSCertificate.Name, "tls")
+//}
 
-func (b TLSBundle) GetXdsCaSecretName() string {
-	return NameWithSuffix(b.Name, "ca")
-}
+//func (b TLSBundle) GetXdsCaSecretName() string {
+//	return NameWithSuffix(b.TLSCACertificate.Name, "ca")
+//}
 
 func (b TLSBundle) Mtls() bool {
-	if b.CertificateByte != nil && b.PrivateKeyByte != nil {
+	if b.TLSCert != nil && b.TLSCert.ServerCertificate != nil && b.TLSCert.PrivateKey != nil {
 		return true
 	}
 	return false
 }
 
-func NameWithSuffix(name, suffix string, customLength ...int) string {
-	maxLength := k8sValidate.DNS1123LabelMaxLength
-	if len(customLength) != 0 {
-		maxLength = customLength[0]
-	}
-	if len(suffix) >= maxLength {
-		return strings.Trim(suffix[max(0, len(suffix)-maxLength):], "-")
-	}
-	out := fmt.Sprintf("%s-%s", name[:min(len(name), maxLength-len(suffix)-1)], suffix)
-	return strings.Trim(out, "-")
-}
+//func NameWithSuffix(name, suffix string, customLength ...int) string {
+//	maxLength := k8sValidate.DNS1123LabelMaxLength
+//	if len(customLength) != 0 {
+//		maxLength = customLength[0]
+//	}
+//	if len(suffix) >= maxLength {
+//		return strings.Trim(suffix[max(0, len(suffix)-maxLength):], "-")
+//	}
+//	out := fmt.Sprintf("%s-%s", name[:min(len(name), maxLength-len(suffix)-1)], suffix)
+//	return strings.Trim(out, "-")
+//}

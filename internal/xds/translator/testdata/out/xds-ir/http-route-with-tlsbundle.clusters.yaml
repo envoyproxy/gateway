@@ -15,7 +15,6 @@
     name: envoy.transport_sockets.tls
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      allowRenegotiation: true
       commonTlsContext:
         validationContextSdsSecretConfig:
           name: policy-btls/policies-ca
