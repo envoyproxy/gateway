@@ -137,7 +137,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				"x-user-id": "one",
 			}
 
-			ratelimitHeader := make(map[string]string)
+			// it does not require any rate limit header, since this request never be rate limited.
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path:    "/get",
@@ -145,11 +145,9 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCode: 200,
-					Headers:    ratelimitHeader,
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			// send exactly 4 requests, and still expect 200
