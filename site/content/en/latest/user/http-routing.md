@@ -76,6 +76,10 @@ The `example-route` matches any traffic for "example.com" and forwards it to the
 
 Before testing HTTP routing to the `example-svc` backend, get the Gateway's address.
 
+> Note: Envoy Gateway supports both IPV4 and FQDN-based EndPointSlice address types.
+> In Envoy Gateway, instead of a backend deployment, you can use a public fqdn for your EndPointSlice.
+> To learn more EndPointSlice Support infos, refer to the [EndPointSlice FQDN documentation][].
+
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}')
 ```
@@ -135,3 +139,4 @@ traffic was routed to the foo backend service.
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
 [spec]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteSpec
+[EndPointSlice FQDN documentation]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/#address-types
