@@ -118,7 +118,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			}
 			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
 
-			// send exactly 4 requests, and expect 429
+			// should just send exactly 4 requests, and expect 429
 
 			// keep sending requests till get 200 first, that will cost one 200
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
@@ -152,7 +152,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
-			// should just send exactly 4 requests, and still expect 200
+			// send exactly 4 requests, and still expect 200
 
 			// keep sending requests till get 200 first, that will cost one 200
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
