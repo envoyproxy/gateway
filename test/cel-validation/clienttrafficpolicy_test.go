@@ -271,7 +271,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					Timeout: &egv1a1.ClientTimeout{
 						HTTP: &egv1a1.HTTPClientTimeout{
-							RequestProcessTimeout: &d,
+							RequestRecievedTimeout: &d,
 						},
 					},
 				}
