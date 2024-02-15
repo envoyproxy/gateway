@@ -173,6 +173,15 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
+			if len(backendRef.Filters) > 0 {
+				parentRef.SetCondition(httpRoute,
+					gwapiv1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					"UnsupportedRefValue",
+					"The filters field within BackendRef is not supported",
+				)
+			}
+
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
 			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
@@ -468,6 +477,14 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		for _, backendRef := range rule.BackendRefs {
+			if len(backendRef.Filters) > 0 {
+				parentRef.SetCondition(grpcRoute,
+					gwapiv1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					"UnsupportedRefValue",
+					"The filters field within BackendRef is not supported",
+				)
+			}
 			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
