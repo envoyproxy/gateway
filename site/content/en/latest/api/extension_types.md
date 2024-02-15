@@ -1,7 +1,4 @@
-+++
-title = "API Reference"
-+++
-
+# API Reference
 
 ## Packages
 - [gateway.envoyproxy.io/v1alpha1](#gatewayenvoyproxyiov1alpha1)
@@ -1155,7 +1152,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `requestRecievedTimeout` | _[Duration](#duration)_ |  false  | The duration envoy waits for the complete request reception. This timer starts upon request initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
+| `requestReceivedTimeout` | _[Duration](#duration)_ |  false  | The duration envoy waits for the complete request reception. This timer starts upon request initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
 
 
 #### HTTPExtAuthService

@@ -54,5 +54,5 @@ type HTTPClientTimeout struct {
 	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
 	//
 	// +optional
-	RequestRecievedTimeout *gwapiv1.Duration `json:"requestRecievedTimeout,omitempty"`
+	RequestReceivedTimeout *gwapiv1.Duration `json:"requestReceivedTimeout,omitempty"`
 }
