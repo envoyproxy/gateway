@@ -88,6 +88,7 @@ type ClaimToHeader struct {
 
 	// UseForRouting must be enabled if this header generated from the claim should be used for
 	// route matching decisions
+	// +optional
 	UseForRouting *bool `json:"useForRouting,omitempty"`
 }
 

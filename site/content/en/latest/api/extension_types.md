@@ -245,7 +245,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `header` | _string_ |  true  | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type (eg. "claim.nested.key", "sub"). The nested claim name must use dot "." to separate the JSON name path. |
-| `useForRouting` | _boolean_ |  true  | UseForRouting must be enabled if this header generated from the claim should be used for route matching decisions |
+| `useForRouting` | _boolean_ |  false  | UseForRouting must be enabled if this header generated from the claim should be used for route matching decisions |
 
 
 #### ClientIPDetectionSettings
