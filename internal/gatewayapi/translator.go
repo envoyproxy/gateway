@@ -6,8 +6,12 @@
 package gatewayapi
 
 import (
+	"fmt"
+	"strings"
+
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -203,10 +207,59 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
+	// Add a catch-all route for each HTTP listener if needed
+	addCatchAllRoute(xdsIR)
+
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, xdsIR, infraIR)
 
+}
+
+// For filters without native per-route support, we need to add a catch-all route
+// to ensure that these filters are disabled for non-matching requests.
+// https://github.com/envoyproxy/gateway/issues/2507
+func addCatchAllRoute(xdsIR map[string]*ir.Xds) {
+	for _, i := range xdsIR {
+		for _, http := range i.HTTP {
+			var needCatchAllRoutePerHost = make(map[string]bool)
+			for _, r := range http.Routes {
+				if r.ExtAuth != nil || r.BasicAuth != nil || r.OIDC != nil {
+					needCatchAllRoutePerHost[r.Hostname] = true
+				}
+			}
+
+			// skip if there is already a catch-all route
+			for host := range needCatchAllRoutePerHost {
+				for _, r := range http.Routes {
+					if (r.Hostname == host &&
+						r.PathMatch != nil &&
+						r.PathMatch.Prefix != nil &&
+						*r.PathMatch.Prefix == "/") &&
+						len(r.HeaderMatches) == 0 &&
+						len(r.QueryParamMatches) == 0 {
+						delete(needCatchAllRoutePerHost, host)
+					}
+				}
+			}
+
+			for host, needCatchAllRoute := range needCatchAllRoutePerHost {
+				if needCatchAllRoute {
+					underscoredHost := strings.ReplaceAll(host, ".", "_")
+					http.Routes = append(http.Routes, &ir.HTTPRoute{
+						Name: fmt.Sprintf("%s/catch-all-return-404", underscoredHost),
+						PathMatch: &ir.StringMatch{
+							Prefix: ptr.To("/"),
+						},
+						DirectResponse: &ir.DirectResponse{
+							StatusCode: 404,
+						},
+						Hostname: host,
+					})
+				}
+			}
+		}
+	}
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
