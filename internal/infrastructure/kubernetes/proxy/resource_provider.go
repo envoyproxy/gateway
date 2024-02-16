@@ -241,7 +241,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
 					AutomountServiceAccountToken:  ptr.To(false),
-					TerminationGracePeriodSeconds: ptr.To[int64](300),
+					TerminationGracePeriodSeconds: ptr.To[int64](900),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",

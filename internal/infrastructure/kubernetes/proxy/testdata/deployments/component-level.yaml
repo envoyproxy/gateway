@@ -53,6 +53,51 @@ spec:
                   fieldPath: metadata.name
           image: envoyproxy/envoy-dev:latest
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/bash
+                  - -c
+                  - |-
+                    function :: {
+                      echo "[$(date -u '+%Y-%m-%d %H:%M:%S.%3N')][$$][info][PreStop] $@"
+                    }
+                    function total_connections {
+                      exec 3<>/dev/tcp/127.0.0.1/19000
+                      echo -e "GET /stats?filter=^server\.total_connections$&format=text HTTP/1.1\nHost: 127.0.0.1\nConnection: close\n" >&3
+                      cat <&3 | grep '^server\.total_connections:' | awk '{print $2}'
+                    }
+                    {
+                      PID=$(pidof envoy)
+                      START_SECONDS=$(date +%s)
+                      DRAIN_TIMEOUT=600
+                      MIN_DRAIN_PERIOD=15
+                      ALLOWED_TO_EXIT=0
+
+                      :: "initiating graceful drain with $MIN_DRAIN_PERIOD second minimum drain period and $DRAIN_TIMEOUT second timeout"
+                      echo -e "POST /drain_listeners?graceful&skip_exit HTTP/1.1\nHost: 127.0.0.1\nConnection: close\n" >/dev/tcp/127.0.0.1/19000
+
+                      while ps -p "$PID" >/dev/null; do
+                        ELAPSED_SECONDS=$(($(date +%s) - $START_SECONDS))
+                        TOTAL_CONNECTIONS=$(total_connections)
+                        :: "total connections: $TOTAL_CONNECTIONS"
+
+                        if [[ $ELAPSED_SECONDS -gt $MIN_DRAIN_PERIOD ]] && [[ $ALLOWED_TO_EXIT -eq 0 ]]; then
+                          :: "minimum drain period reached; allowed to exit when total connections reaches zero"
+                          ALLOWED_TO_EXIT=1
+                        fi
+
+                        if [[ $ELAPSED_SECONDS -gt $DRAIN_TIMEOUT ]]; then
+                          :: "graceful drain sequence timeout exceeded"
+                          exit
+                        elif [[ $ALLOWED_TO_EXIT -eq 1 ]] && [[ $TOTAL_CONNECTIONS -eq 0 ]]; then
+                          exit
+                        else
+                          sleep 1
+                        fi
+                      done
+                    } 1>/proc/1/fd/1 2>/proc/1/fd/2
           name: envoy
           ports:
             - containerPort: 8080
@@ -86,7 +131,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 300
+      terminationGracePeriodSeconds: 900
       volumes:
         - name: certs
           secret:
