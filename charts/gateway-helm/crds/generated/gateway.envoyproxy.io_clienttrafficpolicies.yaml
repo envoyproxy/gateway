@@ -48,6 +48,29 @@ spec:
                 description: ClientIPDetectionSettings provides configuration for
                   determining the original client IP address for requests.
                 properties:
+                  customHeader:
+                    description: CustomHeader provides configuration for determining
+                      the client IP address for a request based on a trusted custom
+                      HTTP header. This uses the the custom_header original IP detection
+                      extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+                      for more details.
+                    properties:
+                      failClosed:
+                        description: FailClosed is a switch used to control the flow
+                          of traffic when client IP detection fails. If set to true,
+                          the listener will respond with 403 Forbidden when the client
+                          IP address cannot be determined.
+                        type: boolean
+                      name:
+                        description: Name of the header containing the original downstream
+                          remote address, if present.
+                        maxLength: 255
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9-]+$
+                        type: string
+                    required:
+                    - name
+                    type: object
                   xForwardedFor:
                     description: XForwardedForSettings provides configuration for
                       using X-Forwarded-For headers for determining the client IP
@@ -63,6 +86,9 @@ spec:
                         type: integer
                     type: object
                 type: object
+                x-kubernetes-validations:
+                - message: customHeader cannot be used in conjunction with xForwardedFor
+                  rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header
                   and adds the Client Address into the X-Forwarded-For header. Note

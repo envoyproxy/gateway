@@ -178,6 +178,31 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "clientIPDetection xForwardedFor and customHeader set",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
+						XForwardedFor: &egv1a1.XForwardedForSettings{
+							NumTrustedHops: ptr.To(uint32(1)),
+						},
+						CustomHeader: &egv1a1.CustomHeaderExtensionSettings{
+							Name: "x-client-ip-address",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.clientIPDetection: Invalid value: \"object\": customHeader cannot be used in conjunction with xForwardedFor",
+			},
+		},
+		{
 			desc: "http3 enabled and ALPN protocols set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{

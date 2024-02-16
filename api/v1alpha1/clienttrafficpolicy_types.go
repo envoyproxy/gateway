@@ -99,11 +99,20 @@ type HeaderSettings struct {
 }
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction with xForwardedFor"
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
 	// +optional
 	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
+	// CustomHeader provides configuration for determining the client IP address for a request based on
+	// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+	// for more details.
+	//
+	// +optional
+	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
 }
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
@@ -115,6 +124,26 @@ type XForwardedForSettings struct {
 	//
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
+}
+
+// CustomHeader provides configuration for determining the client IP address for a request based on
+// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+// for more details.
+type CustomHeaderExtensionSettings struct {
+	// Name of the header containing the original downstream remote address, if present.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern="^[A-Za-z0-9-]+$"
+	//
+	Name string `json:"name"`
+	// FailClosed is a switch used to control the flow of traffic when client IP detection
+	// fails. If set to true, the listener will respond with 403 Forbidden when the client
+	// IP address cannot be determined.
+	//
+	// +optional
+	FailClosed *bool `json:"failClosed,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
