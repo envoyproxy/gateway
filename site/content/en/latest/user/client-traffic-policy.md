@@ -332,7 +332,7 @@ Curl the admin interface port to fetch the configured value for `xff_num_trusted
 ```shell
 curl -s 'http://localhost:19000/config_dump?resource=dynamic_listeners' \
   | jq -r '.configs[0].active_state.listener.default_filter_chain.filters[0].typed_config 
-      | with_entries(select(.key | match("xff|remote_address")))'
+      | with_entries(select(.key | match("xff|remote_address|original_ip")))'
 ```
 
 You should expect to see the following:
