@@ -83,7 +83,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		PermitWithoutStream: true,
 	}))
 
-	r.cache = cache.NewSnapshotCache(false, r.Logger)
+	r.cache = cache.NewSnapshotCache(true, r.Logger)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.

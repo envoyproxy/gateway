@@ -6,7 +6,8 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
-    suppressEnvoyHeaders: true
+    http1:
+      http10: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -19,6 +20,52 @@ clientTrafficPolicies:
       message: ClientTrafficPolicy has been accepted.
       reason: Accepted
       status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-1-section-http-2
+    namespace: envoy-gateway
+  spec:
+    http1:
+      http10:
+        useDefaultHost: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-2
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: ClientTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-1-section-http-3
+    namespace: envoy-gateway
+  spec:
+    http1:
+      http10:
+        useDefaultHost: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-3
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Can't set http10 default host on listener with only wildcard hostnames
+      reason: Invalid
+      status: "False"
       type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -39,8 +86,15 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: Same
+      hostname: www.example.com
       name: http-2
       port: 8080
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-3
+      port: 8081
       protocol: HTTP
   status:
     listeners:
@@ -85,6 +139,29 @@ gateways:
         status: "True"
         type: ResolvedRefs
       name: http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-3
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -108,6 +185,13 @@ infraIR:
           name: http-2
           protocol: HTTP
           servicePort: 8080
+      - address: null
+        name: envoy-gateway/gateway-1/http-3
+        ports:
+        - containerPort: 8081
+          name: http-3
+          protocol: HTTP
+          servicePort: 8081
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -122,19 +206,33 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
+      http1:
+        http10: {}
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      suppressEnvoyHeaders: true
     - address: 0.0.0.0
       hostnames:
-      - '*'
+      - www.example.com
+      http1:
+        http10:
+          defaultHost: www.example.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8080
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      http1: {}
+      isHTTP2: false
+      name: envoy-gateway/gateway-1/http-3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081

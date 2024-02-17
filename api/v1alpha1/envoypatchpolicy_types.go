@@ -117,8 +117,10 @@ type JSONPatchOperation struct {
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	// +optional
 	From *string `json:"from,omitempty"`
-	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value"`
+	// Value is the new value of the path location. The value is only used by
+	// the `add` and `replace` operations.
+	// +optional
+	Value *apiextensionsv1.JSON `json:"value,omitempty"`
 }
 
 // EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy

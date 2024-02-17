@@ -68,7 +68,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Kind is invalid, only Service and MCS ServiceImport is supported
+        message: Kind is invalid, only Service and MCS ServiceImport are supported
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs

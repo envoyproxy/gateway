@@ -36,7 +36,7 @@
                   cacheDuration: 300s
                   httpUri:
                     cluster: localhost_443
-                    timeout: 5s
+                    timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
             requirementMap:
@@ -45,6 +45,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -53,6 +54,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket

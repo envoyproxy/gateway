@@ -741,4 +741,57 @@ xds:
     '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
 ```
 
+## egctl experimental status
+
+This subcommand allows users to show the summary of the status of specific resource type, in order to quickly find
+out the status of any resources.
+
+By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only
+display the latest condition, or add `--verbose` to display more details about current status.
+
+Some examples of this command after installing [Multi-tenancy][] example manifest:
+
+- Show the summary of GatewayClass.
+
+```console
+~ egctl x status gatewayclass
+
+NAME           TYPE       STATUS    REASON
+eg-marketing   Accepted   True      Accepted
+eg-product     Accepted   True      Accepted
+```
+
+- Show the summary of all the Gateways with details under all namespace.
+
+```console
+~ egctl x status gateway --verbose --all-namespaces
+
+NAMESPACE   NAME      TYPE         STATUS    REASON       MESSAGE                                                                    OBSERVED GENERATION   LAST TRANSITION TIME
+marketing   eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
+                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:50:39 +0800 CST
+product     eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
+                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:52:42 +0800 CST
+```
+
+- Show the summary of latest Gateways condition under `product` namespace.
+
+```console
+~ egctl x status gateway --quiet -n product
+
+NAME      TYPE         STATUS    REASON
+eg        Programmed   True      Programmed
+```
+
+- Show the summary of latest HTTPRoutes condition under all namespace.
+
+```console
+~ egctl x status httproute --quiet --all-namespaces
+
+NAMESPACE   NAME      TYPE           STATUS    REASON
+marketing   backend   ResolvedRefs   True      ResolvedRefs
+product     backend   ResolvedRefs   True      ResolvedRefs
+```
+
+
+[Multi-tenancy]: ../deployment-mode#multi-tenancy
 [EnvoyProxy]: ../../api/extension_types#envoyproxy

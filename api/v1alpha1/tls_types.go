@@ -6,7 +6,7 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
@@ -115,7 +115,7 @@ type ClientValidationContext struct {
 	// the Certificate Authorities that can be used
 	// as a trust anchor to validate the certificates presented by the client.
 	//
-	// A single reference to a Kubernetes ConfigMap,
+	// A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,
 	// with the CA certificate in a key named `ca.crt` is currently supported.
 	//
 	// References to a resource in different namespace are invalid UNLESS there
@@ -124,5 +124,5 @@ type ClientValidationContext struct {
 	//
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
-	CACertificateRefs []corev1.ObjectReference `json:"caCertificateRefs,omitempty"`
+	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }

@@ -79,11 +79,11 @@ spec:
                           type: string
                         value:
                           description: Value is the new value of the path location.
+                            The value is only used by the `add` and `replace` operations.
                           x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
                       - path
-                      - value
                       type: object
                     type:
                       description: Type is the typed URL of the Envoy xDS Resource

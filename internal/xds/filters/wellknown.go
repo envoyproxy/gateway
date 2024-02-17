@@ -36,12 +36,12 @@ var (
 	}
 )
 
-func GenerateRouterFilter(suppressEnvoyHeaders bool) *hcm.HttpFilter {
+func GenerateRouterFilter(enableEnvoyHeaders bool) *hcm.HttpFilter {
 	return &hcm.HttpFilter{
 		Name: wellknown.Router,
 		ConfigType: &hcm.HttpFilter_TypedConfig{
 			TypedConfig: protocov.ToAny(&httprouter.Router{
-				SuppressEnvoyHeaders: suppressEnvoyHeaders,
+				SuppressEnvoyHeaders: !enableEnvoyHeaders,
 			}),
 		},
 	}

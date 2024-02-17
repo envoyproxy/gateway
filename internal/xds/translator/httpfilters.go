@@ -12,6 +12,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -44,7 +45,7 @@ func registerHTTPFilter(filter httpFilter) {
 //   - PatchRouteWithPerRouteConfig: EG enables the corresponding filter for each
 //     route in the typedFilterConfig of that route.
 //
-// The filter types that haven't native per-route support: oauth2, basic authn
+// The filter types that haven't native per-route support: oauth2, basic authn, ext_authz.
 // Note: The filter types that have native per-route configuration support should
 // always se their own native per-route configuration.
 type httpFilter interface {
@@ -91,18 +92,20 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	switch {
 	case filter.Name == wellknown.CORS:
 		order = 1
-	case filter.Name == basicAuthFilter:
+	case isFilterType(filter, extAuthFilter):
 		order = 2
-	case isOAuth2Filter(filter):
+	case isFilterType(filter, basicAuthFilter):
 		order = 3
-	case filter.Name == jwtAuthn:
+	case isFilterType(filter, oauth2Filter):
 		order = 4
-	case filter.Name == wellknown.Fault:
+	case filter.Name == jwtAuthn:
 		order = 5
-	case filter.Name == localRateLimitFilter:
+	case filter.Name == wellknown.Fault:
 		order = 6
-	case filter.Name == wellknown.HTTPRateLimit:
+	case filter.Name == localRateLimitFilter:
 		order = 7
+	case filter.Name == wellknown.HTTPRateLimit:
+		order = 8
 	case filter.Name == wellknown.Router:
 		order = 100
 	}
@@ -168,7 +171,8 @@ func (t *Translator) patchHCMWithFilters(
 	t.patchHCMWithRateLimit(mgr, irListener)
 
 	// Add the router filter
-	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(irListener.SuppressEnvoyHeaders))
+	headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
+	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)
@@ -214,11 +218,12 @@ func patchRouteWithPerRouteConfig(
 	return nil
 }
 
-// isOAuth2Filter returns true if the provided filter is an OAuth2 filter.
-func isOAuth2Filter(filter *hcmv3.HttpFilter) bool {
-	// Multiple oauth2 filters are added to the HCM filter chain, one for each
-	// route. The oauth2 filter name is prefixed with "envoy.filters.http.oauth2".
-	return strings.HasPrefix(filter.Name, oauth2Filter)
+// isFilterType returns true if the filter is the provided filter type.
+func isFilterType(filter *hcmv3.HttpFilter, filterType string) bool {
+	// Multiple filters of the same types are added to the HCM filter chain, one for each
+	// route. The filter name is prefixed with the filter type, for example:
+	// "envoy.filters.http.oauth2_first-route".
+	return strings.HasPrefix(filter.Name, filterType)
 }
 
 // patchResources adds all the other needed resources referenced by this

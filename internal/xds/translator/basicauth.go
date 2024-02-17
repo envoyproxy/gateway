@@ -57,13 +57,6 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 			continue
 		}
 
-		// skip if the filter already exists
-		for _, existingFilter := range mgr.HttpFilters {
-			if filter.Name == existingFilter.Name {
-				continue
-			}
-		}
-
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
