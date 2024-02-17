@@ -1,0 +1,48 @@
+- ignorePortInHostMatching: true
+  name: first-listener-v4
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener-v4/*
+    routes:
+    - match:
+        path: foo
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+      typedPerFilterConfig:
+        envoy.filters.http.acl_httproute/default/httproute-1/rule/0/match/0/www_example_com_DENY:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              action: DENY
+              policies:
+                deny-acl:
+                  permissions:
+                  - any: true
+                  principals:
+                  - sourceIp:
+                      addressPrefix: 8.8.8.8
+                      prefixLen: 32
+  - domains:
+    - '*'
+    name: second-listener-v4/*
+    routes:
+    - match:
+        path: foo
+      name: httproute/default/httproute21/rule/0/match/0/www_example2_com
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+      typedPerFilterConfig:
+        envoy.filters.http.acl_httproute/default/httproute21/rule/0/match/0/www_example2_com_ALLOW:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              policies:
+                allow-acl:
+                  permissions:
+                  - any: true
+                  principals:
+                  - sourceIp:
+                      addressPrefix: 8.8.8.8
+                      prefixLen: 32

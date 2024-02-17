@@ -70,6 +70,11 @@ type SecurityPolicySpec struct {
 	//
 	// +optional
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
+
+	// ACL defines the IP deny/allow configuration.
+	//
+	// +optional
+	ACL *ACL `json:"acl,omitempty"`
 }
 
 // SecurityPolicyStatus defines the state of SecurityPolicy

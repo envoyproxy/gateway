@@ -44,6 +44,41 @@ spec:
           spec:
             description: Spec defines the desired state of SecurityPolicy.
             properties:
+              acl:
+                description: ACL defines the IP deny/allow configuration.
+                properties:
+                  allow:
+                    items:
+                      description: IPSpec defines the configuration for IP.
+                      properties:
+                        length:
+                          description: 'Length contains the length of the IP network
+                            prefix. Example: 24'
+                          format: int32
+                          type: integer
+                        prefix:
+                          description: 'Prefix contains the IP prefix. Example: 1.2.3.0'
+                          type: string
+                      type: object
+                    type: array
+                  deny:
+                    items:
+                      description: IPSpec defines the configuration for IP.
+                      properties:
+                        length:
+                          description: 'Length contains the length of the IP network
+                            prefix. Example: 24'
+                          format: int32
+                          type: integer
+                        prefix:
+                          description: 'Prefix contains the IP prefix. Example: 1.2.3.0'
+                          type: string
+                      type: object
+                    type: array
+                type: object
+                x-kubernetes-validations:
+                - message: one of allow or deny must be specified
+                  rule: (has(self.allow) || has(self.deny))
               basicAuth:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.

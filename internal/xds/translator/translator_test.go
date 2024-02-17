@@ -265,6 +265,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "ext-auth",
 		},
 		{
+			name: "acl",
+		},
+		{
 			name: "http10",
 		},
 		{

@@ -1,0 +1,50 @@
+http:
+- name: "first-listener-v4"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "www.example.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+    hostname: "*"
+    pathMatch:
+      exact: "foo"
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - endpoints:
+        - host: "10.0.0.1"
+          port: 50000
+    acl:
+      allow:
+      - prefix: "8.8.8.0"
+        length: 24
+      deny:
+      - prefix: "8.8.8.8"
+        length: 32
+- name: "second-listener-v4"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "www.example2.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: httproute/default/httproute21/rule/0/match/0/www_example2_com
+    hostname: "*"
+    pathMatch:
+      exact: "foo"
+    destination:
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - endpoints:
+        - host: "10.0.0.1"
+          port: 50000
+    acl:
+      allow:
+      - prefix: "8.8.8.8"
+        length: 32

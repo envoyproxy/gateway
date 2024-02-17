@@ -271,6 +271,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
 		extAuth   *ir.ExtAuth
+		acl       *ir.ACL
 		err, errs error
 	)
 
@@ -298,6 +299,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
+	}
+
+	if policy.Spec.ACL != nil {
+		acl = t.buildACL(policy.Spec.ACL)
 	}
 
 	// Apply IR to all relevant routes
@@ -316,6 +321,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					r.OIDC = oidc
 					r.BasicAuth = basicAuth
 					r.ExtAuth = extAuth
+					r.ACL = acl
 				}
 			}
 		}
@@ -333,6 +339,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
 		extAuth   *ir.ExtAuth
+		acl       *ir.ACL
 		err, errs error
 	)
 
@@ -360,6 +367,10 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
+	}
+
+	if policy.Spec.ACL != nil {
+		acl = t.buildACL(policy.Spec.ACL)
 	}
 
 	// Apply IR to all the routes within the specific Gateway
@@ -389,6 +400,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			if r.ExtAuth == nil {
 				r.ExtAuth = extAuth
+			}
+			if r.ACL == nil {
+				r.ACL = acl
 			}
 		}
 	}
@@ -644,6 +658,30 @@ func (t *Translator) buildBasicAuth(
 	}
 
 	return &ir.BasicAuth{Users: usersSecretBytes}, nil
+}
+
+func (t *Translator) buildACL(acl *egv1a1.ACL) *ir.ACL {
+	var allow []ir.IPSpec
+	var deny []ir.IPSpec
+
+	for _, ip := range acl.Allow {
+		allow = append(allow, ir.IPSpec{
+			Prefix: ip.Prefix,
+			Length: ip.Length,
+		})
+	}
+
+	for _, ip := range acl.Deny {
+		deny = append(deny, ir.IPSpec{
+			Prefix: ip.Prefix,
+			Length: ip.Length,
+		})
+	}
+
+	return &ir.ACL{
+		Allow: allow,
+		Deny:  deny,
+	}
 }
 
 func (t *Translator) buildExtAuth(

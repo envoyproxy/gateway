@@ -27,6 +27,21 @@ API group.
 
 
 
+#### ACL
+
+
+
+ACL defines the IP deny/allow configuration.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `allow` | _[IPSpec](#ipspec) array_ |  true  |  |
+| `deny` | _[IPSpec](#ipspec) array_ |  true  |  |
+
+
 #### ALPNProtocol
 
 _Underlying type:_ _string_
@@ -1229,6 +1244,21 @@ _Appears in:_
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
+#### IPSpec
+
+
+
+IPSpec defines the configuration for IP.
+
+_Appears in:_
+- [ACL](#acl)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `prefix` | _string_ |  true  | Prefix contains the IP prefix. Example: 1.2.3.0 |
+| `length` | _integer_ |  true  | Length contains the length of the IP network prefix. Example: 24 |
+
+
 #### InfrastructureProviderType
 
 _Underlying type:_ _string_
@@ -2154,6 +2184,7 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
+| `acl` | _[ACL](#acl)_ |  false  | ACL defines the IP deny/allow configuration. |
 
 
 

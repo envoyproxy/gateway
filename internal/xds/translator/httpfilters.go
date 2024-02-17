@@ -90,22 +90,24 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 
 	// Set a rational order for all the filters.
 	switch {
-	case filter.Name == wellknown.CORS:
+	case isFilterType(filter, aclFilter):
 		order = 1
-	case isFilterType(filter, extAuthFilter):
+	case filter.Name == wellknown.CORS:
 		order = 2
-	case isFilterType(filter, basicAuthFilter):
+	case isFilterType(filter, extAuthFilter):
 		order = 3
-	case isFilterType(filter, oauth2Filter):
+	case isFilterType(filter, basicAuthFilter):
 		order = 4
-	case filter.Name == jwtAuthn:
+	case isFilterType(filter, oauth2Filter):
 		order = 5
-	case filter.Name == wellknown.Fault:
+	case filter.Name == jwtAuthn:
 		order = 6
-	case filter.Name == localRateLimitFilter:
+	case filter.Name == wellknown.Fault:
 		order = 7
-	case filter.Name == wellknown.HTTPRateLimit:
+	case filter.Name == localRateLimitFilter:
 		order = 8
+	case filter.Name == wellknown.HTTPRateLimit:
+		order = 9
 	case filter.Name == wellknown.Router:
 		order = 100
 	}

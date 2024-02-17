@@ -1,0 +1,60 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.acl_httproute/default/httproute-1/rule/0/match/0/www_example_com_ALLOW
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+            rules:
+              policies:
+                allow-acl:
+                  permissions:
+                  - any: true
+                  principals:
+                  - sourceIp:
+                      addressPrefix: 8.8.8.0
+                      prefixLen: 24
+        - name: envoy.filters.http.acl_httproute/default/httproute-1/rule/0/match/0/www_example_com_DENY
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+            rules:
+              action: DENY
+              policies:
+                deny-acl:
+                  permissions:
+                  - any: true
+                  principals:
+                  - sourceIp:
+                      addressPrefix: 8.8.8.8
+                      prefixLen: 32
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener-v4
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        upgradeConfigs:
+        - upgradeType: websocket
+        useRemoteAddress: true
+  name: first-listener-v4
+  perConnectionBufferLimitBytes: 32768

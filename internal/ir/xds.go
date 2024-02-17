@@ -439,6 +439,8 @@ type HTTPRoute struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
+	// ACL defines the schema for acl.
+	ACL *ACL `json:"acl,omitempty" yaml:"acl,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
@@ -598,6 +600,22 @@ type GRPCExtAuthService struct {
 
 	// Authority is the hostname:port of the gRPC External Authorization service.
 	Authority string `json:"authority"`
+}
+
+// ACL defines the configuration for acl.
+//
+// +k8s:deepcopy-gen=true
+type ACL struct {
+	Allow []IPSpec `json:"allow,omitempty"`
+	Deny  []IPSpec `json:"deny,omitempty"`
+}
+
+// IPSpec defines the configuration for IP.
+//
+// +k8s:deepcopy-gen=true
+type IPSpec struct {
+	Prefix string `json:"prefix,omitempty"`
+	Length uint32 `json:"length,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
