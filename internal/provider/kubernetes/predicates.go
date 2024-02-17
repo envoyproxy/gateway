@@ -220,17 +220,18 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 
-	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok {
-		res, _ := r.resources.GatewayAPIResources.Load(gclass)
-		if res != nil && len(res.Gateways) > 0 {
-			for _, gw := range res.Gateways {
-				gw := gw
-				r.updateStatusForGateway(ctx, gw)
+	if ok && r.mergeGateways[gclass] {
+		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
+		if res != nil {
+			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
+				for _, gw := range (*res)[gclass].Gateways {
+					gw := gw
+					r.updateStatusForGateway(ctx, gw)
+				}
 			}
 		}
-
 		return false
 	}
 
@@ -376,14 +377,16 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		}
 	}
 
-	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok {
-		res, _ := r.resources.GatewayAPIResources.Load(gclass)
-		if res != nil && len(res.Gateways) > 0 {
-			for _, gw := range res.Gateways {
-				gw := gw
-				r.updateStatusForGateway(ctx, gw)
+	if ok && r.mergeGateways[gclass] {
+		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
+		if res != nil {
+			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
+				for _, gw := range (*res)[gclass].Gateways {
+					gw := gw
+					r.updateStatusForGateway(ctx, gw)
+				}
 			}
 		}
 		return false
@@ -397,7 +400,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways),
+		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -413,7 +416,7 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways),
+		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
