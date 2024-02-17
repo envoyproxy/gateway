@@ -1736,36 +1736,9 @@ type BackOffPolicy struct {
 }
 
 // TLSBundle contains tls certificate, private key and ca file in []byte format.
+// TLSBundle contains hostname and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSBundle struct {
 	Hostname string
 	CACert   TLSCACertificate
-	TLSCert  *TLSCertificate
 }
-
-//func (b TLSBundle) GetXdsCertSecretName() string {
-//	return NameWithSuffix(b.TLSCertificate.Name, "tls")
-//}
-
-//func (b TLSBundle) GetXdsCaSecretName() string {
-//	return NameWithSuffix(b.TLSCACertificate.Name, "ca")
-//}
-
-func (b TLSBundle) Mtls() bool {
-	if b.TLSCert != nil && b.TLSCert.ServerCertificate != nil && b.TLSCert.PrivateKey != nil {
-		return true
-	}
-	return false
-}
-
-//func NameWithSuffix(name, suffix string, customLength ...int) string {
-//	maxLength := k8sValidate.DNS1123LabelMaxLength
-//	if len(customLength) != 0 {
-//		maxLength = customLength[0]
-//	}
-//	if len(suffix) >= maxLength {
-//		return strings.Trim(suffix[max(0, len(suffix)-maxLength):], "-")
-//	}
-//	out := fmt.Sprintf("%s-%s", name[:min(len(name), maxLength-len(suffix)-1)], suffix)
-//	return strings.Trim(out, "-")
-//}
