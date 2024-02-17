@@ -7,14 +7,13 @@ package proxy
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/lithammer/dedent"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -206,63 +205,38 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				SuccessThreshold: 1,
 				FailureThreshold: 3,
 			},
-			Lifecycle: expectedContainerLifecycle(),
+			Lifecycle: &corev1.Lifecycle{
+				PreStop: &corev1.LifecycleHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   envoy.ShutdownReadyPath,
+						Port:   intstr.FromInt32(envoy.ShutdownReadyPort),
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+			},
+		},
+		{
+			Name:            "shutdown-manager",
+			Image:           "envoyproxy/gateway-dev:latest", // TODO: make this configurable
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command:         []string{"envoy-gateway"},
+			Args:            []string{"envoy", "shutdown-manager"},
+			// TODO: configure resources
+			// TODO: configure security context
+			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+			TerminationMessagePath:   "/dev/termination-log",
+			// TODO: setup readiness probe
+			Lifecycle: &corev1.Lifecycle{
+				PreStop: &corev1.LifecycleHandler{
+					Exec: &corev1.ExecAction{
+						Command: []string{"envoy-gateway", "envoy", "shutdown"},
+					},
+				},
+			},
 		},
 	}
 
 	return containers, nil
-}
-
-func expectedContainerLifecycle() *corev1.Lifecycle {
-	var envoyAdminAddr = fmt.Sprint(bootstrap.EnvoyAdminAddress)
-	var envoyAdminPort = fmt.Sprint(bootstrap.EnvoyAdminPort)
-
-	return &corev1.Lifecycle{
-		PreStop: &corev1.LifecycleHandler{
-			Exec: &corev1.ExecAction{
-				Command: []string{"/bin/bash", "-c", strings.ReplaceAll(strings.TrimSpace(dedent.Dedent(`
-					function :: {
-						echo "[$(date -u '+%Y-%m-%d %H:%M:%S.%3N')][$$][info][PreStop] $@"
-					}
-					function total_connections {
-						exec 3<>/dev/tcp/`+envoyAdminAddr+`/`+envoyAdminPort+`
-						echo -e "GET /stats?filter=^server\.total_connections$&format=text HTTP/1.1\nHost: `+envoyAdminAddr+`\nConnection: close\n" >&3
-						cat <&3 | grep '^server\.total_connections:' | awk '{print $2}'
-					}
-					{
-						PID=$(pidof envoy)
-						START_SECONDS=$(date +%s)
-						DRAIN_TIMEOUT=600
-						MIN_DRAIN_PERIOD=15
-						ALLOWED_TO_EXIT=0
-
-						:: "initiating graceful drain with $MIN_DRAIN_PERIOD second minimum drain period and $DRAIN_TIMEOUT second timeout"
-						echo -e "POST /drain_listeners?graceful&skip_exit HTTP/1.1\nHost: `+envoyAdminAddr+`\nConnection: close\n" >/dev/tcp/`+envoyAdminAddr+`/`+envoyAdminPort+`
-
-						while ps -p "$PID" >/dev/null; do
-							ELAPSED_SECONDS=$(($(date +%s) - $START_SECONDS))
-							TOTAL_CONNECTIONS=$(total_connections)
-							:: "total connections: $TOTAL_CONNECTIONS"
-
-							if [[ $ELAPSED_SECONDS -gt $MIN_DRAIN_PERIOD ]] && [[ $ALLOWED_TO_EXIT -eq 0 ]]; then
-								:: "minimum drain period reached; allowed to exit when total connections reaches zero"
-								ALLOWED_TO_EXIT=1
-							fi
-
-							if [[ $ELAPSED_SECONDS -gt $DRAIN_TIMEOUT ]]; then
-								:: "graceful drain sequence timeout exceeded"
-								exit
-							elif [[ $ALLOWED_TO_EXIT -eq 1 ]] && [[ $TOTAL_CONNECTIONS -eq 0 ]]; then
-								exit
-							else
-								sleep 1
-							fi
-						done
-					} 1>/proc/1/fd/1 2>/proc/1/fd/2
-				`)), "\t", "  ")},
-			},
-		},
-	}
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
