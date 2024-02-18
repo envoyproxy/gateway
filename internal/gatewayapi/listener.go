@@ -25,7 +25,7 @@ type ListenersTranslator interface {
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 	t.validateConflictedLayer7Listeners(gateways)
-	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
+	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
 	if t.MergeGateways {
 		t.validateConflictedMergedListeners(gateways)
@@ -103,7 +103,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Name:    irHTTPListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
-					TLS:     irTLSConfigs(listener.tlsSecrets),
+					TLS:     irTLSConfigs(listener.tlsSecrets, listener.Hostname),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,

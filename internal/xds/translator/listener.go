@@ -388,6 +388,9 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 	}
 
 	if isTLSTerminate {
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.Terminate.Inspector.SNIs); err != nil {
+			return err
+		}
 		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS.Terminate)
 		if err != nil {
 			return err

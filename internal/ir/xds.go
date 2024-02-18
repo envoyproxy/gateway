@@ -294,6 +294,9 @@ type TLSConfig struct {
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
 	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+	// TLS information required for TLS termination, If provided, incoming
+	// connections' server names are inspected and routed to backends accordingly.
+	Inspector TLSInspectorConfig `json:"inspector,omitempty" yaml:"inspector,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -1123,13 +1126,12 @@ func (h TCPListener) Validate() error {
 }
 
 // TLSInspectorConfig holds the configuration required for inspecting TLS
-// passthrough connections.
+// connections.
 // +k8s:deepcopy-gen=true
 type TLSInspectorConfig struct {
 	// Server names that are compared against the server names of a new connection.
 	// Wildcard hosts are supported in the prefix form. Partial wildcards are not
 	// supported, and values like *w.example.com are invalid.
-	// SNIs are used only in case of TLS Passthrough.
 	SNIs []string `json:"snis,omitempty" yaml:"snis,omitempty"`
 }
 
