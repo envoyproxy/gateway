@@ -20,6 +20,19 @@ gateways:
           kind: Secret
           name: tls-secret-1
         mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.bar.com
+      name: tls-hostname
+      port: 90
+      protocol: TLS
+      tls:
+        certificateRefs:
+        - group: ""
+          kind: Secret
+          name: tls-secret-1
+        mode: Terminate
   status:
     listeners:
     - attachedRoutes: 1
@@ -40,6 +53,27 @@ gateways:
         status: "True"
         type: ResolvedRefs
       name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Only one TCP/TLS listener is allowed in a given port
+        reason: ProtocolConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tls-hostname
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
@@ -70,6 +104,7 @@ tcpRoutes:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: tls
     rules:
     - backendRefs:
       - name: service-1
@@ -91,6 +126,40 @@ tcpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: tls
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    creationTimestamp: null
+    name: tcproute-2
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: tls-hostname
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-hostname
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
