@@ -246,6 +246,20 @@ _Appears in:_
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on a trusted custom HTTP header. This uses the the custom_header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
 
 
+#### ClientTimeout
+
+
+
+
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `http` | _[HTTPClientTimeout](#httpclienttimeout)_ |  false  | Timeout settings for HTTP. |
+
+
 #### ClientTrafficPolicy
 
 
@@ -299,6 +313,7 @@ _Appears in:_
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
+| `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
 
 
 
@@ -1143,6 +1158,20 @@ _Appears in:_
 | `method` | _string_ |  false  | Method defines the HTTP method used for health checking. Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  | ExpectedStatuses defines a list of HTTP response statuses considered healthy. Defaults to 200 only |
 | `expectedResponse` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  | ExpectedResponse defines a list of HTTP expected responses to match. |
+
+
+#### HTTPClientTimeout
+
+
+
+
+
+_Appears in:_
+- [ClientTimeout](#clienttimeout)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `requestReceivedTimeout` | _[Duration](#duration)_ |  false  | The duration envoy waits for the complete request reception. This timer starts upon request initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
 
 
 #### HTTPExtAuthService
