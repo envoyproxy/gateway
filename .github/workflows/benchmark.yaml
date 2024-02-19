@@ -12,6 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - run: go version
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.21.1' 
+      - run: go version
+
       - name: Download Nighthawk Docker images
         run: |
          docker pull envoyproxy/nighthawk-dev:latest
