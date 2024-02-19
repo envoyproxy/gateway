@@ -107,6 +107,11 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 	var startTime = time.Now()
 	var allowedToExit = false
 
+	// Reconfigure logger to write to stdout of main process if running in Kubernetes
+	if _, k8s := os.LookupEnv("KUBERNETES_SERVICE_HOST"); k8s && os.Getpid() != 1 {
+		logger = logging.FileLogger("/proc/1/fd/1", "shutdown-manager", v1alpha1.LogLevelInfo)
+	}
+
 	logger.Info(fmt.Sprintf("initiating graceful drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
 
