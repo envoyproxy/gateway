@@ -230,6 +230,21 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              timeout:
+                description: Timeout settings for the client connections.
+                properties:
+                  http:
+                    description: Timeout settings for HTTP.
+                    properties:
+                      requestReceivedTimeout:
+                        description: The duration envoy waits for the complete request
+                          reception. This timer starts upon request initiation and
+                          stops when either the last byte of the request is sent upstream
+                          or when the response begins.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                type: object
               tls:
                 description: TLS settings configure TLS termination settings with
                   the downstream client.
