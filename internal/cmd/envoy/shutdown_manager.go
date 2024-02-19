@@ -7,6 +7,7 @@ package envoy
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var (
@@ -28,39 +30,21 @@ var (
 const (
 	// ShutdownReadyPort is the port Envoy shutdown manager will listen on.
 	ShutdownReadyPort = 19002
-	// ShutdownReadyPath is the path Envoy shutdown manager will listen on.
-	ShutdownReadyPath = "/shutdown"
 	// ShutdownReadyFile is the file used to indicate shutdown readiness.
 	ShutdownReadyFile = "/tmp/shutdown-ready"
 )
 
-// Shutdown is called from a preStop hook where it will block until envoy can
-// gracefully drain open connections prior to pod shutdown.
-func Shutdown(timeout time.Duration, minDrainDuration time.Duration, exitAtConnections int) error {
-	logger.Info(fmt.Sprintf("initiating graceful drain with %.0f second minimum drain period and %.0f second timeout",
-		minDrainDuration.Seconds(), timeout.Seconds()))
-
-	time.Sleep(minDrainDuration) // TODO: Implement graceful shutdown
-
-	if _, err := os.Create(ShutdownReadyFile); err != nil {
-		logger.Error(err, "error creating shutdown ready file")
-		return err
-	}
-
-	return nil
-}
-
 // ShutdownManager serves shutdown manager process for Envoy proxies.
-func ShutdownManager() error {
+func ShutdownManager(readyTimeout time.Duration) error {
 	// Setup HTTP handler
 	handler := http.NewServeMux()
-	handler.HandleFunc(ShutdownReadyPath, func(w http.ResponseWriter, r *http.Request) {
+	handler.HandleFunc("/shutdown/ready", func(w http.ResponseWriter, r *http.Request) {
 		shutdownReadyHandler(w, r, ShutdownReadyFile)
 	})
 
 	// Setup HTTP server
 	srv := http.Server{
-		Handler:           handler,
+		Handler:           http.TimeoutHandler(handler, readyTimeout, ""),
 		Addr:              fmt.Sprintf(":%d", ShutdownReadyPort),
 		ReadTimeout:       5 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -100,6 +84,8 @@ func ShutdownManager() error {
 // has completed a file will be written to indicate shutdown readiness.
 func shutdownReadyHandler(w http.ResponseWriter, req *http.Request, readyFile string) {
 	logger.Info("received shutdown ready request")
+
+	// Poll for shutdown readiness
 	for {
 		_, err := os.Stat(readyFile)
 		switch {
@@ -109,7 +95,110 @@ func shutdownReadyHandler(w http.ResponseWriter, req *http.Request, readyFile st
 			logger.Error(err, "error checking for shutdown readiness")
 		case err == nil:
 			logger.Info("shutdown readiness detected")
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 	}
+}
+
+// Shutdown is called from a preStop hook where it will block until envoy can
+// gracefully drain open connections prior to pod shutdown.
+func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAtConnections int) error {
+	var startTime = time.Now()
+	var allowedToExit = false
+
+	logger.Info(fmt.Sprintf("initiating graceful drain with %.0f second minimum drain period and %.0f second timeout",
+		minDrainDuration.Seconds(), drainTimeout.Seconds()))
+
+	// Send request to Envoy admin API to initiate the graceful drain sequence
+	if resp, err := http.Post(fmt.Sprintf("http://%s:%d/drain_listeners?graceful&skip_exit",
+		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort), "application/json", nil); err != nil {
+		logger.Error(err, fmt.Sprintf("error %s", "initiating graceful drain"))
+	} else {
+		if resp.StatusCode != http.StatusOK {
+			logger.Error(fmt.Errorf("unexpected response status: %s", resp.Status), fmt.Sprintf("error %s", "initiating graceful drain"))
+		}
+		resp.Body.Close()
+	}
+
+	// Poll total connections from Envoy admin API until minimum drain period has
+	// been reached and total connections reaches threshold or timeout is exceeded
+	for {
+		elapsedTime := time.Since(startTime)
+
+		conn, err := getTotalConnections()
+		if err != nil {
+			logger.Error(err, "error getting total connections")
+		}
+
+		if elapsedTime > minDrainDuration && !allowedToExit {
+			logger.Info(fmt.Sprintf("minimum drain period reached; will exit when total connections is %d", exitAtConnections))
+			allowedToExit = true
+		}
+
+		if elapsedTime > drainTimeout {
+			logger.Info("graceful drain sequence timeout exceeded")
+			break
+		} else if allowedToExit && conn != nil && *conn == exitAtConnections {
+			logger.Info("graceful drain sequence completed")
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	// Signal to /shutdown endpoint that the shutdown process is complete
+	if err := createShutdownReadyFile(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// getTotalConnections retrieves the total number of open connections from Envoy's server.total_connections stat
+func getTotalConnections() (*int, error) {
+	// Send request to Envoy admin API to retrieve server.total_connections stat
+	if resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=^server\\.total_connections$&format=json",
+		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort)); err != nil {
+		return nil, err
+	} else {
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
+		} else {
+			// Define struct to decode JSON response into; expecting a single stat in the response in the format:
+			// {"stats":[{"name":"server.total_connections","value":123}]}
+			var r *struct {
+				Stats []struct {
+					Name  string
+					Value int
+				}
+			}
+
+			// Decode JSON response into struct
+			if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+				return nil, err
+			}
+
+			// Defensive check for empty stats
+			if len(r.Stats) == 0 {
+				return nil, fmt.Errorf("no stats found")
+			}
+
+			// Log and return total connections
+			c := r.Stats[0].Value
+			logger.Info(fmt.Sprintf("total connections: %d", c))
+			return &c, nil
+		}
+	}
+}
+
+// createShutdownReadyFile creates a file to indicate that the shutdown process is complete
+func createShutdownReadyFile() error {
+	if _, err := os.Create(ShutdownReadyFile); err != nil {
+		logger.Error(err, "error creating shutdown ready file")
+		return err
+	}
+	return nil
 }

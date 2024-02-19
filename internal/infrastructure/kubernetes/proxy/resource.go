@@ -208,7 +208,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path:   envoy.ShutdownReadyPath,
+						Path:   "/shutdown/ready",
 						Port:   intstr.FromInt32(envoy.ShutdownReadyPort),
 						Scheme: corev1.URISchemeHTTP,
 					},

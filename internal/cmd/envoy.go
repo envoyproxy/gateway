@@ -28,7 +28,7 @@ func getEnvoyCommand() *cobra.Command {
 
 // getShutdownCommand returns the shutdown cobra command to be executed.
 func getShutdownCommand() *cobra.Command {
-	var timeout time.Duration
+	var drainTimeout time.Duration
 	var minDrainDuration time.Duration
 	var exitAtConnections int
 
@@ -36,11 +36,11 @@ func getShutdownCommand() *cobra.Command {
 		Use:   "shutdown",
 		Short: "Gracefully drain open connections prior to pod shutdown.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return envoy.Shutdown(timeout, minDrainDuration, exitAtConnections)
+			return envoy.Shutdown(drainTimeout, minDrainDuration, exitAtConnections)
 		},
 	}
 
-	cmd.PersistentFlags().DurationVar(&timeout, "timeout", 600*time.Second,
+	cmd.PersistentFlags().DurationVar(&drainTimeout, "drain-timeout", 600*time.Second,
 		"Graceful shutdown timeout. This should be less than the pod's terminationGracePeriodSeconds.")
 
 	cmd.PersistentFlags().DurationVar(&minDrainDuration, "min-drain-duration", 15*time.Second,
@@ -54,12 +54,18 @@ func getShutdownCommand() *cobra.Command {
 
 // getShutdownManagerCommand returns the shutdown manager cobra command to be executed.
 func getShutdownManagerCommand() *cobra.Command {
+	var readyTimeout time.Duration
+
 	cmd := &cobra.Command{
 		Use:   "shutdown-manager",
 		Short: "Provides HTTP endpoint used in preStop hook to block until ready for pod shutdown.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return envoy.ShutdownManager()
+			return envoy.ShutdownManager(readyTimeout)
 		},
 	}
+
+	cmd.PersistentFlags().DurationVar(&readyTimeout, "ready-timeout", 610*time.Second,
+		"Shutdown ready timeout. This should be greater than shutdown's drain-timeout and less than the pod's terminationGracePeriodSeconds.")
+
 	return cmd
 }

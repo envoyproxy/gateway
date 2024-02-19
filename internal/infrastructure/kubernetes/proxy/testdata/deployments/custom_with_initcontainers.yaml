@@ -160,7 +160,7 @@ spec:
           lifecycle:
             preStop:
               httpGet:
-                path: /shutdown
+                path: /shutdown/ready
                 port: 19002
                 scheme: HTTP
           name: envoy
