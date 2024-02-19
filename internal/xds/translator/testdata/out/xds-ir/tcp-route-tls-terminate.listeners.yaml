@@ -23,7 +23,10 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - '*.envoyproxy.io'
+    filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
@@ -42,5 +45,9 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: tls-terminate
   perConnectionBufferLimitBytes: 32768
