@@ -2549,11 +2549,6 @@ func (in *PerRetryPolicy) DeepCopyInto(out *PerRetryPolicy) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.IdleTimeout != nil {
-		in, out := &in.IdleTimeout, &out.IdleTimeout
-		*out = new(v1.Duration)
-		**out = **in
-	}
 	if in.BackOff != nil {
 		in, out := &in.BackOff, &out.BackOff
 		*out = new(BackOffPolicy)
@@ -3078,7 +3073,7 @@ func (in *Retry) DeepCopyInto(out *Retry) {
 	*out = *in
 	if in.NumRetries != nil {
 		in, out := &in.NumRetries, &out.NumRetries
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.RetryOn != nil {
@@ -3113,7 +3108,7 @@ func (in *RetryOn) DeepCopyInto(out *RetryOn) {
 	}
 	if in.HTTPStatusCodes != nil {
 		in, out := &in.HTTPStatusCodes, &out.HTTPStatusCodes
-		*out = make([]int, len(*in))
+		*out = make([]HTTPStatus, len(*in))
 		copy(*out, *in)
 	}
 }

@@ -749,6 +749,8 @@ spec:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.
                       Defaults to 2.
+                    format: int32
+                    minimum: 0
                     type: integer
                   perRetry:
                     description: PerRetry is the retry policy to be applied per retry
@@ -773,12 +775,6 @@ spec:
                             format: duration
                             type: string
                         type: object
-                      idleTimeout:
-                        description: IdleTimeout is the upstream idle timeout per
-                          retry attempt.This parameter is optional and if absent there
-                          is no per try idle timeout.
-                        format: duration
-                        type: string
                       timeout:
                         description: Timeout is the timeout per retry attempt.
                         format: duration
@@ -792,6 +788,10 @@ spec:
                         description: HttpStatusCodes specifies the http status codes
                           to be retried.
                         items:
+                          description: HTTPStatus defines the http status code.
+                          exclusiveMaximum: true
+                          maximum: 600
+                          minimum: 100
                           type: integer
                         type: array
                       triggers:
@@ -799,6 +799,19 @@ spec:
                         items:
                           description: TriggerEnum specifies the conditions that trigger
                             retries.
+                          enum:
+                          - 5xx
+                          - gateway-error
+                          - disconnect-reset
+                          - connect-failure
+                          - retriable-4xx
+                          - refused-stream
+                          - retriable-status-codes
+                          - cancelled
+                          - deadline-exceeded
+                          - internal
+                          - resource-exhausted
+                          - unavailable
                           type: string
                         type: array
                     type: object

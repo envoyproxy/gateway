@@ -14,8 +14,9 @@ type Retry struct {
 	// NumRetries is the number of retries to be attempted. Defaults to 2.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=2
-	NumRetries *int `json:"numRetries,omitempty"`
+	NumRetries *int32 `json:"numRetries,omitempty"`
 
 	// RetryOn specifies the retry trigger condition.
 	//
@@ -38,10 +39,11 @@ type RetryOn struct {
 	// HttpStatusCodes specifies the http status codes to be retried.
 	//
 	// +optional
-	HTTPStatusCodes []int `json:"httpStatusCodes,omitempty"`
+	HTTPStatusCodes []HTTPStatus `json:"httpStatusCodes,omitempty"`
 }
 
 // TriggerEnum specifies the conditions that trigger retries.
+// +kubebuilder:validation:Enum={"5xx","gateway-error","disconnect-reset","connect-failure","retriable-4xx","refused-stream","retriable-status-codes","cancelled","deadline-exceeded","internal","resource-exhausted","unavailable"}
 type TriggerEnum string
 
 const (
@@ -86,11 +88,6 @@ type PerRetryPolicy struct {
 	// +optional
 	// +kubebuilder:validation:Format=duration
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
-	// IdleTimeout is the upstream idle timeout per retry attempt.This parameter is optional and if absent there is no per try idle timeout.
-	//
-	// +optional
-	// +kubebuilder:validation:Format=duration
-	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty"`
 	// Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential
 	// back-off algorithm for retries. For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries
