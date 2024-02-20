@@ -502,6 +502,7 @@ func (t *Translator) buildOIDC(
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,
+		CookieSuffix: fmt.Sprintf("%s-%s", policy.Namespace, policy.Name),
 	}, nil
 }
 

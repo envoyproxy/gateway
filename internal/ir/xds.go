@@ -521,6 +521,12 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
+	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
+	// These cookies are set by the oauth filter, including: BearerToken,
+	// OauthHMAC, OauthExpires, IdToken, and RefreshToken.
+	CookieSuffix string `json:"cookieSuffix,omitempty"`
 }
 
 type OIDCProvider struct {

@@ -230,6 +230,7 @@ xdsIR:
         oidc:
           clientID: client2.oauth.foo.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
+          cookieSuffix: default-policy-for-http-route
           logoutPath: /foo/logout
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
@@ -261,6 +262,7 @@ xdsIR:
         oidc:
           clientID: client1.apps.googleusercontent.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
+          cookieSuffix: envoy-gateway-policy-for-gateway-discover-endpoints
           logoutPath: /bar/logout
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
