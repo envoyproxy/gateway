@@ -190,14 +190,15 @@ run-benchmark: ## Run benchmark tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
-# kubectl create configmap test-server-config --from-file=test/benchmark/test-server.yaml --output yaml
 	@$(call log, "Deploying benchmark test server")
-	kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.6.0/quickstart.yaml -n default
-	export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
-	kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
-	curl --verbose --header "Host: www.example.com" http://localhost:8888/get
+	kubectl create namespace nighthawk-test-server
+	kubectl -n nighthawk-test-server create configmap test-server-config --from-file=test/benchmark/test-server.yaml --output yaml
+	kubectl apply -f test/benchmark/benchmark-test-server.yaml
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n nighthawk-test-server deployment/nighthawk-test-server --for=condition=Available
+	kubectl -n nighthawk-test-server port-forward service/nighthawk-test-server 8080:8080 &
+	curl --verbose --header "Host: www.example.com" http://localhost:8080
 	@$(call log, "Running benchmark tests")
-	docker run envoyproxy/nighthawk-dev:latest nighthawk_client http://localhost:8888
+	docker run envoyproxy/nighthawk-dev:latest nighthawk_client http://localhost:8080
 	
 
 .PHONY: delete-cluster
