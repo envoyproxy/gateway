@@ -294,11 +294,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostsList...)
 
-		// Add per-route filter configs to the route config.
-		if err := patchRouteCfgWithPerRouteConfig(xdsRouteCfg, httpListener); err != nil {
-			errs = errors.Join(errs, err)
-		}
-
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
 		if err := patchResources(tCtx, httpListener.Routes); err != nil {
