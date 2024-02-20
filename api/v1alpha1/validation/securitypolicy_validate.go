@@ -8,6 +8,7 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/mail"
 	"net/url"
 
@@ -24,7 +25,7 @@ func ValidateSecurityPolicy(policy *egv1a1.SecurityPolicy) error {
 		return errors.New("policy is nil")
 	}
 	if err := validateSecurityPolicySpec(&policy.Spec); err != nil {
-		errs = append(errs, errors.New("policy is nil"))
+		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
@@ -42,6 +43,8 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		sum++
 	case spec.JWT != nil:
 		sum++
+	case spec.Authorization != nil:
+		sum++
 	}
 	if sum == 0 {
 		errs = append(errs, errors.New("no security policy is specified"))
@@ -52,8 +55,35 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		return utilerrors.NewAggregate(errs)
 	}
 
-	if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
+	if spec.JWT != nil {
+		if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if err := ValidateAuthorisation(spec.Authorization); err != nil {
 		errs = append(errs, err)
+	}
+
+	return utilerrors.NewAggregate(errs)
+}
+
+// ValidateAuthorisation validates the provided Authorisation configuration.
+func ValidateAuthorisation(as *egv1a1.Authorization) error {
+	var errs []error
+	if as == nil {
+		return nil
+	}
+
+	for _, rule := range as.Rules {
+		for _, selector := range rule.ClientSelectors {
+			for _, cidr := range selector.ClientCIDRs {
+				_, _, err := net.ParseCIDR(cidr)
+				if err != nil {
+					errs = append(errs, fmt.Errorf("invalid CIDR: %s", cidr))
+				}
+			}
+		}
 	}
 
 	return utilerrors.NewAggregate(errs)

@@ -44,6 +44,44 @@ spec:
           spec:
             description: Spec defines the desired state of SecurityPolicy.
             properties:
+              authorization:
+                description: Authorization defines the authorization configuration.
+                properties:
+                  rules:
+                    description: Rules contains all the authorization rules.
+                    items:
+                      description: Rule defines the single authorization rule.
+                      properties:
+                        action:
+                          description: Action defines the action to be taken if the
+                            rule matches.
+                          enum:
+                          - AllowRuleType
+                          - DenyRuleType
+                          - LogRuleType
+                          type: string
+                        clientSelector:
+                          description: ClientSelectors contains the client selector
+                            configuration.
+                          items:
+                            description: ClientSelector contains the client selector
+                              configuration.
+                            properties:
+                              clientCIDR:
+                                description: ClientCIDRs is a list of CIDRs. Valid
+                                  examples are "192.168.1.0/24" or "2001:db8::/64"
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          minItems: 1
+                          type: array
+                      required:
+                      - action
+                      type: object
+                    minItems: 1
+                    type: array
+                type: object
               basicAuth:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.

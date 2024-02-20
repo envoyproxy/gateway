@@ -97,6 +97,20 @@ _Appears in:_
 
 
 
+#### Authorization
+
+
+
+Authorization defines the authorization configuration.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules. |
+
+
 #### BackOffPolicy
 
 
@@ -260,6 +274,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on a trusted custom HTTP header. This uses the the custom_header original IP detection extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto for more details. |
+
+
+#### ClientSelector
+
+
+
+ClientSelector contains the client selector configuration.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCIDR` | _string array_ |  false  | ClientCIDRs is a list of CIDRs. Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
 
 
 #### ClientTimeout
@@ -2215,6 +2243,32 @@ _Appears in:_
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried. The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
 
 
+#### Rule
+
+
+
+Rule defines the single authorization rule.
+
+_Appears in:_
+- [Authorization](#authorization)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientSelector` | _[ClientSelector](#clientselector) array_ |  true  | ClientSelectors contains the client selector configuration. |
+| `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
+
+
+#### RuleActionType
+
+_Underlying type:_ _string_
+
+RuleActionType specifies the types of authorization rule action.
+
+_Appears in:_
+- [Rule](#rule)
+
+
+
 #### SecurityPolicy
 
 
@@ -2265,6 +2319,7 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
+| `authorization` | _[Authorization](#authorization)_ |  false  | Authorization defines the authorization configuration. |
 
 
 
