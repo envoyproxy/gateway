@@ -6,6 +6,16 @@ provider:
   type: Kubernetes
   kubernetes:
     watch:
-      type: NamespaceSelectors
-      namespaceSelectors:
-      - label-a
+      type: NamespaceSelector
+      namespaceSelector:
+        matchLabels:
+          label-a: foo
+        matchExpressions:
+          - key: tier
+            operator: In
+            values:
+              - cache
+          - key: environment
+            operator: NotIn
+            values:
+              - dev

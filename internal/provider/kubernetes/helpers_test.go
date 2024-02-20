@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -191,100 +190,6 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 			actual := isAccepted(tc.gc)
 			require.Equal(t, tc.expect, actual)
 		})
-	}
-}
-
-func TestGatewayOldestClass(t *testing.T) {
-	createGatewayClass := func(name string, creationTime time.Time) *gwapiv1.GatewayClass {
-		return &gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              name,
-				CreationTimestamp: metav1.NewTime(creationTime),
-			},
-			Spec: gwapiv1.GatewayClassSpec{
-				ControllerName: egv1a1.GatewayControllerName,
-			},
-		}
-	}
-
-	currentTime := metav1.Now()
-	addDuration := time.Duration(10)
-	testCases := []struct {
-		name    string
-		classes map[string]time.Time
-		remove  map[string]time.Time
-		oldest  string
-	}{
-		{
-			name: "normal",
-			classes: map[string]time.Time{
-				"class-b": currentTime.Time,
-				"class-a": currentTime.Add(1 * addDuration),
-			},
-			remove: nil,
-			oldest: "class-b",
-		},
-		{
-			name: "tie breaker",
-			classes: map[string]time.Time{
-				"class-aa": currentTime.Time,
-				"class-ab": currentTime.Time,
-			},
-			remove: nil,
-			oldest: "class-aa",
-		},
-		{
-			name: "remove from matched",
-			classes: map[string]time.Time{
-				"class-a": currentTime.Time,
-				"class-b": currentTime.Add(1 * addDuration),
-				"class-c": currentTime.Add(2 * addDuration),
-			},
-			remove: map[string]time.Time{
-				"class-b": currentTime.Add(1 * addDuration),
-			},
-			oldest: "class-a",
-		},
-		{
-			name: "remove oldest",
-			classes: map[string]time.Time{
-				"class-a": currentTime.Time,
-				"class-b": currentTime.Add(1 * addDuration),
-				"class-c": currentTime.Add(2 * addDuration),
-			},
-			remove: map[string]time.Time{
-				"class-a": currentTime.Time,
-			},
-			oldest: "class-b",
-		},
-		{
-			name: "remove oldest last",
-			classes: map[string]time.Time{
-				"class-a": currentTime.Time,
-			},
-			remove: map[string]time.Time{
-				"class-a": currentTime.Time,
-			},
-			oldest: "",
-		},
-	}
-
-	for _, tc := range testCases {
-		var cc controlledClasses
-		for name, timestamp := range tc.classes {
-			cc.addMatch(createGatewayClass(name, timestamp))
-		}
-
-		for name, timestamp := range tc.remove {
-			cc.removeMatch(createGatewayClass(name, timestamp))
-		}
-
-		if tc.oldest == "" {
-			require.Nil(t, cc.oldestClass)
-			return
-		}
-
-		require.Equal(t, tc.oldest, cc.oldestClass.Name)
 	}
 }
 

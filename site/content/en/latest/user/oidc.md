@@ -34,7 +34,11 @@ providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA,
 
 Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please make sure the
 redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. If you don't
-specify a redirect URL in the SecurityPolicy, the default redirect URL is `https://<gateway-hostname>/oauth2/callback`.
+specify a redirect URL in the SecurityPolicy, the default redirect URL is `https://${GATEWAY_HOST}/oauth2/callback`.
+Please notice that the `redirectURL` and `logoutPath` must be caught by the target HTTPRoute. For example, if the 
+HTTPRoute is configured to match the host `www.example.com` and the path `/foo`, the `redirectURL` must
+be prefixed with `https://www.example.com/foo`, and `logoutPath` must be prefixed with`/foo`, for example,
+`https://www.example.com/foo/oauth2/callback` and `/foo/logout`, otherwise the OIDC authentication will fail.
 
 After registering the application, you should have the following information:
 * Client ID: The client ID of the OIDC application.
@@ -73,6 +77,8 @@ spec:
     clientID: "${CLIENT_ID}.apps.googleusercontent.com"
     clientSecret:
       name: "my-app-client-secret"
+    redirectURI: "https://www.example.com/oauth2/callback"
+    logoutPath: "/logout"
 EOF
 ```
 
@@ -92,7 +98,7 @@ export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gatewa
 sudo kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 443:443
 ```
 
-Put www.exampe.com in the /etc/hosts file in your test machine, so we can use this host name to access the demo from a browser:
+Put www.example.com in the /etc/hosts file in your test machine, so we can use this host name to access the demo from a browser:
 
 ```shell
 ...

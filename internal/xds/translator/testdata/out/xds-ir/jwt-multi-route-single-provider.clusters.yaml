@@ -57,4 +57,5 @@
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
+      sni: localhost
   type: STRICT_DNS

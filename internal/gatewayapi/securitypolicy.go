@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -19,10 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/tetratelabs/multierror"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -270,6 +270,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
+		extAuth   *ir.ExtAuth
 		err, errs error
 	)
 
@@ -283,13 +284,19 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.ExtAuth != nil {
+		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -308,6 +315,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					r.JWT = jwt
 					r.OIDC = oidc
 					r.BasicAuth = basicAuth
+					r.ExtAuth = extAuth
 				}
 			}
 		}
@@ -324,6 +332,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
+		extAuth   *ir.ExtAuth
 		err, errs error
 	)
 
@@ -337,13 +346,19 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.ExtAuth != nil {
+		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -371,6 +386,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			if r.BasicAuth == nil {
 				r.BasicAuth = basicAuth
+			}
+			if r.ExtAuth == nil {
+				r.ExtAuth = extAuth
 			}
 		}
 	}
@@ -471,6 +489,8 @@ func (t *Translator) buildOIDC(
 		}
 		redirectURL = *oidc.RedirectURL
 		redirectPath = path
+	}
+	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
 	}
 
@@ -624,4 +644,139 @@ func (t *Translator) buildBasicAuth(
 	}
 
 	return &ir.BasicAuth{Users: usersSecretBytes}, nil
+}
+
+func (t *Translator) buildExtAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *Resources) (*ir.ExtAuth, error) {
+	var (
+		http       = policy.Spec.ExtAuth.HTTP
+		grpc       = policy.Spec.ExtAuth.GRPC
+		backendRef *gwapiv1.BackendObjectReference
+		protocol   ir.AppProtocol
+		ds         *ir.DestinationSetting
+		authority  string
+		err        error
+	)
+
+	switch {
+	// These are sanity checks, they should never happen because the API server
+	// should have caught them
+	case http == nil && grpc == nil:
+		return nil, errors.New("one of grpc or http must be specified")
+	case http != nil && grpc != nil:
+		return nil, errors.New("only one of grpc or http can be specified")
+	case http != nil:
+		backendRef = &http.BackendRef
+		protocol = ir.HTTP
+	case grpc != nil:
+		backendRef = &grpc.BackendRef
+		protocol = ir.GRPC
+	}
+
+	if err = t.validateExtServiceBackendReference(
+		backendRef,
+		policy.Namespace,
+		resources); err != nil {
+		return nil, err
+	}
+	authority = fmt.Sprintf(
+		"%s.%s:%d",
+		backendRef.Name,
+		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
+		*backendRef.Port)
+
+	if ds, err = t.processExtServiceDestination(
+		backendRef,
+		policy.Namespace,
+		protocol,
+		resources); err != nil {
+		return nil, err
+	}
+	rd := ir.RouteDestination{
+		Name:     irExtServiceDestinationName(policy, string(backendRef.Name)),
+		Settings: []*ir.DestinationSetting{ds},
+	}
+
+	extAuth := &ir.ExtAuth{
+		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
+	}
+
+	if http != nil {
+		extAuth.HTTP = &ir.HTTPExtAuthService{
+			Destination:      rd,
+			Authority:        authority,
+			Path:             ptr.Deref(http.Path, ""),
+			HeadersToBackend: http.HeadersToBackend,
+		}
+	} else {
+		extAuth.GRPC = &ir.GRPCExtAuthService{
+			Destination: rd,
+			Authority:   authority,
+		}
+	}
+	return extAuth, nil
+}
+
+// TODO: zhaohuabing combine this function with the one in the route translator
+func (t *Translator) processExtServiceDestination(
+	backendRef *gwapiv1.BackendObjectReference,
+	ownerNamespace string,
+	protocol ir.AppProtocol,
+	resources *Resources) (*ir.DestinationSetting, error) {
+	var (
+		endpoints   []*ir.DestinationEndpoint
+		addrType    *ir.DestinationAddressType
+		servicePort v1.ServicePort
+	)
+
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	if servicePort.AppProtocol != nil &&
+		*servicePort.AppProtocol == "kubernetes.io/h2c" {
+		protocol = ir.HTTP2
+	}
+
+	// Route to endpoints by default
+	if !t.EndpointRoutingDisabled {
+		endpointSlices := resources.GetEndpointSlicesForBackend(
+			serviceNamespace, string(backendRef.Name), KindService)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(
+			endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		ep := ir.NewDestEndpoint(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port))
+		endpoints = append(endpoints, ep)
+	}
+
+	// TODO: support mixed endpointslice address type for the same backendRef
+	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
+		return nil, errors.New(
+			"mixed endpointslice address type for the same backendRef is not supported")
+	}
+
+	return &ir.DestinationSetting{
+		Weight:      ptr.To(uint32(1)),
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+	}, nil
+}
+
+func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, service string) string {
+	return strings.ToLower(fmt.Sprintf(
+		"%s/%s/%s/%s",
+		KindSecurityPolicy,
+		policy.GetNamespace(),
+		policy.GetName(),
+		service))
 }

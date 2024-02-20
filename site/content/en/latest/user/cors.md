@@ -16,7 +16,11 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
-The below example defines a SecurityPolicy that allows CORS requests from `www.foo.com`.
+When configuring CORS either an origin with a precise hostname can be configured or an hostname containing a wildcard prefix,
+allowing all subdomains of the specified hostname.
+In addition to that the entire origin (with or without specifying a scheme) can be a wildcard to allow all origins.
+
+The below example defines a SecurityPolicy that allows CORS for all HTTP requests originating from `www.foo.com`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -94,7 +98,7 @@ curl -H "Origin: http://www.bar.com" \
 
 You won't see any CORS headers in the response, indicating that the request from `http://www.bar.com` was not allowed.
 
-If you try to send a request from `http://www.foo.com:8080`, you should also see similar response because the port number 
+If you try to send a request from `http://www.foo.com:8080`, you should also see similar response because the port number
 `8080` is not included in the allowed origins.
 
 ```shell
@@ -107,10 +111,13 @@ curl -H "Origin: http://www.foo.com:8080" \
   1> /dev/null
 ```
 
-Note: CORS specification requires that the browsers to send a preflight request to the server to ask if it's allowed
+Note: 
+* CORS specification requires that the browsers to send a preflight request to the server to ask if it's allowed
 to access the limited resource in another domains. The browsers are supposed to follow the response from the server to
 determine whether to send the actual request or not. The CORS filter only response to the preflight requests according to
 its configuration. It won't deny any requests. The browsers are responsible for enforcing the CORS policy.
+* The targeted HTTPRoute or the HTTPRoutes that the targeted Gateway routes to must allow the OPTIONS method for the CORS 
+filter to work. Otherwise, the OPTIONS request won't match the routes and the CORS filter won't be invoked.
 
 
 ## Clean-Up

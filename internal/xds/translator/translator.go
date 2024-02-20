@@ -19,7 +19,6 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -79,32 +78,32 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	var errs error
 	if err := t.processHTTPListenerXdsTranslation(
 		tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
 	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
 	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP, ir.AccessLog); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
 	if err := processJSONPatches(tCtx, ir.EnvoyPatchPolicies); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
 	if err := processClusterForAccessLog(tCtx, ir.AccessLog); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 	if err := processClusterForTracing(tCtx, ir.Tracing); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
-		errs = multierror.Append(errs, err)
+		errs = errors.Join(errs, err)
 	}
 
 	return tCtx, errs
@@ -139,7 +138,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				// skip this listener if failed to add xds listener to the
 				// resource version table. Normally, this should not happen.
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				continue
 			}
 		} else if httpListener.TLS == nil {
@@ -154,7 +153,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
 				if xdsRouteCfg == nil {
 					// skip this listener if failed to find xds route config
-					errs = multierror.Append(errs, errors.New("unable to find xds route config"))
+					errs = errors.Join(errs, errors.New("unable to find xds route config"))
 					continue
 				}
 			}
@@ -179,16 +178,23 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			if err := tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 			}
 		}
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
 			for t := range httpListener.TLS.Certificates {
-				secret := buildXdsDownstreamTLSSecret(httpListener.TLS.Certificates[t])
+				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[t])
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					errs = multierror.Append(errs, err)
+					errs = errors.Join(errs, err)
+				}
+			}
+
+			if httpListener.TLS.CACertificate != nil {
+				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate)
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 		}
@@ -238,7 +244,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			xdsRoute, err := buildXdsRoute(httpRoute)
 			if err != nil {
 				// skip this route if failed to build xds route
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				continue
 			}
 
@@ -246,7 +252,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 			if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
 				if err != nil {
-					errs = multierror.Append(errs, err)
+					errs = errors.Join(errs, err)
 				}
 			}
 
@@ -260,8 +266,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
-				if err = processXdsCluster(tCtx, httpRoute); err != nil {
-					errs = multierror.Append(errs, err)
+				if err = processXdsCluster(tCtx, httpRoute, httpListener.HTTP1); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 
@@ -273,7 +279,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 						tSocket:      nil,
 						endpointType: EndpointTypeStatic,
 					}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-						errs = multierror.Append(errs, err)
+						errs = errors.Join(errs, err)
 					}
 				}
 			}
@@ -283,14 +289,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// Check if an extension want to modify the Virtual Host we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 			if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 			}
 		}
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostsList...)
 
 		// Add per-route filter configs to the route config.
 		if err := patchRouteCfgWithPerRouteConfig(xdsRouteCfg, httpListener); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 		// Add all the other needed resources referenced by this filter to the
@@ -303,13 +309,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// rate limit server configuration.
 		// Check if a ratelimit cluster exists, if not, add it, if it's needed.
 		if err := t.createRateLimitServiceCluster(tCtx, httpListener); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 		// Check if an extension want to modify the listener that was just configured/created
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 		if err := processExtensionPostListenerHook(tCtx, xdsListener, t.ExtensionManager); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -337,13 +343,13 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, accesslog)
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				// skip this listener if failed to add xds listener to the
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				continue
 			}
 		}
 
 		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 		// 1:1 between IR TCPListener and xDS Cluster
@@ -353,14 +359,20 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			tSocket:      nil,
 			endpointType: EndpointTypeStatic,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
 			for _, s := range tcpListener.TLS.Terminate.Certificates {
-				secret := buildXdsDownstreamTLSSecret(s)
+				secret := buildXdsTLSCertSecret(s)
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					errs = multierror.Append(errs, err)
+					errs = errors.Join(errs, err)
+				}
+			}
+			if tcpListener.TLS.Terminate.CACertificate != nil {
+				caSecret := buildXdsTLSCaCertSecret(tcpListener.TLS.Terminate.CACertificate)
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 		}
@@ -379,12 +391,12 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		xdsListener, err := buildXdsUDPListener(udpListener.Destination.Name, udpListener, accesslog)
 		if err != nil {
 			// skip this listener if failed to build xds listener
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 		if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 			// skip this listener if failed to add xds listener to the resource version table
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 
@@ -395,7 +407,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			tSocket:      nil,
 			endpointType: EndpointTypeStatic,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs
@@ -485,7 +497,7 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
-func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute) error {
+func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
 	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
 	// since there's no Mixed AddressType among all the DestinationSettings.
 	addrTypeState := httpRoute.Destination.Settings[0].AddressType
@@ -506,6 +518,9 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		proxyProtocol:  httpRoute.ProxyProtocol,
 		circuitBreaker: httpRoute.CircuitBreaker,
 		healthCheck:    httpRoute.HealthCheck,
+		http1Settings:  http1Settings,
+		timeout:        httpRoute.Timeout,
+		tcpkeepalive:   httpRoute.TCPKeepalive,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

@@ -17,7 +17,6 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
@@ -26,8 +25,7 @@ import (
 )
 
 const (
-	oauth2Filter                = "envoy.filters.http.oauth2"
-	defaultTokenEndpointTimeout = 10
+	oauth2Filter = "envoy.filters.http.oauth2"
 )
 
 func init() {
@@ -60,15 +58,8 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 
 		filter, err := buildHCMOAuth2Filter(route)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
-		}
-
-		// skip if the filter already exists
-		for _, existingFilter := range mgr.HttpFilters {
-			if filter.Name == existingFilter.Name {
-				continue
-			}
 		}
 
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
@@ -124,7 +115,7 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 					Cluster: cluster.name,
 				},
 				Timeout: &duration.Duration{
-					Seconds: defaultTokenEndpointTimeout,
+					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
 			AuthorizationEndpoint: route.OIDC.Provider.AuthorizationEndpoint,
@@ -217,7 +208,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 
 		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 
@@ -225,26 +216,17 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 		// This validation could be removed since it's already validated in the
 		// Gateway API translator.
 		if cluster.endpointType == EndpointTypeStatic {
-			errs = multierror.Append(errs, fmt.Errorf(
+			errs = errors.Join(errs, fmt.Errorf(
 				"static IP cluster is not allowed: %s",
 				route.OIDC.Provider.TokenEndpoint))
 			continue
 		}
 
-		tlsContext := &tlsv3.UpstreamTlsContext{
-			Sni: cluster.hostname,
-		}
-
-		tlsContextAny, err := anypb.New(tlsContext)
+		// TODO huabing: add support for custom CA and client certificate.
+		tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
-		}
-		tSocket = &corev3.TransportSocket{
-			Name: "envoy.transport_sockets.tls",
-			ConfigType: &corev3.TransportSocket_TypedConfig{
-				TypedConfig: tlsContextAny,
-			},
 		}
 
 		ds = &ir.DestinationSetting{
@@ -261,7 +243,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			tSocket:      tSocket,
 			endpointType: cluster.endpointType,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -282,15 +264,15 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 		// oauth2 client ID and secret.
 		clientSecret := buildOAuth2ClientSecret(route)
 		if err := addXdsSecret(tCtx, clientSecret); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 		hmacSecret, err := buildOAuth2HMACSecret(route)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 		if err := addXdsSecret(tCtx, hmacSecret); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -383,7 +365,7 @@ func (*oidc) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *
 		if _, ok := filterCfg[filterName]; ok {
 			// This should not happen since this is the only place where the oauth2
 			// filter is added in a route.
-			errs = multierror.Append(errs, fmt.Errorf(
+			errs = errors.Join(errs, fmt.Errorf(
 				"route config already contains oauth2 config: %+v", route))
 			continue
 		}
@@ -392,7 +374,7 @@ func (*oidc) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *
 		// per-route in the typePerFilterConfig of the route.
 		routeCfgAny, err := anypb.New(&routev3.FilterConfig{Disabled: true})
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 

@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,11 +32,12 @@ func hasSectionName(policy *egv1a1.ClientTrafficPolicy) bool {
 	return policy.Spec.TargetRef.SectionName != nil
 }
 
-func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
+func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	gateways []*GatewayContext,
 	xdsIR XdsIRMap, infraIR InfraIRMap) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
+	clientTrafficPolicies := resources.ClientTrafficPolicies
 	// Sort based on timestamp
 	sort.Slice(clientTrafficPolicies, func(i, j int) bool {
 		return clientTrafficPolicies[i].CreationTimestamp.Before(&(clientTrafficPolicies[j].CreationTimestamp))
@@ -89,19 +91,29 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 			policyMap[key].Insert(section)
 
 			// Translate for listener matching section name
+			var err error
 			for _, l := range gateway.listeners {
 				if string(l.Name) == section {
-					t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
+					err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 					break
 				}
 			}
-			// Set Accepted=True
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"ClientTrafficPolicy has been accepted.",
-			)
+			if err != nil {
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					status.Error2ConditionMsg(err),
+				)
+			} else {
+				// Set Accepted=True
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionTrue,
+					gwv1a2.PolicyReasonAccepted,
+					"ClientTrafficPolicy has been accepted.",
+				)
+			}
 		}
 	}
 
@@ -162,22 +174,32 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 			policyMap[key].Insert(AllSections)
 
 			// Translate sections that have not yet been targeted
+			var err error
 			for _, l := range gateway.listeners {
 				// Skip if section has already been targeted
 				if s != nil && s.Has(string(l.Name)) {
 					continue
 				}
 
-				t.translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR, infraIR)
+				err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 			}
 
-			// Set Accepted=True
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"ClientTrafficPolicy has been accepted.",
-			)
+			if err != nil {
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					status.Error2ConditionMsg(err),
+				)
+			} else {
+				// Set Accepted=True
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionTrue,
+					gwv1a2.PolicyReasonAccepted,
+					"ClientTrafficPolicy has been accepted.",
+				)
+			}
 		}
 	}
 
@@ -265,7 +287,8 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 	return gateway
 }
 
-func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap, infraIR InfraIRMap) {
+func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
+	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) error {
 	// Find IR
 	irKey := irStringKey(l.gateway.Namespace, l.gateway.Name)
 	// It must exist since we've already finished processing the gateways
@@ -287,19 +310,27 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 	// IR must exist since we're past validation
 	if httpIR != nil {
 		// Translate TCPKeepalive
-		translateListenerTCPKeepalive(policySpec.TCPKeepalive, httpIR)
+		translateListenerTCPKeepalive(policy.Spec.TCPKeepalive, httpIR)
 
 		// Translate Proxy Protocol
-		translateListenerProxyProtocol(policySpec.EnableProxyProtocol, httpIR)
+		translateListenerProxyProtocol(policy.Spec.EnableProxyProtocol, httpIR)
 
-		// Translate Suppress Envoy Headers
-		translateListenerSuppressEnvoyHeaders(policySpec.SuppressEnvoyHeaders, httpIR)
+		// Translate Client IP Detection
+		translateClientIPDetection(policy.Spec.ClientIPDetection, httpIR)
+
+		// Translate Header Settings
+		translateListenerHeaderSettings(policy.Spec.Headers, httpIR)
 
 		// Translate Path Settings
-		translatePathSettings(policySpec.Path, httpIR)
+		translatePathSettings(policy.Spec.Path, httpIR)
+
+		// Translate HTTP1 Settings
+		if err := translateHTTP1Settings(policy.Spec.HTTP1, httpIR); err != nil {
+			return err
+		}
 
 		// enable http3 if set and TLS is enabled
-		if httpIR.TLS != nil && policySpec.HTTP3 != nil {
+		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil {
 			httpIR.HTTP3 = &ir.HTTP3Settings{}
 			var proxyListenerIR *ir.ProxyListener
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
@@ -314,8 +345,11 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		}
 
 		// Translate TLS parameters
-		translateListenerTLSParameters(policySpec.TLS, httpIR)
+		if err := t.translateListenerTLSParameters(policy, httpIR, resources); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir.HTTPListener) {
@@ -372,19 +406,67 @@ func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPLi
 	}
 }
 
-func translateListenerSuppressEnvoyHeaders(suppressEnvoyHeaders *bool, httpIR *ir.HTTPListener) {
-	if suppressEnvoyHeaders != nil {
-		httpIR.SuppressEnvoyHeaders = *suppressEnvoyHeaders
+func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if clientIPDetection == nil {
+		return
+	}
+
+	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
+}
+
+func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) {
+	if headerSettings == nil {
+		return
+	}
+	httpIR.Headers = &ir.HeaderSettings{
+		EnableEnvoyHeaders: ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
 	}
 }
 
-func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HTTPListener) {
+func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {
+	if http1Settings == nil {
+		return nil
+	}
+	httpIR.HTTP1 = &ir.HTTP1Settings{
+		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
+		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
+	}
+	if http1Settings.HTTP10 != nil {
+		var defaultHost *string
+		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
+			for _, hostname := range httpIR.Hostnames {
+				if !strings.Contains(hostname, "*") {
+					// make linter happy
+					theHost := hostname
+					defaultHost = &theHost
+					break
+				}
+			}
+			if defaultHost == nil {
+				return fmt.Errorf("can't set http10 default host on listener with only wildcard hostnames")
+			}
+		}
+		// If useDefaultHost was set, then defaultHost will have the hostname to use.
+		// If no good hostname was found, an error would have been returned.
+		httpIR.HTTP1.HTTP10 = &ir.HTTP10Settings{
+			DefaultHost: defaultHost,
+		}
+	}
+	return nil
+}
+
+func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
+	httpIR *ir.HTTPListener, resources *Resources) error {
 	// Return if this listener isn't a TLS listener. There has to be
 	// at least one certificate defined, which would cause httpIR to
 	// have a TLS structure.
 	if httpIR.TLS == nil {
-		return
+		return nil
 	}
+
+	tlsParams := policy.Spec.TLS
+
 	// Make sure that the negotiated TLS protocol version is as expected if TLS is used,
 	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
 	httpIR.TLS.MinVersion = ptr.To(ir.TLSv12)
@@ -399,10 +481,12 @@ func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HT
 			httpIR.TLS.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
 		}
 	}
+
 	// Return early if not set
 	if tlsParams == nil {
-		return
+		return nil
 	}
+
 	if tlsParams.MinVersion != nil {
 		httpIR.TLS.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
 	}
@@ -418,4 +502,55 @@ func translateListenerTLSParameters(tlsParams *egv1a1.TLSSettings, httpIR *ir.HT
 	if len(tlsParams.SignatureAlgorithms) > 0 {
 		httpIR.TLS.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
+
+	if tlsParams.ClientValidation != nil {
+		from := crossNamespaceFrom{
+			group:     egv1a1.GroupName,
+			kind:      KindClientTrafficPolicy,
+			namespace: policy.Namespace,
+		}
+
+		irCACert := &ir.TLSCACertificate{
+			Name: irTLSCACertName(policy.Namespace, policy.Name),
+		}
+
+		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
+			if caCertRef.Kind == nil || string(*caCertRef.Kind) == KindSecret { // nolint
+				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
+				if err != nil {
+					return err
+				}
+
+				secretBytes, ok := secret.Data[caCertKey]
+				if !ok || len(secretBytes) == 0 {
+					return fmt.Errorf(
+						"caCertificateRef not found in secret %s", caCertRef.Name)
+				}
+
+				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
+
+			} else if string(*caCertRef.Kind) == KindConfigMap {
+				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
+				if err != nil {
+					return err
+				}
+
+				configMapBytes, ok := configMap.Data[caCertKey]
+				if !ok || len(configMapBytes) == 0 {
+					return fmt.Errorf(
+						"caCertificateRef not found in configMap %s", caCertRef.Name)
+				}
+
+				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)
+			} else {
+				return fmt.Errorf("unsupported caCertificateRef kind:%s", string(*caCertRef.Kind))
+			}
+		}
+
+		if len(irCACert.Certificate) > 0 {
+			httpIR.TLS.CACertificate = irCACert
+		}
+	}
+
+	return nil
 }

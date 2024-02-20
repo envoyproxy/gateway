@@ -1,0 +1,60 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.ext_authz_httproute/default/httproute-1/rule/0/match/0/www_example_com
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            httpService:
+              authorizationResponse:
+                allowedUpstreamHeaders:
+                  patterns:
+                  - exact: header1
+                  - exact: header2
+              serverUri:
+                cluster: securitypolicy/default/policy-for-first-route/http-backend
+                timeout: 10s
+                uri: http://http-backend.envoy-gateway:80/auth
+        - name: envoy.filters.http.ext_authz_httproute/default/httproute-2/rule/0/match/0/www_example_com
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            allowedHeaders:
+              patterns:
+              - exact: header1
+              - exact: header2
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend.default:9000
+                clusterName: securitypolicy/default/policy-for-second-route/grpc-backend
+              timeout: 10s
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        upgradeConfigs:
+        - upgradeType: websocket
+        useRemoteAddress: true
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

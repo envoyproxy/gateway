@@ -46,7 +46,7 @@ func (r *ResourceRender) Name() string {
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
+	if OwningGatewayLabelsAbsent(labels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -99,7 +99,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
+	if OwningGatewayLabelsAbsent(labels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -120,7 +120,18 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
-	serviceSpec.ExternalIPs = r.infra.Addresses
+
+	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
+		if len(r.infra.Addresses) > 0 {
+			// Since K8s Service requires specify no more than one IP for each IP family
+			// So we only use the first address
+			// if address is not set, the automatically assigned clusterIP is used
+			serviceSpec.ClusterIP = r.infra.Addresses[0]
+			serviceSpec.ClusterIPs = r.infra.Addresses[0:1]
+		}
+	} else {
+		serviceSpec.ExternalIPs = r.infra.Addresses
+	}
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -143,7 +154,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
+	if OwningGatewayLabelsAbsent(labels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -184,7 +195,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations
 	labels := r.infra.GetProxyMetadata().Labels
 	dpLabels := envoyLabels(labels)
-	if (len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(dpLabels[gatewayapi.OwningGatewayClassLabel]) == 0 {
+	if OwningGatewayLabelsAbsent(dpLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -293,4 +304,11 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	return hpa, nil
+}
+
+// OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels
+func OwningGatewayLabelsAbsent(labels map[string]string) bool {
+	return (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 ||
+		len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) &&
+		len(labels[gatewayapi.OwningGatewayClassLabel]) == 0
 }

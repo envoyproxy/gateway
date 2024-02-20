@@ -22,6 +22,8 @@ envoyProxy:
           - name: global_config
             static_layer:
               envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         dynamic_resources:
           ads_config:
             api_type: DELTA_GRPC
@@ -504,6 +506,8 @@ xds:
           - name: global_config
             staticLayer:
               envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         staticResources:
           clusters:
           - connectTimeout: 0.250s
@@ -799,6 +803,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -807,6 +812,7 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   upgradeConfigs:
                   - upgradeType: websocket
@@ -865,6 +871,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -873,6 +880,7 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/grpc
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
             name: default/eg/grpc

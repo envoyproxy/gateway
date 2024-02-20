@@ -18,6 +18,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func (t *Translator) validateBackendRef(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
@@ -58,7 +60,7 @@ func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, p
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonInvalidKind,
-			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) and %s is supported", GroupMultiClusterService),
+			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) and %s are supported", GroupMultiClusterService),
 		)
 		return false
 	}
@@ -71,7 +73,7 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonInvalidKind,
-			"Kind is invalid, only Service and MCS ServiceImport is supported",
+			"Kind is invalid, only Service and MCS ServiceImport are supported",
 		)
 		return false
 	}
@@ -733,23 +735,76 @@ func (t *Translator) validateHostname(hostname string) error {
 func (t *Translator) validateSecretRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretRef gwapiv1b1.SecretObjectReference,
+	secretObjRef gwapiv1b1.SecretObjectReference,
 	resources *Resources) (*v1.Secret, error) {
-	if secretRef.Group != nil && string(*secretRef.Group) != "" {
-		return nil, errors.New("secret ref group must be unspecified/empty")
-	}
 
-	if secretRef.Kind != nil && string(*secretRef.Kind) != KindSecret {
-		return nil, fmt.Errorf("secret ref kind must be %s", KindSecret)
+	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
+		return nil, err
 	}
 
 	secretNamespace := from.namespace
+	if secretObjRef.Namespace != nil {
+		secretNamespace = string(*secretObjRef.Namespace)
+	}
+	secret := resources.GetSecret(secretNamespace, string(secretObjRef.Name))
+
+	if secret == nil {
+		return nil, fmt.Errorf(
+			"secret %s/%s does not exist", secretNamespace, secretObjRef.Name)
+	}
+
+	return secret, nil
+}
+
+func (t *Translator) validateConfigMapRef(
+	allowCrossNamespace bool,
+	from crossNamespaceFrom,
+	secretObjRef gwapiv1b1.SecretObjectReference,
+	resources *Resources) (*v1.ConfigMap, error) {
+
+	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
+		return nil, err
+	}
+
+	configMapNamespace := from.namespace
+	if secretObjRef.Namespace != nil {
+		configMapNamespace = string(*secretObjRef.Namespace)
+	}
+	configMap := resources.GetConfigMap(configMapNamespace, string(secretObjRef.Name))
+
+	if configMap == nil {
+		return nil, fmt.Errorf(
+			"configmap %s/%s does not exist", configMapNamespace, secretObjRef.Name)
+	}
+
+	return configMap, nil
+}
+
+func (t *Translator) validateSecretObjectRef(
+	allowCrossNamespace bool,
+	from crossNamespaceFrom,
+	secretRef gwapiv1b1.SecretObjectReference,
+	resources *Resources) error {
+	var kind string
+	if secretRef.Group != nil && string(*secretRef.Group) != "" {
+		return errors.New("secret ref group must be unspecified/empty")
+	}
+
+	if secretRef.Kind == nil { // nolint
+		kind = KindSecret
+	} else if string(*secretRef.Kind) == KindSecret {
+		kind = KindSecret
+	} else if string(*secretRef.Kind) == KindConfigMap {
+		kind = KindConfigMap
+	} else {
+		return fmt.Errorf("secret ref kind must be %s", KindSecret)
+	}
 
 	if secretRef.Namespace != nil &&
 		string(*secretRef.Namespace) != "" &&
 		string(*secretRef.Namespace) != from.namespace {
 		if !allowCrossNamespace {
-			return nil, fmt.Errorf(
+			return fmt.Errorf(
 				"secret ref namespace must be unspecified/empty or %s",
 				from.namespace)
 		}
@@ -758,27 +813,101 @@ func (t *Translator) validateSecretRef(
 			from,
 			crossNamespaceTo{
 				group:     "",
-				kind:      KindSecret,
+				kind:      kind,
 				namespace: string(*secretRef.Namespace),
 				name:      string(secretRef.Name),
 			},
 			resources.ReferenceGrants,
 		) {
-			return nil,
-				fmt.Errorf(
-					"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
-					*secretRef.Namespace, secretRef.Name)
+			return fmt.Errorf(
+				"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+				*secretRef.Namespace, secretRef.Name)
 		}
 
-		secretNamespace = string(*secretRef.Namespace)
 	}
 
-	secret := resources.GetSecret(secretNamespace, string(secretRef.Name))
+	return nil
+}
 
-	if secret == nil {
-		return nil, fmt.Errorf(
-			"secret %s/%s does not exist", secretNamespace, secretRef.Name)
+// TODO: zhaohuabing combine this function with the one in the route translator
+// validateExtServiceBackendReference validates the backend reference for an
+// external service referenced by an EG policy.
+// This can also be used for the other external services deployed in the cluster,
+// such as the external processing filter, gRPC Access Log Service, etc.
+// It checks:
+//  1. The group is nil or empty, indicating the core API group.
+//  2. The kind is Service.
+//  3. The port is specified.
+//  4. The service exists and the specified port is found.
+//  5. The cross-namespace reference is permitted by the ReferenceGrants if the
+//     namespace is different from the policy's namespace.
+func (t *Translator) validateExtServiceBackendReference(
+	backendRef *gwapiv1.BackendObjectReference,
+	ownerNamespace string,
+	resources *Resources) error {
+
+	// These are sanity checks, they should never happen because the API server
+	// should have caught them
+	if backendRef.Group != nil && *backendRef.Group != "" {
+		return errors.New(
+			"group is invalid, only the core API group (specified by omitting" +
+				" the group field or setting it to an empty string) is supported")
+	}
+	if backendRef.Kind != nil && *backendRef.Kind != KindService {
+		return errors.New("kind is invalid, only Service (specified by omitting " +
+			"the kind field or setting it to 'Service') is supported")
+	}
+	if backendRef.Port == nil {
+		return errors.New("a valid port number corresponding to a port on the Service must be specified")
 	}
 
-	return secret, nil
+	// check if the service is valid
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	if service == nil {
+		return fmt.Errorf("service %s/%s not found", serviceNamespace, backendRef.Name)
+	}
+	var portFound bool
+	for _, port := range service.Spec.Ports {
+		portProtocol := port.Protocol
+		if port.Protocol == "" { // Default protocol is TCP
+			portProtocol = v1.ProtocolTCP
+		}
+		// currently only HTTP and GRPC are supported, both of which are TCP
+		if port.Port == int32(*backendRef.Port) && portProtocol == v1.ProtocolTCP {
+			portFound = true
+			break
+		}
+	}
+
+	if !portFound {
+		return fmt.Errorf(
+			"TCP Port %d not found on service %s/%s",
+			*backendRef.Port, serviceNamespace, string(backendRef.Name),
+		)
+	}
+
+	// check if the cross-namespace reference is permitted
+	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" &&
+		string(*backendRef.Namespace) != ownerNamespace {
+		if !t.validateCrossNamespaceRef(
+			crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      KindSecurityPolicy,
+				namespace: ownerNamespace,
+			},
+			crossNamespaceTo{
+				group:     GroupDerefOr(backendRef.Group, ""),
+				kind:      KindDerefOr(backendRef.Kind, KindService),
+				namespace: string(*backendRef.Namespace),
+				name:      string(backendRef.Name),
+			},
+			resources.ReferenceGrants,
+		) {
+			return fmt.Errorf(
+				"backend ref to %s %s/%s not permitted by any ReferenceGrant",
+				KindService, *backendRef.Namespace, backendRef.Name)
+		}
+	}
+	return nil
 }

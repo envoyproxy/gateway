@@ -6,8 +6,12 @@
 package gatewayapi
 
 import (
+	"fmt"
+	"strings"
+
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -15,19 +19,21 @@ import (
 )
 
 const (
-	KindEnvoyProxy     = "EnvoyProxy"
-	KindGateway        = "Gateway"
-	KindGatewayClass   = "GatewayClass"
-	KindGRPCRoute      = "GRPCRoute"
-	KindHTTPRoute      = "HTTPRoute"
-	KindNamespace      = "Namespace"
-	KindTLSRoute       = "TLSRoute"
-	KindTCPRoute       = "TCPRoute"
-	KindUDPRoute       = "UDPRoute"
-	KindService        = "Service"
-	KindServiceImport  = "ServiceImport"
-	KindSecret         = "Secret"
-	KindSecurityPolicy = "SecurityPolicy"
+	KindConfigMap           = "ConfigMap"
+	KindClientTrafficPolicy = "ClientTrafficPolicy"
+	KindEnvoyProxy          = "EnvoyProxy"
+	KindGateway             = "Gateway"
+	KindGatewayClass        = "GatewayClass"
+	KindGRPCRoute           = "GRPCRoute"
+	KindHTTPRoute           = "HTTPRoute"
+	KindNamespace           = "Namespace"
+	KindTLSRoute            = "TLSRoute"
+	KindTCPRoute            = "TCPRoute"
+	KindUDPRoute            = "UDPRoute"
+	KindService             = "Service"
+	KindServiceImport       = "ServiceImport"
+	KindSecret              = "Secret"
+	KindSecurityPolicy      = "SecurityPolicy"
 
 	GroupMultiClusterService = "multicluster.x-k8s.io"
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
@@ -80,6 +86,10 @@ type Translator struct {
 	// MergeGateways is true when all Gateway Listeners
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
+
+	// EnvoyPatchPolicyEnabled when the EnvoyPatchPolicy
+	// feature is enabled.
+	EnvoyPatchPolicyEnabled bool
 
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
@@ -148,7 +158,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR, infraIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
@@ -197,10 +207,59 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
+	// Add a catch-all route for each HTTP listener if needed
+	addCatchAllRoute(xdsIR)
+
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, xdsIR, infraIR)
 
+}
+
+// For filters without native per-route support, we need to add a catch-all route
+// to ensure that these filters are disabled for non-matching requests.
+// https://github.com/envoyproxy/gateway/issues/2507
+func addCatchAllRoute(xdsIR map[string]*ir.Xds) {
+	for _, i := range xdsIR {
+		for _, http := range i.HTTP {
+			var needCatchAllRoutePerHost = make(map[string]bool)
+			for _, r := range http.Routes {
+				if r.ExtAuth != nil || r.BasicAuth != nil || r.OIDC != nil {
+					needCatchAllRoutePerHost[r.Hostname] = true
+				}
+			}
+
+			// skip if there is already a catch-all route
+			for host := range needCatchAllRoutePerHost {
+				for _, r := range http.Routes {
+					if (r.Hostname == host &&
+						r.PathMatch != nil &&
+						r.PathMatch.Prefix != nil &&
+						*r.PathMatch.Prefix == "/") &&
+						len(r.HeaderMatches) == 0 &&
+						len(r.QueryParamMatches) == 0 {
+						delete(needCatchAllRoutePerHost, host)
+					}
+				}
+			}
+
+			for host, needCatchAllRoute := range needCatchAllRoutePerHost {
+				if needCatchAllRoute {
+					underscoredHost := strings.ReplaceAll(host, ".", "_")
+					http.Routes = append(http.Routes, &ir.HTTPRoute{
+						Name: fmt.Sprintf("%s/catch-all-return-404", underscoredHost),
+						PathMatch: &ir.StringMatch{
+							Prefix: ptr.To("/"),
+						},
+						DirectResponse: &ir.DirectResponse{
+							StatusCode: 404,
+						},
+						Hostname: host,
+					})
+				}
+			}
+		}
+	}
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

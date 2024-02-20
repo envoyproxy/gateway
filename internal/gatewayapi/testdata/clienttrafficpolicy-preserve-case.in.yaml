@@ -3,14 +3,15 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     namespace: envoy-gateway
-    name: target-gateway-1-section-http-1
+    name: target-gateway-1
   spec:
-    suppressEnvoyHeaders: true
+    http1:
+      enableTrailers: true
+      preserveHeaderCase: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      sectionName: http-1
       namespace: envoy-gateway
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

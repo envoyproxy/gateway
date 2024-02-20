@@ -23,7 +23,10 @@
     unhealthyThreshold: 3
   lbPolicy: LEAST_REQUEST
   name: first-route-dest
-  outlierDetection: {}
+  outlierDetection:
+    baseEjectionTime: 180s
+    interval: 2s
+    maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
@@ -49,7 +52,10 @@
     unhealthyThreshold: 3
   lbPolicy: LEAST_REQUEST
   name: second-route-dest
-  outlierDetection: {}
+  outlierDetection:
+    baseEjectionTime: 180s
+    interval: 1s
+    maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
@@ -73,7 +79,10 @@
     unhealthyThreshold: 3
   lbPolicy: LEAST_REQUEST
   name: third-route-dest
-  outlierDetection: {}
+  outlierDetection:
+    baseEjectionTime: 160s
+    interval: 1s
+    maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
@@ -97,6 +106,9 @@
     unhealthyThreshold: 3
   lbPolicy: LEAST_REQUEST
   name: fourth-route-dest
-  outlierDetection: {}
+  outlierDetection:
+    baseEjectionTime: 180s
+    interval: 1s
+    maxEjectionPercent: 90
   perConnectionBufferLimitBytes: 32768
   type: EDS

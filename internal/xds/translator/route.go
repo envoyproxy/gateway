@@ -72,8 +72,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil && httpRoute.Timeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.Duration)
+	if router.GetRoute() != nil && httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil &&
+		httpRoute.Timeout.HTTP.RequestTimeout != nil {
+		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.HTTP.RequestTimeout.Duration)
 	}
 
 	// Add per route filter configs to the route, if needed.
@@ -328,12 +329,20 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 	headerValueOptions := make([]*corev3.HeaderValueOption, len(headersToAdd))
 
 	for i, header := range headersToAdd {
+		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+
+		if header.Append {
+			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		} else {
+			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		}
+
 		headerValueOptions[i] = &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
 				Key:   header.Name,
 				Value: header.Value,
 			},
-			Append: &wrapperspb.BoolValue{Value: header.Append},
+			AppendAction: appendAction,
 		}
 
 		// Allow empty headers to be set, but don't add the config to do so unless necessary

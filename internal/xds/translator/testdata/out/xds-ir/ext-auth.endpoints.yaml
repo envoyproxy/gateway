@@ -1,0 +1,48 @@
+- clusterName: httproute/default/httproute-1/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.1
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-1/rule/0/backend/0
+- clusterName: httproute/default/httproute-2/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.2
+            portValue: 60000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-2/rule/0/backend/0
+- clusterName: securitypolicy/default/policy-for-first-route/http-backend
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 80
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: securitypolicy/default/policy-for-first-route/http-backend/backend/0
+- clusterName: securitypolicy/default/policy-for-second-route/grpc-backend
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 8.8.8.8
+            portValue: 9000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: securitypolicy/default/policy-for-second-route/grpc-backend/backend/0

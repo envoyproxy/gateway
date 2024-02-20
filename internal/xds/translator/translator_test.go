@@ -95,6 +95,10 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "mutual-tls",
+			requireSecrets: true,
+		},
+		{
 			name:           "http3",
 			requireSecrets: true,
 		},
@@ -167,6 +171,7 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
+			requireSecrets:            true,
 		},
 		{
 			name:                      "jsonpatch-missing-resource",
@@ -174,6 +179,14 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name:                      "jsonpatch-invalid-patch",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-add-op-without-value",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-move-op-with-value",
 			requireEnvoyPatchPolicies: true,
 		},
 		{
@@ -235,6 +248,27 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "path-settings",
+		},
+		{
+			name: "client-ip-detection",
+		},
+		{
+			name: "http1-trailers",
+		},
+		{
+			name: "http1-preserve-case",
+		},
+		{
+			name: "timeout",
+		},
+		{
+			name: "ext-auth",
+		},
+		{
+			name: "http10",
+		},
+		{
+			name: "upstream-tcpkeepalive",
 		},
 	}
 

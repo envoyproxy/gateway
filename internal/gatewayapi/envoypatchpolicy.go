@@ -94,6 +94,16 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			continue
 		}
 
+		if !t.EnvoyPatchPolicyEnabled {
+			status.SetEnvoyPatchPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				egv1a1.PolicyReasonDisabled,
+				"EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
+			)
+			continue
+		}
+
 		// Save the patch
 		for _, patch := range policy.Spec.JSONPatches {
 			irPatch := ir.JSONPatchConfig{}
@@ -101,6 +111,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			irPatch.Name = patch.Name
 			irPatch.Operation.Op = string(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
+			irPatch.Operation.From = patch.Operation.From
 			irPatch.Operation.Value = patch.Operation.Value
 
 			policyIR.JSONPatches = append(policyIR.JSONPatches, &irPatch)

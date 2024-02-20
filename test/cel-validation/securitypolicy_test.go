@@ -16,6 +16,8 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -220,7 +222,67 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "cors alloworigin invalid with wildcard in the middle",
+			desc: "cors alloworigin valid with scheme and wildcard",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{
+							"http://*", // valid
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "cors alloworigin valid with wildcard only",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{
+							"*", // valid
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "cors alloworigin valid with simple hostname without tld",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{
+							"http://localhost", // valid
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "cors alloworigin with wildcard in the middle",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					CORS: &egv1a1.CORS{
@@ -238,7 +300,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.cors.allowOrigins[0]: Invalid value: \"https://foo.*.com\": spec.cors.allowOrigins[0] in body should match '^https?:\\/\\/(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(:[0-9]+)?$'",
+				"spec.cors.allowOrigins[0]: Invalid value: \"https://foo.*.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|https?:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
 		{
@@ -260,7 +322,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.cors.allowOrigins[0]: Invalid value: \"foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^https?:\\/\\/(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(:[0-9]+)?$'",
+				"spec.cors.allowOrigins[0]: Invalid value: \"foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|https?:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
 		{
@@ -282,7 +344,208 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.cors.allowOrigins[0]: Invalid value: \"grpc://foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^https?:\\/\\/(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(:[0-9]+)?$'",
+				"spec.cors.allowOrigins[0]: Invalid value: \"grpc://foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|https?:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+			},
+		},
+
+		// ExtAuth
+		{
+			desc: "GRPC external auth service",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Name: "grpc-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(80)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "HTTP external auth service",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "no extAuth",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": one of grpc or http must be specified",
+			},
+		},
+		{
+			desc: "with both extAuth services",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Name: "grpc-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(80)),
+							},
+						},
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": only one of grpc or http can be specified",
+			},
+		},
+		{
+			desc: "http extAuth service invalid Group",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Group: ptr.To(gwapiv1.Group("unsupported")),
+								Name:  "http-auth-service",
+								Port:  ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+			},
+		},
+		{
+			desc: "http extAuth service invalid Kind",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Kind: ptr.To(gwapiv1.Kind("unsupported")),
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported",
+			},
+		},
+		{
+			desc: "grpc extAuth service invalid Group",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Group: ptr.To(gwapiv1.Group("unsupported")),
+								Name:  "http-auth-service",
+								Port:  ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+			},
+		},
+		{
+			desc: "grpc extAuth service invalid Kind",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendRef: gwapiv1.BackendObjectReference{
+								Kind: ptr.To(gwapiv1.Kind("unsupported")),
+								Name: "http-auth-service",
+								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported",
 			},
 		},
 	}

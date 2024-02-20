@@ -42,6 +42,13 @@ func newTestInfraWithAnnotations(annotations map[string]string) *ir.Infra {
 	return newTestInfraWithAnnotationsAndLabels(annotations, nil)
 }
 
+func newTestInfraWithAddresses(addresses []string) *ir.Infra {
+	infra := newTestInfraWithAnnotationsAndLabels(nil, nil)
+	infra.Proxy.Addresses = addresses
+
+	return infra
+}
+
 func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string) *ir.Infra {
 	i := ir.NewInfra()
 
@@ -83,6 +90,7 @@ func TestDeployment(t *testing.T) {
 		bootstrap    string
 		telemetry    *egv1a1.ProxyTelemetry
 		concurrency  *int32
+		extraArgs    []string
 	}{
 		{
 			caseName: "default",
@@ -423,6 +431,11 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName:  "with-extra-args",
+			infra:     newTestInfra(),
+			extraArgs: []string{"--key1 val1", "--key2 val2"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -459,6 +472,10 @@ func TestDeployment(t *testing.T) {
 
 			if tc.concurrency != nil {
 				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
+			}
+
+			if len(tc.extraArgs) > 0 {
+				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
@@ -536,6 +553,15 @@ func TestService(t *testing.T) {
 				Annotations: map[string]string{
 					"anno1": "value1-override",
 				},
+			},
+		},
+		{
+			caseName: "clusterIP-custom-addresses",
+			infra: newTestInfraWithAddresses([]string{
+				"10.102.168.100",
+			}),
+			service: &egv1a1.KubernetesServiceSpec{
+				Type: &svcType,
 			},
 		},
 	}
@@ -735,4 +761,56 @@ func loadHPA(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
 	_ = yaml.Unmarshal(hpaYAML, hpa)
 	return hpa, nil
+}
+
+func TestOwningGatewayLabelsAbsent(t *testing.T) {
+
+	cases := []struct {
+		caseName string
+		labels   map[string]string
+		expect   bool
+	}{
+		{
+			caseName: "OwningGatewayClassLabel exist, but lack OwningGatewayNameLabel or OwningGatewayNamespaceLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gatewayclass": "eg-class",
+			},
+			expect: false,
+		},
+		{
+			caseName: "OwningGatewayNameLabel and OwningGatewayNamespaceLabel exist, but lack OwningGatewayClassLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-name":      "eg",
+				"gateway.envoyproxy.io/owning-gateway-namespace": "default",
+			},
+			expect: false,
+		},
+		{
+			caseName: "OwningGatewayNameLabel exist, but lack OwningGatewayClassLabel and OwningGatewayNamespaceLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-name": "eg",
+			},
+			expect: true,
+		},
+		{
+			caseName: "OwningGatewayNamespaceLabel exist, but lack OwningGatewayClassLabel and OwningGatewayNameLabel",
+			labels: map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-namespace": "default",
+			},
+			expect: true,
+		},
+		{
+			caseName: "lack all labels",
+			labels:   map[string]string{},
+			expect:   true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			actual := OwningGatewayLabelsAbsent(tc.labels)
+			require.Equal(t, tc.expect, actual)
+		})
+	}
+
 }
