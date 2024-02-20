@@ -154,9 +154,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
 				r.log.Info("gatewayclass marked for deletion")
 				cc.removeMatch(&gwClass)
-
-				// Delete the gatewayclass from the watchable map.
-				r.resources.GatewayAPIResources.Delete(gwClass.Name)
 				continue
 			}
 
@@ -167,6 +164,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	acceptedGCs := cc.matchedClasses
 	if acceptedGCs == nil {
+		r.resources.GatewayAPIResources.Delete(string(r.classController))
 		r.log.Info("no accepted gatewayclass")
 		return reconcile.Result{}, nil
 	}
@@ -352,13 +350,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
 					acceptedGC.Name))
 				return reconcile.Result{}, err
-			} else {
-				// finalize the accepted GatewayClass.
-				if err := r.addFinalizer(ctx, acceptedGC); err != nil {
-					r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
-						acceptedGC.Name))
-					return reconcile.Result{}, err
-				}
+			}
+		} else {
+			// finalize the accepted GatewayClass.
+			if err := r.addFinalizer(ctx, acceptedGC); err != nil {
+				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
+					acceptedGC.Name))
+				return reconcile.Result{}, err
 			}
 		}
 	}
