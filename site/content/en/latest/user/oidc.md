@@ -3,12 +3,12 @@ title: "OIDC Authentication"
 ---
 
 This guide provides instructions for configuring [OpenID Connect (OIDC)][oidc] authentication.
-OpenID Connect (OIDC) is an authentication standard built on top of OAuth 2.0. 
-It enables client applications to rely on authentication that is performed by an OpenID Connect Provider (OP) 
+OpenID Connect (OIDC) is an authentication standard built on top of OAuth 2.0.
+It enables client applications to rely on authentication that is performed by an OpenID Connect Provider (OP)
 to verify the identity of a user.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure OIDC 
-authentication. 
+Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure OIDC
+authentication.
 This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute][HTTPRoute] resource.
 
 ## Prerequisites
@@ -17,7 +17,7 @@ Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gat
 Before proceeding, you should be able to query the example backend using HTTP.
 
 OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../secure-gateways) guide
- to generate the TLS certificates and update the Gateway configuration to add an HTTPS listener.
+to generate the TLS certificates and update the Gateway configuration to add an HTTPS listener.
 
 Verify the Gateway status:
 
@@ -34,7 +34,11 @@ providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA,
 
 Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please make sure the
 redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. If you don't
-specify a redirect URL in the SecurityPolicy, the default redirect URL is `https://<gateway-hostname>/oauth2/callback`.
+specify a redirect URL in the SecurityPolicy, the default redirect URL is `https://${GATEWAY_HOST}/oauth2/callback`.
+Please notice that the `redirectURL` and `logoutPath` must be caught by the target HTTPRoute. For example, if the
+HTTPRoute is configured to match the host `www.example.com` and the path `/foo`, the `redirectURL` must
+be prefixed with `https://www.example.com/foo`, and `logoutPath` must be prefixed with`/foo`, for example,
+`https://www.example.com/foo/oauth2/callback` and `/foo/logout`, otherwise the OIDC authentication will fail.
 
 After registering the application, you should have the following information:
 * Client ID: The client ID of the OIDC application.
@@ -73,6 +77,8 @@ spec:
     clientID: "${CLIENT_ID}.apps.googleusercontent.com"
     clientSecret:
       name: "my-app-client-secret"
+    redirectURI: "https://www.example.com/oauth2/callback"
+    logoutPath: "/logout"
 EOF
 ```
 
