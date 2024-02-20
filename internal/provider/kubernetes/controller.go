@@ -169,14 +169,16 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		return reconcile.Result{}, nil
 	}
 
-	resourcesMap := make(gatewayapi.GatewayClassResources)
+	gwcResources := make([]*gatewayapi.Resources, 0, len(acceptedGCs))
 	for _, acceptedGC := range acceptedGCs {
 		// Initialize resource types.
 		acceptedGC := acceptedGC
-		resourcesMap[acceptedGC.Name] = gatewayapi.NewResources()
+		gwcResource := gatewayapi.NewResources()
+		gwcResource.GatewayClass = acceptedGC
+		gwcResources = append(gwcResources, gwcResource)
 		resourceMappings := newResourceMapping()
 
-		if err := r.processGateways(ctx, acceptedGC, resourceMappings, resourcesMap[acceptedGC.Name]); err != nil {
+		if err := r.processGateways(ctx, acceptedGC, resourceMappings, gwcResource); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -195,7 +197,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 						"name", string(backendRef.Name))
 				} else {
 					resourceMappings.allAssociatedNamespaces[service.Namespace] = struct{}{}
-					resourcesMap[acceptedGC.Name].Services = append(resourcesMap[acceptedGC.Name].Services, service)
+					gwcResource.Services = append(gwcResource.Services, service)
 					r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
 				}
@@ -209,7 +211,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 						"name", string(backendRef.Name))
 				} else {
 					resourceMappings.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
-					resourcesMap[acceptedGC.Name].ServiceImports = append(resourcesMap[acceptedGC.Name].ServiceImports, serviceImport)
+					gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
 					r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
 				}
@@ -232,14 +234,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					endpointSlice := endpointSlice
 					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
 						"name", endpointSlice.Name)
-					resourcesMap[acceptedGC.Name].EndpointSlices = append(resourcesMap[acceptedGC.Name].EndpointSlices, &endpointSlice)
+					gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
 				}
 			}
 		}
 
 		// Add all ReferenceGrants to the resourceTree
 		for _, referenceGrant := range resourceMappings.allAssociatedRefGrants {
-			resourcesMap[acceptedGC.Name].ReferenceGrants = append(resourcesMap[acceptedGC.Name].ReferenceGrants, referenceGrant)
+			gwcResource.ReferenceGrants = append(gwcResource.ReferenceGrants, referenceGrant)
 		}
 
 		// Add all EnvoyPatchPolicies
@@ -254,7 +256,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// It will be recomputed by the gateway-api layer
 			policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
 
-			resourcesMap[acceptedGC.Name].EnvoyPatchPolicies = append(resourcesMap[acceptedGC.Name].EnvoyPatchPolicies, &policy)
+			gwcResource.EnvoyPatchPolicies = append(gwcResource.EnvoyPatchPolicies, &policy)
 		}
 
 		// Add all ClientTrafficPolicies
@@ -268,12 +270,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Discard Status to reduce memory consumption in watchable
 			// It will be recomputed by the gateway-api layer
 			policy.Status = egv1a1.ClientTrafficPolicyStatus{}
-			resourcesMap[acceptedGC.Name].ClientTrafficPolicies = append(resourcesMap[acceptedGC.Name].ClientTrafficPolicies, &policy)
+			gwcResource.ClientTrafficPolicies = append(gwcResource.ClientTrafficPolicies, &policy)
 
 		}
 
 		// Add the referenced ConfigMaps in ClientTrafficPolicies to the resourceTree
-		r.processCtpConfigMapRefs(ctx, resourcesMap[acceptedGC.Name], resourceMappings)
+		r.processCtpConfigMapRefs(ctx, gwcResource, resourceMappings)
 
 		// Add all BackendTrafficPolicies
 		backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
@@ -286,7 +288,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Discard Status to reduce memory consumption in watchable
 			// It will be recomputed by the gateway-api layer
 			policy.Status = egv1a1.BackendTrafficPolicyStatus{}
-			resourcesMap[acceptedGC.Name].BackendTrafficPolicies = append(resourcesMap[acceptedGC.Name].BackendTrafficPolicies, &policy)
+			gwcResource.BackendTrafficPolicies = append(gwcResource.BackendTrafficPolicies, &policy)
 		}
 
 		// Add all SecurityPolicies
@@ -300,11 +302,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Discard Status to reduce memory consumption in watchable
 			// It will be recomputed by the gateway-api layer
 			policy.Status = egv1a1.SecurityPolicyStatus{}
-			resourcesMap[acceptedGC.Name].SecurityPolicies = append(resourcesMap[acceptedGC.Name].SecurityPolicies, &policy)
+			gwcResource.SecurityPolicies = append(gwcResource.SecurityPolicies, &policy)
 		}
 
 		// Add the referenced Secrets in SecurityPolicies to the resourceTree
-		r.processSecurityPolicySecretRefs(ctx, resourcesMap[acceptedGC.Name], resourceMappings)
+		r.processSecurityPolicySecretRefs(ctx, gwcResource, resourceMappings)
 
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
@@ -318,12 +320,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 
-			resourcesMap[acceptedGC.Name].Namespaces = append(resourcesMap[acceptedGC.Name].Namespaces, namespace)
+			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
 		}
 
 		// Process the parametersRef of the accepted GatewayClass.
 		if acceptedGC.Spec.ParametersRef != nil && acceptedGC.DeletionTimestamp == nil {
-			if err := r.processParamsRef(ctx, acceptedGC, resourcesMap[acceptedGC.Name]); err != nil {
+			if err := r.processParamsRef(ctx, acceptedGC, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				if err := r.updateStatusForGatewayClass(ctx, acceptedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
 					r.log.Error(err, "unable to update GatewayClass status")
@@ -333,8 +335,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
-		if resourcesMap[acceptedGC.Name].EnvoyProxy != nil && resourcesMap[acceptedGC.Name].EnvoyProxy.Spec.MergeGateways != nil {
-			r.mergeGateways[acceptedGC.Name] = *resourcesMap[acceptedGC.Name].EnvoyProxy.Spec.MergeGateways
+		if gwcResource.EnvoyProxy != nil && gwcResource.EnvoyProxy.Spec.MergeGateways != nil {
+			r.mergeGateways[acceptedGC.Name] = *gwcResource.EnvoyProxy.Spec.MergeGateways
 		}
 
 		if err := r.updateStatusForGatewayClass(ctx, acceptedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
@@ -342,7 +344,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
-		if len(resourcesMap[acceptedGC.Name].Gateways) == 0 {
+		if len(gwcResource.Gateways) == 0 {
 			r.log.Info("No gateways found for accepted gatewayclass")
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
@@ -363,7 +365,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
-	r.resources.GatewayAPIResources.Store(string(r.classController), resourcesMap.DeepCopy())
+
+	r.resources.GatewayAPIResources.Store(string(r.classController), &gwcResources)
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
