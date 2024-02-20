@@ -171,6 +171,20 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
+#### Authorization
+
+
+
+Authorization defines the authorization configuration.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules. |
+
+
 #### BackOffPolicy
 
 
@@ -2865,6 +2879,38 @@ _Appears in:_
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried.<br />The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
 
 
+#### Rule
+
+
+
+Rule defines the single authorization rule.
+
+_Appears in:_
+- [Authorization](#authorization)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `subjects` | _[Subject](#subject) array_ |  false  | Subjects contains the subject configuration.<br />If empty, all subjects are included. |
+| `permissions` | _string array_ |  false  | Permissions contains allowed HTTP methods.<br />If empty, all methods are matching. |
+| `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
+
+
+#### RuleActionType
+
+_Underlying type:_ _string_
+
+RuleActionType specifies the types of authorization rule action.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Value | Description |
+| ----- | ----------- |
+| `Allow` | Allow is the action to allow the request.<br /> | 
+| `Deny` | Deny is the action to deny the request.<br /> | 
+| `Log` | Log is the action to log the request.<br /> | 
+
+
 #### SecurityPolicy
 
 
@@ -2916,6 +2962,7 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
+| `authorization` | _[Authorization](#authorization)_ |  false  | Authorization defines the authorization configuration. |
 
 
 #### ServiceExternalTrafficPolicy
@@ -3030,6 +3077,20 @@ _Appears in:_
 | `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> | 
 | `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> | 
 | `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+
+
+#### Subject
+
+
+
+Subject contains the subject configuration.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCIDR` | _string_ |  false  | ClientCIDR contains client cidr configuration.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
 
 
 #### TCPActiveHealthChecker
