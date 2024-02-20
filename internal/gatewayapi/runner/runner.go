@@ -52,7 +52,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		func(update message.Update[string, *gatewayapi.GatewayClassResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
+			// There is only 1 key which is the controller name
+			// so when a delete is triggered, delete all IR keys
 			if update.Delete || val == nil {
+				r.deleteAllIRKeys()
 				return
 			}
 
@@ -163,6 +166,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+// deleteAllIRKeys deletes all XdsIR and InfraIR
+func (r *Runner) deleteAllIRKeys() {
+	for key := range r.InfraIR.LoadAll() {
+		r.InfraIR.Delete(key)
+		r.XdsIR.Delete(key)
+	}
 }
 
 // getIRKeysToDelete returns the list of IR keys to delete
