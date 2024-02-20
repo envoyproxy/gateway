@@ -52,7 +52,15 @@ type JWTProvider struct {
 	// For examples, following config:
 	// The claim must be of type; string, int, double, bool. Array type claims are not supported
 	//
+	// +optional
 	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers generated from the claim are used for
+	// route matching decisions.
+	//
+	// +optional
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
 	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
 	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
@@ -85,11 +93,6 @@ type ClaimToHeader struct {
 	// (eg. "claim.nested.key", "sub"). The nested claim name must use dot "."
 	// to separate the JSON name path.
 	Claim string `json:"claim"`
-
-	// UseForRouting must be enabled if this header generated from the claim should be used for
-	// route matching decisions
-	// +optional
-	UseForRouting *bool `json:"useForRouting,omitempty"`
 }
 
 // JWTExtractor defines a custom JWT token extraction from HTTP request.
