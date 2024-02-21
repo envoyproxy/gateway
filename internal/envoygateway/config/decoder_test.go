@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -148,11 +148,11 @@ func TestDecode(t *testing.T) {
 											Value: "env_b_value",
 										},
 									},
-									Image:     pointer.String("envoyproxy/ratelimit:latest"),
+									Image:     ptr.To("envoyproxy/ratelimit:latest"),
 									Resources: v1alpha1.DefaultResourceRequirements(),
 									SecurityContext: &corev1.SecurityContext{
-										RunAsUser:                pointer.Int64(2000),
-										AllowPrivilegeEscalation: pointer.Bool(false),
+										RunAsUser:                ptr.To[int64](2000),
+										AllowPrivilegeEscalation: ptr.To(false),
 									},
 								},
 								Pod: &v1alpha1.KubernetesPodSpec{
@@ -161,9 +161,9 @@ func TestDecode(t *testing.T) {
 										"key2": "val2",
 									},
 									SecurityContext: &corev1.PodSecurityContext{
-										RunAsUser:           pointer.Int64(1000),
-										RunAsGroup:          pointer.Int64(3000),
-										FSGroup:             pointer.Int64(2000),
+										RunAsUser:           ptr.To[int64](1000),
+										RunAsGroup:          ptr.To[int64](3000),
+										FSGroup:             ptr.To[int64](2000),
 										FSGroupChangePolicy: func(s corev1.PodFSGroupChangePolicy) *corev1.PodFSGroupChangePolicy { return &s }(corev1.FSGroupChangeOnRootMismatch),
 									},
 								},
@@ -235,6 +235,67 @@ func TestDecode(t *testing.T) {
 			expect: true,
 		},
 		{
+			in: inPath + "gateway-ns-watch.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaces,
+								Namespaces: []string{
+									"ns-a",
+									"ns-b",
+								},
+							},
+						},
+					},
+					Gateway: v1alpha1.DefaultGateway(),
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "gateway-nsselector-watch.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{"label-a": "foo"},
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      "tier",
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{"cache"},
+										},
+										{
+											Key:      "environment",
+											Operator: metav1.LabelSelectorOpNotIn,
+											Values:   []string{"dev"},
+										},
+									},
+								},
+							},
+						},
+					},
+					Gateway: v1alpha1.DefaultGateway(),
+				},
+			},
+			expect: true,
+		},
+		{
 			in:     inPath + "invalid-gateway-logging.yaml",
 			expect: false,
 		},
@@ -272,7 +333,7 @@ func TestDecode(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.out, eg)
 			} else {
-				require.Equal(t, !reflect.DeepEqual(tc.out, eg) || err != nil, true)
+				require.True(t, !reflect.DeepEqual(tc.out, eg) || err != nil)
 			}
 		})
 	}

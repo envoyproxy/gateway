@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -26,7 +27,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestProcessHTTPRoutes(t *testing.T) {
@@ -59,6 +59,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 		},
 	}
 	gwNsName := utils.NamespacedName(gw).String()
+
+	invalidDuration := gwapiv1.Duration("invalid duration")
 
 	testCases := []struct {
 		name               string
@@ -180,6 +182,54 @@ func TestProcessHTTPRoutes(t *testing.T) {
 					Group:   "gateway.example.io",
 					Version: "v1alpha1",
 					Kind:    "Foo",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "httproute with invalid timeout setting for HTTPRouteRule",
+			routes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+								Timeouts: &gwapiv1.HTTPRouteTimeouts{
+									Request:        &invalidDuration,
+									BackendRequest: &invalidDuration,
+								},
+							},
+						},
+					},
 				},
 			},
 			expected: true,
@@ -421,10 +471,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
@@ -556,10 +602,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
@@ -570,10 +612,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test2",
@@ -650,10 +688,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",

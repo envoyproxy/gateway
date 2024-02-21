@@ -44,6 +44,29 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: "192_168_1_250_443"
+  lbPolicy: LEAST_REQUEST
+  name: "192_168_1_250_443"
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
+      sni: 192.168.1.250
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -57,7 +80,8 @@
               portValue: 8081
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: ratelimit_cluster/backend/0
   name: ratelimit_cluster
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -81,25 +105,3 @@
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
         http2ProtocolOptions: {}
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: "192_168_1_250_443"
-  lbPolicy: LEAST_REQUEST
-  name: "192_168_1_250_443"
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  transportSocket:
-    name: envoy.transport_sockets.tls
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      commonTlsContext:
-        validationContext:
-          trustedCa:
-            filename: /etc/ssl/certs/ca-certificates.crt
-  type: EDS

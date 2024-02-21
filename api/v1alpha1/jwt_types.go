@@ -9,7 +9,6 @@ package v1alpha1
 type JWT struct {
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
-	//
 	// When multiple JWT providers are specified, the JWT is considered valid if
 	// any of the providers successfully validate the JWT. For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html.
@@ -54,7 +53,13 @@ type JWTProvider struct {
 	// The claim must be of type; string, int, double, bool. Array type claims are not supported
 	//
 	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
-	// TODO: Add TBD JWT fields based on defined use cases.
+
+	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
+	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
+	// or access_token from query parameters.
+	//
+	// +optional
+	ExtractFrom *JWTExtractor `json:"extractFrom,omitempty"`
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
@@ -80,4 +85,39 @@ type ClaimToHeader struct {
 	// (eg. "claim.nested.key", "sub"). The nested claim name must use dot "."
 	// to separate the JSON name path.
 	Claim string `json:"claim"`
+}
+
+// JWTExtractor defines a custom JWT token extraction from HTTP request.
+// If specified, Envoy will extract the JWT token from the listed extractors (headers, cookies, or params) and validate each of them.
+// If any value extracted is found to be an invalid JWT, a 401 error will be returned.
+type JWTExtractor struct {
+	// Headers represents a list of HTTP request headers to extract the JWT token from.
+	//
+	// +optional
+	Headers []JWTHeaderExtractor `json:"headers,omitempty"`
+
+	// Cookies represents a list of cookie names to extract the JWT token from.
+	//
+	// +optional
+	Cookies []string `json:"cookies,omitempty"`
+
+	// Params represents a list of query parameters to extract the JWT token from.
+	//
+	// +optional
+	Params []string `json:"params,omitempty"`
+}
+
+// JWTHeaderExtractor defines an HTTP header location to extract JWT token
+type JWTHeaderExtractor struct {
+	// Name is the HTTP header name to retrieve the token
+	//
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// ValuePrefix is the prefix that should be stripped before extracting the token.
+	// The format would be used by Envoy like "{ValuePrefix}<TOKEN>".
+	// For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end.
+	//
+	// +optional
+	ValuePrefix *string `json:"valuePrefix,omitempty"`
 }

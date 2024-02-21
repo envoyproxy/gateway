@@ -1,0 +1,25 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo
+      name: first-route
+      route:
+        cluster: first-route-dest
+      typedPerFilterConfig:
+        envoy.filters.http.oauth2_first-route:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        path: bar
+      name: second-route
+      route:
+        cluster: second-route-dest
+      typedPerFilterConfig:
+        envoy.filters.http.oauth2_second-route:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

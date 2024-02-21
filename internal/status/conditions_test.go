@@ -14,6 +14,7 @@
 package status
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -22,9 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilclock "k8s.io/utils/clock"
 	fakeclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var clock utilclock.Clock = utilclock.RealClock{}
@@ -338,6 +338,30 @@ func TestGatewayReadyCondition(t *testing.T) {
 			assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed), got.Type)
 			assert.Equal(t, tc.expect.Status, got.Status)
 			assert.Equal(t, tc.expect.Reason, got.Reason)
+		})
+	}
+}
+
+func TestError2ConditionMsg(t *testing.T) {
+	testCases := []struct {
+		name   string
+		err    error
+		expect string
+	}{
+		{
+			name:   "nil error",
+			err:    nil,
+			expect: "",
+		},
+		{
+			name:   "error with message",
+			err:    errors.New("something is wrong"),
+			expect: "Something is wrong",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.expect, Error2ConditionMsg(tt.err), "Error2ConditionMsg(%v)", tt.err)
 		})
 	}
 }

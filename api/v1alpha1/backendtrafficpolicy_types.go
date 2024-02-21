@@ -22,7 +22,7 @@ const (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 //
 // BackendTrafficPolicy allows the user to configure the behavior of the connection
-// between the downstream client and Envoy Proxy listener.
+// between the Envoy Proxy listener and the backend service.
 type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -55,6 +55,47 @@ type BackendTrafficPolicySpec struct {
 	// the backend endpoints
 	// +optional
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
+
+	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
+	// +optional
+	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`
+
+	// TcpKeepalive settings associated with the upstream client connection.
+	// Disabled by default.
+	//
+	// +optional
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+
+	// HealthCheck allows gateway to perform active health checking on backends.
+	//
+	// +optional
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
+
+	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
+	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+	// +optional
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
+
+	// Circuit Breaker settings for the upstream connections and requests.
+	// If not set, circuit breakers will be enabled with the default thresholds
+	//
+	// +optional
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
+
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
+
+	// Timeout settings for the backend connections.
+	//
+	// +optional
+	Timeout *Timeout `json:"timeout,omitempty"`
+
+	// The compression config for the http streams.
+	//
+	// +optional
+	Compression []*Compression `json:"compression,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy

@@ -4,24 +4,29 @@ on:
     branches:
     - "main"
     - "release/v*"
-    paths-ignore:
-    - "**/*.png"
+    paths:
+    - 'site/**'
   pull_request:
     branches:
     - "main"
     - "release/v*"
-    paths-ignore:
-    - "**/*.png"
+    paths:
+    - 'site/**'
+
+permissions:
+  contents: read
 
 jobs:
   docs-lint:
     runs-on: ubuntu-22.04
     steps:
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
 
     - name: Run markdown linter
-      uses: nosborn/github-action-markdown-cli@v3.3.0
+      uses: nosborn/github-action-markdown-cli@9b5e871c11cc0649c5ac2526af22e23525fa344d  # v3.3.0
       with:
         files: site/content/*
         config_file: ".github/markdown_lint_config.json"
@@ -33,18 +38,19 @@ jobs:
       contents: write
     steps:
     - name: Git checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         submodules: true
+        ref: ${{ github.event.pull_request.head.sha }}
 
     - name: Setup Hugo
-      uses: peaceiris/actions-hugo@v2
+      uses: peaceiris/actions-hugo@16361eb4acea8698b220b76c0d4e84e1fd22c61d  # v2.6.0
       with:
         hugo-version: 'latest'
         extended: true
 
     - name: Setup Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.1.0
       with:
         node-version: '18'
 
@@ -53,7 +59,7 @@ jobs:
 
     # Upload docs for GitHub Pages
     - name: Upload GitHub Pages artifact
-      uses: actions/upload-pages-artifact@v2.0.0
+      uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
       with:
         # Path of the directory containing the static assets.
         path: site/public
@@ -80,4 +86,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v2.0.4
+      uses: actions/deploy-pages@decdde0ac072f6dcbe43649d82d9c635fff5b4e4  # v4.0.4

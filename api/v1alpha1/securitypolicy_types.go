@@ -44,7 +44,6 @@ type SecurityPolicySpec struct {
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway.
-	// TargetRef
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
@@ -52,10 +51,25 @@ type SecurityPolicySpec struct {
 	// +optional
 	CORS *CORS `json:"cors,omitempty"`
 
+	// BasicAuth defines the configuration for the HTTP Basic Authentication.
+	//
+	// +optional
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+
 	// JWT defines the configuration for JSON Web Token (JWT) authentication.
 	//
 	// +optional
 	JWT *JWT `json:"jwt,omitempty"`
+
+	// OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
+	//
+	// +optional
+	OIDC *OIDC `json:"oidc,omitempty"`
+
+	// ExtAuth defines the configuration for External Authorization.
+	//
+	// +optional
+	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
 }
 
 // SecurityPolicyStatus defines the state of SecurityPolicy

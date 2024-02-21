@@ -81,11 +81,11 @@ func (fw *fakePortForwarder) Address() string {
 
 func TestExtractAllConfigDump(t *testing.T) {
 	input, err := readInputConfig("in.all.json")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fw, err := newFakePortForwarder(input)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = fw.Start()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cases := []struct {
 		output       string
@@ -105,15 +105,15 @@ func TestExtractAllConfigDump(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.expected, func(t *testing.T) {
 			configDump, err := extractConfigDump(fw, true, AllEnvoyConfigType)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if *overrideTestData {
 				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
 			}
 			out, err := readOutputConfig(tc.expected)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if tc.output == "yaml" {
 				assert.YAMLEq(t, string(out), string(got))
 			} else {
@@ -127,11 +127,11 @@ func TestExtractAllConfigDump(t *testing.T) {
 
 func TestExtractSubResourcesConfigDump(t *testing.T) {
 	input, err := readInputConfig("in.all.json")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fw, err := newFakePortForwarder(input)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = fw.Start()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cases := []struct {
 		output       string
@@ -190,15 +190,15 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.expected, func(t *testing.T) {
 			configDump, err := extractConfigDump(fw, false, tc.resourceType)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if *overrideTestData {
 				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
 			}
 			out, err := readOutputConfig(tc.expected)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if tc.output == "yaml" {
 				assert.YAMLEq(t, string(out), string(got))
 			} else {
@@ -239,7 +239,7 @@ func TestLabelSelectorBadInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			labelSelectors = tc.labels
 			_, err := retrieveConfigDump(tc.args, false, AllEnvoyConfigType)
-			assert.True(t, err != nil, "error not found")
+			require.Error(t, err, "error not found")
 		})
 	}
 }

@@ -40,21 +40,21 @@ func TestContexts(t *testing.T) {
 	lctx.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionFalse, gwapiv1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
 
 	require.Len(t, gateway.Status.Listeners, 1)
-	require.EqualValues(t, gateway.Status.Listeners[0].Name, "http")
+	require.EqualValues(t, "http", gateway.Status.Listeners[0].Name)
 	require.Len(t, gateway.Status.Listeners[0].Conditions, 1)
-	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Type, gwapiv1.ListenerConditionAccepted)
-	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Status, metav1.ConditionFalse)
-	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Reason, gwapiv1.ListenerReasonUnsupportedProtocol)
-	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Message, "HTTPS protocol is not supported yet")
+	require.EqualValues(t, gwapiv1.ListenerConditionAccepted, gateway.Status.Listeners[0].Conditions[0].Type)
+	require.EqualValues(t, metav1.ConditionFalse, gateway.Status.Listeners[0].Conditions[0].Status)
+	require.EqualValues(t, gwapiv1.ListenerReasonUnsupportedProtocol, gateway.Status.Listeners[0].Conditions[0].Reason)
+	require.EqualValues(t, "HTTPS protocol is not supported yet", gateway.Status.Listeners[0].Conditions[0].Message)
 
 	lctx.SetSupportedKinds(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: "HTTPRoute"})
 
 	require.Len(t, gateway.Status.Listeners, 1)
 	require.Len(t, gateway.Status.Listeners[0].SupportedKinds, 1)
-	require.EqualValues(t, gateway.Status.Listeners[0].SupportedKinds[0].Kind, "HTTPRoute")
+	require.EqualValues(t, "HTTPRoute", gateway.Status.Listeners[0].SupportedKinds[0].Kind)
 
 	gctx.ResetListeners()
-	require.Len(t, gateway.Status.Listeners[0].Conditions, 0)
+	require.Empty(t, gateway.Status.Listeners[0].Conditions)
 }
 
 func TestContextsStaleListener(t *testing.T) {

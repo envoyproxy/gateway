@@ -67,6 +67,13 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
+	// ExtraArgs defines additional command line options that are provided to Envoy.
+	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
+	// Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here.
+	//
+	// +optional
+	ExtraArgs []string `json:"extraArgs,omitempty"`
+
 	// MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
 	// Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
 	// This means that the port, protocol and hostname tuple must be unique for every listener.
@@ -123,10 +130,13 @@ type EnvoyProxyKubernetesProvider struct {
 	// are applied.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
-	// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
-	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="!has(self.loadBalancerIP) || self.loadBalancerIP.matches(r\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4})\")"
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
+
+	// EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
+	// Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored.
+	//
+	// +optional
+	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.

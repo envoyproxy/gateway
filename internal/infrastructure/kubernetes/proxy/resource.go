@@ -10,7 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -173,6 +173,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
 	}
 
+	if infra.Config != nil {
+		args = append(args, infra.Config.Spec.ExtraArgs...)
+	}
+
 	containers := []corev1.Container{
 		{
 			Name:                     envoyContainerName,
@@ -231,7 +235,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDep
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  "envoy",
-					DefaultMode: pointer.Int32(420),
+					DefaultMode: ptr.To[int32](420),
 				},
 			},
 		},
@@ -252,8 +256,8 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDep
 							Path: SdsCertFilename,
 						},
 					},
-					DefaultMode: pointer.Int32(420),
-					Optional:    pointer.Bool(false),
+					DefaultMode: ptr.To[int32](420),
+					Optional:    ptr.To(false),
 				},
 			},
 		},

@@ -26,6 +26,13 @@ xds:
         ldsConfig:
           ads: {}
           resourceApiVersion: V3
+      layeredRuntime:
+        layers:
+        - name: global_config
+          staticLayer:
+            envoy.restart_features.use_eds_cache_for_ads: true
+            re2.max_program_size.error_level: 4294967295
+            re2.max_program_size.warn_level: 1000
       staticResources:
         clusters:
         - connectTimeout: 0.250s

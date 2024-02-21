@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -13,12 +15,11 @@ import (
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tracingtype "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"github.com/pkg/errors"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -41,7 +42,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 
 	ocAny, err := protocov.ToAnyWithError(oc)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal OpenTelemetryConfig")
+		return nil, fmt.Errorf("failed to marshal OpenTelemetryConfig: %w", err)
 	}
 
 	tags := []*tracingtype.CustomTag{}
@@ -88,7 +89,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				},
 			})
 		default:
-			return nil, errors.Errorf("unknown custom tag type: %s", v.Type)
+			return nil, fmt.Errorf("unknown custom tag type: %s", v.Type)
 		}
 	}
 	// sort tags by tag name, make result consistent
@@ -124,15 +125,15 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	clusterName := buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port))
 
 	ds := &ir.DestinationSetting{
-		Weight:    ptr.To(uint32(1)),
+		Weight:    ptr.To[uint32](1),
+		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))},
 	}
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      nil,
-		protocol:     HTTP2,
-		endpointType: DefaultEndpointType,
+		endpointType: EndpointTypeDNS,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

@@ -9,7 +9,7 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 WAIT_TIMEOUT ?= 15m
 
 FLUENT_BIT_CHART_VERSION ?= 0.30.4
-OTEL_COLLECTOR_CHART_VERSION ?= 0.60.0
+OTEL_COLLECTOR_CHART_VERSION ?= 0.73.1
 TEMPO_CHART_VERSION ?= 1.3.1
 
 # Set Kubernetes Resources Directory Path
@@ -29,8 +29,9 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
+
 	@$(LOG_TARGET)
-	$(tools/controller-gen) crd paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.

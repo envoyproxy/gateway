@@ -8,4 +8,13 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 50
-    locality: {}
+    locality:
+      region: first-route-dest/backend/0
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 50

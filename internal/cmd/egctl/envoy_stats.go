@@ -7,13 +7,13 @@ package egctl
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/tetratelabs/multierror"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
@@ -74,7 +74,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyServerStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
 						if err != nil {
-							errs = multierror.Append(errs, err)
+							errs = errors.Join(errs, err)
 						}
 						wg.Done()
 					}(pod)
@@ -87,7 +87,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyClusterStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
 						if err != nil {
-							errs = multierror.Append(errs, err)
+							errs = errors.Join(errs, err)
 						}
 						wg.Done()
 					}(pod)
@@ -148,17 +148,17 @@ func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNa
 
 	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
 	if err != nil {
-		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}
 	err = fw.Start()
 	if err != nil {
-		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	defer fw.Stop()
 
 	result, err := statsRequest(fw.Address(), path)
 	if err != nil {
-		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	return string(result), nil
 }
@@ -171,17 +171,17 @@ func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podN
 	}
 	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
 	if err != nil {
-		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}
 	err = fw.Start()
 	if err != nil {
-		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	defer fw.Stop()
 
 	result, err := statsRequest(fw.Address(), path)
 	if err != nil {
-		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %v", podNamespace, podName, err)
+		return "", fmt.Errorf("failed to get stats on envoy for pod %s/%s: %w", podNamespace, podName, err)
 	}
 	return string(result), nil
 }

@@ -33,29 +33,22 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: localhost_443
+    clusterName: localhost_80
     endpoints:
     - lbEndpoints:
       - endpoint:
           address:
             socketAddress:
               address: localhost
-              portValue: 443
+              portValue: 80
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
-  name: localhost_443
+      locality:
+        region: localhost_80/backend/0
+  name: localhost_80
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
-  transportSocket:
-    name: envoy.transport_sockets.tls
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      commonTlsContext:
-        validationContext:
-          trustedCa:
-            filename: /etc/ssl/certs/ca-certificates.crt
   type: STRICT_DNS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -78,4 +71,5 @@
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
+      sni: 192.168.1.250
   type: EDS

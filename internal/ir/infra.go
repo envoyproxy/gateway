@@ -6,10 +6,14 @@
 package ir
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"reflect"
 
+	"golang.org/x/exp/slices"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -25,6 +29,11 @@ type Infra struct {
 	Proxy *ProxyInfra `json:"proxy" yaml:"proxy"`
 }
 
+func (i Infra) YAMLString() string {
+	y, _ := yaml.Marshal(&i)
+	return string(y)
+}
+
 // ProxyInfra defines managed proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type ProxyInfra struct {
@@ -35,7 +44,7 @@ type ProxyInfra struct {
 	// Config defines user-facing configuration of the managed proxy infrastructure.
 	Config *v1alpha1.EnvoyProxy `json:"config,omitempty" yaml:"config,omitempty"`
 	// Listeners define the listeners exposed by the proxy infrastructure.
-	Listeners []ProxyListener `json:"listeners,omitempty" yaml:"listeners,omitempty"`
+	Listeners []*ProxyListener `json:"listeners,omitempty" yaml:"listeners,omitempty"`
 	// Addresses contain the external addresses this gateway has been
 	// requested to be available at.
 	Addresses []string `json:"addresses,omitempty" yaml:"addresses,omitempty"`
@@ -44,6 +53,9 @@ type ProxyInfra struct {
 // InfraMetadata defines metadata for the managed proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type InfraMetadata struct {
+	// Annotations define a map of string keys and values that can be used to
+	// organize and categorize proxy infrastructure objects.
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// Labels define a map of string keys and values that can be used to organize
 	// and categorize proxy infrastructure objects.
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -52,10 +64,19 @@ type InfraMetadata struct {
 // ProxyListener defines the listener configuration of the proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type ProxyListener struct {
+	// Name of the ProxyListener
+	Name string `json:"name" yaml:"name"`
 	// Address is the address that the listener should listen on.
-	Address string `json:"address" yaml:"address"`
+	Address *string `json:"address" yaml:"address"`
 	// Ports define network ports of the listener.
 	Ports []ListenerPort `json:"ports,omitempty" yaml:"ports,omitempty"`
+	// HTTP3 provides HTTP/3 configuration on the listener.
+	// +optional
+	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+}
+
+// HTTP3Settings provides HTTP/3 configuration on the listener.
+type HTTP3Settings struct {
 }
 
 // ListenerPort defines a network port of a listener.
@@ -104,15 +125,14 @@ func NewInfra() *Infra {
 // NewProxyInfra returns a new ProxyInfra with default parameters.
 func NewProxyInfra() *ProxyInfra {
 	return &ProxyInfra{
-		Metadata:  NewInfraMetadata(),
-		Name:      DefaultProxyName,
-		Listeners: NewProxyListeners(),
+		Metadata: NewInfraMetadata(),
+		Name:     DefaultProxyName,
 	}
 }
 
 // NewProxyListeners returns a new slice of ProxyListener with default parameters.
-func NewProxyListeners() []ProxyListener {
-	return []ProxyListener{
+func NewProxyListeners() []*ProxyListener {
+	return []*ProxyListener{
 		{
 			Ports: nil,
 		},
@@ -188,10 +208,6 @@ func (p *ProxyInfra) Validate() error {
 		errs = append(errs, errors.New("name field required"))
 	}
 
-	if len(p.Listeners) > 1 {
-		errs = append(errs, errors.New("no more than 1 listener is supported"))
-	}
-
 	if len(p.Listeners) > 0 {
 		for i := range p.Listeners {
 			listener := p.Listeners[i]
@@ -221,4 +237,21 @@ func (p *ProxyInfra) ObjectName() string {
 		return fmt.Sprintf("envoy-%s", DefaultProxyName)
 	}
 	return "envoy-" + p.Name
+}
+
+// Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
+func (p *ProxyInfra) Equal(y *ProxyInfra) bool {
+	// Deep copy to avoid modifying the original ordering.
+	p = p.DeepCopy()
+	p.sort()
+	y = y.DeepCopy()
+	y.sort()
+	return reflect.DeepEqual(p, y)
+}
+
+// sort ensures the listeners are in a consistent order.
+func (p *ProxyInfra) sort() {
+	slices.SortFunc(p.Listeners, func(l1, l2 *ProxyListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
+	})
 }

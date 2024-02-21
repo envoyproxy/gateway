@@ -7,14 +7,61 @@ package translator
 
 import (
 	"sort"
+	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"k8s.io/utils/ptr"
+
+	"github.com/envoyproxy/gateway/internal/xds/filters"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
 )
+
+var httpFilters []httpFilter
+
+// registerHTTPFilter registers the provided HTTP filter.
+func registerHTTPFilter(filter httpFilter) {
+	httpFilters = append(httpFilters, filter)
+}
+
+// httpFilter is the interface for all the HTTP filters.
+//
+// There are two ways to support per-route configuration for an HTTP filter:
+// - For the filters with native per-route configuration support:
+//   - patchHCM: EG adds the filter to the HCM filter chain only once.
+//   - patchRoute: EG adds the filter's native per-route configuration to each
+//     route's typedFilterConfig.
+//
+// - For the filters without native per-route configuration support:
+//   - patchHCM: EG adds a filter for each route in the HCM filter chain, the
+//     filter name is prefixed with the filter's type name, for example,
+//     "envoy.filters.http.oauth2", and suffixed with the route name. Each filter
+//     is configured with the route's per-route configuration. The filter is
+//     disabled by default and is enabled on the route level.
+//   - PatchRouteWithPerRouteConfig: EG enables the corresponding filter for each
+//     route in the typedFilterConfig of that route.
+//
+// The filter types that haven't native per-route support: oauth2, basic authn, ext_authz.
+// Note: The filter types that have native per-route configuration support should
+// always se their own native per-route configuration.
+type httpFilter interface {
+	// patchHCM patches the HttpConnectionManager with the filter.
+	patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error
+
+	// patchRoute patches the provide Route with a filter's Route level configuration.
+	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
+
+	// patchResources adds all the other needed resources referenced by this
+	// filter to the resource version table.
+	// for example:
+	// - a jwt filter needs to add the cluster for the jwks.
+	// - an oidc filter needs to add the cluster for token endpoint and the secret
+	//   for the oauth2 client secret and the hmac secret.
+	patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error
+}
 
 type OrderedHTTPFilter struct {
 	filter *hcmv3.HttpFilter
@@ -37,14 +84,24 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	order := 50
 
 	// Set a rational order for all the filters.
-	switch filter.Name {
-	case wellknown.CORS:
+	switch {
+	case filter.Name == wellknown.CORS:
 		order = 1
-	case jwtAuthnFilter:
+	case isFilterType(filter, extAuthFilter):
 		order = 2
-	case wellknown.HTTPRateLimit:
+	case isFilterType(filter, basicAuthFilter):
 		order = 3
-	case wellknown.Router:
+	case isFilterType(filter, oauth2Filter):
+		order = 4
+	case filter.Name == jwtAuthn:
+		order = 5
+	case filter.Name == wellknown.Fault:
+		order = 6
+	case filter.Name == localRateLimitFilter:
+		order = 7
+	case filter.Name == wellknown.HTTPRateLimit:
+		order = 8
+	case filter.Name == wellknown.Router:
 		order = 100
 	}
 
@@ -55,6 +112,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 }
 
 // sort.Interface implementation.
+
 func (o OrderedHTTPFilters) Len() int {
 	return len(o)
 }
@@ -94,50 +152,68 @@ func (t *Translator) patchHCMWithFilters(
 	irListener *ir.HTTPListener) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
+	//
 	// Important: don't forget to set the order for new filters in the
 	// newOrderedHTTPFilter method.
-	// TODO: Make this a generic interface for all API Gateway features.
-	//       https://github.com/envoyproxy/gateway/issues/882
+	for _, filter := range httpFilters {
+		if err := filter.patchHCM(mgr, irListener); err != nil {
+			return err
+		}
+	}
+
+	// RateLimit filter is handled separately because it relies on the global
+	// rate limit server configuration.
 	t.patchHCMWithRateLimit(mgr, irListener)
 
-	// Add the cors filter, if needed
-	if err := patchHCMWithCORSFilter(mgr, irListener); err != nil {
-		return err
-	}
-
-	// Add the jwt authn filter, if needed.
-	if err := patchHCMWithJWTAuthnFilter(mgr, irListener); err != nil {
-		return err
-	}
-
 	// Add the router filter
-	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
+	headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
+	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)
 	return nil
 }
 
-// patchRouteWithFilters appends per-route filter configurations to the route.
-func patchRouteWithFilters(
+// patchRouteWithPerRouteConfig appends per-route filter configuration to the
+// provided route.
+func patchRouteWithPerRouteConfig(
 	route *routev3.Route,
 	irRoute *ir.HTTPRoute) error {
-	// TODO: Convert this into a generic interface for API Gateway features.
-	//       https://github.com/envoyproxy/gateway/issues/882
+
+	for _, filter := range httpFilters {
+		if err := filter.patchRoute(route, irRoute); err != nil {
+			return err
+		}
+	}
+
+	// RateLimit filter is handled separately because it relies on the global
+	// rate limit server configuration.
 	if err :=
 		patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
 		return nil
 	}
 
-	// Add the cors per route config to the route, if needed.
-	if err := patchRouteWithCORSConfig(route, irRoute); err != nil {
-		return err
-	}
+	return nil
+}
 
-	// Add the jwt per route config to the route, if needed.
-	if err := patchRouteWithJWTConfig(route, irRoute); err != nil {
-		return err
-	}
+// isFilterType returns true if the filter is the provided filter type.
+func isFilterType(filter *hcmv3.HttpFilter, filterType string) bool {
+	// Multiple filters of the same types are added to the HCM filter chain, one for each
+	// route. The filter name is prefixed with the filter type, for example:
+	// "envoy.filters.http.oauth2_first-route".
+	return strings.HasPrefix(filter.Name, filterType)
+}
 
+// patchResources adds all the other needed resources referenced by this
+// filter to the resource version table.
+// for example:
+// - a jwt filter needs to add the cluster for the jwks.
+// - an oidc filter needs to add the secret for the oauth2 client secret.
+func patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+	for _, filter := range httpFilters {
+		if err := filter.patchResources(tCtx, routes); err != nil {
+			return err
+		}
+	}
 	return nil
 }

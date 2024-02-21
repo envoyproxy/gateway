@@ -15,14 +15,14 @@ resources.
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --to xds -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -58,7 +58,7 @@ spec:
   selector:
     app: backend
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -259,14 +259,14 @@ You can also use the `--type`/`-t` flag to retrieve specific output types. In th
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --to xds -t route -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -302,7 +302,7 @@ spec:
   selector:
     app: backend
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -353,14 +353,14 @@ For example, this will provide the similar result as the above:
 
 ```shell
 cat <<EOF | egctl x translate --add-missing-resources --from gateway-api --to gateway-api -t route -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -372,7 +372,7 @@ spec:
       protocol: HTTP
       port: 80
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -396,7 +396,7 @@ spec:
 EOF
 ```
 
-You can see the output contains a [EnvoyProxy](https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy) resource that
+You can see the output contains a [EnvoyProxy][] resource that
 can be used as a starting point to modify the xDS bootstrap resource for the managed Envoy Proxy fleet.
 
 ```yaml
@@ -572,14 +572,14 @@ Sometimes you might find that egctl doesn't provide an expected result. For exam
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --type route --to xds -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -590,7 +590,7 @@ spec:
       protocol: TLS
       port: 8443
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -623,14 +623,14 @@ You can add an additional target `gateway-api` to show the processed Gateway API
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --type route --to gateway-api,xds -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -641,7 +641,7 @@ spec:
       protocol: TLS
       port: 8443
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -740,3 +740,58 @@ xds:
   envoy-gateway-system-eg:
     '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
 ```
+
+## egctl experimental status
+
+This subcommand allows users to show the summary of the status of specific resource type, in order to quickly find
+out the status of any resources.
+
+By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only
+display the latest condition, or add `--verbose` to display more details about current status.
+
+Some examples of this command after installing [Multi-tenancy][] example manifest:
+
+- Show the summary of GatewayClass.
+
+```console
+~ egctl x status gatewayclass
+
+NAME           TYPE       STATUS    REASON
+eg-marketing   Accepted   True      Accepted
+eg-product     Accepted   True      Accepted
+```
+
+- Show the summary of all the Gateways with details under all namespace.
+
+```console
+~ egctl x status gateway --verbose --all-namespaces
+
+NAMESPACE   NAME      TYPE         STATUS    REASON       MESSAGE                                                                    OBSERVED GENERATION   LAST TRANSITION TIME
+marketing   eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
+                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:50:39 +0800 CST
+product     eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
+                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:52:42 +0800 CST
+```
+
+- Show the summary of latest Gateways condition under `product` namespace.
+
+```console
+~ egctl x status gateway --quiet -n product
+
+NAME      TYPE         STATUS    REASON
+eg        Programmed   True      Programmed
+```
+
+- Show the summary of latest HTTPRoutes condition under all namespace.
+
+```console
+~ egctl x status httproute --quiet --all-namespaces
+
+NAMESPACE   NAME      TYPE           STATUS    REASON
+marketing   backend   ResolvedRefs   True      ResolvedRefs
+product     backend   ResolvedRefs   True      ResolvedRefs
+```
+
+
+[Multi-tenancy]: ../deployment-mode#multi-tenancy
+[EnvoyProxy]: ../../api/extension_types#envoyproxy

@@ -25,6 +25,7 @@ The Helm chart for Envoy Gateway
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | certgen.job.annotations | object | `{}` |  |
+| certgen.job.resources | object | `{}` |  |
 | certgen.job.ttlSecondsAfterFinished | int | `0` |  |
 | certgen.rbac.annotations | object | `{}` |  |
 | certgen.rbac.labels | object | `{}` |  |
@@ -32,14 +33,15 @@ The Helm chart for Envoy Gateway
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
 | createNamespace | bool | `false` |  |
-| deployment.envoyGateway.cert.expiryDays | int | `365` |  |
 | deployment.envoyGateway.image.repository | string | `"${ImageRepository}"` |  |
 | deployment.envoyGateway.image.tag | string | `"${ImageTag}"` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `"Always"` |  |
+| deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
 | deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |
+| deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations | object | `{}` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |

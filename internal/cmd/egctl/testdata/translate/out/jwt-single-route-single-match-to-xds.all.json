@@ -44,6 +44,18 @@
                 "resourceApiVersion": "V3"
               }
             },
+            "layeredRuntime": {
+              "layers": [
+                {
+                  "name": "global_config",
+                  "staticLayer": {
+                    "envoy.restart_features.use_eds_cache_for_ads": true,
+                    "re2.max_program_size.error_level": 4294967295,
+                    "re2.max_program_size.warn_level": 1000
+                  }
+                }
+              ]
+            },
             "staticResources": {
               "clusters": [
                 {
@@ -235,7 +247,9 @@
                       }
                     ],
                     "loadBalancingWeight": 1,
-                    "locality": {}
+                    "locality": {
+                      "region": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
+                    }
                   }
                 ]
               }
@@ -295,7 +309,9 @@
                         }
                       ],
                       "loadBalancingWeight": 1,
-                      "locality": {}
+                      "locality": {
+                        "region": "raw_githubusercontent_com_443/backend/0"
+                      }
                     }
                   ]
                 },
@@ -313,7 +329,8 @@
                           "filename": "/etc/ssl/certs/ca-certificates.crt"
                         }
                       }
-                    }
+                    },
+                    "sni": "raw.githubusercontent.com"
                   }
                 },
                 "type": "STRICT_DNS"
@@ -390,12 +407,13 @@
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication",
                                 "providers": {
                                   "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example": {
+                                    "forward": true,
                                     "remoteJwks": {
                                       "asyncFetch": {},
                                       "cacheDuration": "300s",
                                       "httpUri": {
                                         "cluster": "raw_githubusercontent_com_443",
-                                        "timeout": "5s",
+                                        "timeout": "10s",
                                         "uri": "https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json"
                                       },
                                       "retryPolicy": {}
@@ -412,7 +430,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -426,6 +445,7 @@
                             },
                             "routeConfigName": "envoy-gateway-system/eg/http"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
                           "upgradeConfigs": [
                             {

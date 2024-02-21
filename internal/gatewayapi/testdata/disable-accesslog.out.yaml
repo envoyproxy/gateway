@@ -60,7 +60,7 @@ infraIR:
                     value: env_a_value
                   - name: env_b
                     value: env_b_name
-                  image: envoyproxy/envoy-dev:latest
+                  image: envoyproxy/envoy:distroless-dev
                   resources:
                     requests:
                       cpu: 100m
@@ -104,7 +104,8 @@ infraIR:
               disable: true
         status: {}
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http
@@ -123,4 +124,7 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080

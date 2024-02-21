@@ -43,7 +43,7 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Only one TCP/TLS listener is allowed in a given port
@@ -70,7 +70,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/tcp1
         ports:
         - containerPort: 10162
           name: tcp1
@@ -123,9 +124,11 @@ xdsIR:
       destination:
         name: tcproute/default/tcproute-1/rule/-1
         settings:
-        - endpoints:
+        - addressType: IP
+          endpoints:
           - host: 7.7.7.7
             port: 8163
+          protocol: TCP
           weight: 1
       name: envoy-gateway/gateway-1/tcp1/tcproute-1
       port: 10162

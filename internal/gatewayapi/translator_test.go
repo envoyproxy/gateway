@@ -25,13 +25,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -43,6 +43,16 @@ func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 }
 
 func TestTranslate(t *testing.T) {
+	testCasesConfig := []struct {
+		name                    string
+		EnvoyPatchPolicyEnabled bool
+	}{
+		{
+			name:                    "envoypatchpolicy-invalid-feature-disabled",
+			EnvoyPatchPolicyEnabled: false,
+		},
+	}
+
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
 
@@ -54,15 +64,23 @@ func TestTranslate(t *testing.T) {
 
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
+			envoyPatchPolicyEnabled := true
+
+			for _, config := range testCasesConfig {
+				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
+					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+				}
+			}
 
 			translator := &Translator{
-				GatewayControllerName:  egv1a1.GatewayControllerName,
-				GatewayClassName:       "envoy-gateway-class",
-				GlobalRateLimitEnabled: true,
+				GatewayControllerName:   egv1a1.GatewayControllerName,
+				GatewayClassName:        "envoy-gateway-class",
+				GlobalRateLimitEnabled:  true,
+				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 			}
 
 			// Add common test fixtures
-			for i := 1; i <= 3; i++ {
+			for i := 1; i <= 4; i++ {
 				svcName := "service-" + strconv.Itoa(i)
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
@@ -115,22 +133,22 @@ func TestTranslate(t *testing.T) {
 						Ports: []discoveryv1.EndpointPort{
 							{
 								Name:     ptr.To("http"),
-								Port:     ptr.To(int32(8080)),
+								Port:     ptr.To[int32](8080),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("https"),
-								Port:     ptr.To(int32(8443)),
+								Port:     ptr.To[int32](8443),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("tcp"),
-								Port:     ptr.To(int32(8163)),
+								Port:     ptr.To[int32](8163),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("udp"),
-								Port:     ptr.To(int32(8162)),
+								Port:     ptr.To[int32](8162),
 								Protocol: ptr.To(corev1.ProtocolUDP),
 							},
 						},
@@ -180,7 +198,7 @@ func TestTranslate(t *testing.T) {
 					Ports: []discoveryv1.EndpointPort{
 						{
 							Name:     ptr.To("http"),
-							Port:     ptr.To(int32(8080)),
+							Port:     ptr.To[int32](8080),
 							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
 					},
@@ -303,22 +321,22 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 						Ports: []discoveryv1.EndpointPort{
 							{
 								Name:     ptr.To("http"),
-								Port:     ptr.To(int32(8080)),
+								Port:     ptr.To[int32](8080),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("https"),
-								Port:     ptr.To(int32(8443)),
+								Port:     ptr.To[int32](8443),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("tcp"),
-								Port:     ptr.To(int32(8163)),
+								Port:     ptr.To[int32](8163),
 								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
 								Name:     ptr.To("udp"),
-								Port:     ptr.To(int32(8162)),
+								Port:     ptr.To[int32](8162),
 								Protocol: ptr.To(corev1.ProtocolUDP),
 							},
 						},
@@ -367,7 +385,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					Ports: []discoveryv1.EndpointPort{
 						{
 							Name:     ptr.To("http"),
-							Port:     ptr.To(int32(8080)),
+							Port:     ptr.To[int32](8080),
 							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
 					},
@@ -524,9 +542,9 @@ func TestIsValidHostname(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := translator.validateHostname(tc.hostname)
 			if tc.err == "" {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.EqualError(t, err, tc.err)
+				require.EqualError(t, err, tc.err)
 			}
 		})
 	}

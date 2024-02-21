@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -55,21 +57,25 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "custom-stats-matcher",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Matches: []egv1a1.Match{
+				Matches: []egv1a1.StringMatch{
 					{
-						Type:  egv1a1.Prefix,
+						Type:  ptr.To(egv1a1.StringMatchExact),
+						Value: "http.foo.bar.cluster.upstream_rq",
+					},
+					{
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
 						Value: "http",
 					},
 					{
-						Type:  egv1a1.Suffix,
+						Type:  ptr.To(egv1a1.StringMatchSuffix),
 						Value: "upstream_rq",
 					},
 					{
-						Type:  egv1a1.RegularExpression,
+						Type:  ptr.To(egv1a1.StringMatchRegularExpression),
 						Value: "virtual.*",
 					},
 					{
-						Type:  egv1a1.Prefix,
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
 						Value: "cluster",
 					},
 				},
@@ -80,9 +86,9 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := GetRenderedBootstrapConfig(tc.proxyMetrics)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			expected, err := readTestData(tc.name)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, expected, got)
 		})
 	}

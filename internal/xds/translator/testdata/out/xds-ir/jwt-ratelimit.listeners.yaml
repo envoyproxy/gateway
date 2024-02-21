@@ -21,6 +21,7 @@
               first-route/example:
                 audiences:
                 - foo.com
+                forward: true
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
@@ -28,7 +29,7 @@
                   cacheDuration: 300s
                   httpUri:
                     cluster: "192_168_1_250_443"
-                    timeout: 5s
+                    timeout: 10s
                     uri: https://192.168.1.250/jwt/public-key/jwks.json
                   retryPolicy: {}
             requirementMap:
@@ -47,6 +48,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -55,6 +57,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket

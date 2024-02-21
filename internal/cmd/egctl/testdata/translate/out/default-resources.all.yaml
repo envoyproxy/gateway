@@ -17,6 +17,13 @@ envoyProxy:
             socket_address:
               address: 127.0.0.1
               port_value: 19000
+        layered_runtime:
+          layers:
+          - name: global_config
+            static_layer:
+              envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         dynamic_resources:
           ads_config:
             api_type: DELTA_GRPC
@@ -494,6 +501,13 @@ xds:
           ldsConfig:
             ads: {}
             resourceApiVersion: V3
+        layeredRuntime:
+          layers:
+          - name: global_config
+            staticLayer:
+              envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         staticResources:
           clusters:
           - connectTimeout: 0.250s
@@ -598,7 +612,8 @@ xds:
                     portValue: 8000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: httproute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: grpcroute/default/backend/rule/0
@@ -611,7 +626,8 @@ xds:
                     portValue: 9000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: grpcroute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tlsroute/default/backend/rule/-1
@@ -624,7 +640,8 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: tlsroute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tcproute/default/backend/rule/-1
@@ -637,7 +654,8 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: tcproute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: udproute/default/backend/rule/-1
@@ -650,7 +668,8 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: udproute/default/backend/rule/-1/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
@@ -784,6 +803,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -792,6 +812,7 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   upgradeConfigs:
                   - upgradeType: websocket
@@ -850,6 +871,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -858,6 +880,7 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/grpc
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
             name: default/eg/grpc

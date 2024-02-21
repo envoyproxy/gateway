@@ -415,7 +415,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: false,
-		}, {
+		},
+		{
 			name: "valid gateway metrics sink",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
@@ -438,7 +439,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: true,
-		}, {
+		},
+		{
 			name: "invalid gateway metrics sink",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
@@ -450,6 +452,94 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								{
 									Type: v1alpha1.MetricSinkTypeOpenTelemetry,
 								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "invalid gateway watch mode",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: "foobar",
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "happy namespaces must be set when watch mode is Namespaces",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type:       v1alpha1.KubernetesWatchModeTypeNamespaces,
+								Namespaces: []string{"foo"},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "fail namespaces is not be set when watch mode is Namespaces",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type:              v1alpha1.KubernetesWatchModeTypeNamespaces,
+								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "happy namespaceSelector must be set when watch mode is NamespaceSelector",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type:              v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
+								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "fail namespaceSelector is not be set when watch mode is NamespaceSelector",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							Watch: &v1alpha1.KubernetesWatchMode{
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
 							},
 						},
 					},
@@ -474,22 +564,22 @@ func TestValidateEnvoyGateway(t *testing.T) {
 
 func TestEnvoyGateway(t *testing.T) {
 	envoyGateway := v1alpha1.DefaultEnvoyGateway()
-	assert.True(t, envoyGateway.Provider != nil)
-	assert.True(t, envoyGateway.Gateway != nil)
-	assert.True(t, envoyGateway.Logging != nil)
+	assert.NotNil(t, envoyGateway.Provider)
+	assert.NotNil(t, envoyGateway.Gateway)
+	assert.NotNil(t, envoyGateway.Logging)
 	envoyGateway.SetEnvoyGatewayDefaults()
 	assert.Equal(t, envoyGateway.Logging, v1alpha1.DefaultEnvoyGatewayLogging())
 
 	logging := v1alpha1.DefaultEnvoyGatewayLogging()
-	assert.True(t, logging != nil)
-	assert.True(t, logging.Level[v1alpha1.LogComponentGatewayDefault] == v1alpha1.LogLevelInfo)
+	assert.NotNil(t, logging)
+	assert.Equal(t, v1alpha1.LogLevelInfo, logging.Level[v1alpha1.LogComponentGatewayDefault])
 
 	gatewayLogging := &v1alpha1.EnvoyGatewayLogging{
 		Level: logging.Level,
 	}
 	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
-	assert.True(t, gatewayLogging != nil)
-	assert.True(t, gatewayLogging.Level[v1alpha1.LogComponentGatewayDefault] == v1alpha1.LogLevelInfo)
+	assert.NotNil(t, gatewayLogging)
+	assert.Equal(t, v1alpha1.LogLevelInfo, gatewayLogging.Level[v1alpha1.LogComponentGatewayDefault])
 }
 
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
@@ -553,17 +643,17 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 		TypeMeta:         metav1.TypeMeta{},
 		EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{Provider: v1alpha1.DefaultEnvoyGatewayProvider()},
 	}
-	assert.True(t, envoyGateway.Provider != nil)
+	assert.NotNil(t, envoyGateway.Provider)
 
 	envoyGatewayProvider := envoyGateway.GetEnvoyGatewayProvider()
-	assert.True(t, envoyGatewayProvider.Kubernetes == nil)
+	assert.Nil(t, envoyGatewayProvider.Kubernetes)
 	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
 
 	envoyGatewayProvider.Kubernetes = v1alpha1.DefaultEnvoyGatewayKubeProvider()
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, v1alpha1.DefaultKubernetesDeployment(v1alpha1.DefaultRateLimitImage))
 
 	envoyGatewayProvider.Kubernetes = &v1alpha1.EnvoyGatewayKubernetesProvider{}
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment == nil)
+	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 
 	envoyGatewayProvider.Kubernetes = &v1alpha1.EnvoyGatewayKubernetesProvider{
 		RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
@@ -571,9 +661,9 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 			Pod:       nil,
 			Container: nil,
 		}}
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas == nil)
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod == nil)
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container == nil)
+	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
+	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod)
+	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container)
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
 	envoyGatewayProvider.Kubernetes = &v1alpha1.EnvoyGatewayKubernetesProvider{
@@ -586,39 +676,39 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 				Image:           nil,
 			},
 		}}
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources == nil)
+	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources)
 	envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
-	assert.True(t, envoyGatewayProvider.Kubernetes != nil)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes, envoyGatewayKubeProvider)
 
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment != nil)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, v1alpha1.DefaultKubernetesDeployment(v1alpha1.DefaultRateLimitImage))
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas != nil)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, v1alpha1.DefaultKubernetesDeploymentReplicas())
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod != nil)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, v1alpha1.DefaultKubernetesPod())
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container != nil)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, v1alpha1.DefaultKubernetesContainer(v1alpha1.DefaultRateLimitImage))
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources != nil)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, v1alpha1.DefaultResourceRequirements())
-	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image != nil)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, v1alpha1.DefaultKubernetesContainerImage(v1alpha1.DefaultRateLimitImage))
 }
 
 func TestEnvoyGatewayAdmin(t *testing.T) {
 	// default envoygateway config admin should not be nil
 	eg := v1alpha1.DefaultEnvoyGateway()
-	assert.True(t, eg.Admin != nil)
+	assert.NotNil(t, eg.Admin)
 
 	// get default admin config from envoygateway
 	// values should be set in default
 	egAdmin := eg.GetEnvoyGatewayAdmin()
-	assert.True(t, egAdmin != nil)
-	assert.True(t, egAdmin.Address.Port == v1alpha1.GatewayAdminPort)
-	assert.True(t, egAdmin.Address.Host == v1alpha1.GatewayAdminHost)
-	assert.True(t, egAdmin.EnableDumpConfig == false)
-	assert.True(t, egAdmin.EnablePprof == false)
+	assert.NotNil(t, egAdmin)
+	assert.Equal(t, v1alpha1.GatewayAdminPort, egAdmin.Address.Port)
+	assert.Equal(t, v1alpha1.GatewayAdminHost, egAdmin.Address.Host)
+	assert.False(t, egAdmin.EnableDumpConfig)
+	assert.False(t, egAdmin.EnablePprof)
 
 	// override the admin config
 	// values should be updated
@@ -631,34 +721,34 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 		EnablePprof:      true,
 	}
 
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == 19010)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == "0.0.0.0")
-	assert.True(t, eg.GetEnvoyGatewayAdmin().EnableDumpConfig == true)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().EnablePprof == true)
+	assert.Equal(t, 19010, eg.GetEnvoyGatewayAdmin().Address.Port)
+	assert.Equal(t, "0.0.0.0", eg.GetEnvoyGatewayAdmin().Address.Host)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnableDumpConfig)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnablePprof)
 
 	// set eg defaults when admin is nil
 	// the admin should not be nil
 	eg.Admin = nil
 	eg.SetEnvoyGatewayDefaults()
-	assert.True(t, eg.Admin != nil)
-	assert.True(t, eg.Admin.Address.Port == v1alpha1.GatewayAdminPort)
-	assert.True(t, eg.Admin.Address.Host == v1alpha1.GatewayAdminHost)
-	assert.True(t, eg.Admin.EnableDumpConfig == false)
-	assert.True(t, eg.Admin.EnablePprof == false)
+	assert.NotNil(t, eg.Admin)
+	assert.Equal(t, v1alpha1.GatewayAdminPort, eg.Admin.Address.Port)
+	assert.Equal(t, v1alpha1.GatewayAdminHost, eg.Admin.Address.Host)
+	assert.False(t, eg.Admin.EnableDumpConfig)
+	assert.False(t, eg.Admin.EnablePprof)
 }
 
 func TestEnvoyGatewayTelemetry(t *testing.T) {
 	// default envoygateway config telemetry should not be nil
 	eg := v1alpha1.DefaultEnvoyGateway()
-	assert.True(t, eg.Telemetry != nil)
+	assert.NotNil(t, eg.Telemetry)
 
 	// get default telemetry config from envoygateway
 	// values should be set in default
 	egTelemetry := eg.GetEnvoyGatewayTelemetry()
-	assert.True(t, egTelemetry != nil)
-	assert.True(t, egTelemetry.Metrics != nil)
-	assert.True(t, egTelemetry.Metrics.Prometheus.Disable == false)
-	assert.True(t, egTelemetry.Metrics.Sinks == nil)
+	assert.NotNil(t, egTelemetry)
+	assert.NotNil(t, egTelemetry.Metrics)
+	assert.False(t, egTelemetry.Metrics.Prometheus.Disable)
+	assert.Nil(t, egTelemetry.Metrics.Sinks)
 
 	// override the telemetry config
 	// values should be updated
@@ -685,16 +775,16 @@ func TestEnvoyGatewayTelemetry(t *testing.T) {
 		},
 	}
 
-	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable == true)
-	assert.True(t, len(eg.GetEnvoyGatewayTelemetry().Metrics.Sinks) == 2)
-	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Sinks[0].Type == v1alpha1.MetricSinkTypeOpenTelemetry)
+	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable)
+	assert.Len(t, eg.GetEnvoyGatewayTelemetry().Metrics.Sinks, 2)
+	assert.Equal(t, v1alpha1.MetricSinkTypeOpenTelemetry, eg.GetEnvoyGatewayTelemetry().Metrics.Sinks[0].Type)
 
 	// set eg defaults when telemetry is nil
 	// the telemetry should not be nil
 	eg.Telemetry = nil
 	eg.SetEnvoyGatewayDefaults()
-	assert.True(t, eg.Telemetry != nil)
-	assert.True(t, eg.Telemetry.Metrics != nil)
-	assert.True(t, eg.Telemetry.Metrics.Prometheus.Disable == false)
-	assert.True(t, eg.Telemetry.Metrics.Sinks == nil)
+	assert.NotNil(t, eg.Telemetry)
+	assert.NotNil(t, eg.Telemetry.Metrics)
+	assert.False(t, eg.Telemetry.Metrics.Prometheus.Disable)
+	assert.Nil(t, eg.Telemetry.Metrics.Sinks)
 }

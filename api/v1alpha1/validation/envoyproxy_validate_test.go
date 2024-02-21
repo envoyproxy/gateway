@@ -15,10 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -301,7 +300,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Bootstrap: &egv1a1.ProxyBootstrap{
-						Type:  (*egv1a1.BootstrapType)(pointer.String(string(egv1a1.BootstrapTypeMerge))),
+						Type:  ptr.To(egv1a1.BootstrapTypeMerge),
 						Value: mergeUserBootstrap,
 					},
 				},
@@ -390,7 +389,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								{
 									Format: egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
-										Text: pointer.String("[%START_TIME%]"),
+										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
@@ -470,33 +469,33 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			Provider: egv1a1.DefaultEnvoyProxyProvider(),
 		},
 	}
-	assert.True(t, envoyProxy.Spec.Provider != nil)
+	assert.NotNil(t, envoyProxy.Spec.Provider)
 
 	envoyProxyProvider := envoyProxy.GetEnvoyProxyProvider()
-	assert.True(t, envoyProxyProvider.Kubernetes == nil)
+	assert.Nil(t, envoyProxyProvider.Kubernetes)
 	assert.True(t, reflect.DeepEqual(envoyProxy.Spec.Provider, envoyProxyProvider))
 
 	envoyProxyKubeProvider := envoyProxyProvider.GetEnvoyProxyKubeProvider()
 
-	assert.True(t, envoyProxyProvider.Kubernetes != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes)
 	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes, envoyProxyKubeProvider))
 
 	envoyProxyProvider.GetEnvoyProxyKubeProvider()
 
-	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
-	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, egv1a1.DefaultKubernetesDeploymentReplicas())
-	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egv1a1.DefaultKubernetesPod())
-	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, egv1a1.DefaultKubernetesContainer(egv1a1.DefaultEnvoyProxyImage))
-	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, egv1a1.DefaultResourceRequirements())
-	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, egv1a1.DefaultKubernetesContainerImage(egv1a1.DefaultEnvoyProxyImage))
 
-	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyService != nil)
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyService)
 	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer)))
 }
 

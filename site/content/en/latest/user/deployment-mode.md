@@ -5,10 +5,10 @@ title: "Deployment Mode"
 
 ### One GatewayClass per Envoy Gateway
 
-* Envoy Gateway can accept a single [GatewayClass](https://gateway-api.sigs.k8s.io/api-types/gatewayclass/)
+* Envoy Gateway can accept a single [GatewayClass][]
 resource. If you've instantiated multiple GatewayClasses, we recommend running multiple Envoy Gateway controllers
 in different namespaces, linking a GatewayClass to each of them. 
-* Support for accepting multiple GatewayClass is being tracked [here](https://github.com/envoyproxy/gateway/issues/1231).
+* Support for accepting multiple GatewayClass is being tracked [here][issue1231].
 
 ### Supported Modes
 
@@ -16,9 +16,9 @@ in different namespaces, linking a GatewayClass to each of them.
 
 * The default deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
-* Envoy Gateway also supports **Namespaced** deployment mode, you can watch resources in the specific namespaces by assigning
-`EnvoyGateway.provider.kubernetes.watch.namespaces` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
-* Support for alternate deployment modes is being tracked [here](https://github.com/envoyproxy/gateway/issues/1117).
+* Envoy Gateway also supports [Namespaced deployment mode][], you can watch resources in the specific namespaces by assigning
+`EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
+* Support for alternate deployment modes is being tracked [here][issue1117].
 
 ### Multi-tenancy
 
@@ -30,22 +30,27 @@ by the `marketing` and `product` teams in separate namespaces.
 
 * Lets deploy Envoy Gateway in the `marketing` namespace and also watch resources only in this namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
 
-```
-helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller --set config.envoyGateway.provider.kubernetes.watch.namespaces={marketing} eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n marketing --create-namespace
+```shell
+helm install \
+--set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller \
+--set config.envoyGateway.provider.kubernetes.watch.type=Namespaces \
+--set config.envoyGateway.provider.kubernetes.watch.namespaces={marketing} \
+eg-marketing oci://docker.io/envoyproxy/gateway-helm \
+--version v0.0.0-latest -n marketing --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg-marketing
 spec:
   controllerName: gateway.envoyproxy.io/marketing-gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -113,7 +118,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -148,7 +153,7 @@ kubectl -n marketing port-forward service/${ENVOY_SERVICE} 8888:8080 &
 curl --verbose --header "Host: www.marketing.example.com" http://localhost:8888/get
 ```
 
-```
+```console
 *   Trying 127.0.0.1:8888...
 * Connected to localhost (127.0.0.1) port 8888 (#0)
 > GET /get HTTP/1.1
@@ -203,22 +208,27 @@ Handling connection for 8888
 
 * Lets deploy Envoy Gateway in the `product` namespace and also watch resources only in this namespace.
 
-```
-helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller --set config.envoyGateway.provider.kubernetes.watch.namespaces={product} eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n product --create-namespace
+```shell
+helm install \
+--set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller \
+--set config.envoyGateway.provider.kubernetes.watch.type=Namespaces \
+--set config.envoyGateway.provider.kubernetes.watch.namespaces={product} \
+eg-product oci://docker.io/envoyproxy/gateway-helm \
+--version v0.0.0-latest -n product --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg-product
 spec:
   controllerName: gateway.envoyproxy.io/product-gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -286,7 +296,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -381,7 +391,7 @@ and the product team's data plane.
 curl --verbose --header "Host: www.marketing.example.com" http://localhost:8889/get
 ```
 
-```
+```console
 *   Trying 127.0.0.1:8889...
 * Connected to localhost (127.0.0.1) port 8889 (#0)
 > GET /get HTTP/1.1
@@ -398,3 +408,8 @@ Handling connection for 8889
 <
 * Connection #0 to host localhost left intact
 ```
+
+[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+[Namespaced deployment mode]: ../../api/extension_types#kuberneteswatchmode
+[issue1231]: https://github.com/envoyproxy/gateway/issues/1231
+[issue1117]: https://github.com/envoyproxy/gateway/issues/1117

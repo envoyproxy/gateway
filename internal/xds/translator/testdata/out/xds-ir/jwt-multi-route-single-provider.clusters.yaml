@@ -43,7 +43,8 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: localhost_443/backend/0
   name: localhost_443
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -56,4 +57,5 @@
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
+      sni: localhost
   type: STRICT_DNS

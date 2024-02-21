@@ -16,6 +16,7 @@ package status
 import (
 	"fmt"
 	"time"
+	"unicode"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,4 +138,29 @@ func conditionChanged(a, b metav1.Condition) bool {
 		(a.Reason != b.Reason) ||
 		(a.Message != b.Message) ||
 		(a.ObservedGeneration != b.ObservedGeneration)
+}
+
+// Error2ConditionMsg format the error string to a Status condition message.
+// * Convert the first letter to capital
+// * Append "." to the string if it doesn't exit
+func Error2ConditionMsg(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	message := err.Error()
+	if message == "" {
+		return message
+	}
+
+	// Convert the string to a rune slice for easier manipulation
+	runes := []rune(message)
+
+	// Check if the first rune is a letter and convert it to uppercase
+	if unicode.IsLetter(runes[0]) {
+		runes[0] = unicode.ToUpper(runes[0])
+	}
+
+	// Convert the rune slice back to a string
+	return string(runes)
 }

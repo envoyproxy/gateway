@@ -49,8 +49,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 		SupportedFeatures:    suite.AllFeatures,
 		SkipTests: []string{
 			tests.GatewayStaticAddresses.ShortName,
-			tests.GatewayWithAttachedRoutes.ShortName,
-			tests.HTTPRouteBackendProtocolH2C.ShortName,
 		},
 		ExemptFeatures: suite.MeshCoreFeatures,
 	})

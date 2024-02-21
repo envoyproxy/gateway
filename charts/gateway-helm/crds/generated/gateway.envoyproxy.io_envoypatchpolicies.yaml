@@ -56,6 +56,12 @@ spec:
                     operation:
                       description: Patch defines the JSON Patch Operation
                       properties:
+                        from:
+                          description: From is the source location of the value to
+                            be copied or moved. Only valid for move or copy operations
+                            Refer to https://datatracker.ietf.org/doc/html/rfc6901
+                            for more details.
+                          type: string
                         op:
                           description: Op is the type of operation to perform
                           enum:
@@ -73,11 +79,11 @@ spec:
                           type: string
                         value:
                           description: Value is the new value of the path location.
+                            The value is only used by the `add` and `replace` operations.
                           x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
                       - path
-                      - value
                       type: object
                     type:
                       description: Type is the typed URL of the Envoy xDS Resource
@@ -86,6 +92,7 @@ spec:
                       - type.googleapis.com/envoy.config.route.v3.RouteConfiguration
                       - type.googleapis.com/envoy.config.cluster.v3.Cluster
                       - type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+                      - type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
                       type: string
                   required:
                   - name
@@ -102,9 +109,11 @@ spec:
                 type: integer
               targetRef:
                 description: TargetRef is the name of the Gateway API resource this
-                  policy is being attached to. Currently only attaching to Gateway
-                  is supported This Policy and the TargetRef MUST be in the same namespace
-                  for this Policy to have effect and be applied to the Gateway TargetRef
+                  policy is being attached to. By default attaching to Gateway is
+                  supported and when mergeGateways is enabled it should attach to
+                  GatewayClass. This Policy and the TargetRef MUST be in the same
+                  namespace for this Policy to have effect and be applied to the Gateway
+                  TargetRef
                 properties:
                   group:
                     description: Group is the group of the target resource.

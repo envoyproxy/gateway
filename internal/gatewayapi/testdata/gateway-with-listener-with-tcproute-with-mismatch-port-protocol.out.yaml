@@ -16,7 +16,7 @@ gateways:
       protocol: TCP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -41,7 +41,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/tcp
         ports:
         - containerPort: 10162
           name: tcp

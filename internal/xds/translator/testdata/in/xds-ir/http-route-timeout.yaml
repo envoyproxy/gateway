@@ -4,10 +4,15 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "first-route"
     hostname: "*"
-    timeout: 5s
+    timeout:
+      http:
+        requestTimeout: 5s
     headerMatches:
     - name: user
       stringMatch:

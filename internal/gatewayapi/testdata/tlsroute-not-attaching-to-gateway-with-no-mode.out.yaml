@@ -16,7 +16,7 @@ gateways:
       protocol: TLS
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Listener must have TLS set when protocol is TLS.
@@ -37,8 +37,6 @@ gateways:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      listeners:
-      - address: ""
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1

@@ -37,7 +37,8 @@ xds:
                     portValue: 443
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: raw_githubusercontent_com_443/backend/0
         name: raw_githubusercontent_com_443
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
@@ -50,4 +51,5 @@ xds:
               validationContext:
                 trustedCa:
                   filename: /etc/ssl/certs/ca-certificates.crt
+            sni: raw.githubusercontent.com
         type: STRICT_DNS

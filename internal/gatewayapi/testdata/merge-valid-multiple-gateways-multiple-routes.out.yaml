@@ -199,12 +199,16 @@ infraIR:
           mergeGateways: true
         status: {}
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: envoy-gateway/gateway-1/http
           protocol: HTTP
           servicePort: 80
+      - address: null
+        name: envoy-gateway/gateway-2/http-2
+        ports:
         - containerPort: 8888
           name: envoy-gateway/gateway-2/http-2
           protocol: HTTP
@@ -224,6 +228,9 @@ xdsIR:
       - '*.envoyproxy.io'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       routes:
       - backendWeights:
@@ -232,9 +239,11 @@ xdsIR:
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -247,12 +256,18 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-2/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 8888
     - address: 0.0.0.0
       hostnames:
       - example.com
       isHTTP2: false
       name: envoy-gateway/gateway-2/http-3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 8888
       routes:
       - backendWeights:
@@ -261,9 +276,11 @@ xdsIR:
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
-          - endpoints:
+          - addressType: IP
+            endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: example.com
         name: httproute/default/httproute-2/rule/0/match/0/example_com

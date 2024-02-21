@@ -13,6 +13,9 @@ stats_config:
   stats_matcher:
     inclusion_list:
       patterns:
+      {{- range $_, $item := .StatsMatcher.Exacts }}
+      - exact: {{$item}}
+      {{- end}}
       {{- range $_, $item := .StatsMatcher.Prefixs }}
       - prefix: {{$item}}
       {{- end}}
@@ -25,6 +28,13 @@ stats_config:
           regex: {{js $item}}
       {{- end}}
 {{- end }}
+layered_runtime:
+  layers:
+  - name: global_config
+    static_layer:
+      envoy.restart_features.use_eds_cache_for_ads: true
+      re2.max_program_size.error_level: 4294967295
+      re2.max_program_size.warn_level: 1000
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC

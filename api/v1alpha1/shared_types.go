@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	appv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -18,7 +19,7 @@ const (
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
-	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
+	DefaultEnvoyProxyImage = "envoyproxy/envoy:distroless-dev"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.
@@ -112,6 +113,32 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// HostNetwork, If this is set to true, the pod will use host's network namespace.
+	// +optional
+	HostNetwork bool `json:"hostNetwork,omitempty"`
+
+	// ImagePullSecrets is an optional list of references to secrets
+	// in the same namespace to use for pulling any of the images used by this PodSpec.
+	// If specified, these secrets will be passed to individual puller implementations for them to use.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+	//
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	// NodeSelector is a selector which must be true for the pod to fit on a node.
+	// Selector which must match a node's labels for the pod to be scheduled on that node.
+	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+	//
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// TopologySpreadConstraints describes how a group of pods ought to spread across topology
+	// domains. Scheduler will schedule pods in a way which abides by the constraints.
+	// All topologySpreadConstraints are ANDed.
+	//
+	// +optional
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
@@ -165,7 +192,26 @@ const (
 	ServiceTypeNodePort ServiceType = "NodePort"
 )
 
+// ServiceExternalTrafficPolicy describes how nodes distribute service traffic they
+// receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs,
+// and LoadBalancer IPs.
+// +enum
+// +kubebuilder:validation:Enum=Local;Cluster
+type ServiceExternalTrafficPolicy string
+
+const (
+	// ServiceExternalTrafficPolicyCluster routes traffic to all endpoints.
+	ServiceExternalTrafficPolicyCluster ServiceExternalTrafficPolicy = "Cluster"
+
+	// ServiceExternalTrafficPolicyLocal preserves the source IP of the traffic by
+	// routing only to endpoints on the same node as the traffic was received on
+	// (dropping the traffic if there are no local endpoints).
+	ServiceExternalTrafficPolicyLocal ServiceExternalTrafficPolicy = "Local"
+)
+
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
+// +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -199,9 +245,17 @@ type KubernetesServiceSpec struct {
 	// may be ignored if the load balancer provider does not support this feature.
 	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
 	// providers such as GCP.
+	//
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="self.matches(r\"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$\")"
 	// +optional
 	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
+	// ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options
+	// are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node
+	// receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster.
+	// +kubebuilder:default:="Local"
+	// +optional
+	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
@@ -244,7 +298,7 @@ type StringMatch struct {
 	//
 	// +optional
 	// +kubebuilder:default=Exact
-	Type *MatchType `json:"type,omitempty"`
+	Type *StringMatchType `json:"type,omitempty"`
 
 	// Value specifies the string value that the match must have.
 	//
@@ -253,25 +307,66 @@ type StringMatch struct {
 	Value string `json:"value"`
 }
 
-// MatchType specifies the semantics of how a string value should be compared.
+// StringMatchType specifies the semantics of how a string value should be compared.
 // Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 //
 // +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
-type MatchType string
+type StringMatchType string
 
 const (
-	// MatchExact :the input string must match exactly the match value.
-	MatchExact MatchType = "Exact"
+	// StringMatchExact :the input string must match exactly the match value.
+	StringMatchExact StringMatchType = "Exact"
 
-	// MatchPrefix :the input string must start with the match value.
-	MatchPrefix MatchType = "Prefix"
+	// StringMatchPrefix :the input string must start with the match value.
+	StringMatchPrefix StringMatchType = "Prefix"
 
-	// MatchSuffix :the input string must end with the match value.
-	MatchSuffix MatchType = "Suffix"
+	// StringMatchSuffix :the input string must end with the match value.
+	StringMatchSuffix StringMatchType = "Suffix"
 
-	// MatchRegularExpression :The input string must match the regular expression
+	// StringMatchRegularExpression :The input string must match the regular expression
 	// specified in the match value.
 	// The regex string must adhere to the syntax documented in
 	// https://github.com/google/re2/wiki/Syntax.
-	MatchRegularExpression MatchType = "RegularExpression"
+	StringMatchRegularExpression StringMatchType = "RegularExpression"
 )
+
+// KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
+// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
+//
+// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
+type KubernetesHorizontalPodAutoscalerSpec struct {
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler
+	// can scale down. It defaults to 1 replica.
+	//
+	// +kubebuilder:validation:XValidation:message="minReplicas must be greater than 0",rule="self > 0"
+	// +optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	//
+	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="self > 0"
+	MaxReplicas *int32 `json:"maxReplicas"`
+
+	// metrics contains the specifications for which to use to calculate the
+	// desired replica count (the maximum replica count across all metrics will
+	// be used).
+	// If left empty, it defaults to being based on CPU utilization with average on 80% usage.
+	//
+	// +optional
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
+
+	// behavior configures the scaling behavior of the target
+	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
+	// If not set, the default HPAScalingRules for scale up and scale down are used.
+	// See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior.
+	//
+	// +optional
+	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+}
+
+// HTTPStatus defines the http status code.
+// +kubebuilder:validation:Minimum=100
+// +kubebuilder:validation:Maximum=600
+// +kubebuilder:validation:ExclusiveMaximum=true
+type HTTPStatus int

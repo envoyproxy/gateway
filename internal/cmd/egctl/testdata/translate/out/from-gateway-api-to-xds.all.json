@@ -44,6 +44,18 @@
                 "resourceApiVersion": "V3"
               }
             },
+            "layeredRuntime": {
+              "layers": [
+                {
+                  "name": "global_config",
+                  "staticLayer": {
+                    "envoy.restart_features.use_eds_cache_for_ads": true,
+                    "re2.max_program_size.error_level": 4294967295,
+                    "re2.max_program_size.warn_level": 1000
+                  }
+                }
+              ]
+            },
             "staticResources": {
               "clusters": [
                 {
@@ -235,7 +247,9 @@
                       }
                     ],
                     "loadBalancingWeight": 1,
-                    "locality": {}
+                    "locality": {
+                      "region": "httproute/default/backend/rule/0/backend/0"
+                    }
                   }
                 ]
               }
@@ -260,7 +274,9 @@
                       }
                     ],
                     "loadBalancingWeight": 1,
-                    "locality": {}
+                    "locality": {
+                      "region": "grpcroute/default/backend/rule/0/backend/0"
+                    }
                   }
                 ]
               }
@@ -285,7 +301,9 @@
                       }
                     ],
                     "loadBalancingWeight": 1,
-                    "locality": {}
+                    "locality": {
+                      "region": "tlsroute/default/backend/rule/-1/backend/0"
+                    }
                   }
                 ]
               }
@@ -310,7 +328,9 @@
                       }
                     ],
                     "loadBalancingWeight": 1,
-                    "locality": {}
+                    "locality": {
+                      "region": "tcproute/default/backend/rule/-1/backend/0"
+                    }
                   }
                 ]
               }
@@ -335,7 +355,9 @@
                       }
                     ],
                     "loadBalancingWeight": 1,
-                    "locality": {}
+                    "locality": {
+                      "region": "udproute/default/backend/rule/-1/backend/0"
+                    }
                   }
                 ]
               }
@@ -531,7 +553,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -545,6 +568,7 @@
                             },
                             "routeConfigName": "default/eg/http"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
                           "upgradeConfigs": [
                             {
@@ -638,7 +662,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -652,6 +677,7 @@
                             },
                             "routeConfigName": "default/eg/grpc"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
                           "useRemoteAddress": true
                         }

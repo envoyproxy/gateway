@@ -27,6 +27,13 @@ xds:
           ldsConfig:
             ads: {}
             resourceApiVersion: V3
+        layeredRuntime:
+          layers:
+          - name: global_config
+            staticLayer:
+              envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         staticResources:
           clusters:
           - connectTimeout: 0.250s
@@ -131,7 +138,8 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: httproute/envoy-gateway-system/backend/rule/0/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
@@ -169,7 +177,8 @@ xds:
                       portValue: 443
                 loadBalancingWeight: 1
               loadBalancingWeight: 1
-              locality: {}
+              locality:
+                region: raw_githubusercontent_com_443/backend/0
           name: raw_githubusercontent_com_443
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -182,6 +191,7 @@ xds:
                 validationContext:
                   trustedCa:
                     filename: /etc/ssl/certs/ca-certificates.crt
+              sni: raw.githubusercontent.com
           type: STRICT_DNS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
@@ -231,12 +241,13 @@ xds:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                       providers:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example:
+                          forward: true
                           remoteJwks:
                             asyncFetch: {}
                             cacheDuration: 300s
                             httpUri:
                               cluster: raw_githubusercontent_com_443
-                              timeout: 5s
+                              timeout: 10s
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                             retryPolicy: {}
                       requirementMap:
@@ -245,6 +256,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -253,6 +265,7 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: envoy-gateway-system/eg/http
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   upgradeConfigs:
                   - upgradeType: websocket

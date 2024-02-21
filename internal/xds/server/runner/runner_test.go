@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
@@ -143,7 +144,7 @@ func TestTLSConfig(t *testing.T) {
 			}
 			if err == nil {
 				expectedCert, _ := tc.serverCredentials.X509Certificate()
-				assert.Equal(t, receivedCert, &expectedCert)
+				assert.Equal(t, &expectedCert, receivedCert)
 			}
 		})
 	}
@@ -180,7 +181,8 @@ func peekError(conn net.Conn) error {
 	_ = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 	_, err := conn.Read(make([]byte, 1))
 	if err != nil {
-		if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
+		var netErr net.Error
+		if !errors.As(netErr, &netErr) || !netErr.Timeout() {
 			return err
 		}
 	}
@@ -191,7 +193,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	// Occupy the address to make listening failed
 	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
 	l, err := net.Listen("tcp", addr)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	defer l.Close()
 
 	cfg, _ := config.New()

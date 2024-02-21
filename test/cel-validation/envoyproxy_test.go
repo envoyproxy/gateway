@@ -16,9 +16,9 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestEnvoyProxyProvider(t *testing.T) {
@@ -38,10 +38,8 @@ func TestEnvoyProxyProvider(t *testing.T) {
 		wantErrors   []string
 	}{
 		{
-			desc: "nil provider",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-
-			},
+			desc:       "nil provider",
+			mutate:     func(envoy *egv1a1.EnvoyProxy) {},
 			wantErrors: []string{},
 		},
 		{
@@ -163,6 +161,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("1.2.3.4."),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerIP must be a valid IPv4 address"},
+		},
+		{
+			desc: "ServiceTypeLoadBalancer-with-invalid-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: ptr.To("a.b.c.d"),
 							},
 						},
@@ -203,6 +218,320 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"loadBalancerIP can only be set for LoadBalancer type"},
+		},
+		{
+			desc: "invalid-ProxyAccessLogFormat",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "foo",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Text\", \"JSON\""},
+		},
+		{
+			desc: "ProxyAccessLogFormat-with-TypeText-but-no-text",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeText,
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{
+												Path: "foo/bar",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If AccessLogFormat type is Text, text field needs to be set"},
+		},
+		{
+			desc: "ProxyAccessLogFormat-with-TypeJSON-but-no-json",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{
+												Path: "foo/bar",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If AccessLogFormat type is JSON, json field needs to be set"},
+		},
+		{
+			desc: "ProxyAccessLogFormat-with-TypeJSON-but-got-text",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{
+												Path: "foo/bar",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If AccessLogFormat type is JSON, json field needs to be set"},
+		},
+		{
+			desc: "ProxyAccessLogSink-with-TypeFile-but-no-file",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If AccessLogSink type is File, file field needs to be set"},
+		},
+		{
+			desc: "ProxyAccessLogSink-with-TypeOpenTelemetry-but-no-openTelemetry",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If AccessLogSink type is OpenTelemetry, openTelemetry field needs to be set"},
+		},
+		{
+			desc: "ProxyAccessLog-settings-pass",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{
+												Path: "foo/bar",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyMetricSink-with-TypeOpenTelemetry-but-no-openTelemetry",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If MetricSink type is OpenTelemetry, openTelemetry field needs to be set"},
+		},
+		{
+			desc: "ProxyMetrics-sinks-pass",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										Host: "0.0.0.0",
+										Port: 3217,
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-is-required",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.provider.kubernetes.envoyHpa.maxReplicas: Required value"},
+		},
+		{
+			desc: "ProxyHpa-minReplicas-less-than-0",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](-1),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"minReplicas must be greater than 0"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-less-than-0",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MaxReplicas: ptr.To[int32](-1),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"maxReplicas must be greater than 0"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-less-than-minReplicas",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"maxReplicas cannot be less than minReplicas"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-equals-to-minReplicas",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](2),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyHpa-valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](10),
+							},
+						},
+					},
+				}
+			},
 		},
 	}
 

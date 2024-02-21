@@ -6,20 +6,24 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"net"
 	"sort"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 type policyTargetRouteKey struct {
@@ -241,6 +245,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	var (
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
+		pp *ir.ProxyProtocol
+		hc *ir.HealthCheck
+		cb *ir.CircuitBreaker
+		fi *ir.FaultInjection
+		to *ir.Timeout
+		ka *ir.TCPKeepalive
 	)
 
 	// Build IR
@@ -250,7 +260,22 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.LoadBalancer != nil {
 		lb = t.buildLoadBalancer(policy)
 	}
+	if policy.Spec.ProxyProtocol != nil {
+		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.HealthCheck != nil {
+		hc = t.buildHealthCheck(policy)
+	}
+	if policy.Spec.CircuitBreaker != nil {
+		cb = t.buildCircuitBreaker(policy)
+	}
 
+	if policy.Spec.FaultInjection != nil {
+		fi = t.buildFaultInjection(policy)
+	}
+	if policy.Spec.TCPKeepalive != nil {
+		ka = t.buildTCPKeepAlive(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -260,6 +285,17 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 				if strings.HasPrefix(r.Name, prefix) {
 					r.RateLimit = rl
 					r.LoadBalancer = lb
+					r.ProxyProtocol = pp
+					r.HealthCheck = hc
+					r.CircuitBreaker = cb
+					r.FaultInjection = fi
+					r.TCPKeepalive = ka
+
+					// some timeout setting originate from the route
+					if policy.Spec.Timeout != nil {
+						to = t.buildTimeout(policy, r)
+						r.Timeout = to
+					}
 				}
 			}
 		}
@@ -271,6 +307,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	var (
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
+		pp *ir.ProxyProtocol
+		hc *ir.HealthCheck
+		cb *ir.CircuitBreaker
+		fi *ir.FaultInjection
+		ct *ir.Timeout
+		ka *ir.TCPKeepalive
 	)
 
 	// Build IR
@@ -280,6 +322,22 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.LoadBalancer != nil {
 		lb = t.buildLoadBalancer(policy)
 	}
+	if policy.Spec.ProxyProtocol != nil {
+		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.HealthCheck != nil {
+		hc = t.buildHealthCheck(policy)
+	}
+	if policy.Spec.CircuitBreaker != nil {
+		cb = t.buildCircuitBreaker(policy)
+	}
+	if policy.Spec.FaultInjection != nil {
+		fi = t.buildFaultInjection(policy)
+	}
+	if policy.Spec.TCPKeepalive != nil {
+		ka = t.buildTCPKeepAlive(policy)
+	}
+
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
 	// set by a policy attaching to the route
@@ -296,14 +354,170 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			if r.LoadBalancer == nil {
 				r.LoadBalancer = lb
 			}
-		}
-	}
+			if r.ProxyProtocol == nil {
+				r.ProxyProtocol = pp
+			}
+			if r.HealthCheck == nil {
+				r.HealthCheck = hc
+			}
+			if r.CircuitBreaker == nil {
+				r.CircuitBreaker = cb
+			}
+			if r.FaultInjection == nil {
+				r.FaultInjection = fi
+			}
+			if r.TCPKeepalive == nil {
+				r.TCPKeepalive = ka
+			}
 
+			if policy.Spec.Timeout != nil {
+				ct = t.buildTimeout(policy, r)
+				if r.Timeout == nil {
+					r.Timeout = ct
+				}
+			}
+		}
+
+	}
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
+	switch policy.Spec.RateLimit.Type {
+	case egv1a1.GlobalRateLimitType:
+		return t.buildGlobalRateLimit(policy)
+	case egv1a1.LocalRateLimitType:
+		return t.buildLocalRateLimit(policy)
+	}
+
+	status.SetBackendTrafficPolicyCondition(policy,
+		gwv1a2.PolicyConditionAccepted,
+		metav1.ConditionFalse,
+		gwv1a2.PolicyReasonInvalid,
+		"Invalid rateLimit type",
+	)
+	return nil
+}
+
+func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
+	if policy.Spec.RateLimit.Local == nil {
+		message := "Local configuration empty for rateLimit."
+		status.SetBackendTrafficPolicyCondition(policy,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwv1a2.PolicyReasonInvalid,
+			message,
+		)
+		return nil
+	}
+
+	local := policy.Spec.RateLimit.Local
+
+	// Envoy local rateLimit requires a default limit to be set for a route.
+	// EG uses the first rule without clientSelectors as the default route-level
+	// limit. If no such rule is found, EG uses a default limit of uint32 max.
+	var defaultLimit *ir.RateLimitValue
+	for _, rule := range local.Rules {
+		if rule.ClientSelectors == nil || len(rule.ClientSelectors) == 0 {
+			if defaultLimit != nil {
+				message := "Local rateLimit can not have more than one rule without clientSelectors."
+				status.SetBackendTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					message,
+				)
+				return nil
+			}
+			defaultLimit = &ir.RateLimitValue{
+				Requests: rule.Limit.Requests,
+				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+			}
+		}
+	}
+	// If no rule without clientSelectors is found, use uint32 max as the default
+	// limit, which effectively make the default limit unlimited.
+	if defaultLimit == nil {
+		defaultLimit = &ir.RateLimitValue{
+			Requests: math.MaxUint32,
+			Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
+		}
+	}
+
+	// Validate that the rule limit unit is a multiple of the default limit unit.
+	// This is required by Envoy local rateLimit implementation.
+	// see https://github.com/envoyproxy/envoy/blob/6d9a6e995f472526de2b75233abca69aa00021ed/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc#L49
+	defaultLimitUnit := ratelimitUnitToDuration(egv1a1.RateLimitUnit(defaultLimit.Unit))
+	for _, rule := range local.Rules {
+		ruleLimitUint := ratelimitUnitToDuration(rule.Limit.Unit)
+		if defaultLimitUnit == 0 || ruleLimitUint%defaultLimitUnit != 0 {
+			message := "Local rateLimit rule limit unit must be a multiple of the default limit unit."
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
+			return nil
+		}
+	}
+
+	var err error
+	var irRule *ir.RateLimitRule
+	var irRules = make([]*ir.RateLimitRule, 0)
+	for _, rule := range local.Rules {
+		// We don't process the rule without clientSelectors here because it's
+		// previously used as the default route-level limit.
+		if len(rule.ClientSelectors) == 0 {
+			continue
+		}
+
+		irRule, err = buildRateLimitRule(rule)
+		if err != nil {
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				status.Error2ConditionMsg(err),
+			)
+			return nil
+		}
+		if irRule.CIDRMatch != nil && irRule.CIDRMatch.Distinct {
+			message := "Local rateLimit does not support distinct CIDRMatch."
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
+			return nil
+		}
+		for _, match := range irRule.HeaderMatches {
+			if match.Distinct {
+				message := "Local rateLimit does not support distinct HeaderMatch."
+				status.SetBackendTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonInvalid,
+					message,
+				)
+				return nil
+			}
+		}
+		irRules = append(irRules, irRule)
+	}
+
+	rateLimit := &ir.RateLimit{
+		Local: &ir.LocalRateLimit{
+			Default: *defaultLimit,
+			Rules:   irRules,
+		},
+	}
+	return rateLimit
+}
+
+func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
 	if policy.Spec.RateLimit.Global == nil {
-		message := "Global configuration empty for rateLimit"
+		message := "Global configuration empty for rateLimit."
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -312,8 +526,9 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.Rat
 		)
 		return nil
 	}
+
 	if !t.GlobalRateLimitEnabled {
-		message := "Enable Ratelimit in the EnvoyGateway config to configure global rateLimit"
+		message := "Enable Ratelimit in the EnvoyGateway config to configure global rateLimit."
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -322,92 +537,103 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.Rat
 		)
 		return nil
 	}
+
+	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules: make([]*ir.RateLimitRule, len(policy.Spec.RateLimit.Global.Rules)),
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
-	rules := rateLimit.Global.Rules
-	for i, rule := range policy.Spec.RateLimit.Global.Rules {
-		rules[i] = &ir.RateLimitRule{
-			Limit: &ir.RateLimitValue{
-				Requests: rule.Limit.Requests,
-				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
-			},
-			HeaderMatches: make([]*ir.StringMatch, 0),
-		}
-		for _, match := range rule.ClientSelectors {
-			for _, header := range match.Headers {
-				switch {
-				case header.Type == nil && header.Value != nil:
-					fallthrough
-				case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
-					m := &ir.StringMatch{
-						Name:  header.Name,
-						Exact: header.Value,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
-					m := &ir.StringMatch{
-						Name:      header.Name,
-						SafeRegex: header.Value,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
-					m := &ir.StringMatch{
-						Name:     header.Name,
-						Distinct: true,
-					}
-					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-				default:
-					// set negative status condition.
-					message := "Unable to translate rateLimit. Either the header.Type is not valid or the header is missing a value"
-					status.SetBackendTrafficPolicyCondition(policy,
-						gwv1a2.PolicyConditionAccepted,
-						metav1.ConditionFalse,
-						gwv1a2.PolicyReasonInvalid,
-						message,
-					)
-
-					return nil
-				}
-			}
-
-			if match.SourceCIDR != nil {
-				// distinct means that each IP Address within the specified Source IP CIDR is treated as a
-				// distinct client selector and uses a separate rate limit bucket/counter.
-				distinct := false
-				sourceCIDR := match.SourceCIDR.Value
-				if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
-					distinct = true
-				}
-
-				ip, ipn, err := net.ParseCIDR(sourceCIDR)
-				if err != nil {
-					message := "Unable to translate rateLimit"
-					status.SetBackendTrafficPolicyCondition(policy,
-						gwv1a2.PolicyConditionAccepted,
-						metav1.ConditionFalse,
-						gwv1a2.PolicyReasonInvalid,
-						message,
-					)
-
-					return nil
-				}
-
-				mask, _ := ipn.Mask.Size()
-				rules[i].CIDRMatch = &ir.CIDRMatch{
-					CIDR:     ipn.String(),
-					IPv6:     ip.To4() == nil,
-					MaskLen:  mask,
-					Distinct: distinct,
-				}
-			}
+	irRules := rateLimit.Global.Rules
+	var err error
+	for i, rule := range global.Rules {
+		irRules[i], err = buildRateLimitRule(rule)
+		if err != nil {
+			status.SetBackendTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				status.Error2ConditionMsg(err),
+			)
+			return nil
 		}
 	}
 
 	return rateLimit
+}
+
+func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
+	irRule := &ir.RateLimitRule{
+		Limit: ir.RateLimitValue{
+			Requests: rule.Limit.Requests,
+			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+		},
+		HeaderMatches: make([]*ir.StringMatch, 0),
+	}
+
+	for _, match := range rule.ClientSelectors {
+		if len(match.Headers) == 0 && match.SourceCIDR == nil {
+			return nil, errors.New(
+				"unable to translate rateLimit. At least one of the" +
+					" header or sourceCIDR must be specified")
+		}
+		for _, header := range match.Headers {
+			switch {
+			case header.Type == nil && header.Value != nil:
+				fallthrough
+			case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
+				m := &ir.StringMatch{
+					Name:  header.Name,
+					Exact: header.Value,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
+				if err := regex.Validate(*header.Value); err != nil {
+					return nil, err
+				}
+				m := &ir.StringMatch{
+					Name:      header.Name,
+					SafeRegex: header.Value,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
+				m := &ir.StringMatch{
+					Name:     header.Name,
+					Distinct: true,
+				}
+				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
+			default:
+				return nil, errors.New(
+					"unable to translate rateLimit. Either the header." +
+						"Type is not valid or the header is missing a value")
+			}
+		}
+
+		if match.SourceCIDR != nil {
+			// distinct means that each IP Address within the specified Source IP CIDR is treated as a
+			// distinct client selector and uses a separate rate limit bucket/counter.
+			distinct := false
+			sourceCIDR := match.SourceCIDR.Value
+			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
+				distinct = true
+			}
+
+			ip, ipn, err := net.ParseCIDR(sourceCIDR)
+			if err != nil {
+				return nil, errors.New("unable to translate rateLimit")
+			}
+
+			mask, _ := ipn.Mask.Size()
+			irRule.CIDRMatch = &ir.CIDRMatch{
+				CIDR:     ipn.String(),
+				IPv6:     ip.To4() == nil,
+				MaskLen:  mask,
+				Distinct: distinct,
+			}
+		}
+	}
+	return irRule, nil
 }
 
 func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.LoadBalancer {
@@ -422,8 +648,15 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 			lb.ConsistentHash.SourceIP = ptr.To(true)
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
-		lb = &ir.LoadBalancer{
-			LeastRequest: &ir.LeastRequest{},
+		lb = &ir.LoadBalancer{}
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.LeastRequest = &ir.LeastRequest{
+					SlowStart: &ir.SlowStart{
+						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+					},
+				}
+			}
 		}
 	case egv1a1.RandomLoadBalancerType:
 		lb = &ir.LoadBalancer{
@@ -431,9 +664,355 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		}
 	case egv1a1.RoundRobinLoadBalancerType:
 		lb = &ir.LoadBalancer{
-			RoundRobin: &ir.RoundRobin{},
+			RoundRobin: &ir.RoundRobin{
+				SlowStart: &ir.SlowStart{},
+			},
+		}
+		if policy.Spec.LoadBalancer.SlowStart != nil {
+			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+				lb.RoundRobin = &ir.RoundRobin{
+					SlowStart: &ir.SlowStart{
+						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+					},
+				}
+			}
 		}
 	}
 
 	return lb
+}
+
+func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {
+	var pp *ir.ProxyProtocol
+	switch policy.Spec.ProxyProtocol.Version {
+	case egv1a1.ProxyProtocolVersionV1:
+		pp = &ir.ProxyProtocol{
+			Version: ir.ProxyProtocolVersionV1,
+		}
+	case egv1a1.ProxyProtocolVersionV2:
+		pp = &ir.ProxyProtocol{
+			Version: ir.ProxyProtocolVersionV2,
+		}
+	}
+
+	return pp
+}
+
+func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
+	if policy.Spec.HealthCheck == nil {
+		return nil
+	}
+	irhc := &ir.HealthCheck{}
+	if policy.Spec.HealthCheck.Passive != nil {
+		irhc.Passive = t.buildPassiveHealthCheck(policy)
+	}
+	if policy.Spec.HealthCheck.Active != nil {
+		irhc.Active = t.buildActiveHealthCheck(policy)
+	}
+	return irhc
+}
+
+func (t *Translator) buildPassiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.OutlierDetection {
+	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Passive == nil {
+		return nil
+	}
+
+	hc := policy.Spec.HealthCheck.Passive
+	irOD := &ir.OutlierDetection{
+		Interval:                       hc.Interval,
+		SplitExternalLocalOriginErrors: hc.SplitExternalLocalOriginErrors,
+		ConsecutiveLocalOriginFailures: hc.ConsecutiveLocalOriginFailures,
+		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
+		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
+		BaseEjectionTime:               hc.BaseEjectionTime,
+		MaxEjectionPercent:             hc.MaxEjectionPercent,
+	}
+	return irOD
+}
+
+func (t *Translator) buildActiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.ActiveHealthCheck {
+	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Active == nil {
+		return nil
+	}
+
+	hc := policy.Spec.HealthCheck.Active
+	irHC := &ir.ActiveHealthCheck{
+		Timeout:            hc.Timeout,
+		Interval:           hc.Interval,
+		UnhealthyThreshold: hc.UnhealthyThreshold,
+		HealthyThreshold:   hc.HealthyThreshold,
+	}
+	switch hc.Type {
+	case egv1a1.ActiveHealthCheckerTypeHTTP:
+		irHC.HTTP = t.buildHTTPActiveHealthChecker(hc.HTTP)
+	case egv1a1.ActiveHealthCheckerTypeTCP:
+		irHC.TCP = t.buildTCPActiveHealthChecker(hc.TCP)
+	}
+
+	return irHC
+}
+
+func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHealthChecker {
+	if h == nil {
+		return nil
+	}
+
+	irHTTP := &ir.HTTPHealthChecker{
+		Path:   h.Path,
+		Method: h.Method,
+	}
+	if irHTTP.Method != nil {
+		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
+	}
+
+	var irStatuses []ir.HTTPStatus
+	// deduplicate http statuses
+	statusSet := make(map[egv1a1.HTTPStatus]bool, len(h.ExpectedStatuses))
+	for _, r := range h.ExpectedStatuses {
+		if _, ok := statusSet[r]; !ok {
+			statusSet[r] = true
+			irStatuses = append(irStatuses, ir.HTTPStatus(r))
+		}
+	}
+	irHTTP.ExpectedStatuses = irStatuses
+
+	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
+	return irHTTP
+}
+
+func (t *Translator) buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealthChecker {
+	if h == nil {
+		return nil
+	}
+
+	irTCP := &ir.TCPHealthChecker{
+		Send:    translateActiveHealthCheckPayload(h.Send),
+		Receive: translateActiveHealthCheckPayload(h.Receive),
+	}
+	return irTCP
+}
+
+func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {
+	if p == nil {
+		return nil
+	}
+
+	irPayload := &ir.HealthCheckPayload{}
+	switch p.Type {
+	case egv1a1.ActiveHealthCheckPayloadTypeText:
+		irPayload.Text = p.Text
+	case egv1a1.ActiveHealthCheckPayloadTypeBinary:
+		irPayload.Binary = make([]byte, len(p.Binary))
+		copy(irPayload.Binary, p.Binary)
+	}
+
+	return irPayload
+}
+
+func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
+	var seconds int64
+
+	switch unit {
+	case egv1a1.RateLimitUnitSecond:
+		seconds = 1
+	case egv1a1.RateLimitUnitMinute:
+		seconds = 60
+	case egv1a1.RateLimitUnitHour:
+		seconds = 60 * 60
+	case egv1a1.RateLimitUnitDay:
+		seconds = 60 * 60 * 24
+	}
+	return seconds
+}
+
+func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *ir.CircuitBreaker {
+	var cb *ir.CircuitBreaker
+	pcb := policy.Spec.CircuitBreaker
+
+	if pcb != nil {
+		cb = &ir.CircuitBreaker{}
+
+		if pcb.MaxConnections != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
+				cb.MaxConnections = &ui32
+			} else {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxConnections value %d", *pcb.MaxConnections))
+				return nil
+			}
+		}
+
+		if pcb.MaxParallelRequests != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
+				cb.MaxParallelRequests = &ui32
+			} else {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests))
+				return nil
+			}
+		}
+
+		if pcb.MaxPendingRequests != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
+				cb.MaxPendingRequests = &ui32
+			} else {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests))
+				return nil
+			}
+		}
+	}
+
+	return cb
+}
+
+func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTTPRoute) *ir.Timeout {
+	var tto *ir.TCPTimeout
+	var hto *ir.HTTPTimeout
+	terr := false
+
+	pto := policy.Spec.Timeout
+
+	if pto.TCP != nil && pto.TCP.ConnectTimeout != nil {
+		d, err := time.ParseDuration(string(*pto.TCP.ConnectTimeout))
+		if err != nil {
+			setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Timeout", fmt.Sprintf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
+			terr = true
+		} else {
+			tto = &ir.TCPTimeout{
+				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+			}
+		}
+	}
+
+	if pto.HTTP != nil {
+		var cit *metav1.Duration
+		var mcd *metav1.Duration
+
+		if pto.HTTP.ConnectionIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "HTTP Timeout", fmt.Sprintf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
+				terr = true
+			} else {
+				cit = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
+		if pto.HTTP.MaxConnectionDuration != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.MaxConnectionDuration))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "HTTP Timeout", fmt.Sprintf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
+				terr = true
+			} else {
+				mcd = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
+		hto = &ir.HTTPTimeout{
+			ConnectionIdleTimeout: cit,
+			MaxConnectionDuration: mcd,
+		}
+	}
+
+	// if backendtrafficpolicy is not translatable, return the original timeout if it's initialized
+	if terr {
+		if r.Timeout != nil {
+			return r.Timeout.DeepCopy()
+		}
+	} else {
+		// http request timeout is translated during the gateway-api route resource translation
+		// merge route timeout setting with backendtrafficpolicy timeout settings
+		if r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
+			if hto == nil {
+				hto = &ir.HTTPTimeout{
+					RequestTimeout: r.Timeout.HTTP.RequestTimeout,
+				}
+			} else {
+				hto.RequestTimeout = r.Timeout.HTTP.RequestTimeout
+			}
+		}
+
+		if hto != nil || tto != nil {
+			return &ir.Timeout{
+				TCP:  tto,
+				HTTP: hto,
+			}
+		}
+	}
+
+	return nil
+}
+
+func setBackendTrafficPolicyTranslationErrorCondition(policy *egv1a1.BackendTrafficPolicy, field, errMsg string) {
+	message := fmt.Sprintf("Unable to translate %s: %s", field, errMsg)
+	status.SetBackendTrafficPolicyCondition(policy,
+		gwv1a2.PolicyConditionAccepted,
+		metav1.ConditionFalse,
+		gwv1a2.PolicyReasonInvalid,
+		message,
+	)
+}
+
+func int64ToUint32(in int64) (uint32, bool) {
+	if in >= 0 && in <= math.MaxUint32 {
+		return uint32(in), true
+	}
+	return 0, false
+}
+
+func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {
+	var fi *ir.FaultInjection
+	if policy.Spec.FaultInjection != nil {
+		fi = &ir.FaultInjection{}
+
+		if policy.Spec.FaultInjection.Delay != nil {
+			fi.Delay = &ir.FaultInjectionDelay{
+				Percentage: policy.Spec.FaultInjection.Delay.Percentage,
+				FixedDelay: policy.Spec.FaultInjection.Delay.FixedDelay,
+			}
+		}
+		if policy.Spec.FaultInjection.Abort != nil {
+			fi.Abort = &ir.FaultInjectionAbort{
+				Percentage: policy.Spec.FaultInjection.Abort.Percentage,
+			}
+
+			if policy.Spec.FaultInjection.Abort.GrpcStatus != nil {
+				fi.Abort.GrpcStatus = policy.Spec.FaultInjection.Abort.GrpcStatus
+			}
+			if policy.Spec.FaultInjection.Abort.HTTPStatus != nil {
+				fi.Abort.HTTPStatus = policy.Spec.FaultInjection.Abort.HTTPStatus
+			}
+		}
+	}
+	return fi
+}
+
+func (t *Translator) buildTCPKeepAlive(policy *egv1a1.BackendTrafficPolicy) *ir.TCPKeepalive {
+	var ka *ir.TCPKeepalive
+	if policy.Spec.TCPKeepalive != nil {
+		pka := policy.Spec.TCPKeepalive
+		ka = &ir.TCPKeepalive{}
+
+		if pka.Probes != nil {
+			ka.Probes = pka.Probes
+		}
+
+		if pka.IdleTime != nil {
+			d, err := time.ParseDuration(string(*pka.IdleTime))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Keep Alive", fmt.Sprintf("invalid IdleTime value %s", *pka.IdleTime))
+				return nil
+			}
+			ka.IdleTime = ptr.To(uint32(d.Seconds()))
+		}
+
+		if pka.Interval != nil {
+			d, err := time.ParseDuration(string(*pka.Interval))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Keep Alive", fmt.Sprintf("invalid Interval value %s", *pka.Interval))
+				return nil
+			}
+			ka.Interval = ptr.To(uint32(d.Seconds()))
+		}
+
+	}
+	return ka
 }

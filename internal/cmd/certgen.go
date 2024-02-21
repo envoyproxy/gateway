@@ -44,17 +44,17 @@ func certGen() error {
 
 	certs, err := crypto.GenerateCerts(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to generate certificates: %v", err)
+		return fmt.Errorf("failed to generate certificates: %w", err)
 	}
 	log.Info("generated certificates")
 
 	cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 	if err != nil {
-		return fmt.Errorf("failed to create controller-runtime client: %v", err)
+		return fmt.Errorf("failed to create controller-runtime client: %w", err)
 	}
 
 	if err := outputCerts(ctrl.SetupSignalHandler(), cli, cfg, certs); err != nil {
-		return fmt.Errorf("failed to output certificates: %v", err)
+		return fmt.Errorf("failed to output certificates: %w", err)
 	}
 
 	return nil
@@ -66,7 +66,8 @@ func outputCerts(ctx context.Context, cli client.Client, cfg *config.Server, cer
 	if cfg.EnvoyGateway != nil &&
 		cfg.EnvoyGateway.Provider != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts {
+		cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts != nil &&
+		*cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts {
 		updateSecrets = true
 	}
 	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
@@ -78,7 +79,7 @@ func outputCerts(ctx context.Context, cli client.Client, cfg *config.Server, cer
 			return nil
 		}
 
-		return fmt.Errorf("failed to create or update secrets: %v", err)
+		return fmt.Errorf("failed to create or update secrets: %w", err)
 	}
 
 	for i := range secrets {

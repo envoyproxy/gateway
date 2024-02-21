@@ -7,7 +7,7 @@ title: "Rate Limit Design"
 Rate limit is a feature that allows the user to limit the number of incoming requests
 to a predefined value based on attributes within the traffic flow.
 
-Here are some reasons why a user may want to implements Rate limits
+Here are some reasons why a user may want to implement Rate limits
 
 * To prevent malicious activity such as DDoS attacks.
 * To prevent applications and its resources (such as a database) from getting overloaded.
@@ -34,22 +34,27 @@ by matching on a custom `x-user-id` header with a value set to `one`
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-specific-user
 spec:
-  type: Global
-  global:
-    rules:
-    - clientSelectors:
-      - headers:
-        - name: x-user-id
-          value: one
-      limit:
-        requests: 10
-        unit: Hour
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-user-id
+            value: one
+        limit:
+          requests: 10
+          unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -82,18 +87,23 @@ is specified, and the rate limit is applied to all traffic flows accepted by thi
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-all-requests
 spec:
-  type: Global
-  global:
-    rules:
-    - limit:
-        requests: 1000
-        unit: Second
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - limit:
+          requests: 1000
+          unit: Second
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -127,22 +137,27 @@ by matching on a custom `x-user-id` header. Here, user A (recognised from the tr
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-per-user
 spec:
-  type: Global
-  global:
-    rules:
-    - clientSelectors:
-      - headers:
-        - type: Distinct
-          name: x-user-id
-      limit:
-        requests: 10
-        unit: Hour
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - type: Distinct
+            name: x-user-id
+        limit:
+          requests: 10
+          unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -174,20 +189,25 @@ to a specific route by matching on source IP. In this case, requests from `x.x.x
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-per-ip
 spec:
-  type: Global
-  global:
-    rules:
-    - clientSelectors:
-      - sourceIP: x.x.x.x/32
-      limit:
-        requests: 10
-        unit: Hour
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceIP: x.x.x.x/32
+        limit:
+          requests: 10
+          unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -227,33 +247,38 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: eg
+    name: example
   jwt:
     providers:
       - name: example
         remoteJWKS:
           uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
         claimToHeaders:
-      - claim: name
-        header: custom-request-header
+        - claim: name
+          header: custom-request-header
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-specific-user
 spec:
-  type: Global
-  global:
-    rules:
-    - clientSelectors:
-      - headers:
-        - name: custom-request-header
-          value: John Doe
-      limit:
-        requests: 10
-        unit: Hour
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: custom-request-header
+            value: John Doe
+        limit:
+          requests: 10
+          unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -269,12 +294,6 @@ spec:
       name: backend
       port: 3000
       weight: 1
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: RateLimitFilter
-        name: ratelimit-specific-user
     matches:
     - path:
         type: PathPrefix
@@ -291,35 +310,44 @@ Here's an example highlighting this -
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-all-safeguard-app 
 spec:
-  type: Global
-  global:
-    rules:
-    - limit:
-        requests: 100
-        unit: Second
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - limit:
+          requests: 100
+          unit: Hour
 ---
-
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-per-user
 spec:
-  type: Global
-  global:
-    rules:
-    - clientSelectors:
-      - headers:
-        - type: Distinct
-          name: x-user-id
-      limit:
-        requests: 1000
-        unit: Hour
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - type: Distinct
+            name: x-user-id
+        limit:
+          requests: 100
+          unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -401,12 +429,12 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
   * A Status field within the RateLimitFilter API will be added to reflect whether the specific configuration was programmed correctly in these multiple locations or not.
 
 [PolicyAttachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
-[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
-[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPBackendRef
-[matches]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
-[rule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
-[extensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilterType
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute
+[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
+[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPBackendRef
+[matches]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch
+[rule]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch
+[extensionRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilterType
 [IP subnet]: https://en.wikipedia.org/wiki/Subnetwork
 [Actions]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-ratelimit-action
 [descriptors]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rate_limit_filter.html?highlight=descriptor#example-1
@@ -415,5 +443,5 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
 [rate limit filter]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit 
 [rate limit service]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/rate_limit#config-rate-limit-service
 [reference implementation]: https://github.com/envoyproxy/ratelimit
-[EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/config/v1alpha1/envoygateway_types.go
+[EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/v1alpha1/envoygateway_types.go
 [rate limit service configuration]: https://github.com/envoyproxy/ratelimit#configuration

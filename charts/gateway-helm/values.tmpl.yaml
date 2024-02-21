@@ -1,11 +1,10 @@
 deployment:
   envoyGateway:
-    cert:
-      expiryDays: 365
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
     imagePullPolicy: Always
+    imagePullSecrets: []
     resources:
       limits:
         cpu: 500m
@@ -22,6 +21,7 @@ deployment:
       targetPort: 18001
   replicas: 1
   pod:
+    affinity: {}
     annotations: {}
     labels: {}
 
@@ -49,6 +49,7 @@ kubernetesClusterDomain: cluster.local
 certgen:
   job:
     annotations: {}
+    resources: {}
     ttlSecondsAfterFinished: 0
   rbac:
     annotations: {}

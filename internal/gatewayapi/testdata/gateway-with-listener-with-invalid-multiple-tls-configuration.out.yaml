@@ -28,7 +28,7 @@ gateways:
         mode: Terminate
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
@@ -86,8 +86,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      listeners:
-      - address: ""
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1

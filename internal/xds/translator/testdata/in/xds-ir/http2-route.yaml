@@ -5,6 +5,9 @@ http:
   hostnames:
   - "*"
   isHTTP2: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "first-route"
     hostname: "*"
@@ -24,3 +27,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        protocol: GRPC

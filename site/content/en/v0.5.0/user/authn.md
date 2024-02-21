@@ -8,7 +8,7 @@ supports validating a JWT from an HTTP header, e.g. `Authorization: Bearer <toke
 
 ## Installation
 
-Follow the steps from the [Quickstart](quickstart.md) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
@@ -39,7 +39,7 @@ kubectl get authenticationfilter/jwt-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](quickstart.md) guide is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -79,7 +79,7 @@ curl -sS -o /dev/null -H "Host: www.example.com" -w "%{http_code}\n" http://$GAT
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](quickstart.md) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the AuthenticationFilter:
 

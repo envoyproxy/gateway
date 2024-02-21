@@ -8,6 +8,13 @@ admin:
     socket_address:
       address: 127.0.0.1
       port_value: 19000
+layered_runtime:
+  layers:
+  - name: global_config
+    static_layer:
+      envoy.restart_features.use_eds_cache_for_ads: true
+      re2.max_program_size.error_level: 4294967295
+      re2.max_program_size.warn_level: 1000
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC

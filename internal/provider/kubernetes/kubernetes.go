@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -42,14 +41,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
 	}
 
-	// TODO: implement config validation on the watch mode config
-	namespacedMode :=
-		svr.EnvoyGateway.Provider != nil &&
-			svr.EnvoyGateway.Provider.Kubernetes != nil &&
-			(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
-			(svr.EnvoyGateway.Provider.Kubernetes.Watch.Type == v1alpha1.KubernetesWatchModeTypeNamespaces) &&
-			(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0)
-	if namespacedMode {
+	if svr.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
@@ -63,7 +55,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 
 	updateHandler := status.NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
 	if err := mgr.Add(updateHandler); err != nil {
-		return nil, fmt.Errorf("failed to add status update handler %v", err)
+		return nil, fmt.Errorf("failed to add status update handler %w", err)
 	}
 
 	// Create and register the controllers with the manager.

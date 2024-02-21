@@ -123,12 +123,16 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10080
           name: http-1
           protocol: HTTP
           servicePort: 80
+      - address: null
+        name: envoy-gateway/gateway-1/http-2
+        ports:
         - containerPort: 8080
           name: http-2
           protocol: HTTP
@@ -149,6 +153,9 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080
       tcpKeepalive:
         idleTime: 1200
@@ -159,5 +166,8 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 8080
       tcpKeepalive: {}

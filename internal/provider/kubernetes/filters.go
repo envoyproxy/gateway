@@ -19,18 +19,18 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList); err != nil {
 			r.log.Info("no associated resources found for %s", gvk.String())
-			return nil, fmt.Errorf("failed to list %s: %v", gvk.String(), err)
+			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 
 		uExtResources := uExtResourceList.Items
-		if len(r.namespaceLabels) != 0 {
+		if r.namespaceLabel != nil {
 			var extRs []unstructured.Unstructured
 			for _, extR := range uExtResources {
-				ns := extR.GetNamespace()
-				ok, err := r.checkObjectNamespaceLabels(ns)
+				extR := extR
+				ok, err := r.checkObjectNamespaceLabels(&extR)
 				if err != nil {
-					// TODO: should return? or just proceed?
-					return nil, fmt.Errorf("failed to check namespace labels for ExtensionRefFilter %s in namespace %s: %s", extR.GetName(), ns, err)
+					r.log.Error(err, "failed to check namespace labels for ExtensionRefFilter %s in namespace %s: %w", extR.GetName(), extR.GetNamespace())
+					continue
 				}
 				if ok {
 					extRs = append(extRs, extR)

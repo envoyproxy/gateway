@@ -9,6 +9,7 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,7 +88,18 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-weighted-invalid-backend",
 		},
 		{
+			name: "http-route-dns-cluster",
+		},
+		{
 			name:           "simple-tls",
+			requireSecrets: true,
+		},
+		{
+			name:           "mutual-tls",
+			requireSecrets: true,
+		},
+		{
+			name:           "http3",
 			requireSecrets: true,
 		},
 		{
@@ -159,6 +171,7 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
+			requireSecrets:            true,
 		},
 		{
 			name:                      "jsonpatch-missing-resource",
@@ -166,6 +179,14 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name:                      "jsonpatch-invalid-patch",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-add-op-without-value",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-move-op-with-value",
 			requireEnvoyPatchPolicies: true,
 		},
 		{
@@ -189,6 +210,66 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "jwt-single-route-single-match",
 		},
+		{
+			name: "oidc",
+		},
+		{
+			name: "http-route-partial-invalid",
+		},
+		{
+			name: "listener-proxy-protocol",
+		},
+		{
+			name: "jwt-custom-extractor",
+		},
+		{
+			name: "proxy-protocol-upstream",
+		},
+		{
+			name: "basic-auth",
+		},
+		{
+			name: "health-check",
+		},
+		{
+			name: "local-ratelimit",
+		},
+		{
+			name: "circuit-breaker",
+		},
+		{
+			name: "suppress-envoy-headers",
+		},
+		{
+			name: "fault-injection",
+		},
+		{
+			name: "tls-with-ciphers-versions-alpn",
+		},
+		{
+			name: "path-settings",
+		},
+		{
+			name: "client-ip-detection",
+		},
+		{
+			name: "http1-trailers",
+		},
+		{
+			name: "http1-preserve-case",
+		},
+		{
+			name: "timeout",
+		},
+		{
+			name: "ext-auth",
+		},
+		{
+			name: "http10",
+		},
+		{
+			name: "upstream-tcpkeepalive",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -206,7 +287,10 @@ func TestTranslateXds(t *testing.T) {
 			}
 
 			tCtx, err := tr.Translate(ir)
-			require.NoError(t, err)
+			if !strings.HasSuffix(tc.name, "partial-invalid") {
+				require.NoError(t, err)
+			}
+
 			listeners := tCtx.XdsResources[resourcev3.ListenerType]
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
@@ -295,9 +379,8 @@ func TestTranslateXdsNegative(t *testing.T) {
 				},
 			}
 
-			tCtx, err := tr.Translate(ir)
+			_, err := tr.Translate(ir)
 			require.Error(t, err)
-			require.Nil(t, tCtx)
 			if tc.name != "jsonpatch-invalid" {
 				require.Contains(t, err.Error(), "validation failed for xds resource")
 			}
@@ -316,6 +399,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			name: "distinct-match",
 		},
 		{
+			name: "distinct-remote-address-match",
+		},
+		{
 			name: "value-match",
 		},
 		{
@@ -329,6 +415,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		},
 		{
 			name: "masked-remote-address-match",
+		},
+		{
+			name: "multiple-masked-remote-address-match-with-same-cidr",
 		},
 	}
 

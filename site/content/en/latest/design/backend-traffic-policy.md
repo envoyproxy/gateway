@@ -29,14 +29,14 @@ then the configuration from the policy that is targeting the xRoute resource wil
 Here is an example highlighting how a user can configure this API.
 
 ```yaml
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -48,7 +48,7 @@ spec:
       protocol: HTTP
       port: 80
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: ipv4-route
@@ -70,7 +70,7 @@ spec:
             type: PathPrefix
             value: /
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: ipv6-route
@@ -131,6 +131,7 @@ Here is a list of some features that can be included in this API. Note that this
 - Keep alive probes
 - Health checking
 - Load balancing
+- Rate limit
 
 ## Design Decisions
 

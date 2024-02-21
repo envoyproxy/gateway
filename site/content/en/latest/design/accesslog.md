@@ -6,17 +6,17 @@ title: "Observability: Accesslog"
 
 Envoy supports extensible accesslog to different sinks, File, gRPC etc. Envoy supports customizable access log formats using predefined fields as well as arbitrary HTTP request and response headers. Envoy supports several built-in access log filters and extension filters that are registered at runtime.
 
-Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels) for implementers such as Envoy Gateway to expose features. Since accesslog is not covered by `Core` or `Extended` APIs, EG should provide an easy to config access log formats and sinks per `EnvoyProxy`.
+Envoy Gateway leverages [Gateway API][] for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels][] for implementers such as Envoy Gateway to expose features. Since accesslog is not covered by `Core` or `Extended` APIs, EG should provide an easy to config access log formats and sinks per `EnvoyProxy`.
 
 ## Goals
 
 - Support send accesslog to `File` or `OpenTelemetry` backend
-- TODO: Support access log filters base on [CEL](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/filters/cel/v3/cel.proto#extension-envoy-access-loggers-extension-filters-cel) expression
+- TODO: Support access log filters base on [CEL][] expression
 
 ## Non-Goals
 
 - Support non-CEL filters, e.g. `status_code_filter`, `response_flag_filter`
-- Support [HttpGrpcAccessLogConfig](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto#extensions-access-loggers-grpc-v3-httpgrpcaccesslogconfig) or [TcpGrpcAccessLogConfig](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto#extensions-access-loggers-grpc-v3-tcpgrpcaccesslogconfig)
+- Support [HttpGrpcAccessLogConfig][] or [TcpGrpcAccessLogConfig][]
 
 ## Use-Cases
 
@@ -235,3 +235,9 @@ spec:
                 resources:
                   k8s.cluster.name: "cluster-1"
 ```
+
+[Gateway API]: https://gateway-api.sigs.k8s.io/
+[support levels]: https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels
+[CEL]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/filters/cel/v3/cel.proto#extension-envoy-access-loggers-extension-filters-cel
+[HttpGrpcAccessLogConfig]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto#extensions-access-loggers-grpc-v3-httpgrpcaccesslogconfig
+[TcpGrpcAccessLogConfig]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto#extensions-access-loggers-grpc-v3-tcpgrpcaccesslogconfig

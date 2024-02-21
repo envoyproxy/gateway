@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 const (
@@ -103,6 +104,7 @@ type readyServerParameters struct {
 }
 
 type StatsMatcherParameters struct {
+	Exacts             []string
 	Prefixs            []string
 	Suffixs            []string
 	RegularExpressions []string
@@ -112,7 +114,7 @@ type StatsMatcherParameters struct {
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
 	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
-		return fmt.Errorf("failed to render bootstrap config: %v", err)
+		return fmt.Errorf("failed to render bootstrap config: %w", err)
 	}
 	b.rendered = buf.String()
 
@@ -154,12 +156,22 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 		if proxyMetrics.Matches != nil {
 			// Add custom envoy proxy stats
 			for _, match := range proxyMetrics.Matches {
-				switch match.Type {
-				case egv1a1.Prefix:
+				// matchType default to exact
+				matchType := egv1a1.StringMatchExact
+				if match.Type != nil {
+					matchType = *match.Type
+				}
+				switch matchType {
+				case egv1a1.StringMatchExact:
+					StatsMatcher.Exacts = append(StatsMatcher.Exacts, match.Value)
+				case egv1a1.StringMatchPrefix:
 					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
-				case egv1a1.Suffix:
+				case egv1a1.StringMatchSuffix:
 					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
-				case egv1a1.RegularExpression:
+				case egv1a1.StringMatchRegularExpression:
+					if err := regex.Validate(match.Value); err != nil {
+						return "", err
+					}
 					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
 				}
 			}
