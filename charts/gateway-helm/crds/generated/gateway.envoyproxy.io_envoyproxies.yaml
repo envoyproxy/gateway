@@ -2012,6 +2012,23 @@ spec:
                               - name
                               type: object
                             type: array
+                          merge:
+                            description: Merge defines how to perform the merge operation
+                              to deployment
+                            properties:
+                              object:
+                                description: Object contains the raw configuration
+                                  for merged object
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
+                              type:
+                                description: Type is the type of merge operation to
+                                  perform
+                                type: string
+                            required:
+                            - object
+                            - type
+                            type: object
                           pod:
                             description: Pod defines the desired specification of
                               pod.

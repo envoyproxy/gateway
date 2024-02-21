@@ -6,9 +6,14 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
+
+	jsonpatch "github.com/evanphx/json-patch"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/utils/ptr"
 )
 
@@ -120,4 +125,41 @@ func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 	if len(hpa.Metrics) == 0 {
 		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()
 	}
+}
+
+// ApplyMergePatch applies a merge patch to a deployment based on the merge type
+func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deployment) (*appv1.Deployment, error) {
+	if deployment.Merge == nil {
+		return old, nil
+	}
+
+	var patchedJSON []byte
+	var err error
+
+	// Serialize the current deployment to JSON
+	originalJSON, err := json.Marshal(old)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling original deployment: %v", err)
+	}
+
+	switch deployment.Merge.Type {
+	case StrategicMerge:
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Merge.Object.Raw, appv1.Deployment{})
+	case JSONMerge:
+		patchedJSON, err = jsonpatch.MergePatch(originalJSON, deployment.Merge.Object.Raw)
+	default:
+		return nil, fmt.Errorf("unsupported merge type: %s", deployment.Merge.Type)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error applying merge patch: %v", err)
+	}
+
+	// Deserialize the patched JSON into a new deployment object
+	var patchedDeployment appv1.Deployment
+	if err := json.Unmarshal(patchedJSON, &patchedDeployment); err != nil {
+		return nil, fmt.Errorf("error unmarshaling patched deployment: %v", err)
+	}
+
+	return &patchedDeployment, nil
 }

@@ -9,6 +9,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -52,6 +53,11 @@ const (
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
+	// Merge defines how to perform the merge operation to deployment
+	//
+	// +optional
+	Merge *KubernetesMergeSpec `json:"merge,omitempty"`
+
 	// Replicas is the number of desired pods. Defaults to 1.
 	//
 	// +optional
@@ -370,3 +376,22 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 // +kubebuilder:validation:Maximum=600
 // +kubebuilder:validation:ExclusiveMaximum=true
 type HTTPStatus int
+
+// MergeType defines the type of merge operation
+type MergeType string
+
+const (
+	// StrategicMerge indicates a strategic merge patch type
+	StrategicMerge MergeType = "StrategicMerge"
+	// JSONMerge indicates a JSON merge patch type
+	JSONMerge MergeType = "JSONMerge"
+)
+
+// KubernetesMergeSpec defines how to perform the merge operation
+type KubernetesMergeSpec struct {
+	// Type is the type of merge operation to perform
+	Type MergeType `json:"type"`
+
+	// Object contains the raw configuration for merged object
+	Object runtime.RawExtension `json:"object"`
+}
