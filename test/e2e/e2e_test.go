@@ -18,6 +18,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
+	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -51,4 +52,27 @@ func TestE2E(t *testing.T) {
 	cSuite.Setup(t)
 	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
 	cSuite.Run(t, tests.ConformanceTests)
+
+	t.Run("MergeGateways E2E", func(t *testing.T) {
+		mergeGatewaysSuiteGatewayClassName := "merge-gateways"
+
+		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t\n supported features: [%v]\n exempt features: [%v]",
+			mergeGatewaysSuiteGatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.SupportedFeatures, *flags.ExemptFeatures)
+
+		mergeGatewaysSuite := suite.New(suite.Options{
+			Client:           client,
+			GatewayClassName: mergeGatewaysSuiteGatewayClassName,
+			Debug:            *flags.ShowDebug,
+		})
+
+		// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
+		// since this test suite reuse the base resources of previous test suite.
+		mergeGatewaysSuite.Applier.FS = Manifests
+		mergeGatewaysSuite.Applier.GatewayClass = mergeGatewaysSuiteGatewayClassName
+		mergeGatewaysSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, mergeGatewaysSuite.Client,
+			mergeGatewaysSuite.TimeoutConfig, mergeGatewaysSuite.GatewayClassName)
+
+		t.Logf("Running %d E2E tests for MergeGateways feature", len(tests.MergeGatewaysTests))
+		mergeGatewaysSuite.Run(t, tests.MergeGatewaysTests)
+	})
 }
