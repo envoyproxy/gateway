@@ -121,10 +121,6 @@ func (*fault) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error
 	return nil
 }
 
-func (*fault) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
-	return nil
-}
-
 // patchRoute patches the provided route with the fault config if applicable.
 // Note: this method enables the corresponding fault filter for the provided route.
 func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
