@@ -54,16 +54,12 @@ var MergeGatewaysTest = suite.ConformanceTest{
 
 			gw3Addr, _, err := net.SplitHostPort(gw3HostPort)
 			if err != nil {
-				t.Errorf("failed to split hostport %s of gateway %s: %v", gw2HostPort, gw2NN.Name, err)
+				t.Errorf("failed to split hostport %s of gateway %s: %v", gw3HostPort, gw3NN.Name, err)
 			}
 
-			if gw1Addr != gw2Addr {
-				t.Errorf("inconsistent gateway address %s and %s for %s and %s", gw1Addr, gw2Addr, gw1NN.String(), gw2NN.String())
-				t.FailNow()
-			}
-
-			if gw2Addr != gw3Addr {
-				t.Errorf("inconsistent gateway address %s and %s for %s and %s", gw2Addr, gw3Addr, gw2NN.String(), gw3NN.String())
+			if gw1Addr != gw2Addr || gw2Addr != gw3Addr {
+				t.Errorf("inconsistent gateway address %s: %s, %s: %s and %s: %s",
+					gw1NN.String(), gw1Addr, gw2NN.String(), gw2Addr, gw3NN.String(), gw3Addr)
 				t.FailNow()
 			}
 
