@@ -290,7 +290,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) error {
 	// Find IR
-	irKey := irStringKey(l.gateway.Namespace, l.gateway.Name)
+	irKey := t.getIRKey(l.gateway)
 	// It must exist since we've already finished processing the gateways
 	gwXdsIR := xdsIR[irKey]
 

@@ -1,12 +1,5 @@
 - ignorePortInHostMatching: true
   name: first-listener
-  typedPerFilterConfig:
-    envoy.filters.http.oauth2_first-route:
-      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-      disabled: true
-    envoy.filters.http.oauth2_second-route:
-      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-      disabled: true
   virtualHosts:
   - domains:
     - '*'
