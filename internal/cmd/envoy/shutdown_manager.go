@@ -82,7 +82,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 // shutdownReadyHandler handles the endpoint used by a preStop hook on the Envoy
 // container to block until ready to terminate. After the graceful drain process
 // has completed a file will be written to indicate shutdown readiness.
-func shutdownReadyHandler(w http.ResponseWriter, req *http.Request, readyFile string) {
+func shutdownReadyHandler(w http.ResponseWriter, _ *http.Request, readyFile string) {
 	logger.Info("received shutdown ready request")
 
 	// Poll for shutdown readiness
