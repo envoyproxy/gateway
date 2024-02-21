@@ -97,6 +97,21 @@ _Appears in:_
 
 
 
+#### BackOffPolicy
+
+
+
+
+
+_Appears in:_
+- [PerRetryPolicy](#perretrypolicy)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `baseInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | BaseInterval is the base interval between retries. |
+| `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set. The default is 10 times the base_interval |
+
+
 #### BackendTrafficPolicy
 
 
@@ -149,6 +164,7 @@ _Appears in:_
 | `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions. If not set, retry will be disabled. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 | `compression` | _[Compression](#compression) array_ |  false  | The compression config for the http streams. |
 
@@ -1198,6 +1214,7 @@ HTTPStatus defines the http status code.
 
 _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
+- [RetryOn](#retryon)
 
 
 
@@ -1683,6 +1700,21 @@ _Appears in:_
 | `disableMergeSlashes` | _boolean_ |  false  | DisableMergeSlashes allows disabling the default configuration of merging adjacent slashes in the path. Note that slash merging is not part of the HTTP spec and is provided for convenience. |
 
 
+#### PerRetryPolicy
+
+
+
+
+
+_Appears in:_
+- [Retry](#retry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout is the timeout per retry attempt. |
+| `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential back-off algorithm for retries. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
+
+
 #### ProviderType
 
 _Underlying type:_ _string_
@@ -2133,6 +2165,37 @@ _Appears in:_
 
 
 
+#### Retry
+
+
+
+Retry defines the retry strategy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `numRetries` | _integer_ |  false  | NumRetries is the number of retries to be attempted. Defaults to 2. |
+| `retryOn` | _[RetryOn](#retryon)_ |  false  | RetryOn specifies the retry trigger condition. <br /><br /> If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
+| `perRetry` | _[PerRetryPolicy](#perretrypolicy)_ |  false  | PerRetry is the retry policy to be applied per retry attempt. |
+
+
+#### RetryOn
+
+
+
+
+
+_Appears in:_
+- [Retry](#retry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
+| `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried. |
+
+
 #### SecurityPolicy
 
 
@@ -2378,6 +2441,17 @@ _Underlying type:_ _string_
 
 _Appears in:_
 - [TracingProvider](#tracingprovider)
+
+
+
+#### TriggerEnum
+
+_Underlying type:_ _string_
+
+TriggerEnum specifies the conditions that trigger retries.
+
+_Appears in:_
+- [RetryOn](#retryon)
 
 
 
