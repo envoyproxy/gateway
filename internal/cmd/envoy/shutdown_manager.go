@@ -38,8 +38,8 @@ const (
 func ShutdownManager(readyTimeout time.Duration) error {
 	// Setup HTTP handler
 	handler := http.NewServeMux()
-	handler.HandleFunc("/shutdown/ready", func(w http.ResponseWriter, r *http.Request) {
-		shutdownReadyHandler(w, r, ShutdownReadyFile)
+	handler.HandleFunc("/shutdown/ready", func(w http.ResponseWriter, _ *http.Request) {
+		shutdownReadyHandler(w, ShutdownReadyFile)
 	})
 
 	// Setup HTTP server
@@ -82,7 +82,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 // shutdownReadyHandler handles the endpoint used by a preStop hook on the Envoy
 // container to block until ready to terminate. After the graceful drain process
 // has completed a file will be written to indicate shutdown readiness.
-func shutdownReadyHandler(w http.ResponseWriter, _ *http.Request, readyFile string) {
+func shutdownReadyHandler(w http.ResponseWriter, readyFile string) {
 	logger.Info("received shutdown ready request")
 
 	// Poll for shutdown readiness
@@ -95,14 +95,14 @@ func shutdownReadyHandler(w http.ResponseWriter, _ *http.Request, readyFile stri
 			logger.Error(err, "error checking for shutdown readiness")
 		case err == nil:
 			logger.Info("shutdown readiness detected")
-			w.WriteHeader(http.StatusOK)
 			return
 		}
 	}
 }
 
-// Shutdown is called from a preStop hook where it will block until envoy can
-// gracefully drain open connections prior to pod shutdown.
+// Shutdown is called from a preStop hook on the shutdown-manager container where
+// it will initiate a graceful drain sequence on the Envoy proxy and block until
+// connections are drained or a timeout is exceeded.
 func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAtConnections int) error {
 	var startTime = time.Now()
 	var allowedToExit = false
@@ -152,7 +152,7 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 		time.Sleep(1 * time.Second)
 	}
 
-	// Signal to /shutdown endpoint that the shutdown process is complete
+	// Signal to shutdownReadyHandler that drain process is complete
 	if err := createShutdownReadyFile(); err != nil {
 		return err
 	}
