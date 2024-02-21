@@ -8,15 +8,14 @@ package ir
 import (
 	"cmp"
 	"errors"
-	"net/http"
-	"net/netip"
-	"reflect"
-
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"net/http"
+	"net/netip"
+	"reflect"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -225,6 +224,8 @@ type HTTPListener struct {
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
+	// ClientTimeout sets the timeout configuration for downstream connections
+	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -387,6 +388,21 @@ type HeaderSettings struct {
 	// The default is to suppress these headers.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
+}
+
+// ClientTimeout sets the timeout configuration for downstream connections
+// +k8s:deepcopy-gen=true
+type ClientTimeout struct {
+	// Timeout settings for HTTP.
+	HTTP *HTTPClientTimeout `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// HTTPClientTimeout set the configuration for client HTTP.
+// +k8s:deepcopy-gen=true
+type HTTPClientTimeout struct {
+	// The duration envoy waits for the complete request reception. This timer starts upon request
+	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route

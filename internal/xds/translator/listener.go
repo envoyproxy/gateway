@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -228,6 +229,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
 		},
 		Tracing: hcmTracing,
+	}
+
+	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil && irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
+		mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
 	}
 
 	// Add the proxy protocol filter if needed

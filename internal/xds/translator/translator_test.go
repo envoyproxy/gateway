@@ -270,6 +270,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "upstream-tcpkeepalive",
 		},
+		{
+			name: "client-timeout",
+		},
 	}
 
 	for _, tc := range testCases {
