@@ -411,11 +411,12 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 			if err != nil {
 				return err
 			}
-
-			if httpIR.Timeout == nil {
+			switch {
+			case httpIR.Timeout == nil:
 				httpIR.Timeout = &ir.ClientTimeout{}
-			}
-			if httpIR.Timeout.HTTP == nil {
+				fallthrough
+
+			case httpIR.Timeout.HTTP == nil:
 				httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
 			}
 

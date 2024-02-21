@@ -18,4 +18,4 @@ http:
               port: 50000
     timeout:
       http:
-        RequestReceivedTimeout: "5s"
+        requestReceivedTimeout: "5s"
