@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -494,6 +495,17 @@ func (t *Translator) buildOIDC(
 		logoutPath = *oidc.LogoutPath
 	}
 
+	nsName := types.NamespacedName{
+		Namespace: policy.GetNamespace(),
+		Name:      policy.GetName(),
+	}
+	h := fnv.New32a()
+	_, err = h.Write([]byte(nsName.String()))
+	if err != nil {
+		return nil, fmt.Errorf("error generating oauth cookie suffix: %w", err)
+	}
+	suffix := strconv.Itoa(int(h.Sum32()))
+
 	return &ir.OIDC{
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
@@ -502,7 +514,7 @@ func (t *Translator) buildOIDC(
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,
-		CookieSuffix: fmt.Sprintf("%s-%s", policy.Namespace, policy.Name),
+		CookieSuffix: suffix,
 	}, nil
 }
 
