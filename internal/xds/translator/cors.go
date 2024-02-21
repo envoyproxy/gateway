@@ -165,10 +165,6 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	return nil
 }
 
-func (*cors) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
-	return nil
-}
-
 func (c *cors) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
 	return nil
 }

@@ -364,3 +364,9 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
 }
+
+// HTTPStatus defines the http status code.
+// +kubebuilder:validation:Minimum=100
+// +kubebuilder:validation:Maximum=600
+// +kubebuilder:validation:ExclusiveMaximum=true
+type HTTPStatus int

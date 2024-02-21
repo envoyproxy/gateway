@@ -39,9 +39,8 @@ func registerHTTPFilter(filter httpFilter) {
 //   - patchHCM: EG adds a filter for each route in the HCM filter chain, the
 //     filter name is prefixed with the filter's type name, for example,
 //     "envoy.filters.http.oauth2", and suffixed with the route name. Each filter
-//     is configured with the route's per-route configuration.
-//   - patchRouteConfig: EG disables all the filters of this type in the
-//     typedFilterConfig of the route config.
+//     is configured with the route's per-route configuration. The filter is
+//     disabled by default and is enabled on the route level.
 //   - PatchRouteWithPerRouteConfig: EG enables the corresponding filter for each
 //     route in the typedFilterConfig of that route.
 //
@@ -51,10 +50,6 @@ func registerHTTPFilter(filter httpFilter) {
 type httpFilter interface {
 	// patchHCM patches the HttpConnectionManager with the filter.
 	patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error
-
-	// patchRouteConfig patches the provided RouteConfiguration with a filter's
-	// RouteConfiguration level configuration.
-	patchRouteConfig(rc *routev3.RouteConfiguration, irListener *ir.HTTPListener) error
 
 	// patchRoute patches the provide Route with a filter's Route level configuration.
 	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
@@ -176,23 +171,6 @@ func (t *Translator) patchHCMWithFilters(
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)
-	return nil
-}
-
-// patchRouteCfgWithPerRouteConfig appends per-route filter configurations to the
-// provided listener's RouteConfiguration.
-// This method is used to disable the filters without native per-route support.
-// The disabled filters will be enabled by route in the patchRouteWithPerRouteConfig
-// method.
-func patchRouteCfgWithPerRouteConfig(
-	routeCfg *routev3.RouteConfiguration,
-	irListener *ir.HTTPListener) error {
-	// Only supports the oauth2 filter for now, other filters will be added later.
-	for _, filter := range httpFilters {
-		if err := filter.patchRouteConfig(routeCfg, irListener); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
