@@ -98,6 +98,14 @@ func GetServiceURL(namespace string, dnsDomain string) string {
 	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
 }
 
+func RateLimitLabelSelector() []string {
+	return []string{
+		"app.kubernetes.io/name=envoy-ratelimit",
+		"app.kubernetes.io/component=ratelimit",
+		"app.kubernetes.io/managed-by=envoy-gateway",
+	}
+}
+
 // rateLimitLabels returns the labels used for all envoy rate limit resources.
 func rateLimitLabels() map[string]string {
 	return map[string]string{
