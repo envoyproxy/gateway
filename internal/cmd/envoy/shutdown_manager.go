@@ -39,12 +39,12 @@ func ShutdownManager(readyTimeout time.Duration) error {
 	// Setup HTTP handler
 	handler := http.NewServeMux()
 	handler.HandleFunc("/shutdown/ready", func(w http.ResponseWriter, _ *http.Request) {
-		shutdownReadyHandler(w, ShutdownReadyFile)
+		shutdownReadyHandler(w, readyTimeout, ShutdownReadyFile)
 	})
 
 	// Setup HTTP server
 	srv := http.Server{
-		Handler:           http.TimeoutHandler(handler, readyTimeout, ""),
+		Handler:           handler,
 		Addr:              fmt.Sprintf(":%d", ShutdownReadyPort),
 		ReadTimeout:       5 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -82,11 +82,20 @@ func ShutdownManager(readyTimeout time.Duration) error {
 // shutdownReadyHandler handles the endpoint used by a preStop hook on the Envoy
 // container to block until ready to terminate. After the graceful drain process
 // has completed a file will be written to indicate shutdown readiness.
-func shutdownReadyHandler(w http.ResponseWriter, readyFile string) {
+func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, readyFile string) {
+	var startTime = time.Now()
+
 	logger.Info("received shutdown ready request")
 
 	// Poll for shutdown readiness
 	for {
+		elapsedTime := time.Since(startTime)
+		if elapsedTime > readyTimeout {
+			logger.Info("shutdown readiness timeout exceeded")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		_, err := os.Stat(readyFile)
 		switch {
 		case os.IsNotExist(err):
