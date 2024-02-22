@@ -14,9 +14,10 @@ import (
 	"os/signal"
 	"runtime"
 
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
+
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 func newEnvoyDashboardCmd() *cobra.Command {
@@ -56,7 +57,7 @@ func newEnvoyDashboardCmd() *cobra.Command {
 			if len(labelSelectors) > 0 {
 				pl, err := kubeClient.PodsForSelector(podNamespace, labelSelectors...)
 				if err != nil {
-					return fmt.Errorf("not able to locate pod with selector %s: %v", labelSelectors, err)
+					return fmt.Errorf("not able to locate pod with selector %s: %w", labelSelectors, err)
 				}
 				if len(pl.Items) < 1 {
 					return errors.New("no pods found")
@@ -84,12 +85,12 @@ func portForward(podName, namespace, urlFormat string, listenPort int, client ku
 	}
 	fw, err := kube.NewLocalPortForwarder(client, meta, listenPort, adminPort)
 	if err != nil {
-		return fmt.Errorf("could not build port forwarder for envoy proxy: %v", err)
+		return fmt.Errorf("could not build port forwarder for envoy proxy: %w", err)
 	}
 
 	if err = fw.Start(); err != nil {
 		fw.Stop()
-		return fmt.Errorf("could not start port forwarder for envoy proxy: %v", err)
+		return fmt.Errorf("could not start port forwarder for envoy proxy: %w", err)
 	}
 
 	ClosePortForwarderOnInterrupt(fw)
