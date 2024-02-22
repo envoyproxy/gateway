@@ -207,8 +207,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
 		return true
-
 	}
+
 	// Any condition on the listener apart from Programmed=true indicates an error.
 	if !(lConditions[0].Type == string(gwapiv1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
 		hasProgrammedCond := false

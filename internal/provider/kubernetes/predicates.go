@@ -213,11 +213,14 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 	labels := svc.GetLabels()
 
-	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
-	gtw := r.findOwningGateway(ctx, labels)
-	if gtw != nil {
-		r.updateStatusForGateway(ctx, gtw)
-		return false
+	// Only services in the configured namespace should be reconciled.
+	if svc.Namespace == r.namespace {
+		// Check if the Service belongs to a Gateway, if so, update the Gateway status.
+		gtw := r.findOwningGateway(ctx, labels)
+		if gtw != nil {
+			r.updateStatusForGateway(ctx, gtw)
+			return false
+		}
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
@@ -226,9 +229,15 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
 		if res != nil {
 			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gw := range (*res)[gclass].Gateways {
-					gw := gw
-					r.updateStatusForGateway(ctx, gw)
+				for _, gtw := range (*res)[gclass].Gateways {
+					curGtw := new(gwapiv1.Gateway)
+					key := types.NamespacedName{Namespace: gtw.Namespace, Name: gtw.Name}
+					if err := r.client.Get(ctx, key, curGtw); err != nil {
+						r.log.Info("gateway not found", "gatewayclass", gclass, "name", key.String())
+						return false
+					}
+
+					r.updateStatusForGateway(ctx, curGtw)
 				}
 			}
 		}
@@ -383,9 +392,15 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
 		if res != nil {
 			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gw := range (*res)[gclass].Gateways {
-					gw := gw
-					r.updateStatusForGateway(ctx, gw)
+				for _, gtw := range (*res)[gclass].Gateways {
+					curGtw := new(gwapiv1.Gateway)
+					key := types.NamespacedName{Namespace: gtw.Namespace, Name: gtw.Name}
+					if err := r.client.Get(ctx, key, curGtw); err != nil {
+						r.log.Info("gateway not found", "gatewayclass", gclass, "name", key.String())
+						return false
+					}
+
+					r.updateStatusForGateway(ctx, curGtw)
 				}
 			}
 		}
