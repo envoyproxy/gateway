@@ -224,22 +224,11 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gclass] {
-		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
-		if res != nil {
-			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gtw := range (*res)[gclass].Gateways {
-					curGtw := new(gwapiv1.Gateway)
-					key := types.NamespacedName{Namespace: gtw.Namespace, Name: gtw.Name}
-					if err := r.client.Get(ctx, key, curGtw); err != nil {
-						r.log.Info("gateway not found", "gatewayclass", gclass, "name", key.String())
-						return false
-					}
-
-					r.updateStatusForGateway(ctx, curGtw)
-				}
-			}
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways[gcName] {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
+			return false
 		}
 		return false
 	}
@@ -387,22 +376,11 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gclass] {
-		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
-		if res != nil {
-			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gtw := range (*res)[gclass].Gateways {
-					curGtw := new(gwapiv1.Gateway)
-					key := types.NamespacedName{Namespace: gtw.Namespace, Name: gtw.Name}
-					if err := r.client.Get(ctx, key, curGtw); err != nil {
-						r.log.Info("gateway not found", "gatewayclass", gclass, "name", key.String())
-						return false
-					}
-
-					r.updateStatusForGateway(ctx, curGtw)
-				}
-			}
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways[gcName] {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
+			return false
 		}
 		return false
 	}
@@ -463,6 +441,23 @@ func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map
 	}
 
 	return gtw
+}
+
+// updateStatusForGatewaysUnderGatewayClass updates status of all Gateways under the GatewayClass.
+func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx context.Context, gatewayClassName string) error {
+	gateways := new(gwapiv1.GatewayList)
+	if err := r.client.List(ctx, gateways, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, gatewayClassName),
+	}); err != nil {
+		return err
+	}
+
+	for _, gateway := range gateways.Items {
+		gateway := gateway
+		r.updateStatusForGateway(ctx, &gateway)
+	}
+
+	return nil
 }
 
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
