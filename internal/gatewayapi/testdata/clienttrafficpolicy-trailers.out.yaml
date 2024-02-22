@@ -120,24 +120,24 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       http1:
         enableTrailers: true
       isHTTP2: false
-      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       http1:
         enableTrailers: true
       isHTTP2: false
-      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect

@@ -383,10 +383,10 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: true
-      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -435,10 +435,10 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-2
       hostnames:
       - '*'
       isHTTP2: false
-      gatewayName: envoy-gateway/gateway-2
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -488,10 +488,10 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-3
       hostnames:
       - '*'
       isHTTP2: false
-      gatewayName: envoy-gateway/gateway-3
       name: envoy-gateway/gateway-3/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

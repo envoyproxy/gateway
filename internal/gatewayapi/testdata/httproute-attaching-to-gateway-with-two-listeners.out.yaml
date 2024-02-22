@@ -128,10 +128,10 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - foo.com
       isHTTP2: false
-      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -158,10 +158,10 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - bar.com
       isHTTP2: false
-      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect

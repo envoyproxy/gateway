@@ -1,30 +1,22 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1
+- apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
     creationTimestamp: null
     name: gateway-1
-    namespace: envoy-gateway
+    namespace: default
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
     - allowedRoutes:
         namespaces:
-          from: All
-      hostname: foo.com
-      name: http-1
+          from: Same
+      name: http
       port: 80
-      protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: All
-      hostname: bar.com
-      name: http-2
-      port: 81
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -41,13 +33,30 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http-1
+      name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-    - attachedRoutes: 2
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-2
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-2
+      port: 8888
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -78,9 +87,12 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
-      namespace: envoy-gateway
+      namespace: default
+      sectionName: http
     rules:
     - backendRefs:
       - name: service-1
@@ -104,7 +116,8 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
-        namespace: envoy-gateway
+        namespace: default
+        sectionName: http
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -112,16 +125,19 @@ httpRoutes:
     name: httproute-2
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
+    - name: gateway-2
+      namespace: default
+      sectionName: http-2
     rules:
     - backendRefs:
       - name: service-2
         port: 8080
       matches:
       - path:
-          value: /test
+          value: /
   status:
     parents:
     - conditions:
@@ -137,43 +153,87 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http-2
 infraIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway-class:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeGateways: true
+        status: {}
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http-1
+        name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http-1
+          name: default/gateway-1/http
           protocol: HTTP
           servicePort: 80
       - address: null
-        name: envoy-gateway/gateway-1/http-2
+        name: default/gateway-2/http-2
         ports:
-        - containerPort: 10081
-          name: http-2
+        - containerPort: 8888
+          name: default/gateway-2/http-2
           protocol: HTTP
-          servicePort: 81
+          servicePort: 8888
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway/gateway-1
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+      name: envoy-gateway-class
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-2
+    namespace: default
+  spec:
+    cors:
+      allowHeaders:
+      - x-header-5
+      - x-header-6
+      allowMethods:
+      - GET
+      - POST
+      allowOrigins:
+      - '*'
+      exposeHeaders:
+      - x-header-7
+      - x-header-8
+      maxAge: 33m20s
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: SecurityPolicy has been accepted.
+      reason: Accepted
+      status: "True"
+      type: Accepted
 xdsIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway-class:
     accessLog:
       text:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
+      gatewayName: default/gateway-1
       hostnames:
-      - foo.com
+      - '*'
       isHTTP2: false
-      name: envoy-gateway/gateway-1/http-1
+      name: default/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -182,25 +242,21 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destination:
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: foo.com
-        isHTTP2: false
-        name: httproute/default/httproute-2/rule/0/match/0/foo_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /test
-      - backendWeights:
-          invalid: 0
-          valid: 0
+        cors:
+          allowHeaders:
+          - x-header-5
+          - x-header-6
+          allowMethods:
+          - GET
+          - POST
+          allowOrigins:
+          - distinct: false
+            name: ""
+            safeRegex: .*
+          exposeHeaders:
+          - x-header-7
+          - x-header-8
+          maxAge: 33m20s
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -210,23 +266,22 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: foo.com
-        isHTTP2: false
-        name: httproute/default/httproute-1/rule/0/match/0/foo_com
+        hostname: gateway.envoyproxy.io
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
+      gatewayName: default/gateway-2
       hostnames:
-      - bar.com
+      - '*'
       isHTTP2: false
-      name: envoy-gateway/gateway-1/http-2
+      name: default/gateway-2/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 10081
+      port: 8888
       routes:
       - backendWeights:
           invalid: 0
@@ -240,28 +295,8 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: bar.com
-        isHTTP2: false
-        name: httproute/default/httproute-2/rule/0/match/0/bar_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /test
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: bar.com
-        isHTTP2: false
-        name: httproute/default/httproute-1/rule/0/match/0/bar_com
+        hostname: gateway.envoyproxy.io
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""

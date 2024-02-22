@@ -125,11 +125,11 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       http3: {}
       isHTTP2: false
-      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/tls
       path:
         escapedSlashesAction: UnescapeAndRedirect
