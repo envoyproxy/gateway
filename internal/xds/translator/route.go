@@ -454,7 +454,7 @@ func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {
 	return ret
 }
 
-// buildRetryOn concatenates triggers to a comma-delimited list
+// buildRetryOn concatenates triggers to a comma-delimited string.
 // An error is returned if a trigger is not in the list of supported values (not likely, due to prior validations).
 func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	if len(triggers) == 0 {

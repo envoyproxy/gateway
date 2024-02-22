@@ -14,11 +14,11 @@ http:
       numRetries: 5
       retryOn:
         httpStatusCodes:
-          - 429
-          - 503
+        - 429
+        - 503
         triggers:
-          - connect-failure
-          - retriable-status-codes
+        - connect-failure
+        - retriable-status-codes
       perRetry:
         timeout: 250ms
         backoff:
