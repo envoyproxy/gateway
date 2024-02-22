@@ -28,3 +28,4 @@ gateways:
           allowedRoutes:
             namespaces:
               from: Same
+
