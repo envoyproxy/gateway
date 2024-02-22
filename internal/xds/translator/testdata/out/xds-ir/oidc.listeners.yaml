@@ -14,7 +14,8 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.oauth2_first-route
+        - disabled: true
+          name: envoy.filters.http.oauth2_first-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
@@ -48,7 +49,8 @@
                 cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
-        - name: envoy.filters.http.oauth2_second-route
+        - disabled: true
+          name: envoy.filters.http.oauth2_second-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
@@ -85,6 +87,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -93,6 +96,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket

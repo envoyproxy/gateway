@@ -53,12 +53,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-	// SuppressEnvoyHeaders configures the Envoy Router filter to suppress the "x-envoy-'
-	// headers from both requests and responses.
-	// By default these headers are added to both requests and responses.
-	//
-	// +optional
-	SuppressEnvoyHeaders *bool `json:"suppressEnvoyHeaders,omitempty"`
 	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
 	// Client Address into the X-Forwarded-For header.
 	// Note Proxy Protocol must be present when this field is set, else the connection
@@ -86,14 +80,39 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
+	// HeaderSettings provides configuration for header management.
+	//
+	// +optional
+	Headers *HeaderSettings `json:"headers,omitempty"`
+	// Timeout settings for the client connections.
+	//
+	// +optional
+	Timeout *ClientTimeout `json:"timeout,omitempty"`
+}
+
+// HeaderSettings providess configuration options for headers on the listener.
+type HeaderSettings struct {
+	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
+	// and responses.
+	// +optional
+	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 }
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction with xForwardedFor"
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
 	// +optional
 	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
+	// CustomHeader provides configuration for determining the client IP address for a request based on
+	// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+	// for more details.
+	//
+	// +optional
+	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
 }
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
@@ -105,6 +124,26 @@ type XForwardedForSettings struct {
 	//
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
+}
+
+// CustomHeader provides configuration for determining the client IP address for a request based on
+// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+// for more details.
+type CustomHeaderExtensionSettings struct {
+	// Name of the header containing the original downstream remote address, if present.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern="^[A-Za-z0-9-]+$"
+	//
+	Name string `json:"name"`
+	// FailClosed is a switch used to control the flow of traffic when client IP detection
+	// fails. If set to true, the listener will respond with 403 Forbidden when the client
+	// IP address cannot be determined.
+	//
+	// +optional
+	FailClosed *bool `json:"failClosed,omitempty"`
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
@@ -120,6 +159,20 @@ type HTTP1Settings struct {
 	// By default, Envoy will lowercase all the headers.
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
+	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+	// +optional
+	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
+}
+
+// HTTP10Settings provides HTTP/1.0 configuration on the listener.
+type HTTP10Settings struct {
+	// UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
+	// then the hostname associated with the listener should be injected into the
+	// request.
+	// If this is not set and an HTTP/1.0 request arrives without a host, then
+	// it will be rejected.
+	// +optional
+	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy

@@ -53,6 +53,10 @@
     name: envoy.transport_sockets.tls
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.foo.com
   type: STRICT_DNS
 - commonLbConfig:
@@ -82,5 +86,9 @@
     name: envoy.transport_sockets.tls
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.bar.com
   type: STRICT_DNS

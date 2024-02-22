@@ -21,7 +21,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -138,21 +138,27 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return false
 	}
 
-	if r.secretReferencedByGateway(secret) {
+	nsName := utils.NamespacedName(secret)
+
+	if r.isGatewayReferencingSecret(&nsName) {
 		return true
 	}
 
-	if r.secretReferencedBySecurityPolicy(secret) {
+	if r.isSecurityPolicyReferencingSecret(&nsName) {
+		return true
+	}
+
+	if r.isCtpReferencingSecret(&nsName) {
 		return true
 	}
 
 	return false
 }
 
-func (r *gatewayAPIReconciler) secretReferencedByGateway(secret *corev1.Secret) bool {
+func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.NamespacedName) bool {
 	gwList := &gwapiv1.GatewayList{}
 	if err := r.client.List(context.Background(), gwList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, utils.NamespacedName(secret).String()),
+		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated Gateways")
 		return false
@@ -171,16 +177,28 @@ func (r *gatewayAPIReconciler) secretReferencedByGateway(secret *corev1.Secret) 
 	return true
 }
 
-func (r *gatewayAPIReconciler) secretReferencedBySecurityPolicy(secret *corev1.Secret) bool {
-	spList := &v1alpha1.SecurityPolicyList{}
+func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
+	spList := &egv1a1.SecurityPolicyList{}
 	if err := r.client.List(context.Background(), spList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, utils.NamespacedName(secret).String()),
+		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated SecurityPolicies")
 		return false
 	}
 
 	return len(spList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedName) bool {
+	ctpList := &egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretCtpIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ClientTrafficPolicies")
+		return false
+	}
+
+	return len(ctpList.Items) > 0
 }
 
 // validateServiceForReconcile tries finding the owning Gateway of the Service
@@ -202,22 +220,39 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 
-	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok {
-		res, _ := r.resources.GatewayAPIResources.Load(gclass)
-		if res != nil && len(res.Gateways) > 0 {
-			for _, gw := range res.Gateways {
-				gw := gw
-				r.updateStatusForGateway(ctx, gw)
+	if ok && r.mergeGateways[gclass] {
+		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
+		if res != nil {
+			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
+				for _, gw := range (*res)[gclass].Gateways {
+					gw := gw
+					r.updateStatusForGateway(ctx, gw)
+				}
 			}
 		}
-
 		return false
 	}
 
 	nsName := utils.NamespacedName(svc)
-	return r.isRouteReferencingBackend(&nsName)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isSecurityPolicyReferencingBackend(&nsName)
+}
+
+func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
+	spList := &egv1a1.SecurityPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendSecurityPolicyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated SecurityPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
 }
 
 // validateServiceImportForReconcile tries finding the owning Gateway of the ServiceImport
@@ -313,7 +348,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		nsName.Name = multiClusterSvcName
 	}
 
-	return r.isRouteReferencingBackend(&nsName)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isSecurityPolicyReferencingBackend(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
@@ -338,14 +377,16 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		}
 	}
 
-	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok {
-		res, _ := r.resources.GatewayAPIResources.Load(gclass)
-		if res != nil && len(res.Gateways) > 0 {
-			for _, gw := range res.Gateways {
-				gw := gw
-				r.updateStatusForGateway(ctx, gw)
+	if ok && r.mergeGateways[gclass] {
+		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
+		if res != nil {
+			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
+				for _, gw := range (*res)[gclass].Gateways {
+					gw := gw
+					r.updateStatusForGateway(ctx, gw)
+				}
 			}
 		}
 		return false
@@ -359,7 +400,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways),
+		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -375,7 +416,7 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways),
+		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
@@ -428,5 +469,28 @@ func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	}
 
 	r.store.addNode(node)
+	return true
+}
+
+// validateConfigMapForReconcile checks whether the ConfigMap belongs to a valid ClientTrafficPolicy.
+func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) bool {
+	configMap, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	ctpList := &egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapCtpIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ClientTrafficPolicy")
+		return false
+	}
+
+	if len(ctpList.Items) == 0 {
+		return false
+	}
+
 	return true
 }

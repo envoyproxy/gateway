@@ -152,8 +152,8 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 
 	// Rules are ORed
 	for rIdx, rule := range global.Rules {
-		var rlActions []*routev3.RateLimit_Action
 		// Matches are ANDed
+		rlActions := []*routev3.RateLimit_Action{routeDescriptor}
 		for mIdx, match := range rule.HeaderMatches {
 			// Case for distinct match
 			if match.Distinct {
@@ -167,7 +167,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 						},
 					},
 				}
-				rlActions = append(rlActions, routeDescriptor, action)
+				rlActions = append(rlActions, action)
 			} else {
 				// Setup HeaderValueMatch actions
 				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
@@ -190,7 +190,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 						},
 					},
 				}
-				rlActions = append(rlActions, routeDescriptor, action)
+				rlActions = append(rlActions, action)
 			}
 		}
 
@@ -225,7 +225,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 					MaskedRemoteAddress: mra,
 				},
 			}
-			rlActions = append(rlActions, routeDescriptor, action)
+			rlActions = append(rlActions, action)
 
 			// Setup RemoteAddress action if distinct match is set
 			if rule.CIDRMatch.Distinct {
@@ -251,7 +251,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 					},
 				},
 			}
-			rlActions = append(rlActions, routeDescriptor, action)
+			rlActions = append(rlActions, action)
 		}
 
 		rateLimit := &routev3.RateLimit{Actions: rlActions}
@@ -291,6 +291,7 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 			//     descriptors:
 			//       - key:   ${RouteRuleDescriptor}
 			//         value: ${RouteRuleDescriptor}
+			//       - ...
 			//
 			routeDescriptor := &rlsconfv3.RateLimitDescriptor{
 				Key:         getRouteDescriptor(route.Name),

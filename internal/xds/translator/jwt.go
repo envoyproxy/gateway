@@ -121,7 +121,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
 							Cluster: jwksCluster.name,
 						},
-						Timeout: &durationpb.Duration{Seconds: 5},
+						Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
 					},
 					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
@@ -181,8 +181,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
 // as the CA to authenticate server certificates.
-func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
+// TODO huabing: add support for custom CA and client certificate.
+func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 	tlsCtxProto := &tlsv3.UpstreamTlsContext{
+		Sni: sni,
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
@@ -281,7 +283,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 				endpointType: jwks.endpointType,
 			}
 			if jwks.tls {
-				tSocket, err = buildXdsUpstreamTLSSocket()
+				tSocket, err = buildXdsUpstreamTLSSocket(jwks.hostname)
 				if err != nil {
 					errs = errors.Join(errs, err)
 					continue
@@ -329,10 +331,6 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 	}
 
 	return false
-}
-
-func (*jwt) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
-	return nil
 }
 
 // buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct

@@ -82,6 +82,11 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
 
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
+
 	// Timeout settings for the backend connections.
 	//
 	// +optional

@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	oauth2Filter                = "envoy.filters.http.oauth2"
-	defaultTokenEndpointTimeout = 10
+	oauth2Filter = "envoy.filters.http.oauth2"
 )
 
 func init() {
@@ -41,6 +40,7 @@ var _ httpFilter = &oidc{}
 // patchHCM builds and appends the oauth2 Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
 // Note: this method creates an oauth2 filter for each route that contains an OIDC config.
+// the filter is disabled by default. It is enabled on the route level.
 func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 
@@ -61,13 +61,6 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
-		}
-
-		// skip if the filter already exists
-		for _, existingFilter := range mgr.HttpFilters {
-			if filter.Name == existingFilter.Name {
-				continue
-			}
 		}
 
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
@@ -93,7 +86,8 @@ func buildHCMOAuth2Filter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: oauth2FilterName(route),
+		Name:     oauth2FilterName(route),
+		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: OAuth2Any,
 		},
@@ -123,7 +117,7 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 					Cluster: cluster.name,
 				},
 				Timeout: &duration.Duration{
-					Seconds: defaultTokenEndpointTimeout,
+					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
 			AuthorizationEndpoint: route.OIDC.Provider.AuthorizationEndpoint,
@@ -230,20 +224,11 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		tlsContext := &tlsv3.UpstreamTlsContext{
-			Sni: cluster.hostname,
-		}
-
-		tlsContextAny, err := anypb.New(tlsContext)
+		// TODO huabing: add support for custom CA and client certificate.
+		tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
-		}
-		tSocket = &corev3.TransportSocket{
-			Name: "envoy.transport_sockets.tls",
-			ConfigType: &corev3.TransportSocket_TypedConfig{
-				TypedConfig: tlsContextAny,
-			},
 		}
 
 		ds = &ir.DestinationSetting{
@@ -356,52 +341,6 @@ func generateHMACSecretKey() ([]byte, error) {
 	}
 
 	return key, nil
-}
-
-// patchRouteCfg patches the provided route configuration with the oauth2 filter
-// if applicable.
-// Note: this method disables all the oauth2 filters by default. The filter will
-// be enabled per-route in the typePerFilterConfig of the route.
-func (*oidc) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
-	if routeCfg == nil {
-		return errors.New("route configuration is nil")
-	}
-	if irListener == nil {
-		return errors.New("ir listener is nil")
-	}
-
-	var errs error
-	for _, route := range irListener.Routes {
-		if !routeContainsOIDC(route) {
-			continue
-		}
-
-		filterName := oauth2FilterName(route)
-		filterCfg := routeCfg.TypedPerFilterConfig
-
-		if _, ok := filterCfg[filterName]; ok {
-			// This should not happen since this is the only place where the oauth2
-			// filter is added in a route.
-			errs = errors.Join(errs, fmt.Errorf(
-				"route config already contains oauth2 config: %+v", route))
-			continue
-		}
-
-		// Disable all the filters by default. The filter will be enabled
-		// per-route in the typePerFilterConfig of the route.
-		routeCfgAny, err := anypb.New(&routev3.FilterConfig{Disabled: true})
-		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-
-		if filterCfg == nil {
-			routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
-		}
-
-		routeCfg.TypedPerFilterConfig[filterName] = routeCfgAny
-	}
-	return errs
 }
 
 // patchRoute patches the provided route with the oauth2 config if applicable.
