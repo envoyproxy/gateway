@@ -495,16 +495,11 @@ func (t *Translator) buildOIDC(
 		logoutPath = *oidc.LogoutPath
 	}
 
-	nsName := types.NamespacedName{
-		Namespace: policy.GetNamespace(),
-		Name:      policy.GetName(),
-	}
 	h := fnv.New32a()
-	_, err = h.Write([]byte(nsName.String()))
-	if err != nil {
+	if _, err = h.Write([]byte(policy.UID)); err != nil {
 		return nil, fmt.Errorf("error generating oauth cookie suffix: %w", err)
 	}
-	suffix := strconv.Itoa(int(h.Sum32()))
+	suffix := fmt.Sprintf("%X", h.Sum32())
 
 	return &ir.OIDC{
 		Provider:     *provider,

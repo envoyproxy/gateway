@@ -28,11 +28,11 @@
               credentials:
                 clientId: client.oauth.foo.com
                 cookieNames:
-                  bearerToken: BearerToken-1667669650
-                  idToken: IdToken-1667669650
-                  oauthExpires: OauthExpires-1667669650
-                  oauthHmac: OauthHMAC-1667669650
-                  refreshToken: RefreshToken-1667669650
+                  bearerToken: BearerToken-5F93C2E4
+                  idToken: IdToken-5F93C2E4
+                  oauthExpires: OauthExpires-5F93C2E4
+                  oauthHmac: OauthHMAC-5F93C2E4
+                  refreshToken: RefreshToken-5F93C2E4
                 hmacSecret:
                   name: first-route/oauth2/hmac_secret
                   sdsConfig:
@@ -69,11 +69,11 @@
               credentials:
                 clientId: client.oauth.bar.com
                 cookieNames:
-                  bearerToken: BearerToken-2003913538
-                  idToken: IdToken-2003913538
-                  oauthExpires: OauthExpires-2003913538
-                  oauthHmac: OauthHMAC-2003913538
-                  refreshToken: RefreshToken-2003913538
+                  bearerToken: BearerToken-B0A1B740
+                  idToken: IdToken-B0A1B740
+                  oauthExpires: OauthExpires-B0A1B740
+                  oauthHmac: OauthHMAC-B0A1B740
+                  refreshToken: RefreshToken-B0A1B740
                 hmacSecret:
                   name: second-route/oauth2/hmac_secret
                   sdsConfig:
