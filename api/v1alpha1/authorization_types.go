@@ -8,6 +8,10 @@ package v1alpha1
 // Authorization defines the authorization configuration.
 type Authorization struct {
 	// Rules contains all the authorization rules.
+	// If rules contains at least one Allow rule and none of them
+	// matches the action for the request is deny.
+	// If rules contains at least one Deny rule and none of them
+	// matches the action for the request is allow.
 	//
 	// +kubebuilder:validation:MinItems=1
 	Rules []Rule `json:"rules,omitempty"`
@@ -16,6 +20,8 @@ type Authorization struct {
 // Rule defines the single authorization rule.
 type Rule struct {
 	// ClientSelectors contains the client selector configuration.
+	// All selectors are ANDd together and only if all selector are valid
+	// the Action is performed.
 	//
 	// +kubebuilder:validation:MinItems=1
 	ClientSelectors []ClientSelector `json:"clientSelector,omitempty"`

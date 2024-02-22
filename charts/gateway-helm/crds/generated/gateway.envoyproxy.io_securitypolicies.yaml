@@ -48,7 +48,11 @@ spec:
                 description: Authorization defines the authorization configuration.
                 properties:
                   rules:
-                    description: Rules contains all the authorization rules.
+                    description: Rules contains all the authorization rules. If rules
+                      contains at least one Allow rule and none of them matches the
+                      action for the request is deny. If rules contains at least one
+                      Deny rule and none of them matches the action for the request
+                      is allow.
                     items:
                       description: Rule defines the single authorization rule.
                       properties:
@@ -62,7 +66,8 @@ spec:
                           type: string
                         clientSelector:
                           description: ClientSelectors contains the client selector
-                            configuration.
+                            configuration. All selectors are ANDd together and only
+                            if all selector are valid the Action is performed.
                           items:
                             description: ClientSelector contains the client selector
                               configuration.

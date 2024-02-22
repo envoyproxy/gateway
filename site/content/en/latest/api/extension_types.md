@@ -108,7 +108,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules. |
+| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules. If rules contains at least one Allow rule and none of them matches the action for the request is deny. If rules contains at least one Deny rule and none of them matches the action for the request is allow. |
 
 
 #### BackOffPolicy
@@ -2254,7 +2254,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientSelector` | _[ClientSelector](#clientselector) array_ |  true  | ClientSelectors contains the client selector configuration. |
+| `clientSelector` | _[ClientSelector](#clientselector) array_ |  true  | ClientSelectors contains the client selector configuration. All selectors are ANDd together and only if all selector are valid the Action is performed. |
 | `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
 
 

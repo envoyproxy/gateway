@@ -61,15 +61,15 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		}
 	}
 
-	if err := ValidateAuthorisation(spec.Authorization); err != nil {
+	if err := ValidateAuthorization(spec.Authorization); err != nil {
 		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
 }
 
-// ValidateAuthorisation validates the provided Authorisation configuration.
-func ValidateAuthorisation(as *egv1a1.Authorization) error {
+// ValidateAuthorization validates the provided Authorisation configuration.
+func ValidateAuthorization(as *egv1a1.Authorization) error {
 	var errs []error
 	if as == nil {
 		return nil
