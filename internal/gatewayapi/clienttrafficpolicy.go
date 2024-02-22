@@ -324,6 +324,11 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
 
+		// Translate Client Timeout Settings
+		if err := translateClientTimeout(policy.Spec.Timeout, httpIR); err != nil {
+			return err
+		}
+
 		// Translate HTTP1 Settings
 		if err := translateHTTP1Settings(policy.Spec.HTTP1, httpIR); err != nil {
 			return err
@@ -393,6 +398,35 @@ func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPLis
 	if pathSettings.EscapedSlashesAction != nil {
 		httpIR.Path.EscapedSlashesAction = ir.PathEscapedSlashAction(*pathSettings.EscapedSlashesAction)
 	}
+}
+
+func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTPListener) error {
+	if clientTimeout == nil {
+		return nil
+	}
+
+	if clientTimeout.HTTP != nil {
+		if clientTimeout.HTTP.RequestReceivedTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestReceivedTimeout))
+			if err != nil {
+				return err
+			}
+			switch {
+			case httpIR.Timeout == nil:
+				httpIR.Timeout = &ir.ClientTimeout{}
+				fallthrough
+
+			case httpIR.Timeout.HTTP == nil:
+				httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
+			}
+
+			httpIR.Timeout.HTTP.RequestReceivedTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+	}
+
+	return nil
 }
 
 func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {
