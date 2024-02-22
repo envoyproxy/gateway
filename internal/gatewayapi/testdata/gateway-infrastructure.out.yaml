@@ -118,6 +118,7 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      gatewayName: default/gateway-1
       name: default/gateway-1/https
       path:
         escapedSlashesAction: UnescapeAndRedirect

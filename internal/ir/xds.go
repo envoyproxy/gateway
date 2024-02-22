@@ -191,6 +191,8 @@ func (x Xds) Printable() *Xds {
 // HTTPListener holds the listener configuration.
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
+	// GatewayName contains the name of the gateway to which this
+	GatewayName string `json:"gatewayName" yaml:"gatewayName"`
 	// Name of the HttpListener
 	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.

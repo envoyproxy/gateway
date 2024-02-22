@@ -109,6 +109,7 @@ xdsIR:
       hostnames:
       - '*.envoyproxy.io'
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

@@ -100,10 +100,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
-					Name:    irHTTPListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
-					TLS:     irTLSConfigs(listener.tlsSecrets),
+					GatewayName: irStringKey(gateway.Namespace, gateway.Name),
+					Name:        irHTTPListenerName(listener),
+					Address:     "0.0.0.0",
+					Port:        uint32(containerPort),
+					TLS:         irTLSConfigs(listener.tlsSecrets),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,

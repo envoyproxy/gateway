@@ -360,6 +360,7 @@ xdsIR:
       hostnames:
       - foo.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -389,6 +390,7 @@ xdsIR:
       hostnames:
       - bar.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -418,6 +420,7 @@ xdsIR:
       hostnames:
       - foo1.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-3
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -447,6 +450,7 @@ xdsIR:
       hostnames:
       - bar1.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-4
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -476,6 +480,7 @@ xdsIR:
       hostnames:
       - foo2.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-5
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -505,6 +510,7 @@ xdsIR:
       hostnames:
       - bar2.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-6
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -534,6 +540,7 @@ xdsIR:
       hostnames:
       - foo3.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-7
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -563,6 +570,7 @@ xdsIR:
       hostnames:
       - bar3.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-8
       path:
         escapedSlashesAction: UnescapeAndRedirect

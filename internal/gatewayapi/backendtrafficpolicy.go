@@ -352,7 +352,14 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
+	policyTarget := irStringKey(
+		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
+		string(policy.Spec.TargetRef.Name),
+	)
 	for _, http := range ir.HTTP {
+		if t.MergeGateways && http.GatewayName != policyTarget {
+			continue
+		}
 		for _, r := range http.Routes {
 			// Apply if not already set
 			if r.RateLimit == nil {

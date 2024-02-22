@@ -103,6 +103,7 @@ xdsIR:
       hostnames:
       - foo.com
       isHTTP2: false
+      gatewayName: envoy-gateway/gateway-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
