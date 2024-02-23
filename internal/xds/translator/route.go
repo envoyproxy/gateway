@@ -57,16 +57,15 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		routeAction := buildXdsRouteAction(httpRoute.Destination.Name)
-		if httpRoute.Mirrors != nil {
-			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
-		}
+		var routeAction *routev3.RouteAction
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
 			routeAction = buildXdsWeightedRouteAction(httpRoute)
-			if httpRoute.Mirrors != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
-			}
+		} else {
+			routeAction = buildXdsRouteAction(httpRoute.Destination.Name)
+		}
+		if httpRoute.Mirrors != nil {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 		if !httpRoute.IsHTTP2 {
 			// Allow websocket upgrades for HTTP 1.1
