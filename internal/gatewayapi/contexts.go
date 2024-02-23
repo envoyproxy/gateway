@@ -441,17 +441,3 @@ func (b *BackendRefContext) GetBackendRef(routeKind gwapiv1.Kind) *gwapiv1.Backe
 	}
 	return nil
 }
-
-func (b *BackendRefContext) GetHTTPFilters() []gwapiv1.HTTPRouteFilter {
-	if b.HTTPBackendRef != nil {
-		return b.HTTPBackendRef.Filters
-	}
-	return nil
-}
-
-func (b *BackendRefContext) GetGRPCFilters() []v1alpha2.GRPCRouteFilter {
-	if b.GRPCBackendRef != nil {
-		return b.GRPCBackendRef.Filters
-	}
-	return nil
-}
