@@ -99,7 +99,8 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
-	deploymentConfig *egv1a1.EnvoyProxyDeploymentSpec) ([]corev1.Container, error) {
+	deploymentConfig *egv1a1.EnvoyProxyDeploymentSpec,
+	shutdownConfig *egv1a1.ShutdownConfig) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
@@ -220,7 +221,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Image:                    *deploymentConfig.ShutdownManagerContainer.Image,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
-			Args:                     []string{"envoy", "shutdown-manager"},
+			Args:                     expectedShutdownManagerArgs(shutdownConfig),
 			Env:                      expectedContainerEnv(deploymentConfig.ShutdownManagerContainer),
 			Resources:                *deploymentConfig.ShutdownManagerContainer.Resources,
 			SecurityContext:          deploymentConfig.ShutdownManagerContainer.SecurityContext,
@@ -256,7 +257,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
 					Exec: &corev1.ExecAction{
-						Command: []string{"envoy-gateway", "envoy", "shutdown"},
+						Command: expectedShutdownPreStopCommand(shutdownConfig),
 					},
 				},
 			},
@@ -264,6 +265,36 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	return containers, nil
+}
+
+func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {
+	args := []string{"envoy", "shutdown-manager"}
+	if cfg != nil && cfg.DrainTimeout != nil {
+		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", cfg.DrainTimeout.Seconds()+10))
+	}
+	return args
+}
+
+func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
+	command := []string{"envoy-gateway", "envoy", "shutdown"}
+
+	if cfg == nil {
+		return command
+	}
+
+	if cfg.DrainTimeout != nil {
+		command = append(command, fmt.Sprintf("--drain-timeout=%.0fs", cfg.DrainTimeout.Seconds()))
+	}
+
+	if cfg.MinDrainDuration != nil {
+		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", cfg.MinDrainDuration.Seconds()))
+	}
+
+	if cfg.ExitAtConnections != nil {
+		command = append(command, fmt.Sprintf("--exit-at-connections=%d", *cfg.ExitAtConnections))
+	}
+
+	return command
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.

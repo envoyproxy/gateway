@@ -116,12 +116,6 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 	}
 }
 
-func (container *KubernetesContainerSpec) defaultKubernetesContainerSpec(image string) {
-	if container.Resources == nil {
-		container.Resources = DefaultResourceRequirements()
-	}
-}
-
 func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 	if len(hpa.Metrics) == 0 {
 		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()
