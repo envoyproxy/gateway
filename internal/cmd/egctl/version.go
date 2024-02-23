@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/cmd/options"
 	"github.com/envoyproxy/gateway/internal/cmd/version"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -98,16 +99,14 @@ func versions(w io.Writer, containerName, output string, remote bool) error {
 	}
 
 	for _, pod := range pods.Items {
+		pod := pod
 		if pod.Status.Phase != "Running" {
 
 			fmt.Fprintf(w, "WARN: pod %s/%s is not running, skipping it.", pod.Namespace, pod.Name)
 			continue
 		}
 
-		nn := types.NamespacedName{
-			Namespace: pod.Namespace,
-			Name:      pod.Name,
-		}
+		nn := utils.NamespacedName(&pod)
 		stdout, _, err := c.PodExec(nn, containerName, "envoy-gateway version -ojson")
 		if err != nil {
 			return fmt.Errorf("pod exec on %s/%s failed: %w", nn.Namespace, nn.Name, err)

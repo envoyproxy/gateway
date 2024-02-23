@@ -69,11 +69,11 @@
               credentials:
                 clientId: client.oauth.bar.com
                 cookieNames:
-                  bearerToken: BearerToken-B0A1B740
-                  idToken: IdToken-B0A1B740
-                  oauthExpires: OauthExpires-B0A1B740
-                  oauthHmac: OauthHMAC-B0A1B740
-                  refreshToken: RefreshToken-B0A1B740
+                  bearerToken: BearerToken-5f93c2e4
+                  idToken: IdToken-5f93c2e4
+                  oauthExpires: OauthExpires-5f93c2e4
+                  oauthHmac: OauthHMAC-5f93c2e4
+                  refreshToken: RefreshToken-5f93c2e4
                 hmacSecret:
                   name: second-route/oauth2/hmac_secret
                   sdsConfig:

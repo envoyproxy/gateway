@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -28,6 +27,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -61,10 +61,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	}
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
-		key := types.NamespacedName{
-			Name:      gw.GetName(),
-			Namespace: gw.GetNamespace(),
-		}
+		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
@@ -495,11 +492,8 @@ func (t *Translator) buildOIDC(
 		logoutPath = *oidc.LogoutPath
 	}
 
-	h := fnv.New32a()
-	if _, err = h.Write([]byte(policy.UID)); err != nil {
-		return nil, fmt.Errorf("error generating oauth cookie suffix: %w", err)
-	}
-	suffix := fmt.Sprintf("%X", h.Sum32())
+	// Generate a unique cookie suffix for oauth filters
+	suffix := utils.Digest32(string(policy.UID))
 
 	return &ir.OIDC{
 		Provider:     *provider,
