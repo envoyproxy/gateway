@@ -514,7 +514,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
-			name: "should be able to update status of all gateways under gatewayclass when MergeGateways enabled",
+			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
 			configs: []client.Object{
 				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
 					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
@@ -532,6 +532,22 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			}, nil),
 			expect: false,
 		},
+		{
+			name: "no gateways found under gatewayclass when MergeGateways enabled",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mergeGatewaysConfig.Name),
+				}),
+				mergeGatewaysConfig,
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
+				gatewayapi.OwningGatewayClassLabel: "test-mg",
+			}, nil),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
@@ -540,6 +556,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
+		mergeGateways: map[string]bool{
+			"test-mg": true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -592,7 +611,23 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "should be able to update status of all gateways under gatewayclass when MergeGateways enabled",
+			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mergeGatewaysConfig.Name),
+				}),
+				mergeGatewaysConfig,
+			},
+			deployment: test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
+				gatewayapi.OwningGatewayClassLabel: "test-mg",
+			}),
+			expect: false,
+		},
+		{
+			name: "no gateways found under gatewayclass when MergeGateways enabled",
 			configs: []client.Object{
 				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
 					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
@@ -618,6 +653,9 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
+		mergeGateways: map[string]bool{
+			"test-mg": true,
+		},
 	}
 
 	for _, tc := range testCases {
