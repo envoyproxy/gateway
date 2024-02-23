@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/cmd/options"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 var (
@@ -168,7 +169,8 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 
 	podsNamespacedNames := []types.NamespacedName{}
 	for _, pod := range pods {
-		podNsName := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}
+		pod := pod
+		podNsName := utils.NamespacedName(&pod)
 		if pod.Status.Phase != "Running" {
 			return podsNamespacedNames, fmt.Errorf("pod %s is not running", podNsName)
 		}

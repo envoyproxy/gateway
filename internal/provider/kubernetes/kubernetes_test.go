@@ -321,7 +321,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 	// Ensure the Gateway reports "Scheduled".
 	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, gw); err != nil {
+		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
 			return false
 		}
 
@@ -354,10 +354,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}, defaultWait, defaultTick)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
-	key := types.NamespacedName{
-		Namespace: gw.Namespace,
-		Name:      gw.Name,
-	}
+	key := utils.NamespacedName(gw)
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, key, gw) == nil
 	}, defaultWait, defaultTick)
@@ -884,10 +881,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 
 			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
-			key := types.NamespacedName{
-				Namespace: testCase.route.Namespace,
-				Name:      testCase.route.Name,
-			}
+			key := utils.NamespacedName(testCase.route)
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)
@@ -1035,10 +1029,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 
 			// Ensure the test TLSRoute in the TLSRoute resources is as expected.
-			key := types.NamespacedName{
-				Namespace: testCase.route.Namespace,
-				Name:      testCase.route.Name,
-			}
+			key := utils.NamespacedName(testCase.route)
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)

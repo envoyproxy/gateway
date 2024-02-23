@@ -16,7 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
-	providerutils "github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -52,7 +52,7 @@ var (
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
 func ExpectedResourceHashedName(name string) string {
-	hashedName := providerutils.GetHashedName(name, 48)
+	hashedName := utils.GetHashedName(name, 48)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }
 
@@ -116,7 +116,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			}
 			port := corev1.ContainerPort{
 				// hashed container port name including up to the 6 characters of the port name and the maximum of 15 characters.
-				Name:          providerutils.GetHashedName(p.Name, 6),
+				Name:          utils.GetHashedName(p.Name, 6),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}

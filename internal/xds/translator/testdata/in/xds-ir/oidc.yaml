@@ -55,4 +55,4 @@ http:
       redirectURL: "https://www.example.com/bar/oauth2/callback"
       redirectPath: "/bar/oauth2/callback"
       logoutPath: "/bar/logout"
-      cookieSuffix: B0A1B740
+      cookieSuffix: 5f93c2e4

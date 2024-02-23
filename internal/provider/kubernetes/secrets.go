@@ -14,10 +14,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/crypto"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 var (
@@ -86,10 +86,7 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 	for i := range secrets {
 		secret := secrets[i]
 		current := new(corev1.Secret)
-		key := types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}
+		key := utils.NamespacedName(&secret)
 		if err := client.Get(ctx, key, current); err != nil {
 			// Create if not found.
 			if kerrors.IsNotFound(err) {

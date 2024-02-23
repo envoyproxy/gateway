@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // createOrUpdateServiceAccount creates a ServiceAccount in the kube api server based on the
@@ -29,10 +30,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 	}
 
 	current := &corev1.ServiceAccount{}
-	key := types.NamespacedName{
-		Namespace: sa.Namespace,
-		Name:      sa.Name,
-	}
+	key := utils.NamespacedName(sa)
 
 	return i.Client.CreateOrUpdate(ctx, key, current, sa, func() bool {
 		// the service account never changed, does not need to update

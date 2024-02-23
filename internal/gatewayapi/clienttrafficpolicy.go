@@ -21,6 +21,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -64,10 +65,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 			}
 
 			// Check for conflicts
-			key := types.NamespacedName{
-				Name:      gateway.Name,
-				Namespace: gateway.Namespace,
-			}
+			key := utils.NamespacedName(gateway)
 
 			// Check if another policy targeting the same section exists
 			section := string(*(policy.Spec.TargetRef.SectionName))
