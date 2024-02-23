@@ -173,6 +173,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
+			backendRef := backendRef
 			backendRefContext := BackendRefContext{
 				HTTPBackendRef: &backendRef,
 			}
@@ -472,6 +473,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		for _, backendRef := range rule.BackendRefs {
+			backendRef := backendRef
 			backendRefContext := BackendRefContext{
 				GRPCBackendRef: &backendRef,
 			}
