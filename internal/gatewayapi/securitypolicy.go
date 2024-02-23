@@ -493,7 +493,7 @@ func (t *Translator) buildOIDC(
 	}
 
 	// Generate a unique cookie suffix for oauth filters
-	suffix := utils.Digest(string(policy.UID))
+	suffix := utils.Digest32(string(policy.UID))
 
 	return &ir.OIDC{
 		Provider:     *provider,

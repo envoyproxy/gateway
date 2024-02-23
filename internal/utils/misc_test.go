@@ -18,9 +18,9 @@ func TestGetHashedName(t *testing.T) {
 		length   int
 		expected string
 	}{
-		{"test default name", "http", 6, "http-c96448a5"},
-		{"test removing trailing slash", "namespace/name", 10, "namespace-3c4f601e"},
-		{"test removing trailing hyphen", "envoy-gateway-system/eg/http", 6, "envoy-128ffda5"},
+		{"test default name", "http", 6, "http-e0603c49"},
+		{"test removing trailing slash", "namespace/name", 10, "namespace-18a6500f"},
+		{"test removing trailing hyphen", "envoy-gateway-system/eg/http", 6, "envoy-2ecf157b"},
 	}
 
 	for _, tc := range testCases {

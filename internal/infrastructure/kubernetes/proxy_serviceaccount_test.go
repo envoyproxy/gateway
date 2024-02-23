@@ -54,7 +54,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test-afd071e5",
+					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",
@@ -103,7 +103,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test-afd071e5",
+					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",

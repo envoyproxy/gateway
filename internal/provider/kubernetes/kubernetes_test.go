@@ -37,6 +37,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -881,7 +882,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 
 			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
-			key := utils.NamespacedName(testCase.route)
+			key := utils.NamespacedName(&testCase.route)
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)
@@ -1029,7 +1030,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 
 			// Ensure the test TLSRoute in the TLSRoute resources is as expected.
-			key := utils.NamespacedName(testCase.route)
+			key := utils.NamespacedName(&testCase.route)
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)
