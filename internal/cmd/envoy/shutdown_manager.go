@@ -151,14 +151,14 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 		}
 
 		if elapsedTime > minDrainDuration && !allowedToExit {
-			logger.Info(fmt.Sprintf("minimum drain period reached; will exit when total connections is %d", exitAtConnections))
+			logger.Info(fmt.Sprintf("minimum drain period reached; will exit when total connections is less than or equal to %d", exitAtConnections))
 			allowedToExit = true
 		}
 
 		if elapsedTime > drainTimeout {
 			logger.Info("graceful drain sequence timeout exceeded")
 			break
-		} else if allowedToExit && conn != nil && *conn == exitAtConnections {
+		} else if allowedToExit && conn != nil && *conn <= exitAtConnections {
 			logger.Info("graceful drain sequence completed")
 			break
 		}
