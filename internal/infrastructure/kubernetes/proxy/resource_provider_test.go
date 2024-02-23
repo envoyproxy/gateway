@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,6 +88,7 @@ func TestDeployment(t *testing.T) {
 		caseName     string
 		infra        *ir.Infra
 		deploy       *egv1a1.EnvoyProxyDeploymentSpec
+		shutdown     *egv1a1.ShutdownConfig
 		proxyLogging map[egv1a1.ProxyLogComponent]egv1a1.LogLevel
 		bootstrap    string
 		telemetry    *egv1a1.ProxyTelemetry
@@ -148,6 +150,47 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 				},
+			},
+		},
+		{
+			caseName: "shutdown-manager",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
+				ShutdownManagerContainer: &egv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "env_a",
+							Value: "env_a_value",
+						},
+						{
+							Name:  "env_b",
+							Value: "env_b_value",
+						},
+					},
+					Image: ptr.To("envoyproxy/gateway-dev:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("96Mi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("100m"),
+							corev1.ResourceMemory: resource.MustParse("64Mi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						RunAsUser: ptr.To[int64](1234),
+					},
+				},
+			},
+			shutdown: &egv1a1.ShutdownConfig{
+				DrainTimeout: &metav1.Duration{
+					Duration: 30 * time.Second,
+				},
+				MinDrainDuration: &metav1.Duration{
+					Duration: 5 * time.Second,
+				},
+				ExitAtConnections: ptr.To[int32](20),
 			},
 		},
 		{
@@ -505,6 +548,10 @@ func TestDeployment(t *testing.T) {
 
 			if tc.concurrency != nil {
 				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
+			}
+
+			if tc.shutdown != nil {
+				tc.infra.Proxy.Config.Spec.Shutdown = tc.shutdown
 			}
 
 			if len(tc.extraArgs) > 0 {
