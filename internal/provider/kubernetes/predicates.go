@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -213,14 +214,11 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 	labels := svc.GetLabels()
 
-	// Only services in the configured namespace should be reconciled.
-	if svc.Namespace == r.namespace {
-		// Check if the Service belongs to a Gateway, if so, update the Gateway status.
-		gtw := r.findOwningGateway(ctx, labels)
-		if gtw != nil {
-			r.updateStatusForGateway(ctx, gtw)
-			return false
-		}
+	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
+	gtw := r.findOwningGateway(ctx, labels)
+	if gtw != nil {
+		r.updateStatusForGateway(ctx, gtw)
+		return false
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
@@ -321,7 +319,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	return allAssociatedRoutes != 0
 }
 
-// validateEndpointSliceForReconcile returns true if the the endpointSlice references
+// validateEndpointSliceForReconcile returns true if the endpointSlice references
 // a service that is referenced by a xRoute
 func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Object) bool {
 	ep, ok := obj.(*discoveryv1.EndpointSlice)
@@ -450,6 +448,10 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, gatewayClassName),
 	}); err != nil {
 		return err
+	}
+
+	if len(gateways.Items) == 0 {
+		return fmt.Errorf("no gateways found for gatewayclass: %s", gatewayClassName)
 	}
 
 	for _, gateway := range gateways.Items {
