@@ -1374,7 +1374,8 @@ _Appears in:_
 | `issuer` | _string_ |  false  | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
 | `audiences` | _string array_ |  false  | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` | _[RemoteJWKS](#remotejwks)_ |  true  | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
-| `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  true  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `recomputeRoute` | _boolean_ |  false  | RecomputeRoute clears the route cache and recalculates the routing decision. This field must be enabled if the headers generated from the claim are used for route matching decisions. If the recomputation selects a new route, features targeting the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  | ExtractFrom defines different ways to extract the JWT token from HTTP request. If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema or access_token from query parameters. |
 
 
@@ -1419,6 +1420,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to deployment |
 | `replicas` | _integer_ |  false  | Replicas is the number of desired pods. Defaults to 1. |
 | `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ |  false  | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
@@ -1441,6 +1443,21 @@ _Appears in:_
 | `maxReplicas` | _integer_ |  true  | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
 | `metrics` | _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#metricspec-v2-autoscaling) array_ |  false  | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
 | `behavior` | _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#horizontalpodautoscalerbehavior-v2-autoscaling)_ |  false  | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
+
+
+#### KubernetesPatchSpec
+
+
+
+KubernetesPatchSpec defines how to perform the patch operation
+
+_Appears in:_
+- [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[MergeType](#mergetype)_ |  false  | Type is the type of merge operation to perform <br /><br /> By default, StrategicMerge is used as the patch type. |
+| `value` | _[JSON](#json)_ |  true  | Object contains the raw configuration for merged object |
 
 
 #### KubernetesPodSpec
@@ -1576,6 +1593,8 @@ LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
+
+
 
 
 
@@ -2193,7 +2212,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
-| `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried. |
+| `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried. The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
 
 
 #### SecurityPolicy

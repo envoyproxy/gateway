@@ -265,6 +265,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		deployment.Spec.Replicas = nil
 	}
 
+	// apply merge patch to deployment
+	if merged, err := deploymentConfig.ApplyMergePatch(deployment); err == nil {
+		deployment = merged
+	}
+
 	return deployment, nil
 }
 

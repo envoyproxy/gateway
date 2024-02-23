@@ -657,6 +657,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 					Timeout:               routeRoute.Timeout,
+					Retry:                 routeRoute.Retry,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
