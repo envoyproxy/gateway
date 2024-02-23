@@ -26,7 +26,7 @@ func newEnvoyDashboardCmd() *cobra.Command {
 
 	dashboardCmd := &cobra.Command{
 		Use:   "envoy-proxy <name> -n <namespace>",
-		Short: "Retrieves Envoy admin dashboard for the specified pod",
+		Short: "Retrieve Envoy admin dashboard for the specified pod",
 		Long:  `Retrieve Envoy admin dashboard for the specified pod.`,
 		Example: `  # Retrieve Envoy admin dashboard for the specified pod.
   egctl experimental dashboard envoy-proxy <pod-name> -n <namespace>
@@ -47,6 +47,10 @@ func newEnvoyDashboardCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
+			if listenPort > 65535 || listenPort < 0 {
+				return fmt.Errorf("invalid port number range")
+			}
+
 			kubeClient, err := getCLIClient()
 			if err != nil {
 				return err
@@ -66,7 +70,7 @@ func newEnvoyDashboardCmd() *cobra.Command {
 				podNamespace = pl.Items[0].Namespace
 			}
 
-			return portForward(podName, podNamespace, "http://%s", adminPort, kubeClient, c.OutOrStdout())
+			return portForward(podName, podNamespace, "http://%s", listenPort, kubeClient, c.OutOrStdout())
 		},
 	}
 	dashboardCmd.PersistentFlags().StringArrayVarP(&labelSelectors, "labels", "l", nil, "Labels to select the envoy proxy pod.")

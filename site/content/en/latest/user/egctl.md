@@ -795,3 +795,21 @@ product     backend   ResolvedRefs   True      ResolvedRefs
 
 [Multi-tenancy]: ../deployment-mode#multi-tenancy
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
+
+
+## egctl experimental dashboard
+
+This subcommand streamlines the process for users to access the Envoy admin dashboard. By executing the following command:
+
+```bash
+egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
+```
+
+You will see the following output:
+
+```bash
+egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
+http://localhost:19000
+```
+
+the Envoy admin dashboard will automatically open in your default web browser. This eliminates the need to manually locate and expose the admin port.
