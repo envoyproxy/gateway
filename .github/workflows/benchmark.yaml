@@ -22,6 +22,8 @@ jobs:
         env:
           KIND_NODE_TAG: v1.29.0
           IMAGE_PULL_POLICY: IfNotPresent
+          TAG: latest
+          WAIT_TIMEOUT: 180s
         run: make benchmark
       
      # - name: Setup Kubernetes

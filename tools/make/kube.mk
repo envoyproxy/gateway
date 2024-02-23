@@ -100,6 +100,10 @@ conformance: create-cluster kube-install-image kube-deploy run-conformance delet
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
+RPS ?= 1000
+CONNECTIONS ?= 1
+DURATION ?= 90
+
 .PHONY: benchmark
 benchmark: create-cluster kube-install-image kube-deploy run-benchmark 
 
@@ -188,17 +192,15 @@ run-experimental-conformance: ## Run Experimental Gateway API conformance.
 .PHONY: run-benchmark
 run-benchmark: ## Run benchmark tests
 	@$(LOG_TARGET)
-	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/config/gatewayclass.yaml
 	@$(call log, "Deploying benchmark test server")
 	kubectl create namespace nighthawk-test-server
 	kubectl -n nighthawk-test-server create configmap test-server-config --from-file=test/benchmark/test-server.yaml --output yaml
 	kubectl apply -f test/benchmark/benchmark-test-server.yaml
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n nighthawk-test-server deployment/nighthawk-test-server --for=condition=Available
-	kubectl -n nighthawk-test-server port-forward service/nighthawk-test-server 8080:8080 &
-	curl --verbose --header "Host: www.example.com" http://localhost:8080
+	@$(call log, "Waiting for benchmark test server to be ready")
+	WAIT_TIMEOUT=$(WAIT_TIMEOUT) RPS=$(RPS) CONNECTIONS=$(CONNECTIONS) DURATION=$(DURATION) sh test/benchmark/run-benchmark.sh
 	@$(call log, "Running benchmark tests")
-	docker run envoyproxy/nighthawk-dev:latest nighthawk_client http://localhost:8080
 	
 
 .PHONY: delete-cluster
