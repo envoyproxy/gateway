@@ -38,12 +38,12 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	}{
 		{
 			name:   "matching controller name",
-			obj:    test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+			obj:    test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 			expect: true,
 		},
 		{
 			name:   "non-matching controller name",
-			obj:    test.GetGatewayClass("test-gc", "not.configured/controller"),
+			obj:    test.GetGatewayClass("test-gc", "not.configured/controller", nil),
 			expect: false,
 		},
 	}
@@ -149,14 +149,14 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}{
 		{
 			name:    "references class with matching controller name",
-			configs: []client.Object{test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName)},
-			gateway: test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
+			configs: []client.Object{test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil)},
+			gateway: test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 			expect:  true,
 		},
 		{
 			name:    "references class with non-matching controller name",
-			configs: []client.Object{test.GetGatewayClass("test-gc", "not.configured/controller")},
-			gateway: test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
+			configs: []client.Object{test.GetGatewayClass("test-gc", "not.configured/controller", nil)},
+			gateway: test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 			expect:  false,
 		},
 	}
@@ -191,8 +191,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "references valid gateway",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
-				test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", test.ObjectKindNamespacedName{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", test.GroupKindNamespacedName{
 					Kind: gatewayapi.KindSecret,
 					Name: "secret",
 				}),
@@ -203,8 +203,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "references invalid gateway",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", "not.configured/controller"),
-				test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", test.ObjectKindNamespacedName{
+				test.GetGatewayClass("test-gc", "not.configured/controller", nil),
+				test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", test.GroupKindNamespacedName{
 					Kind: gatewayapi.KindSecret,
 					Name: "secret",
 				}),
@@ -215,8 +215,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "references SecurityPolicy OIDC",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
-				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&v1alpha1.SecurityPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "oidc",
@@ -248,8 +248,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "references SecurityPolicy Basic Auth",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
-				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc"),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&v1alpha1.SecurityPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "basic-auth",
@@ -275,7 +275,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "secret is not referenced by any EG CRs",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 			},
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: false,
@@ -308,7 +308,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 // TestValidateEndpointSliceForReconcile tests the validateEndpointSliceForReconcile
 // predicate function.
 func TestValidateEndpointSliceForReconcile(t *testing.T) {
-	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc")
+	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 
 	testCases := []struct {
 		name          string
@@ -319,7 +319,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "route service but no routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
@@ -328,7 +328,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "http route service routes exist, but endpointslice is associated with another service",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -338,7 +338,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "http route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -376,7 +376,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 // TestValidateServiceForReconcile tests the validateServiceForReconcile
 // predicate function.
 func TestValidateServiceForReconcile(t *testing.T) {
-	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc")
+	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
+	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
 
 	testCases := []struct {
 		name    string
@@ -387,7 +388,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "gateway service but deployment does not exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
@@ -399,7 +400,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "gateway service deployment also exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetGatewayDeployment(types.NamespacedName{Name: infraName(sampleGateway, false)}, nil),
 			},
@@ -414,7 +415,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "route service but no routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
@@ -423,7 +424,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "http route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -436,7 +437,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			// in which case we'll have to reconcile the bad config, and remove listeners accordingly.
 			name: "route service routes exist but with non-existing gateway reference",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
@@ -445,7 +446,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "grpc route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetGRPCRoute(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -455,7 +456,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "tls route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetTLSRoute(types.NamespacedName{Name: "tlsroute-test"}, "scheduled-status-test",
 					types.NamespacedName{Name: "service"}, 443),
@@ -466,7 +467,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "udp route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetUDPRoute(types.NamespacedName{Name: "udproute-test"}, "scheduled-status-test",
 					types.NamespacedName{Name: "service"}, 80),
@@ -477,7 +478,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "tcp route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetTCPRoute(types.NamespacedName{Name: "tcproute-test"}, "scheduled-status-test",
 					types.NamespacedName{Name: "service"}, 80),
@@ -512,6 +513,41 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service"}, nil, nil),
 			expect:  true,
 		},
+		{
+			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mergeGatewaysConfig.Name),
+				}),
+				mergeGatewaysConfig,
+				test.GetGateway(types.NamespacedName{Name: "merged-gateway-1", Namespace: "default"}, "test-mg", 8081),
+				test.GetGateway(types.NamespacedName{Name: "merged-gateway-2", Namespace: "default"}, "test-mg", 8082),
+				test.GetGateway(types.NamespacedName{Name: "merged-gateway-3", Namespace: "default"}, "test-mg", 8083),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
+				gatewayapi.OwningGatewayClassLabel: "test-mg",
+			}, nil),
+			expect: false,
+		},
+		{
+			name: "no gateways found under gatewayclass when MergeGateways enabled",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mergeGatewaysConfig.Name),
+				}),
+				mergeGatewaysConfig,
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
+				gatewayapi.OwningGatewayClassLabel: "test-mg",
+			}, nil),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
@@ -520,6 +556,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
+		mergeGateways: map[string]bool{
+			"test-mg": true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -544,7 +583,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 // TestValidateDeploymentForReconcile tests the validateDeploymentForReconcile
 // predicate function.
 func TestValidateDeploymentForReconcile(t *testing.T) {
-	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc")
+	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
+	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
 
 	testCases := []struct {
 		name       string
@@ -557,7 +597,7 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 			// purpose of the Deployment watcher is just for update Gateway object statuses.
 			name: "gateway deployment deployment also exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetService(types.NamespacedName{Name: "deployment"}, map[string]string{
 					gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
@@ -570,6 +610,41 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 			}),
 			expect: false,
 		},
+		{
+			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mergeGatewaysConfig.Name),
+				}),
+				mergeGatewaysConfig,
+			},
+			deployment: test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
+				gatewayapi.OwningGatewayClassLabel: "test-mg",
+			}),
+			expect: false,
+		},
+		{
+			name: "no gateways found under gatewayclass when MergeGateways enabled",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mergeGatewaysConfig.Name),
+				}),
+				mergeGatewaysConfig,
+				test.GetGateway(types.NamespacedName{Name: "merged-gateway-1", Namespace: "default"}, "test-mg", 8081),
+				test.GetGateway(types.NamespacedName{Name: "merged-gateway-2", Namespace: "default"}, "test-mg", 8082),
+				test.GetGateway(types.NamespacedName{Name: "merged-gateway-3", Namespace: "default"}, "test-mg", 8083),
+			},
+			deployment: test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
+				gatewayapi.OwningGatewayClassLabel: "test-mg",
+			}),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
@@ -578,6 +653,9 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
+		mergeGateways: map[string]bool{
+			"test-mg": true,
+		},
 	}
 
 	for _, tc := range testCases {
