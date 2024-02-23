@@ -48,7 +48,7 @@ The logo should convey the concept of "powerful simplicity" and "connectivity fo
 
 ## Design Suggestions  
 
-The logo should embody the project's core values of simplicity, power, and flexibility. A modern, clean design with elements that suggest connectivity, integration, and extension would be ideal. The use of familiar shapes or symbols that resonate with the target audience, such as abstract representations of gateways, bridges, or nodes, could be effective. The color palette should be welcoming yet convey sophistication, possibly incorporating shades of blue or purple to represent reliability and growth.
+The logo should be a variation of the Envoy Proxy logo also shares the same color palette. embody the project's core values of simplicity, power, and flexibility. A modern, clean design with elements that suggest connectivity, integration, and extension would be ideal. The use of familiar shapes or symbols that resonate with the target audience, such as abstract representations of gateways, bridges, or nodes, could be effective.
 
 ## Creative Considerations & Distribution
 
