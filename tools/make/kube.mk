@@ -118,7 +118,6 @@ run-e2e: prepare-e2e
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
-	kubectl describe node
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
 
 .PHONY: prepare-e2e
@@ -172,7 +171,6 @@ run-conformance: ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
-	kubectl describe node
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 
 CONFORMANCE_REPORT_PATH ?= 

@@ -34,8 +34,8 @@ const (
 	ShutdownManagerHealthCheckPath = "/healthz"
 	// ShutdownManagerReadyPath is the path used to indicate shutdown readiness.
 	ShutdownManagerReadyPath = "/shutdown/ready"
-	// ShutdownReadyFile is the file used to indicate shutdown readiness.
-	ShutdownReadyFile = "/tmp/shutdown-ready"
+	// ShutdownActiveFile is the file used to indicate shutdown readiness.
+	ShutdownActiveFile = "/tmp/shutdown-active"
 )
 
 // ShutdownManager serves shutdown manager process for Envoy proxies.
@@ -44,7 +44,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 	handler := http.NewServeMux()
 	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
 	handler.HandleFunc(ShutdownManagerReadyPath, func(w http.ResponseWriter, _ *http.Request) {
-		shutdownReadyHandler(w, readyTimeout, ShutdownReadyFile)
+		shutdownReadyHandler(w, readyTimeout, ShutdownActiveFile)
 	})
 
 	// Setup HTTP server
@@ -85,15 +85,28 @@ func ShutdownManager(readyTimeout time.Duration) error {
 }
 
 // shutdownReadyHandler handles the endpoint used by a preStop hook on the Envoy
-// container to block until ready to terminate. After the graceful drain process
-// has completed a file will be written to indicate shutdown readiness.
-func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, readyFile string) {
+// container to block until ready to terminate. When the graceful drain process
+// has begun a file will be written to indicate shutdown is in progress. This
+// handler will poll for the file and block until it is removed.
+func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, activeFile string) {
 	var startTime = time.Now()
 
 	logger.Info("received shutdown ready request")
 
+	// Since we cannot establish order between preStop hooks, wait a bit giving the exec
+	// preStop hook a chance to touch the signaling file before starting to poll for it.
+	time.Sleep(2 * time.Second)
+
+	// Exit early if active file failed to show up
+	if _, err := os.Stat(activeFile); os.IsNotExist(err) {
+		logger.Info("shutdown active file not found")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	// Poll for shutdown readiness
 	for {
+		// Check if ready timeout is exceeded
 		elapsedTime := time.Since(startTime)
 		if elapsedTime > readyTimeout {
 			logger.Info("shutdown readiness timeout exceeded")
@@ -101,15 +114,15 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 			return
 		}
 
-		_, err := os.Stat(readyFile)
+		_, err := os.Stat(activeFile)
 		switch {
 		case os.IsNotExist(err):
-			time.Sleep(1 * time.Second)
+			logger.Info("shutdown readiness detected")
+			return
 		case err != nil:
 			logger.Error(err, "error checking for shutdown readiness")
 		case err == nil:
-			logger.Info("shutdown readiness detected")
-			return
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
@@ -124,6 +137,12 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 	// Reconfigure logger to write to stdout of main process if running in Kubernetes
 	if _, k8s := os.LookupEnv("KUBERNETES_SERVICE_HOST"); k8s && os.Getpid() != 1 {
 		logger = logging.FileLogger("/proc/1/fd/1", "shutdown-manager", v1alpha1.LogLevelInfo)
+	}
+
+	// Signal to shutdownReadyHandler that drain process is started
+	if _, err := os.Create(ShutdownActiveFile); err != nil {
+		logger.Error(err, "error creating shutdown active file")
+		return err
 	}
 
 	logger.Info(fmt.Sprintf("initiating graceful drain with %.0f second minimum drain period and %.0f second timeout",
@@ -167,7 +186,8 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 	}
 
 	// Signal to shutdownReadyHandler that drain process is complete
-	if err := createShutdownReadyFile(); err != nil {
+	if err := os.Remove(ShutdownActiveFile); err != nil {
+		logger.Error(err, "error removing shutdown active file")
 		return err
 	}
 
@@ -211,13 +231,4 @@ func getTotalConnections() (*int, error) {
 			return &c, nil
 		}
 	}
-}
-
-// createShutdownReadyFile creates a file to indicate that the shutdown process is complete
-func createShutdownReadyFile() error {
-	if _, err := os.Create(ShutdownReadyFile); err != nil {
-		logger.Error(err, "error creating shutdown ready file")
-		return err
-	}
-	return nil
 }

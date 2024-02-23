@@ -60,6 +60,5 @@ spec:
             name: ENVOY_GATEWAY_NAMESPACE
             defaultValue: "envoy-gateway-system"
   shutdown:
-    drainTimeout: 5s
-    minDrainDuration: 2s
-    exitAtConnections: 5
+    drainTimeout: 15s
+    minDrainDuration: 5s
