@@ -786,7 +786,8 @@ spec:
                     properties:
                       httpStatusCodes:
                         description: HttpStatusCodes specifies the http status codes
-                          to be retried.
+                          to be retried. The retriable-status-codes trigger must also
+                          be configured for these status codes to trigger a retry.
                         items:
                           description: HTTPStatus defines the http status code.
                           exclusiveMaximum: true

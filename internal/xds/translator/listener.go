@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
@@ -228,6 +229,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
 		},
 		Tracing: hcmTracing,
+	}
+
+	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil && irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
+		mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
 	}
 
 	// Add the proxy protocol filter if needed

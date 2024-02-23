@@ -23,6 +23,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -66,10 +67,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 	}
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
-		key := types.NamespacedName{
-			Name:      gw.GetName(),
-			Namespace: gw.GetNamespace(),
-		}
+		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
@@ -251,6 +249,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		fi *ir.FaultInjection
 		to *ir.Timeout
 		ka *ir.TCPKeepalive
+		rt *ir.Retry
 	)
 
 	// Build IR
@@ -276,6 +275,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.TCPKeepalive != nil {
 		ka = t.buildTCPKeepAlive(policy)
 	}
+	if policy.Spec.Retry != nil {
+		rt = t.buildRetry(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -290,6 +292,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
 					r.TCPKeepalive = ka
+					r.Retry = rt
 
 					// some timeout setting originate from the route
 					if policy.Spec.Timeout != nil {
@@ -313,6 +316,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		fi *ir.FaultInjection
 		ct *ir.Timeout
 		ka *ir.TCPKeepalive
+		rt *ir.Retry
 	)
 
 	// Build IR
@@ -336,6 +340,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		ka = t.buildTCPKeepAlive(policy)
+	}
+	if policy.Spec.Retry != nil {
+		rt = t.buildRetry(policy)
 	}
 
 	// Apply IR to all the routes within the specific Gateway
@@ -368,6 +375,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.TCPKeepalive == nil {
 				r.TCPKeepalive = ka
+			}
+			if r.Retry == nil {
+				r.Retry = rt
 			}
 
 			if policy.Spec.Timeout != nil {
@@ -1015,4 +1025,91 @@ func (t *Translator) buildTCPKeepAlive(policy *egv1a1.BackendTrafficPolicy) *ir.
 
 	}
 	return ka
+}
+
+func (t *Translator) buildRetry(policy *egv1a1.BackendTrafficPolicy) *ir.Retry {
+	var rt *ir.Retry
+	if policy.Spec.Retry != nil {
+		prt := policy.Spec.Retry
+		rt = &ir.Retry{}
+
+		if prt.NumRetries != nil {
+			rt.NumRetries = ptr.To(uint32(*prt.NumRetries))
+		}
+
+		if prt.RetryOn != nil {
+			ro := &ir.RetryOn{}
+			bro := false
+			if prt.RetryOn.HTTPStatusCodes != nil {
+				ro.HTTPStatusCodes = makeIrStatusSet(prt.RetryOn.HTTPStatusCodes)
+				bro = true
+			}
+
+			if prt.RetryOn.Triggers != nil {
+				ro.Triggers = makeIrTriggerSet(prt.RetryOn.Triggers)
+				bro = true
+			}
+
+			if bro {
+				rt.RetryOn = ro
+			}
+		}
+
+		if prt.PerRetry != nil {
+			pr := &ir.PerRetryPolicy{}
+			bpr := false
+
+			if prt.PerRetry.Timeout != nil {
+				pr.Timeout = prt.PerRetry.Timeout
+				bpr = true
+			}
+
+			if prt.PerRetry.BackOff != nil {
+				if prt.PerRetry.BackOff.MaxInterval != nil || prt.PerRetry.BackOff.BaseInterval != nil {
+					bop := &ir.BackOffPolicy{}
+					if prt.PerRetry.BackOff.MaxInterval != nil {
+						bop.MaxInterval = prt.PerRetry.BackOff.MaxInterval
+					}
+
+					if prt.PerRetry.BackOff.BaseInterval != nil {
+						bop.BaseInterval = prt.PerRetry.BackOff.BaseInterval
+					}
+					pr.BackOff = bop
+					bpr = true
+				}
+			}
+
+			if bpr {
+				rt.PerRetry = pr
+			}
+		}
+	}
+
+	return rt
+}
+
+func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
+	var irStatuses []ir.HTTPStatus
+	// deduplicate http statuses
+	statusSet := make(map[egv1a1.HTTPStatus]bool, len(in))
+	for _, r := range in {
+		if _, ok := statusSet[r]; !ok {
+			statusSet[r] = true
+			irStatuses = append(irStatuses, ir.HTTPStatus(r))
+		}
+	}
+	return irStatuses
+}
+
+func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
+	var irTriggers []ir.TriggerEnum
+	// deduplicate http statuses
+	triggerSet := make(map[egv1a1.TriggerEnum]bool, len(in))
+	for _, r := range in {
+		if _, ok := triggerSet[r]; !ok {
+			triggerSet[r] = true
+			irTriggers = append(irTriggers, ir.TriggerEnum(r))
+		}
+	}
+	return irTriggers
 }
