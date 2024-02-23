@@ -57,20 +57,27 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
+		routeAction := buildXdsRouteAction(httpRoute.Destination.Name)
+		if httpRoute.Mirrors != nil {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
+		}
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
-			routeAction := buildXdsWeightedRouteAction(httpRoute)
+			routeAction = buildXdsWeightedRouteAction(httpRoute)
 			if httpRoute.Mirrors != nil {
 				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 			}
-			router.Action = &routev3.Route_Route{Route: routeAction}
-		} else {
-			routeAction := buildXdsRouteAction(httpRoute.Destination.Name)
-			if httpRoute.Mirrors != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
-			}
-			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
+		if !httpRoute.IsHTTP2 {
+			// Allow websocket upgrades for HTTP 1.1
+			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
+				{
+					UpgradeType: "websocket",
+				},
+			}
+		}
+		router.Action = &routev3.Route_Route{Route: routeAction}
 	}
 
 	// Hash Policy
