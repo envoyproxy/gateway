@@ -465,7 +465,8 @@ spec:
                           description: RecomputeRoute clears the route cache and recalculates
                             the routing decision. This field must be enabled if the
                             headers generated from the claim are used for route matching
-                            decisions.
+                            decisions. If the recomputation selects a new route, features
+                            targeting the new matched route will be applied.
                           type: boolean
                         remoteJWKS:
                           description: RemoteJWKS defines how to fetch and cache JSON
@@ -485,6 +486,11 @@ spec:
                       - name
                       - remoteJWKS
                       type: object
+                      x-kubernetes-validations:
+                      - message: claimToHeaders must be specified if recomputeRoute
+                          is enabled
+                        rule: '(has(self.recomputeRoute) && self.recomputeRoute) ?
+                          size(self.claimToHeaders) > 0 : true'
                     maxItems: 4
                     minItems: 1
                     type: array

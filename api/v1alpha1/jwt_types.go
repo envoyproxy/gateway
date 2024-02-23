@@ -19,6 +19,7 @@ type JWT struct {
 }
 
 // JWTProvider defines how a JSON Web Token (JWT) can be verified.
+// +kubebuilder:validation:XValidation:rule="(has(self.recomputeRoute) && self.recomputeRoute) ? size(self.claimToHeaders) > 0 : true", message="claimToHeaders must be specified if recomputeRoute is enabled"
 type JWTProvider struct {
 	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
 	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
@@ -57,7 +58,8 @@ type JWTProvider struct {
 
 	// RecomputeRoute clears the route cache and recalculates the routing decision.
 	// This field must be enabled if the headers generated from the claim are used for
-	// route matching decisions.
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
 	//
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
