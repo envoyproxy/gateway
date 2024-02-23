@@ -208,8 +208,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path:   "/shutdown/ready",
-						Port:   intstr.FromInt32(envoy.ShutdownReadyPort),
+						Path:   envoy.ShutdownManagerReadyPath,
+						Port:   intstr.FromInt32(envoy.ShutdownManagerPort),
 						Scheme: corev1.URISchemeHTTP,
 					},
 				},
@@ -227,7 +227,32 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			VolumeMounts:             deploymentConfig.ShutdownManagerContainer.VolumeMounts,
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
-			// TODO: setup readiness probe
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   envoy.ShutdownManagerHealthCheckPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   envoy.ShutdownManagerHealthCheckPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
+			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
 					Exec: &corev1.ExecAction{

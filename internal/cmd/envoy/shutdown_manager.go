@@ -28,8 +28,12 @@ var (
 )
 
 const (
-	// ShutdownReadyPort is the port Envoy shutdown manager will listen on.
-	ShutdownReadyPort = 19002
+	// ShutdownManagerPort is the port Envoy shutdown manager will listen on.
+	ShutdownManagerPort = 19002
+	// ShutdownManagerHealthCheckPath is the path used for health checks.
+	ShutdownManagerHealthCheckPath = "/healthz"
+	// ShutdownManagerReadyPath is the path used to indicate shutdown readiness.
+	ShutdownManagerReadyPath = "/shutdown/ready"
 	// ShutdownReadyFile is the file used to indicate shutdown readiness.
 	ShutdownReadyFile = "/tmp/shutdown-ready"
 )
@@ -38,14 +42,15 @@ const (
 func ShutdownManager(readyTimeout time.Duration) error {
 	// Setup HTTP handler
 	handler := http.NewServeMux()
-	handler.HandleFunc("/shutdown/ready", func(w http.ResponseWriter, _ *http.Request) {
+	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
+	handler.HandleFunc(ShutdownManagerReadyPath, func(w http.ResponseWriter, _ *http.Request) {
 		shutdownReadyHandler(w, readyTimeout, ShutdownReadyFile)
 	})
 
 	// Setup HTTP server
 	srv := http.Server{
 		Handler:           handler,
-		Addr:              fmt.Sprintf(":%d", ShutdownReadyPort),
+		Addr:              fmt.Sprintf(":%d", ShutdownManagerPort),
 		ReadTimeout:       5 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      10 * time.Second,
