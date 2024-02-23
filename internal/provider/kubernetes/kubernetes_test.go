@@ -101,7 +101,7 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, _ *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-controllername", egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-controllername", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -117,7 +117,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-accepted-status", egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-accepted-status", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -164,14 +164,14 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	}()
 
 	epName := "test-envoy-proxy"
-	ep := test.NewEnvoyProxy(testNs, epName)
+	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: testNs, Name: epName}, false)
 	require.NoError(t, cli.Create(ctx, ep))
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, ep))
 	}()
 
-	gc := test.GetGatewayClass("gc-with-param-ref", egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("gc-with-param-ref", egv1a1.GatewayControllerName, nil)
 	gc.Spec.ParametersRef = &gwapiv1.ParametersReference{
 		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
 		Kind:      egv1a1.KindEnvoyProxy,
@@ -221,7 +221,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("gc-scheduled-status-test", egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("gc-scheduled-status-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -375,7 +375,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("httproute-test", egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("httproute-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -942,7 +942,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("tlsroute-test", egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("tlsroute-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -1094,7 +1094,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("service-cleanup-test", egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("service-cleanup-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
@@ -1277,7 +1277,7 @@ func TestNamespacedProvider(t *testing.T) {
 
 	cli := provider.manager.GetClient()
 	gcName := "gc-watch-ns"
-	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Create the namespaces.
@@ -1289,11 +1289,11 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, cli.Create(ctx, ns3))
 
 	// Create the gateways
-	gw1 := test.GetGateway(types.NamespacedName{Name: "gw-ns1", Namespace: "ns1"}, gcName)
+	gw1 := test.GetGateway(types.NamespacedName{Name: "gw-ns1", Namespace: "ns1"}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, gw1))
-	gw2 := test.GetGateway(types.NamespacedName{Name: "gw-ns2", Namespace: "ns2"}, gcName)
+	gw2 := test.GetGateway(types.NamespacedName{Name: "gw-ns2", Namespace: "ns2"}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, gw2))
-	gw3 := test.GetGateway(types.NamespacedName{Name: "gw-ns3", Namespace: "ns3"}, gcName)
+	gw3 := test.GetGateway(types.NamespacedName{Name: "gw-ns3", Namespace: "ns3"}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, gw3))
 
 	// Ensure only 2 gateways are reconciled
@@ -1347,7 +1347,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	require.NoError(t, cli.Create(ctx, nonWatchedNS))
 
 	gcName := "gc-name"
-	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	require.Eventually(t, func() bool {
@@ -1369,13 +1369,13 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}()
 
 	// Create the gateways
-	watchedGateway := test.GetGateway(types.NamespacedName{Name: "watched-gateway", Namespace: watchedNS.Name}, gcName)
+	watchedGateway := test.GetGateway(types.NamespacedName{Name: "watched-gateway", Namespace: watchedNS.Name}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, watchedGateway))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedGateway))
 	}()
 
-	nonWatchedGateway := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name}, gcName)
+	nonWatchedGateway := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, nonWatchedGateway))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedGateway))
