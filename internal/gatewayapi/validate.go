@@ -22,8 +22,13 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func (t *Translator) validateBackendRef(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
+func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
 	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind) bool {
+	if !t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind) {
+		return false
+	}
+	backendRef := backendRefContext.GetBackendRef(routeKind)
+
 	if !t.validateBackendRefGroup(backendRef, parentRef, route) {
 		return false
 	}
@@ -77,6 +82,30 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 		)
 		return false
 	}
+	return true
+}
+
+func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, parentRef *RouteParentContext, route RouteContext, routeKind gwapiv1.Kind) bool {
+	var filtersLen int
+	switch routeKind {
+	case KindHTTPRoute:
+		filtersLen = len(backendRef.GetHTTPFilters())
+	case KindGRPCRoute:
+		filtersLen = len(backendRef.GetGRPCFilters())
+	default:
+		return true
+	}
+
+	if filtersLen > 0 {
+		parentRef.SetCondition(route,
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"UnsupportedRefValue",
+			"The filters field within BackendRef is not supported",
+		)
+		return false
+	}
+
 	return true
 }
 

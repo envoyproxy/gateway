@@ -173,17 +173,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
-			if len(backendRef.Filters) > 0 {
-				parentRef.SetCondition(httpRoute,
-					gwapiv1.RouteConditionResolvedRefs,
-					metav1.ConditionFalse,
-					"UnsupportedRefValue",
-					"The filters field within BackendRef is not supported",
-				)
-				continue
+			backendRefContext := BackendRefContext{
+				HTTPBackendRef: &backendRef,
 			}
 
-			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
+			ds, backendWeight := t.processDestination(backendRefContext, parentRef, httpRoute, resources)
 			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
@@ -478,16 +472,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		for _, backendRef := range rule.BackendRefs {
-			if len(backendRef.Filters) > 0 {
-				parentRef.SetCondition(grpcRoute,
-					gwapiv1.RouteConditionResolvedRefs,
-					metav1.ConditionFalse,
-					"UnsupportedRefValue",
-					"The filters field within BackendRef is not supported",
-				)
-				continue
+			backendRefContext := BackendRefContext{
+				GRPCBackendRef: &backendRef,
 			}
-			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
+
+			ds, backendWeight := t.processDestination(backendRefContext, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
@@ -741,7 +730,10 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
-				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+				backendRefContext := BackendRefContext{
+					BackendRef: &backendRef,
+				}
+				ds, _ := t.processDestination(backendRefContext, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
 				}
@@ -879,7 +871,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
-		ds, _ := t.processDestination(backendRef, parentRef, udpRoute, resources)
+		backendRefContext := BackendRefContext{
+			BackendRef: &backendRef,
+		}
+		ds, _ := t.processDestination(backendRefContext, parentRef, udpRoute, resources)
 		// Skip further processing if route destination is not valid
 		if ds == nil || len(ds.Endpoints) == 0 {
 			continue
@@ -1011,7 +1006,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		backendRef := tcpRoute.Spec.Rules[0].BackendRefs[0]
-		ds, _ := t.processDestination(backendRef, parentRef, tcpRoute, resources)
+		backendRefContext := BackendRefContext{
+			BackendRef: &backendRef,
+		}
+		ds, _ := t.processDestination(backendRefContext, parentRef, tcpRoute, resources)
 		// Skip further processing if route destination is not valid
 		if ds == nil || len(ds.Endpoints) == 0 {
 			continue
@@ -1087,20 +1085,19 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // processDestination takes a backendRef and translates it into destination setting or sets error statuses and
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
-func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
+func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	parentRef *RouteParentContext,
 	route RouteContext,
 	resources *Resources) (ds *ir.DestinationSetting, backendWeight uint32) {
-
+	routeType := GetRouteType(route)
 	weight := uint32(1)
+	backendRef := backendRefContext.GetBackendRef(routeType)
 	if backendRef.Weight != nil {
 		weight = uint32(*backendRef.Weight)
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-
-	routeType := GetRouteType(route)
-	if !t.validateBackendRef(&backendRef, parentRef, route, resources, backendNamespace, routeType) {
+	if !t.validateBackendRef(backendRefContext, parentRef, route, resources, backendNamespace, routeType) {
 		return nil, weight
 	}
 
