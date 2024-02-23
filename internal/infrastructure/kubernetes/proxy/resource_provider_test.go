@@ -139,11 +139,13 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "patch-deployment",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Patch: &egv1a1.KubernetesPatchSpec{
-					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
-						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
+			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
+				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
+					Patch: &egv1a1.KubernetesPatchSpec{
+						Type: ptr.To(egv1a1.StrategicMerge),
+						Value: v1.JSON{
+							Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
+						},
 					},
 				},
 			},

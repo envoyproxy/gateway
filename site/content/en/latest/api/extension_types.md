@@ -843,6 +843,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to deployment |
 | `replicas` | _integer_ |  false  | Replicas is the number of desired pods. Defaults to 1. |
 | `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ |  false  | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
@@ -1473,6 +1474,7 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation
 
 _Appears in:_
+- [EnvoyProxyDeploymentSpec](#envoyproxydeploymentspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |

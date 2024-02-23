@@ -459,10 +459,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-								Patch: &egv1a1.KubernetesPatchSpec{
-									Value: v1.JSON{
-										Raw: []byte{},
+							EnvoyDeployment: &egv1a1.EnvoyProxyDeploymentSpec{
+								KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
+									Patch: &egv1a1.KubernetesPatchSpec{
+										Value: v1.JSON{
+											Raw: []byte{},
+										},
 									},
 								},
 							},
@@ -482,9 +484,11 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-								Patch: &egv1a1.KubernetesPatchSpec{
-									Type: ptr.To(egv1a1.StrategicMerge),
+							EnvoyDeployment: &egv1a1.EnvoyProxyDeploymentSpec{
+								KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
+									Patch: &egv1a1.KubernetesPatchSpec{
+										Type: ptr.To(egv1a1.StrategicMerge),
+									},
 								},
 							},
 						},
@@ -503,11 +507,13 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-								Patch: &egv1a1.KubernetesPatchSpec{
-									Type: ptr.To(egv1a1.StrategicMerge),
-									Value: v1.JSON{
-										Raw: []byte("{}"),
+							EnvoyDeployment: &egv1a1.EnvoyProxyDeploymentSpec{
+								KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
+									Patch: &egv1a1.KubernetesPatchSpec{
+										Type: ptr.To(egv1a1.StrategicMerge),
+										Value: v1.JSON{
+											Raw: []byte("{}"),
+										},
 									},
 								},
 							},
@@ -527,10 +533,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-								Patch: &egv1a1.KubernetesPatchSpec{
-									Value: v1.JSON{
-										Raw: []byte("{}"),
+							EnvoyDeployment: &egv1a1.EnvoyProxyDeploymentSpec{
+								KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
+									Patch: &egv1a1.KubernetesPatchSpec{
+										Value: v1.JSON{
+											Raw: []byte("{}"),
+										},
 									},
 								},
 							},
