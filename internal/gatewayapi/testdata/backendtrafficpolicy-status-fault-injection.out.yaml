@@ -70,6 +70,12 @@ backendTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
+      message: 'There are existing ClientTrafficPolicies that are overriding this
+        one on these routes: [default/httproute-1]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
+    - lastTransitionTime: null
       message: BackendTrafficPolicy has been accepted.
       reason: Accepted
       status: "True"

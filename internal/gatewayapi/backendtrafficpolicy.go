@@ -16,7 +16,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -71,6 +73,9 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
+	// Map of Gateway to the routes attached to it
+	gatewayRouteMap := make(map[string]sets.Set[string])
+
 	// Translate
 	// 1. First translate Policies targeting xRoutes
 	// 2.. Finally, the policies targeting Gateways
@@ -85,6 +90,32 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 			route := resolveBTPolicyRouteTargetRef(policy, routeMap)
 			if route == nil {
 				continue
+			}
+
+			// Populate the gatewayRouteMap that will be used to check policy overrides
+			var parents []gwapiv1.ParentReference
+			switch r := route.(type) {
+			case *HTTPRouteContext:
+				parents = r.Spec.ParentRefs
+			case *GRPCRouteContext:
+				parents = r.Spec.ParentRefs
+			}
+			for _, p := range parents {
+				if p.Kind == nil || *p.Kind == KindGateway {
+					namespace := route.GetNamespace()
+					if p.Namespace != nil {
+						namespace = string(*p.Namespace)
+					}
+					k := types.NamespacedName{
+						Namespace: namespace,
+						Name:      string(p.Name),
+					}.String()
+					v := utils.NamespacedName(route).String()
+					if _, ok := gatewayRouteMap[k]; !ok {
+						gatewayRouteMap[k] = make(sets.Set[string])
+					}
+					gatewayRouteMap[k].Insert(v)
+				}
 			}
 
 			t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR)
@@ -107,6 +138,23 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 			}
 
 			t.translateBackendTrafficPolicyForGateway(policy, gateway, xdsIR)
+
+			// Check if this policy is overridden by other policies
+			// targeting at route level
+			gw := utils.NamespacedName(gateway).String()
+			if r, ok := gatewayRouteMap[gw]; ok {
+				// Maintain order here to ensure status/string does not change with the same data
+				routes := r.UnsortedList()
+				sort.Strings(routes)
+				message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding this one on these routes: %v", routes)
+
+				status.SetBackendTrafficPolicyCondition(policy,
+					egv1a1.PolicyConditionOverridden,
+					metav1.ConditionTrue,
+					egv1a1.PolicyReasonOverridden,
+					message,
+				)
+			}
 
 			message := "BackendTrafficPolicy has been accepted."
 			status.SetBackendTrafficPolicyAcceptedIfUnset(&policy.Status, message)
