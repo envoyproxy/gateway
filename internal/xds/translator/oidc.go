@@ -153,6 +153,13 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 						SdsConfig: makeConfigSource(),
 					},
 				},
+				CookieNames: &oauth2v3.OAuth2Credentials_CookieNames{
+					BearerToken:  fmt.Sprintf("BearerToken-%s", route.OIDC.CookieSuffix),
+					OauthHmac:    fmt.Sprintf("OauthHMAC-%s", route.OIDC.CookieSuffix),
+					OauthExpires: fmt.Sprintf("OauthExpires-%s", route.OIDC.CookieSuffix),
+					IdToken:      fmt.Sprintf("IdToken-%s", route.OIDC.CookieSuffix),
+					RefreshToken: fmt.Sprintf("RefreshToken-%s", route.OIDC.CookieSuffix),
+				},
 			},
 			// every OIDC provider supports basic auth
 			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH,

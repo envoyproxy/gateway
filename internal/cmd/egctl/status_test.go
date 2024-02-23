@@ -15,6 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestWriteStatus(t *testing.T) {
@@ -29,6 +31,7 @@ func TestWriteStatus(t *testing.T) {
 		quiet              bool
 		verbose            bool
 		allNamespaces      bool
+		typedName          bool
 		outputs            string
 		expect             bool
 	}{
@@ -40,6 +43,7 @@ func TestWriteStatus(t *testing.T) {
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      false,
+			typedName:          false,
 			outputs: `NAME      TYPE      STATUS    REASON    MESSAGE   OBSERVED GENERATION   LAST TRANSITION TIME
 `,
 			expect: true,
@@ -80,6 +84,7 @@ func TestWriteStatus(t *testing.T) {
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      false,
+			typedName:          false,
 			outputs: `NAME      TYPE      STATUS          REASON
 gc        foobar2   test-status-2   test reason 2
           foobar1   test-status-1   test reason 1
@@ -122,6 +127,7 @@ gc        foobar2   test-status-2   test reason 2
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      false,
+			typedName:          false,
 			outputs: `NAME      TYPE      STATUS          REASON          MESSAGE          OBSERVED GENERATION   LAST TRANSITION TIME
 gc        foobar2   test-status-2   test reason 2   test message 2   123457                2024-01-01 01:00:00 +0000 UTC
           foobar1   test-status-1   test reason 1   test message 1   123456                2024-01-01 00:00:00 +0000 UTC
@@ -164,6 +170,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 			quiet:              true,
 			verbose:            true,
 			allNamespaces:      false,
+			typedName:          false,
 			outputs: `NAME      TYPE      STATUS          REASON          MESSAGE          OBSERVED GENERATION   LAST TRANSITION TIME
 gc        foobar2   test-status-2   test reason 2   test message 2   123457                2024-01-01 01:00:00 +0000 UTC
 `,
@@ -177,6 +184,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      true,
+			typedName:          false,
 			outputs: `NAMESPACE   NAME      TYPE      STATUS    REASON    MESSAGE   OBSERVED GENERATION   LAST TRANSITION TIME
 `,
 			expect: true,
@@ -218,6 +226,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      true,
+			typedName:          false,
 			outputs: `NAMESPACE   NAME      TYPE      STATUS          REASON          MESSAGE          OBSERVED GENERATION   LAST TRANSITION TIME
 default     gtw       foobar2   test-status-2   test reason 2   test message 2   123457                2024-01-01 01:00:00 +0000 UTC
                       foobar1   test-status-1   test reason 1   test message 1   123456                2024-01-01 00:00:00 +0000 UTC
@@ -287,6 +296,7 @@ default     gtw       foobar2   test-status-2   test reason 2   test message 2  
 			quiet:              true,
 			verbose:            true,
 			allNamespaces:      true,
+			typedName:          false,
 			outputs: `NAMESPACE   NAME      TYPE      STATUS          REASON          MESSAGE          OBSERVED GENERATION   LAST TRANSITION TIME
 default1    gtw1      foobar2   test-status-2   test reason 2   test message 2   123457                2024-01-01 01:00:00 +0000 UTC
 default2    gtw2      foobar4   test-status-4   test reason 4   test message 4   123459                2024-01-01 03:00:00 +0000 UTC
@@ -368,6 +378,7 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      true,
+			typedName:          false,
 			outputs: `NAMESPACE   NAME      TYPE      STATUS          REASON
 default1    http1     foobar2   test-status-2   test reason 2
                       foobar1   test-status-1   test reason 1
@@ -451,6 +462,7 @@ default2    http2     foobar4   test-status-4   test reason 4
 			quiet:              true,
 			verbose:            false,
 			allNamespaces:      false,
+			typedName:          false,
 			namespace:          "default1",
 			outputs: `NAME      TYPE      STATUS          REASON
 http1     foobar2   test-status-2   test reason 2
@@ -499,9 +511,57 @@ http2     foobar4   test-status-4   test reason 4
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      false,
+			typedName:          false,
 			outputs: `NAME      TYPE      STATUS          REASON
 btls      foobar2   test-status-2   test reason 2
           foobar1   test-status-1   test reason 1
+`,
+			expect: true,
+		},
+		{
+			name: "egctl x status envoypatchpolicy with typed name",
+			resourceList: &egv1a1.EnvoyPatchPolicyList{
+				Items: []egv1a1.EnvoyPatchPolicy{
+					{
+						TypeMeta: metav1.TypeMeta{
+							Kind: "EnvoyPatchPolicy",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "epp",
+							Namespace: "default",
+						},
+						Status: egv1a1.EnvoyPatchPolicyStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               "foobar1",
+									Status:             metav1.ConditionStatus("test-status-1"),
+									ObservedGeneration: 123456,
+									LastTransitionTime: metav1.NewTime(testTime),
+									Reason:             "test reason 1",
+									Message:            "test message 1",
+								},
+								{
+									Type:               "foobar2",
+									Status:             metav1.ConditionStatus("test-status-2"),
+									ObservedGeneration: 123457,
+									LastTransitionTime: metav1.NewTime(testTime.Add(1 * time.Hour)),
+									Reason:             "test reason 2",
+									Message:            "test message 2",
+								},
+							},
+						},
+					},
+				},
+			},
+			resourceNamespaced: true,
+			resourceType:       "envoypatchpolicy",
+			quiet:              false,
+			verbose:            false,
+			allNamespaces:      false,
+			typedName:          true,
+			outputs: `NAME                   TYPE      STATUS          REASON
+envoypatchpolicy/epp   foobar2   test-status-2   test reason 2
+                       foobar1   test-status-1   test reason 1
 `,
 			expect: true,
 		},
@@ -513,18 +573,19 @@ btls      foobar2   test-status-2   test reason 2
 			tab := newStatusTableWriter(&out)
 
 			needNamespace := tc.allNamespaces && tc.resourceNamespaced
-			writeStatusHeaders(tab, tc.verbose, needNamespace)
-			err := writeStatusBodies(tab, tc.resourceList, tc.resourceType, tc.quiet, tc.verbose, needNamespace)
+			headers := fetchStatusHeaders(tc.verbose, needNamespace)
+			bodies, err := fetchStatusBodies(tc.resourceList, tc.resourceType, tc.quiet, tc.verbose, needNamespace, tc.typedName)
 			if tc.expect {
 				require.NoError(t, err)
+
+				writeStatusTable(tab, headers, bodies)
+				err = tab.Flush()
+				require.NoError(t, err)
+
+				require.Equal(t, tc.outputs, out.String())
 			} else {
-				require.Error(t, err)
+				require.EqualError(t, err, tc.outputs)
 			}
-
-			err = tab.Flush()
-			require.NoError(t, err)
-
-			require.Equal(t, tc.outputs, out.String())
 		})
 	}
 }
