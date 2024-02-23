@@ -30,3 +30,24 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+  - name: "second-route-defaults"
+    hostname: "foo"
+    retry: {}
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "third-route-error"
+    hostname: "bar"
+    retry:
+      retryOn:
+        triggers:
+        - this-is-not-a-trigger
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

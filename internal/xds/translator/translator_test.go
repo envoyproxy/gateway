@@ -274,7 +274,7 @@ func TestTranslateXds(t *testing.T) {
 			name: "client-timeout",
 		},
 		{
-			name: "retry",
+			name: "retry-partial-invalid",
 		},
 	}
 
