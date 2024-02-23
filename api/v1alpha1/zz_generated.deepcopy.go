@@ -2026,6 +2026,11 @@ func (in *JWTProvider) DeepCopyInto(out *JWTProvider) {
 		*out = make([]ClaimToHeader, len(*in))
 		copy(*out, *in)
 	}
+	if in.RecomputeRoute != nil {
+		in, out := &in.RecomputeRoute, &out.RecomputeRoute
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ExtractFrom != nil {
 		in, out := &in.ExtractFrom, &out.ExtractFrom
 		*out = new(JWTExtractor)
