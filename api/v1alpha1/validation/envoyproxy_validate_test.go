@@ -461,7 +461,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Object: v1.JSON{
+									Value: v1.JSON{
 										Raw: []byte{},
 									},
 								},
@@ -470,7 +470,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					},
 				},
 			},
-			expected: false,
+			expected: true,
 		}, {
 			name: "should invalid when patch object is empty",
 			proxy: &egv1a1.EnvoyProxy{
@@ -484,7 +484,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Type: egv1a1.JSONMerge,
+									Type: ptr.To(egv1a1.StrategicMerge),
 								},
 							},
 						},
@@ -505,8 +505,31 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Type: egv1a1.JSONMerge,
-									Object: v1.JSON{
+									Type: ptr.To(egv1a1.StrategicMerge),
+									Value: v1.JSON{
+										Raw: []byte("{}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		}, {
+			name: "should valid when patch type is empty and object is not empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: v1.JSON{
 										Raw: []byte("{}"),
 									},
 								},

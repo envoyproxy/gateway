@@ -390,8 +390,11 @@ const (
 // KubernetesPatchSpec defines how to perform the patch operation
 type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
-	Type MergeType `json:"type"`
+	//
+	// By default, StrategicMerge is used as the patch type.
+	// +optional
+	Type *MergeType `json:"type,omitempty"`
 
 	// Object contains the raw configuration for merged object
-	Object apiextensionsv1.JSON `json:"object"`
+	Value apiextensionsv1.JSON `json:"value"`
 }

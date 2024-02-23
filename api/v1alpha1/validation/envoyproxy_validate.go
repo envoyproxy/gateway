@@ -89,14 +89,11 @@ func validateDeployment(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyDeployment != nil {
 		if patch := spec.Provider.Kubernetes.EnvoyDeployment.Patch; patch != nil {
-			if patch.Type == "" {
-				errs = append(errs, fmt.Errorf("envoy deployment patch type cannot be empty"))
-			}
-			if patch.Object.Raw == nil {
+			if patch.Value.Raw == nil {
 				errs = append(errs, fmt.Errorf("envoy deployment patch object cannot be empty"))
 			}
-			if patch.Type != egv1a1.JSONMerge && patch.Type != egv1a1.StrategicMerge {
-				errs = append(errs, fmt.Errorf("unsupported envoy deployment patch type %s", patch.Type))
+			if patch.Type != nil && *patch.Type != egv1a1.JSONMerge && *patch.Type != egv1a1.StrategicMerge {
+				errs = append(errs, fmt.Errorf("unsupported envoy deployment patch type %s", *patch.Type))
 			}
 		}
 	}

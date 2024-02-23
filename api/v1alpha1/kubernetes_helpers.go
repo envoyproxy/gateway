@@ -142,15 +142,14 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 		return nil, fmt.Errorf("error marshaling original deployment: %w", err)
 	}
 
-	switch deployment.Patch.Type {
-	case StrategicMerge:
-		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Patch.Object.Raw, appv1.Deployment{})
-	case JSONMerge:
-		patchedJSON, err = jsonpatch.MergePatch(originalJSON, deployment.Patch.Object.Raw)
+	switch {
+	case deployment.Patch.Type == nil || *deployment.Patch.Type == StrategicMerge:
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Patch.Value.Raw, appv1.Deployment{})
+	case *deployment.Patch.Type == JSONMerge:
+		patchedJSON, err = jsonpatch.MergePatch(originalJSON, deployment.Patch.Value.Raw)
 	default:
-		return nil, fmt.Errorf("unsupported merge type: %s", deployment.Patch.Type)
+		return nil, fmt.Errorf("unsupported merge type: %s", *deployment.Patch.Type)
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("error applying merge patch: %w", err)
 	}

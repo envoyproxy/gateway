@@ -152,8 +152,8 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
-					Type: egv1a1.StrategicMerge,
-					Object: v1.JSON{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
 						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
 					},
 				},

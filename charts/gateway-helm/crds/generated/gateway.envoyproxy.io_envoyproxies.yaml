@@ -2016,17 +2016,17 @@ spec:
                             description: Patch defines how to perform the patch operation
                               to deployment
                             properties:
-                              object:
+                              type:
+                                description: "Type is the type of merge operation
+                                  to perform \n By default, StrategicMerge is used
+                                  as the patch type."
+                                type: string
+                              value:
                                 description: Object contains the raw configuration
                                   for merged object
                                 x-kubernetes-preserve-unknown-fields: true
-                              type:
-                                description: Type is the type of merge operation to
-                                  perform
-                                type: string
                             required:
-                            - object
-                            - type
+                            - value
                             type: object
                           pod:
                             description: Pod defines the desired specification of

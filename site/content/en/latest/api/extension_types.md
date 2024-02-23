@@ -1417,24 +1417,14 @@ _Appears in:_
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
-<<<<<<< HEAD
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to deployment |
 | `replicas` | _integer_ |  false  | Replicas is the number of desired pods. Defaults to 1. |
 | `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ |  false  | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
 | `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  | Container defines the desired specification of main container. |
 | `initContainers` | _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#container-v1-core) array_ |  false  | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
-=======
-| Field | Description |
-| --- | --- |
-| `patch` _[KubernetesPatchSpec](#kubernetespatchspec)_ | Patch defines how to perform the patch operation to deployment |
-| `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
-| `strategy` _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ | The deployment strategy to use to replace existing pods with new ones. |
-| `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired specification of pod. |
-| `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the desired specification of main container. |
-| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#container-v1-core) array_ | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
->>>>>>> 5a83c722 (feat: support mergepatch to envoyproxy/ratelimit deployment)
 
 
 #### KubernetesHorizontalPodAutoscalerSpec
@@ -1463,10 +1453,10 @@ KubernetesPatchSpec defines how to perform the patch operation
 _Appears in:_
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
-| Field | Description |
-| --- | --- |
-| `type` _[MergeType](#mergetype)_ | Type is the type of merge operation to perform |
-| `object` _[JSON](#json)_ | Object contains the raw configuration for merged object |
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[MergeType](#mergetype)_ |  false  | Type is the type of merge operation to perform <br /><br /> By default, StrategicMerge is used as the patch type. |
+| `value` | _[JSON](#json)_ |  true  | Object contains the raw configuration for merged object |
 
 
 #### KubernetesPodSpec
@@ -1604,15 +1594,6 @@ _Appears in:_
 - [ProxyLogging](#proxylogging)
 
 
-
-#### MergeType
-
-_Underlying type:_ `string`
-
-MergeType defines the type of merge operation
-
-_Appears in:_
-- [KubernetesPatchSpec](#kubernetespatchspec)
 
 
 
