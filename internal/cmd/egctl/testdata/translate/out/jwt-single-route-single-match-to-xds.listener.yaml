@@ -74,8 +74,6 @@ xds:
                   routeConfigName: envoy-gateway-system/eg/http
                 serverHeaderTransformation: PASS_THROUGH
                 statPrefix: http
-                upgradeConfigs:
-                - upgradeType: websocket
                 useRemoteAddress: true
           name: envoy-gateway-system/eg/http
           perConnectionBufferLimitBytes: 32768

@@ -29,3 +29,5 @@
         keepEmptyValue: true
       route:
         cluster: response-header-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

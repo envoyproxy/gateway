@@ -28,6 +28,8 @@
               - name: x-org-id
                 stringMatch:
                   exact: foo
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
@@ -95,6 +97,8 @@
                   exact: bar
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
@@ -136,6 +140,8 @@
       name: third-route-ratelimit-no-rule
       route:
         cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
