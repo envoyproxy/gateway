@@ -307,7 +307,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		}
 	}
 
-	return resource.ExpectedProxyContainerEnv(rateLimitDeployment.Container, env)
+	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
 // Validate the ratelimit tls secret validating.

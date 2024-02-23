@@ -99,7 +99,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
-	deploymentConfig *egv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
+	deploymentConfig *egv1a1.EnvoyProxyDeploymentSpec) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
@@ -185,11 +185,11 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedProxyContainerEnv(deploymentConfig),
+			Env:                      expectedContainerEnv(deploymentConfig.Container),
 			Resources:                *deploymentConfig.Container.Resources,
 			SecurityContext:          deploymentConfig.Container.SecurityContext,
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig),
+			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig.Container),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			ReadinessProbe: &corev1.Probe{
@@ -216,13 +216,15 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			},
 		},
 		{
-			Name:            "shutdown-manager",
-			Image:           "envoyproxy/gateway-dev:latest", // TODO: make this configurable
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command:         []string{"envoy-gateway"},
-			Args:            []string{"envoy", "shutdown-manager"},
-			// TODO: configure resources
-			// TODO: configure security context
+			Name:                     "shutdown-manager",
+			Image:                    *deploymentConfig.ShutdownManagerContainer.Image,
+			ImagePullPolicy:          corev1.PullIfNotPresent,
+			Command:                  []string{"envoy-gateway"},
+			Args:                     []string{"envoy", "shutdown-manager"},
+			Env:                      expectedContainerEnv(deploymentConfig.ShutdownManagerContainer),
+			Resources:                *deploymentConfig.ShutdownManagerContainer.Resources,
+			SecurityContext:          deploymentConfig.ShutdownManagerContainer.SecurityContext,
+			VolumeMounts:             deploymentConfig.ShutdownManagerContainer.VolumeMounts,
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			// TODO: setup readiness probe
@@ -240,7 +242,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
-func expectedContainerVolumeMounts(deploymentSpec *egv1a1.KubernetesDeploymentSpec) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "certs",
@@ -253,11 +255,11 @@ func expectedContainerVolumeMounts(deploymentSpec *egv1a1.KubernetesDeploymentSp
 		},
 	}
 
-	return resource.ExpectedContainerVolumeMounts(deploymentSpec.Container, volumeMounts)
+	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 
 // expectedDeploymentVolumes returns expected proxy deployment volumes.
-func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
+func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.EnvoyProxyDeploymentSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "certs",
@@ -295,8 +297,8 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDep
 	return resource.ExpectedDeploymentVolumes(deploymentSpec.Pod, volumes)
 }
 
-// expectedProxyContainerEnv returns expected proxy container envs.
-func expectedProxyContainerEnv(deploymentConfig *egv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
+// expectedContainerEnv returns expected proxy container envs.
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name: envoyNsEnvVar,
@@ -318,5 +320,5 @@ func expectedProxyContainerEnv(deploymentConfig *egv1a1.KubernetesDeploymentSpec
 		},
 	}
 
-	return resource.ExpectedProxyContainerEnv(deploymentConfig.Container, env)
+	return resource.ExpectedContainerEnv(containerSpec, env)
 }

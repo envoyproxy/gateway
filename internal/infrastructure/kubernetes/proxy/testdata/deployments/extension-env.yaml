@@ -204,6 +204,17 @@ spec:
             - shutdown-manager
           command:
             - envoy-gateway
+          env:
+            - name: ENVOY_GATEWAY_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: ENVOY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
           image: envoyproxy/gateway-dev:latest
           imagePullPolicy: IfNotPresent
           lifecycle:
@@ -214,7 +225,10 @@ spec:
                   - envoy
                   - shutdown
           name: shutdown-manager
-          resources: {}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
       dnsPolicy: ClusterFirst

@@ -83,9 +83,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							Provider: &egv1a1.EnvoyProxyProvider{
 								Type: egv1a1.ProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-										Container: &egv1a1.KubernetesContainerSpec{
-											Image: ptr.To("envoyproxy/envoy-dev:v1.2.3"),
+									EnvoyDeployment: &egv1a1.EnvoyProxyDeploymentSpec{
+										KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Image: ptr.To("envoyproxy/envoy-dev:v1.2.3"),
+											},
 										},
 									},
 								},

@@ -483,7 +483,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 	envoyProxyProvider.GetEnvoyProxyKubeProvider()
 
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultEnvoyProxyDeployment())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, egv1a1.DefaultKubernetesDeploymentReplicas())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod)

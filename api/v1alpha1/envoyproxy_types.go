@@ -123,7 +123,7 @@ type EnvoyProxyKubernetesProvider struct {
 	// are applied.
 	//
 	// +optional
-	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
+	EnvoyDeployment *EnvoyProxyDeploymentSpec `json:"envoyDeployment,omitempty"`
 
 	// EnvoyService defines the desired state of the Envoy service resource.
 	// If unspecified, default settings for the managed Envoy service resource
@@ -137,6 +137,16 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
+}
+
+// EnvoyProxyDeploymentSpec defines the desired state of the Kubernetes deployment resource.
+type EnvoyProxyDeploymentSpec struct {
+	KubernetesDeploymentSpec `json:",inline"`
+
+	// ShutdownManagerContainer defines the desired specification of the shutdown-manager container.
+	//
+	// +optional
+	ShutdownManagerContainer *KubernetesContainerSpec `json:"shutdownManagerContainer,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.
