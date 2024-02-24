@@ -2254,7 +2254,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientSelector` | _[ClientSelector](#clientselector) array_ |  true  | ClientSelectors contains the client selector configuration. All selectors are ANDd together and only if all selector are valid the Action is performed. |
+| `clientSelector` | _[ClientSelector](#clientselector) array_ |  true  | ClientSelectors contains the client selector configuration. All selectors are and together and only if all selector are valid the Action is performed. |
 | `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
 
 

@@ -20,7 +20,7 @@ type Authorization struct {
 // Rule defines the single authorization rule.
 type Rule struct {
 	// ClientSelectors contains the client selector configuration.
-	// All selectors are ANDd together and only if all selector are valid
+	// All selectors are and together and only if all selector are valid
 	// the Action is performed.
 	//
 	// +kubebuilder:validation:MinItems=1
@@ -40,14 +40,14 @@ type ClientSelector struct {
 }
 
 // RuleActionType specifies the types of authorization rule action.
-// +kubebuilder:validation:Enum=AllowRuleType;DenyRuleType;LogRuleType
+// +kubebuilder:validation:Enum=Allow;Deny;Log
 type RuleActionType string
 
 const (
-	// AllowRuleType is the action to allow the request.
-	AllowRuleType RuleActionType = "Allow"
-	// DenyRuleType is the action to deny the request.
-	DenyRuleType RuleActionType = "Deny"
-	// LogRuleType is the action to log the request.
-	LogRuleType RuleActionType = "Log"
+	// Allow is the action to allow the request.
+	Allow RuleActionType = "Allow"
+	// Deny is the action to deny the request.
+	Deny RuleActionType = "Deny"
+	// Log is the action to log the request.
+	Log RuleActionType = "Log"
 )
