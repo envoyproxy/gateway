@@ -115,18 +115,18 @@ clientTrafficPolicies:
         http:
           requestReceivedTimeout: "5s"
 backendTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: default
-    name: policy-for-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
       namespace: default
-    tcpKeepalive:
-      probes: 3
-      idleTime: 20m
-      interval: 60s
+      name: policy-for-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      tcpKeepalive:
+        probes: 3
+        idleTime: 20m
+        interval: 60s
