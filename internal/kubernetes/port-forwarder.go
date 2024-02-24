@@ -24,6 +24,8 @@ type PortForwarder interface {
 
 	Stop()
 
+	WaitForStop()
+
 	// Address returns the address of the local forwarded address.
 	Address() string
 }
@@ -126,6 +128,10 @@ func (f *localForwarder) buildKubernetesPortForwarder(readyCh chan struct{}) (*p
 
 func (f *localForwarder) Stop() {
 	close(f.stopCh)
+}
+
+func (f *localForwarder) WaitForStop() {
+	<-f.stopCh
 }
 
 func (f *localForwarder) Address() string {
