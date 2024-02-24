@@ -85,6 +85,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      gatewayName: envoy-gateway/gateway
       hostnames:
       - '*'
       isHTTP2: false

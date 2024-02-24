@@ -222,6 +222,52 @@ securityPolicies:
       reason: Accepted
       status: "True"
       type: Accepted
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: default
+    name: target-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      namespace: default
+    timeout:
+      http:
+        requestReceivedTimeout: "5s"
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: ClientTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
+      type: Accepted
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: default
+    tcpKeepalive:
+      idleTime: 20m
+      interval: 60s
+      probes: 3
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: BackendTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
+      type: Accepted
 xdsIR:
   envoy-gateway-class:
     accessLog:
@@ -272,6 +318,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        tcpKeepalive:
+          idleTime: 1200
+          interval: 60
+          probes: 3
     - address: 0.0.0.0
       gatewayName: default/gateway-2
       hostnames:
@@ -282,6 +332,9 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8888
+      timeout:
+        http:
+          requestReceivedTimeout: 5s
       routes:
       - backendWeights:
           invalid: 0
