@@ -382,9 +382,8 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}, defaultWait, defaultTick)
 
 	gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-	if gatewayClassResources == nil {
-		return false
-	}
+	assert.NotNil(t, gatewayClassResources)
+
 	res := (*gatewayClassResources)[gc.Name]
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
@@ -921,9 +920,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 
 			gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-			if gatewayClassResources == nil {
-				return false
-			}
+			assert.NotNil(t, gatewayClassResources)
+
 			res := (*gatewayClassResources)[gc.Name]
 			assert.Equal(t, &testCase.route, res.HTTPRoutes[0])
 
@@ -1085,9 +1083,8 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 
 			gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-			if gatewayClassResources == nil {
-				return false
-			}
+			assert.NotNil(t, gatewayClassResources)
+
 			res, _ := (*gatewayClassResources)[gc.Name]
 			assert.Equal(t, &testCase.route, res.TLSRoutes[0])
 
