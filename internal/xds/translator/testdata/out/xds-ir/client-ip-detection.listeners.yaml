@@ -26,8 +26,6 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
         xffNumTrustedHops: 2
   name: first-listener
@@ -66,8 +64,6 @@
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: false
   name: second-listener
   perConnectionBufferLimitBytes: 32768
@@ -107,8 +103,6 @@
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: false
   name: third-listener
   perConnectionBufferLimitBytes: 32768

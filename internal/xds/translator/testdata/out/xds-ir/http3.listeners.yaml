@@ -31,8 +31,6 @@
           routeConfigName: envoy-gateway/gateway-1/tls
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.quic
@@ -81,8 +79,6 @@
           routeConfigName: envoy-gateway/gateway-1/tls
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls

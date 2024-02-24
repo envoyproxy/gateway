@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +24,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // hasMatchingController returns true if the provided object is a GatewayClass
@@ -221,16 +222,11 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gclass] {
-		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
-		if res != nil {
-			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gw := range (*res)[gclass].Gateways {
-					gw := gw
-					r.updateStatusForGateway(ctx, gw)
-				}
-			}
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways[gcName] {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
+			return false
 		}
 		return false
 	}
@@ -323,7 +319,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	return allAssociatedRoutes != 0
 }
 
-// validateEndpointSliceForReconcile returns true if the the endpointSlice references
+// validateEndpointSliceForReconcile returns true if the endpointSlice references
 // a service that is referenced by a xRoute
 func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Object) bool {
 	ep, ok := obj.(*discoveryv1.EndpointSlice)
@@ -378,16 +374,11 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gclass] {
-		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
-		if res != nil {
-			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gw := range (*res)[gclass].Gateways {
-					gw := gw
-					r.updateStatusForGateway(ctx, gw)
-				}
-			}
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways[gcName] {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
+			return false
 		}
 		return false
 	}
@@ -448,6 +439,27 @@ func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map
 	}
 
 	return gtw
+}
+
+// updateStatusForGatewaysUnderGatewayClass updates status of all Gateways under the GatewayClass.
+func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx context.Context, gatewayClassName string) error {
+	gateways := new(gwapiv1.GatewayList)
+	if err := r.client.List(ctx, gateways, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, gatewayClassName),
+	}); err != nil {
+		return err
+	}
+
+	if len(gateways.Items) == 0 {
+		return fmt.Errorf("no gateways found for gatewayclass: %s", gatewayClassName)
+	}
+
+	for _, gateway := range gateways.Items {
+		gateway := gateway
+		r.updateStatusForGateway(ctx, &gateway)
+	}
+
+	return nil
 }
 
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {

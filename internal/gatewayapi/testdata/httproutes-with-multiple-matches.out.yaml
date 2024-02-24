@@ -306,6 +306,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: example.com
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/example_com
         pathMatch:
           distinct: false
@@ -328,6 +329,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: example.com
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-3/rule/0/match/0/example_com
         pathMatch:
           distinct: false
@@ -350,6 +352,7 @@ xdsIR:
           exact: one
           name: version
         hostname: example.net
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-4/rule/0/match/0/example_net
         pathMatch:
           distinct: false
@@ -368,6 +371,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: example.net
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-5/rule/0/match/0/example_net
         pathMatch:
           distinct: false
@@ -386,6 +390,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: '*.com'
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_com
         pathMatch:
           distinct: false
@@ -404,6 +409,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: '*.net'
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_net
         pathMatch:
           distinct: false
@@ -422,6 +428,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: '*'
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

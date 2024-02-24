@@ -30,6 +30,7 @@ http:
         - two.foo.com
         remoteJWKS:
           uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+        recomputeRoute: true
         claimToHeaders:
         - header: one-route-example2-key1
           claim: claim.neteased.key

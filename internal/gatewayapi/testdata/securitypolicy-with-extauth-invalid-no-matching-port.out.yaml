@@ -152,6 +152,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false

@@ -548,6 +548,121 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				"spec.extAuth: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported",
 			},
 		},
+		// JWT
+		{
+			desc: "valid jwt",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "jwt with claim to headers",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										Claim:  "name",
+										Header: "x-claim-name",
+									},
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "jwt with recomputeRoute",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								RecomputeRoute: ptr.To(true),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Invalid value: \"object\": no such key: claimToHeaders evaluating rule: claimToHeaders must be specified if recomputeRoute is enabled"},
+		},
+		{
+			desc: "jwt with claim to headers and recomputeRoute",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										Claim:  "name",
+										Header: "x-claim-name",
+									},
+								},
+								RecomputeRoute: ptr.To(true),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {

@@ -15,3 +15,5 @@
       route:
         cluster: first-route-dest
         timeout: 5s
+        upgradeConfigs:
+        - upgradeType: websocket

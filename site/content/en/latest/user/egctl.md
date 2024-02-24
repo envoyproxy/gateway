@@ -743,11 +743,19 @@ xds:
 
 ## egctl experimental status
 
-This subcommand allows users to show the summary of the status of specific resource type, in order to quickly find
+This subcommand allows users to show the summary of the status of specific or all resource types, in order to quickly find
 out the status of any resources.
 
 By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only
 display the latest condition, or add `--verbose` to display more details about current status.
+
+{{% alert title="Note" color="primary" %}}
+
+Currently, this subcommand only supports: `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`,
+`TLSRoute`, `TCPRoute`, `UDPRoute`, `BackendTLSPolicy`, 
+`BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy` resource types and `all`.
+
+{{% /alert %}}
 
 Some examples of this command after installing [Multi-tenancy][] example manifest:
 
@@ -761,7 +769,29 @@ eg-marketing   Accepted   True      Accepted
 eg-product     Accepted   True      Accepted
 ```
 
-- Show the summary of all the Gateways with details under all namespace.
+- Show the summary of all resource types under all namespaces, the resource type with empty status will be ignored.
+
+```console
+~ egctl x status all -A
+
+NAME                        TYPE       STATUS    REASON
+gatewayclass/eg-marketing   Accepted   True      Accepted
+gatewayclass/eg-product     Accepted   True      Accepted
+
+NAMESPACE   NAME         TYPE         STATUS    REASON
+marketing   gateway/eg   Programmed   True      Programmed
+                         Accepted     True      Accepted
+product     gateway/eg   Programmed   True      Programmed
+                         Accepted     True      Accepted
+
+NAMESPACE   NAME                TYPE           STATUS    REASON
+marketing   httproute/backend   ResolvedRefs   True      ResolvedRefs
+                                Accepted       True      Accepted
+product     httproute/backend   ResolvedRefs   True      ResolvedRefs
+                                Accepted       True      Accepted
+```
+
+- Show the summary of all the Gateways with details under all namespaces.
 
 ```console
 ~ egctl x status gateway --verbose --all-namespaces
@@ -782,7 +812,7 @@ NAME      TYPE         STATUS    REASON
 eg        Programmed   True      Programmed
 ```
 
-- Show the summary of latest HTTPRoutes condition under all namespace.
+- Show the summary of latest HTTPRoutes condition under all namespaces.
 
 ```console
 ~ egctl x status httproute --quiet --all-namespaces
@@ -795,3 +825,21 @@ product     backend   ResolvedRefs   True      ResolvedRefs
 
 [Multi-tenancy]: ../deployment-mode#multi-tenancy
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
+
+
+## egctl experimental dashboard
+
+This subcommand streamlines the process for users to access the Envoy admin dashboard. By executing the following command:
+
+```bash
+egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
+```
+
+You will see the following output:
+
+```bash
+egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
+http://localhost:19000
+```
+
+the Envoy admin dashboard will automatically open in your default web browser. This eliminates the need to manually locate and expose the admin port.

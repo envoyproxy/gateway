@@ -24,6 +24,13 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
+// supportedTypes list all the resource types that status command supports.
+var supportedTypes = []string{
+	"GatewayClass", "Gateway", "HTTPRoute", "GRPCRoute",
+	"TLSRoute", "TCPRoute", "UDPRoute", "BackendTLSPolicy",
+	"BackendTrafficPolicy", "ClientTrafficPolicy", "EnvoyPatchPolicy", "SecurityPolicy",
+}
+
 func newStatusCommand() *cobra.Command {
 	var (
 		quiet, verbose, allNamespaces bool
@@ -47,11 +54,12 @@ func newStatusCommand() *cobra.Command {
 
   # Show the status of httproute resources under all namespaces.
   egctl x status httproute -A
+
+  # Show the status of all resources under all namespaces.
+  egctl x status all -A
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-
-			table := newStatusTableWriter(os.Stdout)
 			k8sClient, err := newK8sClient()
 			if err != nil {
 				return err
@@ -66,14 +74,23 @@ func newStatusCommand() *cobra.Command {
 				return fmt.Errorf("invalid args: must specific a resources type")
 			}
 
-			return runStatus(ctx, k8sClient, table, resourceType, namespace, quiet, verbose, allNamespaces)
+			if resourceType == "all" {
+				for _, rt := range supportedTypes {
+					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						return err
+					}
+				}
+				return nil
+			} else {
+				return runStatus(ctx, k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false, false)
+			}
 		},
 	}
 
-	statusCommand.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Show the status of resources only")
+	statusCommand.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Show the first status of resources only")
 	statusCommand.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show the status of resources with details")
-	statusCommand.PersistentFlags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "Get resources from all namespaces")
-	statusCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Specific a namespace to get resources")
+	statusCommand.PersistentFlags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "Get the status of resources from all namespaces")
+	statusCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Specific a namespace to get the status of resources")
 
 	return statusCommand
 }
@@ -82,8 +99,19 @@ func newStatusTableWriter(out io.Writer) *tabwriter.Writer {
 	return tabwriter.NewWriter(out, 10, 0, 3, ' ', 0)
 }
 
-func runStatus(ctx context.Context, cli client.Client, table *tabwriter.Writer, resourceType, namespace string, quiet, verbose, allNamespaces bool) error {
-	var resourcesList client.ObjectList
+func writeStatusTable(table *tabwriter.Writer, headers []string, bodies [][]string) {
+	fmt.Fprintln(table, strings.Join(headers, "\t"))
+	for _, body := range bodies {
+		fmt.Fprintln(table, strings.Join(body, "\t"))
+	}
+}
+
+// runStatus find and write the summary table of status for a specific resource type.
+func runStatus(ctx context.Context, cli client.Client, resourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
+	var (
+		resourcesList client.ObjectList
+		table         = newStatusTableWriter(os.Stdout)
+	)
 
 	if allNamespaces {
 		namespace = ""
@@ -160,7 +188,7 @@ func runStatus(ctx context.Context, cli client.Client, table *tabwriter.Writer, 
 		}
 		resourcesList = &ctp
 
-	case "epp", "enovypatchpolicy":
+	case "epp", "envoypatchpolicy":
 		epp := egv1a1.EnvoyPatchPolicyList{}
 		if err := cli.List(ctx, &epp, client.InNamespace(namespace)); err != nil {
 			return err
@@ -175,7 +203,7 @@ func runStatus(ctx context.Context, cli client.Client, table *tabwriter.Writer, 
 		resourcesList = &sp
 
 	default:
-		return fmt.Errorf("unknown resource type: %s", resourceType)
+		return fmt.Errorf("unknown resource type: %s, supported types are: %s", resourceType, strings.Join(supportedTypes, ","))
 	}
 
 	namespaced, err := cli.IsObjectNamespaced(resourcesList)
@@ -184,16 +212,30 @@ func runStatus(ctx context.Context, cli client.Client, table *tabwriter.Writer, 
 	}
 
 	needNamespaceHeader := allNamespaces && namespaced
-	writeStatusHeaders(table, verbose, needNamespaceHeader)
-
-	if err = writeStatusBodies(table, resourcesList, resourceType, quiet, verbose, needNamespaceHeader); err != nil {
+	headers := fetchStatusHeaders(verbose, needNamespaceHeader)
+	bodies, err := fetchStatusBodies(resourcesList, resourceType, quiet, verbose, needNamespaceHeader, typedName)
+	if err != nil {
 		return err
 	}
 
-	return table.Flush()
+	if ignoreEmpty && len(bodies) == 0 {
+		return nil
+	}
+
+	writeStatusTable(table, headers, bodies)
+	if err = table.Flush(); err != nil {
+		return err
+	}
+
+	// Separate tables by newline if there are multiple tables.
+	if ignoreEmpty && typedName {
+		fmt.Print("\n")
+	}
+
+	return nil
 }
 
-func writeStatusHeaders(table *tabwriter.Writer, verbose, needNamespace bool) {
+func fetchStatusHeaders(verbose, needNamespace bool) []string {
 	headers := []string{"NAME", "TYPE", "STATUS", "REASON"}
 
 	if needNamespace {
@@ -203,109 +245,128 @@ func writeStatusHeaders(table *tabwriter.Writer, verbose, needNamespace bool) {
 		headers = append(headers, []string{"MESSAGE", "OBSERVED GENERATION", "LAST TRANSITION TIME"}...)
 	}
 
-	fmt.Fprintln(table, strings.Join(headers, "\t"))
+	return headers
 }
 
-func writeStatusBodies(table *tabwriter.Writer, resourcesList client.ObjectList, resourceType string, quiet, verbose, needNamespace bool) error {
+func fetchStatusBodies(resourcesList client.ObjectList, resourceType string, quiet, verbose, needNamespace, typedName bool) ([][]string, error) {
 	v := reflect.ValueOf(resourcesList).Elem()
 
 	itemsField := v.FieldByName("Items")
 	if !itemsField.IsValid() {
-		return fmt.Errorf("failed to load `.Items` field from %s", resourceType)
+		return nil, fmt.Errorf("failed to load `.Items` field from %s", resourceType)
 	}
 
+	var body [][]string
 	for i := 0; i < itemsField.Len(); i++ {
 		item := itemsField.Index(i)
 
+		// There's no need to check whether Name, Namespace and Kind field is valid,
+		// since all the objects in ObjectList are implemented k8s Object interface.
 		var name, namespace string
 		nameField := item.FieldByName("Name")
-		if !nameField.IsValid() {
-			return fmt.Errorf("failed to find `.Items[i].Name` field from %s", resourceType)
+		if typedName {
+			kindField := item.FieldByName("Kind")
+			name = strings.ToLower(kindField.String()) + "/" + nameField.String()
+		} else {
+			name = nameField.String()
 		}
-		name = nameField.String()
 
 		if needNamespace {
 			namespaceField := item.FieldByName("Namespace")
-			if !namespaceField.IsValid() {
-				return fmt.Errorf("failed to find `.Items[i].Namespace` field from %s", resourceType)
-			}
 			namespace = namespaceField.String()
 		}
 
 		statusField := item.FieldByName("Status")
 		if !statusField.IsValid() {
-			return fmt.Errorf("failed to find `.Items[i].Status` field from %s", resourceType)
+			return nil, fmt.Errorf("failed to find `.Items[i].Status` field from %s", resourceType)
 		}
 
 		// Different resources store the conditions at different position.
-		switch {
-		case strings.Contains(resourceType, "route"):
+		switch strings.ToLower(resourceType) {
+		case "httproute", "grpcroute", "tlsroute", "tcproute", "udproute":
 			// Scrape conditions from `Resource.Status.Parents[i].Conditions` field
 			parentsField := statusField.FieldByName("Parents")
 			if !parentsField.IsValid() {
-				return fmt.Errorf("failed to find `.Items[i].Status.Parents` field from %s", resourceType)
+				return nil, fmt.Errorf("failed to find `.Items[i].Status.Parents` field from %s", resourceType)
 			}
 
 			for j := 0; j < parentsField.Len(); j++ {
 				parentItem := parentsField.Index(j)
-				if err := findAndWriteConditions(table, parentItem, resourceType, name, namespace, quiet, verbose, needNamespace); err != nil {
-					return err
+				rows, err := fetchConditionsField(parentItem, resourceType, name, namespace, quiet, verbose, needNamespace)
+				if err != nil {
+					return nil, err
 				}
+
+				body = append(body, rows...)
 			}
 
-		case resourceType == "btlspolicy" || resourceType == "backendtlspolicy":
+		case "btlspolicy", "backendtlspolicy":
 			// Scrape conditions from `Resource.Status.Ancestors[i].Conditions` field
 			ancestorsField := statusField.FieldByName("Ancestors")
 			if !ancestorsField.IsValid() {
-				return fmt.Errorf("failed to find `.Items[i].Status.Ancestors` field from %s", resourceType)
+				return nil, fmt.Errorf("failed to find `.Items[i].Status.Ancestors` field from %s", resourceType)
 			}
 
 			for j := 0; j < ancestorsField.Len(); j++ {
 				ancestorItem := ancestorsField.Index(j)
-				if err := findAndWriteConditions(table, ancestorItem, resourceType, name, namespace, quiet, verbose, needNamespace); err != nil {
-					return err
+				rows, err := fetchConditionsField(ancestorItem, resourceType, name, namespace, quiet, verbose, needNamespace)
+				if err != nil {
+					return nil, err
 				}
+
+				body = append(body, rows...)
 			}
 
 		default:
 			// Scrape conditions from `Resource.Status.Conditions` field
-			if err := findAndWriteConditions(table, statusField, resourceType, name, namespace, quiet, verbose, needNamespace); err != nil {
-				return err
+			rows, err := fetchConditionsField(statusField, resourceType, name, namespace, quiet, verbose, needNamespace)
+			if err != nil {
+				return nil, err
 			}
+
+			body = append(body, rows...)
 		}
 	}
 
-	return nil
+	return body, nil
 }
 
-func findAndWriteConditions(table *tabwriter.Writer, parent reflect.Value, resourceType, name, namespace string, quiet, verbose, needNamespace bool) error {
+func fetchConditionsField(parent reflect.Value, resourceType, name, namespace string, quiet, verbose, needNamespace bool) ([][]string, error) {
 	conditionsField := parent.FieldByName("Conditions")
 	if !conditionsField.IsValid() {
-		return fmt.Errorf("failed to find `Conditions` field for %s", resourceType)
+		return nil, fmt.Errorf("failed to find `Conditions` field for %s", resourceType)
 	}
 
-	conditions := conditionsField.Interface().([]metav1.Condition)
-	writeConditions(table, conditions, name, namespace, quiet, verbose, needNamespace)
+	conditions, ok := conditionsField.Interface().([]metav1.Condition)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert `Conditions` field to type `[]metav1.Condition`")
+	}
 
-	return nil
+	rows := fetchConditions(conditions, name, namespace, quiet, verbose, needNamespace)
+	return rows, nil
 }
 
-func writeConditions(table *tabwriter.Writer, conditions []metav1.Condition, name, namespace string, quiet, verbose, needNamespace bool) {
+func fetchConditions(conditions []metav1.Condition, name, namespace string, quiet, verbose, needNamespace bool) [][]string {
+	var rows [][]string
+
 	// Sort in descending order by time of each condition.
 	for i := len(conditions) - 1; i >= 0; i-- {
 		if i < len(conditions)-1 {
 			name, namespace = "", ""
 		}
 
-		writeCondition(table, conditions[i], name, namespace, verbose, needNamespace)
+		row := fetchCondition(conditions[i], name, namespace, verbose, needNamespace)
+		rows = append(rows, row)
 
 		if quiet {
 			break
 		}
 	}
+
+	return rows
 }
 
-func writeCondition(table *tabwriter.Writer, condition metav1.Condition, name, namespace string, verbose, needNamespace bool) {
+func fetchCondition(condition metav1.Condition, name, namespace string, verbose, needNamespace bool) []string {
 	row := []string{name, condition.Type, string(condition.Status), condition.Reason}
 
 	// Write conditions corresponding to its headers.
@@ -320,5 +381,5 @@ func writeCondition(table *tabwriter.Writer, condition metav1.Condition, name, n
 		}...)
 	}
 
-	fmt.Fprintln(table, strings.Join(row, "\t"))
+	return row
 }

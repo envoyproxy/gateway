@@ -37,6 +37,7 @@ type RetryOn struct {
 	Triggers []TriggerEnum `json:"triggers,omitempty"`
 
 	// HttpStatusCodes specifies the http status codes to be retried.
+	// The retriable-status-codes trigger must also be configured for these status codes to trigger a retry.
 	//
 	// +optional
 	HTTPStatusCodes []HTTPStatus `json:"httpStatusCodes,omitempty"`
