@@ -245,7 +245,6 @@ xdsIR:
       clientIPDetection:
         xForwardedFor:
           numTrustedHops: 2
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: false
@@ -259,7 +258,6 @@ xdsIR:
         customHeader:
           failClosed: false
           name: x-client-ip-address
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: false
@@ -273,7 +271,6 @@ xdsIR:
         customHeader:
           failClosed: true
           name: x-client-ip-address
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: false
@@ -283,7 +280,6 @@ xdsIR:
         mergeSlashes: true
       port: 8083
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: false

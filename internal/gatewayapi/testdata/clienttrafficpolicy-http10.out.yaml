@@ -204,7 +204,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       http1:
@@ -216,7 +215,6 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - www.example.com
       http1:
@@ -229,7 +227,6 @@ xdsIR:
         mergeSlashes: true
       port: 8080
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       http1: {}

@@ -357,7 +357,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		string(policy.Spec.TargetRef.Name),
 	)
 	for _, http := range ir.HTTP {
-		if t.MergeGateways && http.GatewayName != policyTarget {
+		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
 		for _, r := range http.Routes {

@@ -131,7 +131,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      gatewayName: default/gateway-1
       hostnames:
       - '*'
       isHTTP2: false

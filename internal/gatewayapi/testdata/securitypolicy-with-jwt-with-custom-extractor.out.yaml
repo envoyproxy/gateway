@@ -268,7 +268,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: true
@@ -319,7 +318,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-2
       hostnames:
       - '*'
       isHTTP2: false

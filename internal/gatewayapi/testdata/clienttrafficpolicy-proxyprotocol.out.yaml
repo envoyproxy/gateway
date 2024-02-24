@@ -121,7 +121,6 @@ xdsIR:
     http:
     - address: 0.0.0.0
       enableProxyProtocol: true
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: false
@@ -131,7 +130,6 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
-      gatewayName: envoy-gateway/gateway-1
       hostnames:
       - '*'
       isHTTP2: false
