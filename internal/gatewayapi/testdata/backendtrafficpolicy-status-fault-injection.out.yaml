@@ -333,6 +333,7 @@ xdsIR:
             fixedDelay: 5.4s
             percentage: 80
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
   envoy-gateway/gateway-2:
     accessLog:
@@ -366,6 +367,7 @@ xdsIR:
             httpStatus: 14
             percentage: 0.01
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -391,6 +393,7 @@ xdsIR:
             fixedDelay: 5.4s
             percentage: 80
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

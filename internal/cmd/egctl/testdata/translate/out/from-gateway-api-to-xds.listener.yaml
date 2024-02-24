@@ -57,8 +57,6 @@ xds:
                   routeConfigName: default/eg/http
                 serverHeaderTransformation: PASS_THROUGH
                 statPrefix: http
-                upgradeConfigs:
-                - upgradeType: websocket
                 useRemoteAddress: true
           name: default/eg/http
           perConnectionBufferLimitBytes: 32768
