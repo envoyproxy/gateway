@@ -30,12 +30,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-const (
-	defaultWait = time.Second * 60
-	defaultTick = time.Millisecond * 20
-)
-
 func TestProcessHTTPRoutes(t *testing.T) {
+	const (
+		defaultWait = time.Second * 60
+		defaultTick = time.Millisecond * 20
+	)
+
 	// The gatewayclass configured for the reconciler and referenced by test cases.
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 	gc := &gwapiv1.GatewayClass{
