@@ -18,6 +18,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func init() {
@@ -110,8 +112,17 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			}
 
 			conflictedListener := []gwapiv1.ListenerStatus{{
-				Name:           gwapiv1.SectionName("http3"),
-				SupportedKinds: []gwapiv1.RouteGroupKind{},
+				Name: gwapiv1.SectionName("http3"),
+				SupportedKinds: []gwapiv1.RouteGroupKind{
+					{
+						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
+						Kind:  gatewayapi.KindHTTPRoute,
+					},
+					{
+						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
+						Kind:  gatewayapi.KindGRPCRoute,
+					},
+				},
 				Conditions: []metav1.Condition{{
 					Type:   string(gwapiv1.ListenerConditionConflicted),
 					Status: metav1.ConditionTrue,
