@@ -104,11 +104,11 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 // GetEnvoyGatewayTelemetry returns the EnvoyGatewayTelemetry of EnvoyGateway or a default EnvoyGatewayTelemetry if unspecified.
 func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	if e.Telemetry != nil {
-		if e.Telemetry.Metrics.Prometheus == nil {
-			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
-		}
 		if e.Telemetry.Metrics == nil {
 			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
+		}
+		if e.Telemetry.Metrics.Prometheus == nil {
+			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
 		}
 		return e.Telemetry
 	}
