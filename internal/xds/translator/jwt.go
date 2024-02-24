@@ -145,6 +145,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				Forward:             true,
 			}
 
+			if irProvider.RecomputeRoute != nil {
+				jwtProvider.ClearRouteCache = *irProvider.RecomputeRoute
+			}
+
 			if irProvider.ExtractFrom != nil {
 				jwtProvider.FromHeaders = buildJwtFromHeaders(irProvider.ExtractFrom.Headers)
 				jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies

@@ -44,6 +44,7 @@
                   headerName: one-route-example2-key1
                 - claimName: name
                   headerName: one-route-example2-key2
+                clearRouteCache: true
                 forward: true
                 issuer: https://www.two.example.com
                 payloadInMetadata: https://www.two.example.com
