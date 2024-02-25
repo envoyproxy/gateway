@@ -25,9 +25,9 @@ import (
 )
 
 var (
-	defaultRateLimitNamespace = "envoy-gateway-system"
-	defaultConfigMap          = "envoy-gateway-config"
-	defaultConfigMapKey       = "envoy-gateway.yaml"
+	defaultRateLimitNamespace = "envoy-gateway-system" // TODO: make this configurable until EG support
+	defaultConfigMap          = "envoy-gateway-config" // TODO: make this configurable until EG support
+	defaultConfigMapKey       = "envoy-gateway.yaml"   // TODO: make this configurable until EG support
 )
 
 func ratelimitConfigCommand() *cobra.Command {
@@ -129,6 +129,8 @@ func fetchRunningRateLimitPods(cli kubernetes.CLIClient, namespace string, label
 	return rlNN, nil
 }
 
+// extractRateLimitConfig After turning on port forwarding through PortForwarder,
+// construct a request and send it to the rate limit Pod to obtain relevant configuration information.
 func extractRateLimitConfig(fw kubernetes.PortForwarder, rlPod types.NamespacedName) ([]byte, error) {
 
 	if err := fw.Start(); err != nil {
