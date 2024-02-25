@@ -1,5 +1,10 @@
 deployment:
   envoyGateway:
+    leaderElection:
+      enabled: true
+      leaseDuration: 1s
+      retryPeriod: 2s
+      renew_deadline: 10s
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'

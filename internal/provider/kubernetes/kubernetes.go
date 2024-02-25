@@ -34,12 +34,16 @@ type Provider struct {
 func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
-		Scheme:                 envoygateway.GetScheme(),
-		Logger:                 svr.Logger.Logger,
-		LeaderElection:         false,
-		HealthProbeBindAddress: ":8081",
-		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
+		Scheme:                  envoygateway.GetScheme(),
+		Logger:                  svr.Logger.Logger,
+		LeaderElection:          svr.LeaderElection.Enabled,
+		HealthProbeBindAddress:  ":8081",
+		LeaderElectionID:        svr.LeaderElection.LeaderElectionID,
+		LeaderElectionNamespace: svr.Namespace,
 	}
+
+	var notRequired bool
+	mgrOpts.Controller.NeedLeaderElection = &notRequired
 
 	if svr.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)

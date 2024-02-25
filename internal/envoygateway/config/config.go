@@ -7,6 +7,8 @@ package config
 
 import (
 	"errors"
+	"os"
+	"time"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -23,6 +25,8 @@ const (
 	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
 	EnvoyPrefix = "envoy"
+	// DefaultElectionID is the default leader name for EGs
+	DefaultElectionID = "5b9825d2.gateway.envoyproxy.io"
 )
 
 // Server wraps the EnvoyGateway configuration and additional parameters
@@ -36,17 +40,73 @@ type Server struct {
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
 	Logger logging.Logger
+	// Leader election settings
+	LeaderElection *LeaderElection
+}
+
+type LeaderElection struct {
+	// LeaderElectionID specifies the resource name used for leader election.
+	LeaderElectionID string
+	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
+	LeaseDuration *time.Duration
+	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.
+	RenewDeadline *time.Duration
+	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.
+	RetryPeriod *time.Duration
+	// Enables or disables the leader election feature. It is enabled by default.
+	Enabled bool
 }
 
 // New returns a Server with default parameters.
 func New() (*Server, error) {
+	settings, err := withLeaderElectionSettings()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Server{
 		EnvoyGateway: v1alpha1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		// the default logger
-		Logger: logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		Logger:         logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		LeaderElection: settings,
 	}, nil
+}
+
+func parseEnvDuration(envVar string, duration **time.Duration) error {
+	if value := os.Getenv(envVar); value != "" {
+		if parsedDuration, err := time.ParseDuration(value); err == nil {
+			*duration = &parsedDuration
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
+func withLeaderElectionSettings() (*LeaderElection, error) {
+	le := &LeaderElection{
+		LeaderElectionID: env.Lookup("ENVOY_GATEWAY_ELECTION_ID", DefaultElectionID),
+		Enabled:          true,
+	}
+
+	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_ENABLED", &le.RenewDeadline); err != nil {
+		return nil, err
+	}
+
+	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION", &le.RenewDeadline); err != nil {
+		return nil, err
+	}
+
+	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RETRY_PERIOD", &le.RenewDeadline); err != nil {
+		return nil, err
+	}
+
+	if os.Getenv("ENVOY_GATEWAY_LEADER_ELECTION_ENABLED") == "false" {
+		le.Enabled = false
+	}
+	return le, nil
 }
 
 // Validate validates a Server config.
