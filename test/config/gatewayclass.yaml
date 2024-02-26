@@ -59,3 +59,30 @@ spec:
           environment:
             name: ENVOY_GATEWAY_NAMESPACE
             defaultValue: "envoy-gateway-system"
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: internet
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    name: internet-config
+    namespace: envoy-gateway-system
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: internet-config
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: private
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
