@@ -868,6 +868,15 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 				return nil
 			}
 		}
+
+		if pcb.MaxRequestsPerConnection != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+				cb.MaxRequestsPerConnection = &ui32
+			} else {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection))
+				return nil
+			}
+		}
 	}
 
 	return cb

@@ -814,8 +814,6 @@ xds:
                     routeConfigName: default/eg/http
                   serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
-                  upgradeConfigs:
-                  - upgradeType: websocket
                   useRemoteAddress: true
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
@@ -1027,6 +1025,8 @@ xds:
               name: httproute/default/backend/rule/0/match/0/www_example_com
               route:
                 cluster: httproute/default/backend/rule/0
+                upgradeConfigs:
+                - upgradeType: websocket
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true

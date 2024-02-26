@@ -18,3 +18,5 @@
       name: first-route
       route:
         cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

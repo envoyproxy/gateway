@@ -119,6 +119,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: '*'
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

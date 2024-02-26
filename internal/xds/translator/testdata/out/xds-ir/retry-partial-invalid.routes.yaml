@@ -20,6 +20,8 @@
             baseInterval: 0.100s
             maxInterval: 10s
           retryOn: connect-failure,retriable-status-codes
+        upgradeConfigs:
+        - upgradeType: websocket
   - domains:
     - foo
     name: first-listener/foo
@@ -34,6 +36,8 @@
           retriableStatusCodes:
           - 503
           retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
+        upgradeConfigs:
+        - upgradeType: websocket
   - domains:
     - bar
     name: first-listener/bar

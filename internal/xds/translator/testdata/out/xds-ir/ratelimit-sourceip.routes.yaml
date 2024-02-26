@@ -17,6 +17,8 @@
               descriptorValue: first-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
+        upgradeConfigs:
+        - upgradeType: websocket
     - match:
         path: example
       name: second-route
@@ -29,6 +31,8 @@
               descriptorValue: second-route
           - maskedRemoteAddress:
               v4PrefixMaskLen: 24
+        upgradeConfigs:
+        - upgradeType: websocket
     - match:
         path: test
       name: third-route
@@ -42,6 +46,8 @@
           - genericKey:
               descriptorKey: rule-0-match--1
               descriptorValue: rule-0-match--1
+        upgradeConfigs:
+        - upgradeType: websocket
     - match:
         path: distinct
       name: fourth-route
@@ -55,3 +61,5 @@
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
           - remoteAddress: {}
+        upgradeConfigs:
+        - upgradeType: websocket

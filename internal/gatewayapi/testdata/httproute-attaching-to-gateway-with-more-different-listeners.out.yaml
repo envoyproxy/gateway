@@ -379,6 +379,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
           distinct: false
@@ -407,6 +408,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:
           distinct: false
@@ -435,6 +437,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo1.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo1_com
         pathMatch:
           distinct: false
@@ -463,6 +466,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar1.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar1_com
         pathMatch:
           distinct: false
@@ -491,6 +495,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo2.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo2_com
         pathMatch:
           distinct: false
@@ -519,6 +524,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar2.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar2_com
         pathMatch:
           distinct: false
@@ -547,6 +553,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo3.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo3_com
         pathMatch:
           distinct: false
@@ -575,6 +582,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar3.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar3_com
         pathMatch:
           distinct: false

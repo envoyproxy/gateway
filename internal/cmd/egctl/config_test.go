@@ -79,6 +79,8 @@ func (fw *fakePortForwarder) Address() string {
 	return fmt.Sprintf("localhost:%d", fw.localPort)
 }
 
+func (fw *fakePortForwarder) WaitForStop() {}
+
 func TestExtractAllConfigDump(t *testing.T) {
 	input, err := readInputConfig("in.all.json")
 	require.NoError(t, err)
