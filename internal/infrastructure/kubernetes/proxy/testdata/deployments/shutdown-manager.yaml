@@ -195,6 +195,10 @@ spec:
           command:
             - envoy-gateway
           env:
+            - name: env_a
+              value: env_a_value
+            - name: env_b
+              value: env_b_value
             - name: ENVOY_GATEWAY_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -205,10 +209,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
-            - name: env_a
-              value: env_a_value
-            - name: env_b
-              value: env_b_value
           image: envoyproxy/gateway-dev:v1.2.3
           imagePullPolicy: IfNotPresent
           lifecycle:

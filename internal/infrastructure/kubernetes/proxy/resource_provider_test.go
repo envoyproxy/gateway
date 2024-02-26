@@ -87,7 +87,7 @@ func TestDeployment(t *testing.T) {
 	cases := []struct {
 		caseName     string
 		infra        *ir.Infra
-		deploy       *egv1a1.EnvoyProxyDeploymentSpec
+		deploy       *egv1a1.KubernetesDeploymentSpec
 		shutdown     *egv1a1.ShutdownConfig
 		proxyLogging map[egv1a1.ProxyLogComponent]egv1a1.LogLevel
 		bootstrap    string
@@ -103,37 +103,35 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "custom",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Replicas: ptr.To[int32](2),
-					Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
-					Pod: &egv1a1.KubernetesPodSpec{
-						Annotations: map[string]string{
-							"prometheus.io/scrape": "true",
-						},
-						Labels: map[string]string{
-							"foo.bar": "custom-label",
-						},
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: ptr.To[int64](1000),
-						},
-						HostNetwork: true,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: ptr.To[int32](2),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
 					},
-					Container: &egv1a1.KubernetesContainerSpec{
-						Image: ptr.To("envoyproxy/envoy:v1.2.3"),
-						Resources: &corev1.ResourceRequirements{
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("2Gi"),
-							},
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
-								corev1.ResourceMemory: resource.MustParse("1Gi"),
-							},
+					Labels: map[string]string{
+						"foo.bar": "custom-label",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: ptr.To[int64](1000),
+					},
+					HostNetwork: true,
+				},
+				Container: &egv1a1.KubernetesContainerSpec{
+					Image: ptr.To("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Privileged: ptr.To(true),
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
 						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -141,13 +139,11 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "patch-deployment",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Patch: &egv1a1.KubernetesPatchSpec{
-						Type: ptr.To(egv1a1.StrategicMerge),
-						Value: v1.JSON{
-							Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
-						},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
 					},
 				},
 			},
@@ -155,31 +151,31 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "shutdown-manager",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				ShutdownManagerContainer: &egv1a1.KubernetesContainerSpec{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "env_a",
-							Value: "env_a_value",
-						},
-						{
-							Name:  "env_b",
-							Value: "env_b_value",
-						},
-					},
-					Image: ptr.To("envoyproxy/gateway-dev:v1.2.3"),
-					Resources: &corev1.ResourceRequirements{
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("200m"),
-							corev1.ResourceMemory: resource.MustParse("96Mi"),
-						},
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("100m"),
-							corev1.ResourceMemory: resource.MustParse("64Mi"),
-						},
-					},
-					SecurityContext: &corev1.SecurityContext{
-						RunAsUser: ptr.To[int64](1234),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte(`{
+							"spec":{
+								"template":{
+									"spec":{
+										"containers":[{
+											"name":"shutdown-manager",
+											"resources":{
+												"requests":{"cpu":"100m","memory":"64Mi"},
+												"limits":{"cpu":"200m","memory":"96Mi"}
+											},
+											"securityContext":{"runAsUser":1234},
+											"env":[
+												{"name":"env_a","value":"env_a_value"},
+												{"name":"env_b","value":"env_b_value"}
+											],
+											"image":"envoyproxy/gateway-dev:v1.2.3"
+										}]
+									}
+								}
+							}
+						}`),
 					},
 				},
 			},
@@ -202,43 +198,41 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "extension-env",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Replicas: ptr.To[int32](2),
-					Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
-					Pod: &egv1a1.KubernetesPodSpec{
-						Annotations: map[string]string{
-							"prometheus.io/scrape": "true",
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: ptr.To[int32](2),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: ptr.To[int64](1000),
+					},
+				},
+				Container: &egv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "env_a",
+							Value: "env_a_value",
 						},
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: ptr.To[int64](1000),
+						{
+							Name:  "env_b",
+							Value: "env_b_value",
 						},
 					},
-					Container: &egv1a1.KubernetesContainerSpec{
-						Env: []corev1.EnvVar{
-							{
-								Name:  "env_a",
-								Value: "env_a_value",
-							},
-							{
-								Name:  "env_b",
-								Value: "env_b_value",
-							},
+					Image: ptr.To("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
 						},
-						Image: ptr.To("envoyproxy/envoy:v1.2.3"),
-						Resources: &corev1.ResourceRequirements{
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("2Gi"),
-							},
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
-								corev1.ResourceMemory: resource.MustParse("1Gi"),
-							},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Privileged: ptr.To(true),
-						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -246,34 +240,32 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "default-env",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Replicas: ptr.To[int32](2),
-					Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
-					Pod: &egv1a1.KubernetesPodSpec{
-						Annotations: map[string]string{
-							"prometheus.io/scrape": "true",
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: ptr.To[int32](2),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: ptr.To[int64](1000),
+					},
+				},
+				Container: &egv1a1.KubernetesContainerSpec{
+					Env:   nil,
+					Image: ptr.To("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
 						},
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: ptr.To[int64](1000),
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
 						},
 					},
-					Container: &egv1a1.KubernetesContainerSpec{
-						Env:   nil,
-						Image: ptr.To("envoyproxy/envoy:v1.2.3"),
-						Resources: &corev1.ResourceRequirements{
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("2Gi"),
-							},
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
-								corev1.ResourceMemory: resource.MustParse("1Gi"),
-							},
-						},
-						SecurityContext: &corev1.SecurityContext{
-							Privileged: ptr.To(true),
-						},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -281,54 +273,52 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "volumes",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Replicas: ptr.To[int32](2),
-					Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
-					Pod: &egv1a1.KubernetesPodSpec{
-						Annotations: map[string]string{
-							"prometheus.io/scrape": "true",
-						},
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: ptr.To[int64](1000),
-						},
-						Volumes: []corev1.Volume{
-							{
-								Name: "certs",
-								VolumeSource: corev1.VolumeSource{
-									Secret: &corev1.SecretVolumeSource{
-										SecretName:  "custom-envoy-cert",
-										DefaultMode: ptr.To[int32](420),
-									},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: ptr.To[int32](2),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: ptr.To[int64](1000),
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "certs",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  "custom-envoy-cert",
+									DefaultMode: ptr.To[int32](420),
 								},
 							},
 						},
 					},
-					Container: &egv1a1.KubernetesContainerSpec{
-						Env: []corev1.EnvVar{
-							{
-								Name:  "env_a",
-								Value: "env_a_value",
-							},
-							{
-								Name:  "env_b",
-								Value: "env_b_value",
-							},
+				},
+				Container: &egv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "env_a",
+							Value: "env_a_value",
 						},
-						Image: ptr.To("envoyproxy/envoy:v1.2.3"),
-						Resources: &corev1.ResourceRequirements{
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("2Gi"),
-							},
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
-								corev1.ResourceMemory: resource.MustParse("1Gi"),
-							},
+						{
+							Name:  "env_b",
+							Value: "env_b_value",
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Privileged: ptr.To(true),
+					},
+					Image: ptr.To("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
 						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: ptr.To(true),
 					},
 				},
 			},
@@ -362,62 +352,60 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "custom_with_initcontainers",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Replicas: ptr.To[int32](3),
-					Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
-					Pod: &egv1a1.KubernetesPodSpec{
-						Annotations: map[string]string{
-							"prometheus.io/scrape": "true",
-						},
-						Labels: map[string]string{
-							"foo.bar": "custom-label",
-						},
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: ptr.To[int64](1000),
-						},
-						Volumes: []corev1.Volume{
-							{
-								Name: "custom-libs",
-								VolumeSource: corev1.VolumeSource{
-									EmptyDir: &corev1.EmptyDirVolumeSource{},
-								},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: ptr.To[int32](3),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Labels: map[string]string{
+						"foo.bar": "custom-label",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: ptr.To[int64](1000),
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "custom-libs",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 					},
-					Container: &egv1a1.KubernetesContainerSpec{
-						Image: ptr.To("envoyproxy/envoy:v1.2.3"),
-						Resources: &corev1.ResourceRequirements{
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("2Gi"),
-							},
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
-								corev1.ResourceMemory: resource.MustParse("1Gi"),
-							},
+				},
+				Container: &egv1a1.KubernetesContainerSpec{
+					Image: ptr.To("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Privileged: ptr.To(true),
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
 						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: ptr.To(true),
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "custom-libs",
+							MountPath: "/lib/filter_foo.so",
+						},
+					},
+				},
+				InitContainers: []corev1.Container{
+					{
+						Name:    "install-filter-foo",
+						Image:   "alpine:3.11.3",
+						Command: []string{"/bin/sh", "-c"},
+						Args:    []string{"echo \"Installing filter-foo\"; wget -q https://example.com/download/filter_foo_v1.0.0.tgz -O - | tar -xz --directory=/lib filter_foo.so; echo \"Done\";"},
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      "custom-libs",
-								MountPath: "/lib/filter_foo.so",
-							},
-						},
-					},
-					InitContainers: []corev1.Container{
-						{
-							Name:    "install-filter-foo",
-							Image:   "alpine:3.11.3",
-							Command: []string{"/bin/sh", "-c"},
-							Args:    []string{"echo \"Installing filter-foo\"; wget -q https://example.com/download/filter_foo_v1.0.0.tgz -O - | tar -xz --directory=/lib filter_foo.so; echo \"Done\";"},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "custom-libs",
-									MountPath: "/lib",
-								},
+								MountPath: "/lib",
 							},
 						},
 					},
@@ -441,15 +429,13 @@ func TestDeployment(t *testing.T) {
 				"label1": "value1",
 				"label2": "value2",
 			}),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Pod: &egv1a1.KubernetesPodSpec{
-						Annotations: map[string]string{
-							"anno1": "value1-override",
-						},
-						Labels: map[string]string{
-							"label1": "value1-override",
-						},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"anno1": "value1-override",
+					},
+					Labels: map[string]string{
+						"label1": "value1-override",
 					},
 				},
 			},
@@ -457,16 +443,14 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "with-image-pull-secrets",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Pod: &egv1a1.KubernetesPodSpec{
-						ImagePullSecrets: []corev1.LocalObjectReference{
-							{
-								Name: "aaa",
-							},
-							{
-								Name: "bbb",
-							},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					ImagePullSecrets: []corev1.LocalObjectReference{
+						{
+							Name: "aaa",
+						},
+						{
+							Name: "bbb",
 						},
 					},
 				},
@@ -475,13 +459,11 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "with-node-selector",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Pod: &egv1a1.KubernetesPodSpec{
-						NodeSelector: map[string]string{
-							"key1": "value1",
-							"key2": "value2",
-						},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					NodeSelector: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
 					},
 				},
 			},
@@ -489,19 +471,17 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "with-topology-spread-constraints",
 			infra:    newTestInfra(),
-			deploy: &egv1a1.EnvoyProxyDeploymentSpec{
-				KubernetesDeploymentSpec: egv1a1.KubernetesDeploymentSpec{
-					Pod: &egv1a1.KubernetesPodSpec{
-						TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
-							{
-								MaxSkew:           1,
-								TopologyKey:       "kubernetes.io/hostname",
-								WhenUnsatisfiable: corev1.DoNotSchedule,
-								LabelSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{"app": "foo"},
-								},
-								MatchLabelKeys: []string{"pod-template-hash"},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+						{
+							MaxSkew:           1,
+							TopologyKey:       "kubernetes.io/hostname",
+							WhenUnsatisfiable: corev1.DoNotSchedule,
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"app": "foo"},
 							},
+							MatchLabelKeys: []string{"pod-template-hash"},
 						},
 					},
 				},

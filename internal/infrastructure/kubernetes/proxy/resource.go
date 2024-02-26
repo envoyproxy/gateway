@@ -99,7 +99,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
-	deploymentConfig *egv1a1.EnvoyProxyDeploymentSpec,
+	deploymentConfig *egv1a1.KubernetesDeploymentSpec,
 	shutdownConfig *egv1a1.ShutdownConfig) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
@@ -218,14 +218,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		{
 			Name:                     "shutdown-manager",
-			Image:                    *deploymentConfig.ShutdownManagerContainer.Image,
+			Image:                    egv1a1.DefaultShutdownManagerImage,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(deploymentConfig.ShutdownManagerContainer),
-			Resources:                *deploymentConfig.ShutdownManagerContainer.Resources,
-			SecurityContext:          deploymentConfig.ShutdownManagerContainer.SecurityContext,
-			VolumeMounts:             deploymentConfig.ShutdownManagerContainer.VolumeMounts,
+			Env:                      expectedContainerEnv(nil),
+			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			ReadinessProbe: &corev1.Probe{
@@ -315,7 +313,7 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 }
 
 // expectedDeploymentVolumes returns expected proxy deployment volumes.
-func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.EnvoyProxyDeploymentSpec) []corev1.Volume {
+func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "certs",
@@ -376,5 +374,9 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 		},
 	}
 
-	return resource.ExpectedContainerEnv(containerSpec, env)
+	if containerSpec != nil {
+		return resource.ExpectedContainerEnv(containerSpec, env)
+	} else {
+		return env
+	}
 }

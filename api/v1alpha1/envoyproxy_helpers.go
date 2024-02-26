@@ -37,30 +37,8 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
 func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	return &EnvoyProxyKubernetesProvider{
-		EnvoyDeployment: DefaultEnvoyProxyDeployment(),
+		EnvoyDeployment: DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
 		EnvoyService:    DefaultKubernetesService(),
-	}
-}
-
-// DefaultEnvoyProxyDeployment returns a new EnvoyProxyDeploymentSpec with default settings.
-func DefaultEnvoyProxyDeployment() *EnvoyProxyDeploymentSpec {
-	return &EnvoyProxyDeploymentSpec{
-		KubernetesDeploymentSpec: *DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
-		ShutdownManagerContainer: DefaultShutdownManagerContainer(),
-	}
-}
-
-// DefaultShutdownManagerContainer returns a new KubernetesContainerSpec with default settings
-// for the shutdown manager.
-func DefaultShutdownManagerContainer() *KubernetesContainerSpec {
-	return &KubernetesContainerSpec{
-		Resources: &v1.ResourceRequirements{
-			Requests: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
-				v1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
-			},
-		},
-		Image: DefaultKubernetesContainerImage(DefaultShutdownManagerImage),
 	}
 }
 
@@ -93,10 +71,10 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyDeployment == nil {
-		r.Kubernetes.EnvoyDeployment = DefaultEnvoyProxyDeployment()
+		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
 	}
 
-	r.Kubernetes.EnvoyDeployment.defaultEnvoyProxyDeploymentSpec()
+	r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
 
 	if r.Kubernetes.EnvoyService == nil {
 		r.Kubernetes.EnvoyService = DefaultKubernetesService()
@@ -111,29 +89,6 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	return r.Kubernetes
-}
-
-// defaultEnvoyProxyDeploymentSpec fill a default EnvoyProxyDeploymentSpec if unspecified.
-func (deployment *EnvoyProxyDeploymentSpec) defaultEnvoyProxyDeploymentSpec() {
-	deployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
-
-	if deployment.ShutdownManagerContainer == nil {
-		deployment.ShutdownManagerContainer = DefaultShutdownManagerContainer()
-	}
-
-	deployment.ShutdownManagerContainer.defaultShutdownManagerContainerSpec()
-}
-
-func (container *KubernetesContainerSpec) defaultShutdownManagerContainerSpec() {
-	d := DefaultShutdownManagerContainer()
-
-	if container.Resources == nil {
-		container.Resources = d.Resources
-	}
-
-	if container.Image == nil {
-		container.Image = d.Image
-	}
 }
 
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.
@@ -165,4 +120,14 @@ func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
 	sort.Strings(args)
 
 	return strings.Join(args, ",")
+}
+
+// DefaultShutdownManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
+func DefaultShutdownManagerContainerResourceRequirements() *v1.ResourceRequirements {
+	return &v1.ResourceRequirements{
+		Requests: v1.ResourceList{
+			v1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
+			v1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
+		},
+	}
 }

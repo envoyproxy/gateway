@@ -832,26 +832,6 @@ EnvoyProxy is the schema for the envoyproxies API.
 | `spec` | _[EnvoyProxySpec](#envoyproxyspec)_ |  true  | EnvoyProxySpec defines the desired state of EnvoyProxy. |
 
 
-#### EnvoyProxyDeploymentSpec
-
-
-
-EnvoyProxyDeploymentSpec defines the desired state of the Kubernetes deployment resource.
-
-_Appears in:_
-- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to deployment |
-| `replicas` | _integer_ |  false  | Replicas is the number of desired pods. Defaults to 1. |
-| `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ |  false  | The deployment strategy to use to replace existing pods with new ones. |
-| `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
-| `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  | Container defines the desired specification of main container. |
-| `initContainers` | _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#container-v1-core) array_ |  false  | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
-| `shutdownManagerContainer` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  | ShutdownManagerContainer defines the desired specification of the shutdown-manager container. |
-
-
 #### EnvoyProxyKubernetesProvider
 
 
@@ -863,7 +843,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `envoyDeployment` | _[EnvoyProxyDeploymentSpec](#envoyproxydeploymentspec)_ |  false  | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the managed Envoy deployment resource are applied. |
+| `envoyDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the managed Envoy deployment resource are applied. |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the managed Envoy service resource are applied. |
 | `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment. Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
 
@@ -1407,7 +1387,6 @@ _Appears in:_
 KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
 
 _Appears in:_
-- [EnvoyProxyDeploymentSpec](#envoyproxydeploymentspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
@@ -1438,7 +1417,7 @@ KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment 
 
 _Appears in:_
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
-- [EnvoyProxyDeploymentSpec](#envoyproxydeploymentspec)
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1474,7 +1453,6 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation
 
 _Appears in:_
-- [EnvoyProxyDeploymentSpec](#envoyproxydeploymentspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
@@ -1490,7 +1468,6 @@ _Appears in:_
 KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
 
 _Appears in:_
-- [EnvoyProxyDeploymentSpec](#envoyproxydeploymentspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
