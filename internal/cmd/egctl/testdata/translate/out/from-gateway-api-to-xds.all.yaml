@@ -431,6 +431,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 8443
+            drainType: MODIFY_ONLY
             filterChains:
             - filterChainMatch:
                 serverNames:
@@ -476,6 +477,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 1234
+            drainType: MODIFY_ONLY
             filterChains:
             - filters:
               - name: envoy.filters.network.tcp_proxy

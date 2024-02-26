@@ -717,6 +717,7 @@
                       "portValue": 8443
                     }
                   },
+                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filterChainMatch": {
@@ -794,6 +795,7 @@
                       "portValue": 1234
                     }
                   },
+                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filters": [

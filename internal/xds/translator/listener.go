@@ -148,6 +148,9 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 }
 
@@ -171,6 +174,9 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
 			QuicOptions:            &listenerv3.QuicProtocolOptions{},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
 	return xdsListener
@@ -253,10 +259,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	if err := t.patchHCMWithFilters(mgr, irListener); err != nil {
 		return err
 	}
-
-	// Remove /healthcheck/fail from endpoints that will trigger a drain of listeners for better control
-	// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
-	xdsListener.DrainType = listenerv3.Listener_MODIFY_ONLY
 
 	mgrAny, err := protocov.ToAnyWithError(mgr)
 	if err != nil {
