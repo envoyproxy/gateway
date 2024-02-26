@@ -14,6 +14,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
+	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -218,7 +219,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		{
 			Name:                     "shutdown-manager",
-			Image:                    egv1a1.DefaultShutdownManagerImage,
+			Image:                    expectedShutdownManagerImage(),
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
@@ -263,6 +264,15 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	return containers, nil
+}
+
+func expectedShutdownManagerImage() string {
+	tag := version.Get().ShutdownManagerVersion
+	if tag == "" {
+		tag = egv1a1.DefaultShutdownManagerImageTag
+	}
+
+	return fmt.Sprintf("%s:%s", egv1a1.DefaultShutdownManagerImageName, tag)
 }
 
 func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {

@@ -101,7 +101,6 @@ jobs:
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
         IMAGE_PULL_POLICY: IfNotPresent
-        TAG: latest
       run: make conformance
 
   e2e-test:
@@ -130,7 +129,6 @@ jobs:
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
         IMAGE_PULL_POLICY: IfNotPresent
-        TAG: latest
       run: make e2e
 
   publish:
