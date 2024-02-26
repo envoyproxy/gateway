@@ -254,6 +254,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		return err
 	}
 
+	// Remove /healthcheck/fail from endpoints that will trigger a drain of listeners for better control
+	// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+	xdsListener.DrainType = listenerv3.Listener_MODIFY_ONLY
+
 	mgrAny, err := protocov.ToAnyWithError(mgr)
 	if err != nil {
 		return err

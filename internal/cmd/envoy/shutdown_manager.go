@@ -148,15 +148,14 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 	logger.Info(fmt.Sprintf("initiating graceful drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
 
-	// Send request to Envoy admin API to initiate the graceful drain sequence
-	if resp, err := http.Post(fmt.Sprintf("http://%s:%d/drain_listeners?graceful&skip_exit",
-		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort), "application/json", nil); err != nil {
-		logger.Error(err, fmt.Sprintf("error %s", "initiating graceful drain"))
-	} else {
-		if resp.StatusCode != http.StatusOK {
-			logger.Error(fmt.Errorf("unexpected response status: %s", resp.Status), fmt.Sprintf("error %s", "initiating graceful drain"))
-		}
-		resp.Body.Close()
+	// Start failing active health checks
+	if err := postEnvoyAdminAPI("healthcheck/fail"); err != nil {
+		logger.Error(err, "error failing active health checks")
+	}
+
+	// Initiate graceful drain sequence
+	if err := postEnvoyAdminAPI("drain_listeners?graceful&skip_exit"); err != nil {
+		logger.Error(err, "error initiating graceful drain")
 	}
 
 	// Poll total connections from Envoy admin API until minimum drain period has
@@ -192,6 +191,21 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 	}
 
 	return nil
+}
+
+// postEnvoyAdminAPI sends a POST request to the Envoy admin API
+func postEnvoyAdminAPI(path string) error {
+	if resp, err := http.Post(fmt.Sprintf("http://%s:%d/%s",
+		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort, path), "application/json", nil); err != nil {
+		return err
+	} else {
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected response status: %s", resp.Status)
+		}
+		return nil
+	}
 }
 
 // getTotalConnections retrieves the total number of open connections from Envoy's server.total_connections stat
