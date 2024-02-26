@@ -186,7 +186,6 @@ func TestDeployment(t *testing.T) {
 				MinDrainDuration: &metav1.Duration{
 					Duration: 5 * time.Second,
 				},
-				ExitAtConnections: ptr.To[int32](20),
 			},
 		},
 		{

@@ -288,10 +288,6 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", cfg.MinDrainDuration.Seconds()))
 	}
 
-	if cfg.ExitAtConnections != nil {
-		command = append(command, fmt.Sprintf("--exit-at-connections=%d", *cfg.ExitAtConnections))
-	}
-
 	return command
 }
 

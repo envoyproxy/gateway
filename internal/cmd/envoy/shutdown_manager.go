@@ -170,7 +170,7 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 		}
 
 		if elapsedTime > minDrainDuration && !allowedToExit {
-			logger.Info(fmt.Sprintf("minimum drain period reached; will exit when total connections is less than or equal to %d", exitAtConnections))
+			logger.Info(fmt.Sprintf("minimum drain period reached; will exit when total connections reaches %d", exitAtConnections))
 			allowedToExit = true
 		}
 

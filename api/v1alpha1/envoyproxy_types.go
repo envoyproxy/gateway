@@ -132,11 +132,6 @@ type ShutdownConfig struct {
 	//
 	// +optional
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
-	// ExitAtConnections defines the number of connections to wait for when monitoring Envoy listener drain process.
-	// If unspecified, defaults to 0.
-	//
-	// +optional
-	ExitAtConnections *int32 `json:"exitAtConnections,omitempty"`
 }
 
 // EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource

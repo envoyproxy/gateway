@@ -220,7 +220,6 @@ spec:
                   - shutdown
                   - --drain-timeout=30s
                   - --min-drain-duration=5s
-                  - --exit-at-connections=20
           name: shutdown-manager
           resources:
             limits:
