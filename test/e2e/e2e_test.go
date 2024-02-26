@@ -18,6 +18,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
+	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -51,4 +52,48 @@ func TestE2E(t *testing.T) {
 	cSuite.Setup(t)
 	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
 	cSuite.Run(t, tests.ConformanceTests)
+
+	t.Run("Multiple GatewayClass E2E", func(t *testing.T) {
+		internetGatewaySuiteGatewayClassName := "internet"
+
+		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t\n supported features: [%v]\n exempt features: [%v]",
+			internetGatewaySuiteGatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.SupportedFeatures, *flags.ExemptFeatures)
+
+		internetGatewaySuite := suite.New(suite.Options{
+			Client:           client,
+			GatewayClassName: internetGatewaySuiteGatewayClassName,
+			Debug:            *flags.ShowDebug,
+		})
+
+		// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
+		// since this test suite reuse the base resources of previous test suite.
+		internetGatewaySuite.Applier.FS = Manifests
+		internetGatewaySuite.Applier.GatewayClass = internetGatewaySuiteGatewayClassName
+		internetGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, internetGatewaySuite.Client,
+			internetGatewaySuite.TimeoutConfig, internetGatewaySuite.GatewayClassName)
+
+		t.Logf("Running %d E2E tests for MergeGateways feature", len(tests.InternetGCTests))
+		internetGatewaySuite.Run(t, tests.InternetGCTests)
+
+		privateGatewaySuiteGatewayClassName := "private"
+
+		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t\n supported features: [%v]\n exempt features: [%v]",
+			privateGatewaySuiteGatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.SupportedFeatures, *flags.ExemptFeatures)
+
+		privateGatewaySuite := suite.New(suite.Options{
+			Client:           client,
+			GatewayClassName: privateGatewaySuiteGatewayClassName,
+			Debug:            *flags.ShowDebug,
+		})
+
+		// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
+		// since this test suite reuse the base resources of previous test suite.
+		privateGatewaySuite.Applier.FS = Manifests
+		privateGatewaySuite.Applier.GatewayClass = privateGatewaySuiteGatewayClassName
+		privateGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, privateGatewaySuite.Client,
+			privateGatewaySuite.TimeoutConfig, privateGatewaySuite.GatewayClassName)
+
+		t.Logf("Running %d E2E tests for MergeGateways feature", len(tests.PrivateGCTests))
+		privateGatewaySuite.Run(t, tests.PrivateGCTests)
+	})
 }
