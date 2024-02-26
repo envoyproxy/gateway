@@ -23,3 +23,14 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+  - name: "second-route"
+    hostname: "*"
+    timeout:
+      http:
+        requestTimeout: 0s
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50001
