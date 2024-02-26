@@ -15,10 +15,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
-	"github.com/envoyproxy/gateway/internal/utils/file"
-	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -28,6 +24,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils/file"
+	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 const (
@@ -323,11 +324,21 @@ func TestFetchRunningRateLimitPods(t *testing.T) {
 					},
 					Status: corev1.PodStatus{
 						Phase: corev1.PodRunning,
+						Conditions: []corev1.PodCondition{
+							{
+								Type:   corev1.PodReady,
+								Status: corev1.ConditionTrue,
+							},
+							{
+								Type:   corev1.ContainersReady,
+								Status: corev1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
 			namespace:     "envoy-gateway-system",
-			labelSelector: ratelimit.RateLimitLabelSelector(),
+			labelSelector: ratelimit.LabelSelector(),
 			expectErr:     nil,
 		},
 		{
@@ -344,7 +355,7 @@ func TestFetchRunningRateLimitPods(t *testing.T) {
 				},
 			},
 			namespace:     "envoy-gateway-system",
-			labelSelector: ratelimit.RateLimitLabelSelector(),
+			labelSelector: ratelimit.LabelSelector(),
 			expectErr:     fmt.Errorf("please check that the rate limit instance starts properly"),
 		},
 	}
@@ -467,4 +478,63 @@ func TestExtractRateLimitConfig(t *testing.T) {
 		})
 
 	}
+}
+
+func TestCheckRateLimitPodStatusReady(t *testing.T) {
+
+	cases := []struct {
+		caseName string
+		status   corev1.PodStatus
+		expect   bool
+	}{
+		{
+			caseName: "rate limit pod is ready",
+			expect:   true,
+			status: corev1.PodStatus{
+				Phase: corev1.PodRunning,
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   corev1.ContainersReady,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			},
+		},
+		{
+			caseName: "rate limit pod is not ready",
+			expect:   false,
+			status: corev1.PodStatus{
+				Phase: corev1.PodRunning,
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   corev1.ContainersReady,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+		},
+		{
+			caseName: "rate limit pod is running failed",
+			expect:   false,
+			status: corev1.PodStatus{
+				Phase: corev1.PodFailed,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			actual := checkRateLimitPodStatusReady(tc.status)
+			require.Equal(t, tc.expect, actual)
+		})
+	}
+
 }

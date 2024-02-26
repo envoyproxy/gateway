@@ -12,16 +12,17 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
-	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
 var (
@@ -41,7 +42,7 @@ func ratelimitConfigCommand() *cobra.Command {
 		Aliases: []string{"rl"},
 		Long:    `Retrieve the relevant rate limit configuration from the Rate Limit instance`,
 		Example: `  # Retrieve rate limit configuration
-  egctl config ratelimit
+  egctl config envoy-ratelimit
 
   # Retrieve rate limit configuration with short syntax
   egctl c rl
@@ -82,7 +83,7 @@ func retrieveRateLimitConfig(cli kubernetes.CLIClient, ns string) ([]byte, error
 	}
 
 	// Filter out all rate limit pods in the Running state
-	rlNN, err := fetchRunningRateLimitPods(cli, ns, ratelimit.RateLimitLabelSelector())
+	rlNN, err := fetchRunningRateLimitPods(cli, ns, ratelimit.LabelSelector())
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,9 @@ func fetchRunningRateLimitPods(cli kubernetes.CLIClient, namespace string, label
 			Namespace: rlPod.Namespace,
 			Name:      rlPod.Name,
 		}
-		if rlPod.Status.Phase != "Running" {
+
+		// Check that the rate limit pod is ready properly and can accept external traffic
+		if !checkRateLimitPodStatusReady(rlPod.Status) {
 			continue
 		}
 
@@ -127,6 +130,23 @@ func fetchRunningRateLimitPods(cli kubernetes.CLIClient, namespace string, label
 	}
 
 	return rlNN, nil
+}
+
+// checkRateLimitPodStatusReady Check that the rate limit pod is ready
+func checkRateLimitPodStatusReady(status corev1.PodStatus) bool {
+
+	if status.Phase != corev1.PodRunning {
+		return false
+	}
+
+	for _, condition := range status.Conditions {
+		if condition.Type == corev1.PodReady &&
+			condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
 }
 
 // extractRateLimitConfig After turning on port forwarding through PortForwarder,

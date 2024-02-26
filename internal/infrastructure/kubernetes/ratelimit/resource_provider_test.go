@@ -36,6 +36,32 @@ var ownerReferenceUID = map[string]types.UID{
 	ResourceKindServiceAccount: "test-owner-reference-uid-for-service-account",
 }
 
+func TestRateLimitLabelSelector(t *testing.T) {
+
+	cases := []struct {
+		name     string
+		expected []string
+	}{
+		{
+			name: "rateLimit-labelSelector",
+			expected: []string{
+				"app.kubernetes.io/name=envoy-ratelimit",
+				"app.kubernetes.io/component=ratelimit",
+				"app.kubernetes.io/managed-by=envoy-gateway",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := LabelSelector()
+			require.ElementsMatch(t, tc.expected, got)
+		})
+	}
+
+}
+
 func TestRateLimitLabels(t *testing.T) {
 	cases := []struct {
 		name     string

@@ -146,7 +146,7 @@ func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNa
 		path += "/prometheus"
 	}
 
-	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName},adminPort)
+	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, adminPort)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}
@@ -169,7 +169,7 @@ func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podN
 		// for yaml output we will convert the json to yaml when printed
 		path += "?format=json"
 	}
-	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName},adminPort)
+	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, adminPort)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}

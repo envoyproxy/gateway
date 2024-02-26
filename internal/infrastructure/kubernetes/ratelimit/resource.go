@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -98,12 +99,18 @@ func GetServiceURL(namespace string, dnsDomain string) string {
 	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
 }
 
-func RateLimitLabelSelector() []string {
-	return []string{
-		"app.kubernetes.io/name=envoy-ratelimit",
-		"app.kubernetes.io/component=ratelimit",
-		"app.kubernetes.io/managed-by=envoy-gateway",
+// LabelSelector returns the string slice form labels used for all envoy rate limit resources.
+func LabelSelector() []string {
+
+	rlLabelMap := rateLimitLabels()
+	retLabels := make([]string, 0, len(rlLabelMap))
+
+	for labelK, labelV := range rlLabelMap {
+		ls := strings.Join([]string{labelK, labelV}, "=")
+		retLabels = append(retLabels, ls)
 	}
+
+	return retLabels
 }
 
 // rateLimitLabels returns the labels used for all envoy rate limit resources.
