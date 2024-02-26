@@ -38,13 +38,13 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		Logger:                  svr.Logger.Logger,
 		LeaderElection:          svr.LeaderElection.Enabled,
 		HealthProbeBindAddress:  ":8081",
-		LeaderElectionID:        svr.LeaderElection.LeaderElectionID,
+		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svr.Namespace,
 	}
 
 	var notRequired bool
 	mgrOpts.Controller.NeedLeaderElection = &notRequired
-
+	
 	if svr.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {

@@ -37,7 +37,7 @@ func (s *watchAndReconcileSource) Start(ctx context.Context, eh handler.EventHan
 		select {
 		case <-ctx.Done():
 		case <-s.condition:
-			// Triggers a full reconcile
+			// Triggers a reconcile
 			eh.Generic(ctx, event.GenericEvent{Object: s.object}, queue)
 
 		}

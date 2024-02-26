@@ -25,8 +25,6 @@ const (
 	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
 	EnvoyPrefix = "envoy"
-	// DefaultElectionID is the default leader name for EGs
-	DefaultElectionID = "5b9825d2.gateway.envoyproxy.io"
 )
 
 // Server wraps the EnvoyGateway configuration and additional parameters
@@ -45,8 +43,6 @@ type Server struct {
 }
 
 type LeaderElection struct {
-	// LeaderElectionID specifies the resource name used for leader election.
-	LeaderElectionID string
 	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
 	LeaseDuration *time.Duration
 	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.
@@ -87,19 +83,18 @@ func parseEnvDuration(envVar string, duration **time.Duration) error {
 
 func withLeaderElectionSettings() (*LeaderElection, error) {
 	le := &LeaderElection{
-		LeaderElectionID: env.Lookup("ENVOY_GATEWAY_ELECTION_ID", DefaultElectionID),
-		Enabled:          true,
+		Enabled: true,
 	}
 
-	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_ENABLED", &le.RenewDeadline); err != nil {
+	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RENEW_DEADLINE", &le.RenewDeadline); err != nil {
 		return nil, err
 	}
 
-	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION", &le.RenewDeadline); err != nil {
+	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION", &le.LeaseDuration); err != nil {
 		return nil, err
 	}
 
-	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RETRY_PERIOD", &le.RenewDeadline); err != nil {
+	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RETRY_PERIOD", &le.RetryPeriod); err != nil {
 		return nil, err
 	}
 
