@@ -2304,7 +2304,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `drainTimeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds. If unspecified, defaults to 600 seconds. |
-| `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete. If unspecified, defaults to 15 seconds. |
+| `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete. If unspecified, defaults to 5 seconds. |
 
 
 #### SlowStart
