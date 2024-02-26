@@ -248,12 +248,16 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
 	if httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil {
 		if httpRoute.Timeout.HTTP.RequestTimeout != nil {
-			var timeout time.Duration
+			timeout := time.Hour // Default to 1 hour
 
-			// If request timeout is other than zero, use request timeout + 30 so
-			// idle timeout will not interfere with configured request timeout.
-			if httpRoute.Timeout.HTTP.RequestTimeout.Duration != 0 {
-				timeout = httpRoute.Timeout.HTTP.RequestTimeout.Duration + time.Second*30
+			// Ensure is not less than the request timeout
+			if timeout < httpRoute.Timeout.HTTP.RequestTimeout.Duration {
+				timeout = httpRoute.Timeout.HTTP.RequestTimeout.Duration
+			}
+
+			// Disable idle timeout when request timeout is disabled
+			if httpRoute.Timeout.HTTP.RequestTimeout.Duration == 0 {
+				timeout = 0
 			}
 
 			return durationpb.New(timeout)

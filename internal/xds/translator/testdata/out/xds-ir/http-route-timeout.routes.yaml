@@ -14,7 +14,7 @@
       name: first-route
       route:
         cluster: first-route-dest
-        idleTimeout: 35s
+        idleTimeout: 3600s
         timeout: 5s
         upgradeConfigs:
         - upgradeType: websocket
@@ -23,6 +23,15 @@
       name: second-route
       route:
         cluster: second-route-dest
+        idleTimeout: 4000s
+        timeout: 4000s
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: third-route
+      route:
+        cluster: third-route-dest
         idleTimeout: 0s
         timeout: 0s
         upgradeConfigs:
