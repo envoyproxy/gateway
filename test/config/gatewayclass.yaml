@@ -61,4 +61,4 @@ spec:
             defaultValue: "envoy-gateway-system"
   shutdown:
     drainTimeout: 15s
-    minDrainDuration: 5s
+

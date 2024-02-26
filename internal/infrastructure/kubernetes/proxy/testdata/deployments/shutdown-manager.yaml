@@ -219,7 +219,7 @@ spec:
                   - envoy
                   - shutdown
                   - --drain-timeout=30s
-                  - --min-drain-duration=5s
+                  - --min-drain-duration=15s
           name: shutdown-manager
           resources:
             limits:

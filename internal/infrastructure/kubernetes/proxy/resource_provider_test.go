@@ -184,7 +184,7 @@ func TestDeployment(t *testing.T) {
 					Duration: 30 * time.Second,
 				},
 				MinDrainDuration: &metav1.Duration{
-					Duration: 5 * time.Second,
+					Duration: 15 * time.Second,
 				},
 			},
 		},

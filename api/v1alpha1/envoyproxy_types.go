@@ -128,7 +128,7 @@ type ShutdownConfig struct {
 	// +optional
 	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
 	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
-	// If unspecified, defaults to 15 seconds.
+	// If unspecified, defaults to 5 seconds.
 	//
 	// +optional
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
