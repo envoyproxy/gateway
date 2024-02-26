@@ -418,26 +418,21 @@ func (r *RouteParentContext) HasCondition(route RouteContext, condType gwapiv1.R
 	return false
 }
 
-// BackendRefContext represents a generic BackendRef object that can reference Gateway objects.
-type BackendRefContext struct {
-	HTTPBackendRef *gwapiv1.HTTPBackendRef
-	GRPCBackendRef *v1alpha2.GRPCBackendRef
-	BackendRef     *gwapiv1.BackendRef
+// BackendRefContext represents a generic BackendRef object that can reference different BackendRef objects.
+type BackendRefContext any
+
+func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
+	rv := reflect.ValueOf(b)
+	br := rv.FieldByName("BackendRef")
+	if br.IsValid() {
+		backendRef := br.Interface().(gwapiv1.BackendRef)
+		return &backendRef
+
+	}
+	backendRef := b.(gwapiv1.BackendRef)
+	return &backendRef
 }
 
-// GetBackendRef returns the BackendRef object from BackendRefContext matching route Kind.
-func (b *BackendRefContext) GetBackendRef(routeKind gwapiv1.Kind) *gwapiv1.BackendRef {
-	switch routeKind {
-	case KindHTTPRoute:
-		if b.HTTPBackendRef != nil {
-			return &b.HTTPBackendRef.BackendRef
-		}
-	case KindGRPCRoute:
-		if b.GRPCBackendRef != nil {
-			return &b.GRPCBackendRef.BackendRef
-		}
-	default:
-		return b.BackendRef
-	}
-	return nil
+func GetFilters(b BackendRefContext) any {
+	return reflect.ValueOf(b).FieldByName("Filters")
 }

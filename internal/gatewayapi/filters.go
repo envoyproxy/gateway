@@ -704,25 +704,22 @@ func (t *Translator) processRequestMirrorFilter(
 
 	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
 	weight := int32(1)
-	mirrorBackendRef := gwapiv1.BackendRef{
-		BackendObjectReference: mirrorBackend,
-		Weight:                 &weight,
-	}
-
-	backendRefContext := BackendRefContext{
-		HTTPBackendRef: &gwapiv1.HTTPBackendRef{
-			BackendRef: mirrorBackendRef,
+	mirrorBackendRef := gwapiv1.HTTPBackendRef{
+		BackendRef: gwapiv1.BackendRef{
+			BackendObjectReference: mirrorBackend,
+			Weight:                 &weight,
 		},
 	}
+
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	if !t.validateBackendRef(backendRefContext, filterContext.ParentRef, filterContext.Route,
+	if !t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
 		resources, serviceNamespace, KindHTTPRoute) {
 		return
 	}
 
-	ds, _ := t.processDestination(backendRefContext, filterContext.ParentRef, filterContext.Route, resources)
+	ds, _ := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
 	newMirror := &ir.RouteDestination{
 		Name:     fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),

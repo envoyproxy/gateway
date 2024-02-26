@@ -27,7 +27,7 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 	if !t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind) {
 		return false
 	}
-	backendRef := backendRefContext.GetBackendRef(routeKind)
+	backendRef := GetBackendRef(backendRefContext)
 
 	if !t.validateBackendRefGroup(backendRef, parentRef, route) {
 		return false
@@ -89,9 +89,11 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	var filtersLen int
 	switch routeKind {
 	case KindHTTPRoute:
-		filtersLen = len(backendRef.HTTPBackendRef.Filters)
+		br := backendRef.(gwapiv1.HTTPBackendRef)
+		filtersLen = len(br.Filters)
 	case KindGRPCRoute:
-		filtersLen = len(backendRef.GRPCBackendRef.Filters)
+		br := backendRef.(gwapiv1a2.GRPCBackendRef)
+		filtersLen = len(br.Filters)
 	default:
 		return true
 	}

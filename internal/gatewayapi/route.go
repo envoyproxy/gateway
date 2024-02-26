@@ -174,11 +174,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		for _, backendRef := range rule.BackendRefs {
 			backendRef := backendRef
-			backendRefContext := BackendRefContext{
-				HTTPBackendRef: &backendRef,
-			}
-
-			ds, backendWeight := t.processDestination(backendRefContext, parentRef, httpRoute, resources)
+			ds, backendWeight := t.processDestination(backendRef, parentRef, httpRoute, resources)
 			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
@@ -474,11 +470,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 		for _, backendRef := range rule.BackendRefs {
 			backendRef := backendRef
-			backendRefContext := BackendRefContext{
-				GRPCBackendRef: &backendRef,
-			}
-
-			ds, backendWeight := t.processDestination(backendRefContext, parentRef, grpcRoute, resources)
+			ds, backendWeight := t.processDestination(backendRef, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
@@ -732,10 +724,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
-				backendRefContext := BackendRefContext{
-					BackendRef: &backendRef,
-				}
-				ds, _ := t.processDestination(backendRefContext, parentRef, tlsRoute, resources)
+				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
 				}
@@ -873,10 +862,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
-		backendRefContext := BackendRefContext{
-			BackendRef: &backendRef,
-		}
-		ds, _ := t.processDestination(backendRefContext, parentRef, udpRoute, resources)
+		ds, _ := t.processDestination(backendRef, parentRef, udpRoute, resources)
 		// Skip further processing if route destination is not valid
 		if ds == nil || len(ds.Endpoints) == 0 {
 			continue
@@ -1008,10 +994,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		backendRef := tcpRoute.Spec.Rules[0].BackendRefs[0]
-		backendRefContext := BackendRefContext{
-			BackendRef: &backendRef,
-		}
-		ds, _ := t.processDestination(backendRefContext, parentRef, tcpRoute, resources)
+		ds, _ := t.processDestination(backendRef, parentRef, tcpRoute, resources)
 		// Skip further processing if route destination is not valid
 		if ds == nil || len(ds.Endpoints) == 0 {
 			continue
@@ -1093,7 +1076,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	resources *Resources) (ds *ir.DestinationSetting, backendWeight uint32) {
 	routeType := GetRouteType(route)
 	weight := uint32(1)
-	backendRef := backendRefContext.GetBackendRef(routeType)
+	backendRef := GetBackendRef(backendRefContext)
 	if backendRef.Weight != nil {
 		weight = uint32(*backendRef.Weight)
 	}
