@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -267,12 +268,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 }
 
 func expectedShutdownManagerImage() string {
-	tag := version.Get().ShutdownManagerVersion
-	if tag == "" {
-		tag = egv1a1.DefaultShutdownManagerImageTag
+	if v := version.Get().ShutdownManagerVersion; v != "" {
+		return fmt.Sprintf("%s:%s", strings.Split(egv1a1.DefaultShutdownManagerImage, ":")[0], v)
 	}
-
-	return fmt.Sprintf("%s:%s", egv1a1.DefaultShutdownManagerImageName, tag)
+	return egv1a1.DefaultShutdownManagerImage
 }
 
 func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {
