@@ -122,7 +122,7 @@ type EnvoyProxyProvider struct {
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
 type ShutdownConfig struct {
-	// DrainTimeout defines the graceful shutdown timeout. This should be less than the pod's terminationGracePeriodSeconds.
+	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
 	// If unspecified, defaults to 600 seconds.
 	//
 	// +optional

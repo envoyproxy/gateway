@@ -6636,7 +6636,7 @@ spec:
                   process.
                 properties:
                   drainTimeout:
-                    description: DrainTimeout defines the graceful shutdown timeout.
+                    description: DrainTimeout defines the graceful drain timeout.
                       This should be less than the pod's terminationGracePeriodSeconds.
                       If unspecified, defaults to 600 seconds.
                     type: string
