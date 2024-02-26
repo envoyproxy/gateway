@@ -418,7 +418,7 @@ func (r *RouteParentContext) HasCondition(route RouteContext, condType gwapiv1.R
 	return false
 }
 
-// BackendRefContext represents a generic BackendRef object that can reference different BackendRef objects.
+// BackendRefContext represents a generic BackendRef object (HTTPBackendRef, GRPCBackendRef or BackendRef itself)
 type BackendRefContext any
 
 func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
@@ -434,5 +434,5 @@ func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
 }
 
 func GetFilters(b BackendRefContext) any {
-	return reflect.ValueOf(b).FieldByName("Filters")
+	return reflect.ValueOf(b).FieldByName("Filters").Interface()
 }

@@ -89,11 +89,11 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	var filtersLen int
 	switch routeKind {
 	case KindHTTPRoute:
-		br := backendRef.(gwapiv1.HTTPBackendRef)
-		filtersLen = len(br.Filters)
+		filters := GetFilters(backendRef).([]gwapiv1.HTTPRouteFilter)
+		filtersLen = len(filters)
 	case KindGRPCRoute:
-		br := backendRef.(gwapiv1a2.GRPCBackendRef)
-		filtersLen = len(br.Filters)
+		filters := GetFilters(backendRef).([]gwapiv1a2.GRPCRouteFilter)
+		filtersLen = len(filters)
 	default:
 		return true
 	}
