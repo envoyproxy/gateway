@@ -129,6 +129,97 @@ curl -vvv --header "Host: bar.example.com" --header "env: canary" "http://${GATE
 A `200` status code should be returned and the body should include `"pod": "bar-canary-backend-*"` indicating the
 traffic was routed to the foo backend service.
 
+### JWT Claims Base Routing
+
+Users would like to route to a specific backend by matching on JWT claims, users can achieve this base on [JWT Authentication](./jwt-authentication.md) configuration.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: jwt-claim-routing
+  jwt:
+    providers:
+      - name: example
+        recomputeRoute: true
+        claimToHeaders:
+          - claim: sub
+            header: x-sub
+          - claim: admin
+            header: x-admin
+          - claim: name
+            header: x-name
+        remoteJWKS:
+          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: jwt-claim-routing
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - kind: Service
+          name: foo-svc
+          port: 8080
+          weight: 1
+      matches:
+        - headers:
+            - name: x-name
+              value: John Doe
+    - backendRefs:
+        - kind: Service
+          name: bar-svc
+          port: 8080
+          weight: 1
+      matches:
+        - headers:
+            - name: x-name
+              value: Tom
+    # catch all
+    - backendRefs:
+        - kind: Service
+          name: infra-backend-invalid
+          port: 8080
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+EOF
+```
+Get the JWT used for testing request authentication:
+
+```shell
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+```
+
+Test HTTP routing to the `foo-svc` backend base on the JWT Token to the request.
+
+```shell
+curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/"
+```
+
+Get another JWT used for testing request authentication:
+
+```shell
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+```
+
+Test HTTP routing to the `bar-svc` backend base on the JWT Token to the request.
+
+```shell
+curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/"
+```
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
