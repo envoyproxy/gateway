@@ -146,7 +146,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 				// Maintain order here to ensure status/string does not change with the same data
 				routes := r.UnsortedList()
 				sort.Strings(routes)
-				message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding this one on these routes: %v", routes)
+				message := fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", routes)
 
 				status.SetBackendTrafficPolicyCondition(policy,
 					egv1a1.PolicyConditionOverridden,
