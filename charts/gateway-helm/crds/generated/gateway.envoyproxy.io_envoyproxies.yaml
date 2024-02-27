@@ -8,6 +8,8 @@ metadata:
 spec:
   group: gateway.envoyproxy.io
   names:
+    categories:
+    - envoy-gateway
     kind: EnvoyProxy
     listKind: EnvoyProxyList
     plural: envoyproxies
