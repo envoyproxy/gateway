@@ -178,15 +178,17 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 
 // Deployment returns the expected Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
+	proxyConfig := r.infra.GetProxyConfig()
+
 	// Get the EnvoyProxy config to configure the deployment.
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	provider := proxyConfig.GetEnvoyProxyProvider()
 	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig, proxyConfig.Spec.Shutdown)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +243,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
 					AutomountServiceAccountToken:  ptr.To(false),
-					TerminationGracePeriodSeconds: ptr.To[int64](300),
+					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
@@ -271,6 +273,14 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	return deployment, nil
+}
+
+func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
+	s := 900 // default
+	if cfg != nil && cfg.DrainTimeout != nil {
+		s = int(cfg.DrainTimeout.Seconds() + 300) // 5 minutes longer than drain timeout
+	}
+	return ptr.To(int64(s))
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {

@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,6 +88,7 @@ func TestDeployment(t *testing.T) {
 		caseName     string
 		infra        *ir.Infra
 		deploy       *egv1a1.KubernetesDeploymentSpec
+		shutdown     *egv1a1.ShutdownConfig
 		proxyLogging map[egv1a1.ProxyLogComponent]egv1a1.LogLevel
 		bootstrap    string
 		telemetry    *egv1a1.ProxyTelemetry
@@ -143,6 +145,46 @@ func TestDeployment(t *testing.T) {
 					Value: v1.JSON{
 						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
 					},
+				},
+			},
+		},
+		{
+			caseName: "shutdown-manager",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte(`{
+							"spec":{
+								"template":{
+									"spec":{
+										"containers":[{
+											"name":"shutdown-manager",
+											"resources":{
+												"requests":{"cpu":"100m","memory":"64Mi"},
+												"limits":{"cpu":"200m","memory":"96Mi"}
+											},
+											"securityContext":{"runAsUser":1234},
+											"env":[
+												{"name":"env_a","value":"env_a_value"},
+												{"name":"env_b","value":"env_b_value"}
+											],
+											"image":"envoyproxy/gateway-dev:v1.2.3"
+										}]
+									}
+								}
+							}
+						}`),
+					},
+				},
+			},
+			shutdown: &egv1a1.ShutdownConfig{
+				DrainTimeout: &metav1.Duration{
+					Duration: 30 * time.Second,
+				},
+				MinDrainDuration: &metav1.Duration{
+					Duration: 15 * time.Second,
 				},
 			},
 		},
@@ -485,6 +527,10 @@ func TestDeployment(t *testing.T) {
 
 			if tc.concurrency != nil {
 				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
+			}
+
+			if tc.shutdown != nil {
+				tc.infra.Proxy.Config.Spec.Shutdown = tc.shutdown
 			}
 
 			if len(tc.extraArgs) > 0 {

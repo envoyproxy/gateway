@@ -23,6 +23,7 @@ func newConfigCommand() *cobra.Command {
 	}
 
 	cfgCommand.AddCommand(proxyCommand())
+	cfgCommand.AddCommand(ratelimitCommand())
 
 	flags := cfgCommand.Flags()
 	options.AddKubeConfigFlags(flags)
@@ -33,6 +34,10 @@ func newConfigCommand() *cobra.Command {
 	cfgCommand.PersistentFlags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "List all envoy proxy pods from all namespaces.")
 
 	return cfgCommand
+}
+
+func ratelimitCommand() *cobra.Command {
+	return ratelimitConfigCommand()
 }
 
 func proxyCommand() *cobra.Command {

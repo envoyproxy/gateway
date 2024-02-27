@@ -75,5 +75,6 @@ xds:
                 serverHeaderTransformation: PASS_THROUGH
                 statPrefix: http
                 useRemoteAddress: true
+          drainType: MODIFY_ONLY
           name: envoy-gateway-system/eg/http
           perConnectionBufferLimitBytes: 32768

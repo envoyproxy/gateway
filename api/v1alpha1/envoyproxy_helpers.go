@@ -12,6 +12,7 @@ import (
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
 
@@ -119,4 +120,14 @@ func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
 	sort.Strings(args)
 
 	return strings.Join(args, ",")
+}
+
+// DefaultShutdownManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
+func DefaultShutdownManagerContainerResourceRequirements() *v1.ResourceRequirements {
+	return &v1.ResourceRequirements{
+		Requests: v1.ResourceList{
+			v1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
+			v1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
+		},
+	}
 }

@@ -24,10 +24,10 @@ const (
 	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
-	// envoyAdminAddress is the listening address of the envoy admin interface.
-	envoyAdminAddress = "127.0.0.1"
-	// envoyAdminPort is the port used to expose admin interface.
-	envoyAdminPort = 19000
+	// EnvoyAdminAddress is the listening address of the envoy admin interface.
+	EnvoyAdminAddress = "127.0.0.1"
+	// EnvoyAdminPort is the port used to expose admin interface.
+	EnvoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
 	envoyAdminAccessLogPath = "/dev/null"
 
@@ -185,8 +185,8 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 				Port:    DefaultXdsServerPort,
 			},
 			AdminServer: adminServerParameters{
-				Address:       envoyAdminAddress,
-				Port:          envoyAdminPort,
+				Address:       EnvoyAdminAddress,
+				Port:          EnvoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
 			ReadyServer: readyServerParameters{

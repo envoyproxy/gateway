@@ -5,6 +5,7 @@
 VERSION_PACKAGE := github.com/envoyproxy/gateway/internal/cmd/version
 
 GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell cat VERSION) \
+	-X $(VERSION_PACKAGE).shutdownManagerVersion=$(TAG) \
 	-X $(VERSION_PACKAGE).gitCommitID=$(GIT_COMMIT)
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)

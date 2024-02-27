@@ -53,8 +53,8 @@ func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"))
 }
 
-// ExpectedProxyContainerEnv returns expected container envs.
-func ExpectedProxyContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
+// ExpectedContainerEnv returns expected container envs.
+func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
 	amendFunc := func(envVar corev1.EnvVar) {
 		for index, e := range env {
 			if e.Name == envVar.Name {
