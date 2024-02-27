@@ -32,3 +32,5 @@
       - some-header6
       route:
         cluster: request-header-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

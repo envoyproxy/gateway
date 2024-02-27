@@ -234,6 +234,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: www.example.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_example_com
         oidc:
           clientID: client2.oauth.foo.com
@@ -266,6 +267,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: www.example.com
+        isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_example_com
         oidc:
           clientID: client1.apps.googleusercontent.com

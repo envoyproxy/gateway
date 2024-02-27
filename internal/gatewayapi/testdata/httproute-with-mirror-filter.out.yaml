@@ -131,6 +131,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         mirrors:
         - name: httproute/default/httproute-1/rule/0-mirror-0
           settings:

@@ -3,6 +3,7 @@
       address: 0.0.0.0
       portValue: 10443
       protocol: UDP
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -31,8 +32,6 @@
           routeConfigName: envoy-gateway/gateway-1/tls
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.quic
@@ -55,6 +54,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10443
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -81,8 +81,6 @@
           routeConfigName: envoy-gateway/gateway-1/tls
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls

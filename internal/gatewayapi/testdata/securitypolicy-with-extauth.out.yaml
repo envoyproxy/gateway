@@ -239,6 +239,7 @@ xdsIR:
           - header1
           - header2
         hostname: www.foo.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
@@ -273,6 +274,7 @@ xdsIR:
             - header2
             path: /auth
         hostname: www.bar.com
+        isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
         pathMatch:
           distinct: false

@@ -394,7 +394,15 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
+	policyTarget := irStringKey(
+		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
+		string(policy.Spec.TargetRef.Name),
+	)
 	for _, http := range ir.HTTP {
+		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
 		for _, r := range http.Routes {
 			// Apply if not already set
 			if r.RateLimit == nil {
@@ -907,6 +915,15 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 				cb.MaxPendingRequests = &ui32
 			} else {
 				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests))
+				return nil
+			}
+		}
+
+		if pcb.MaxRequestsPerConnection != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+				cb.MaxRequestsPerConnection = &ui32
+			} else {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection))
 				return nil
 			}
 		}

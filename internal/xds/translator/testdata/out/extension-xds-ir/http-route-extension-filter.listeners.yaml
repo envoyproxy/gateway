@@ -28,9 +28,8 @@
           routeConfigName: extension-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: extension-listener
   perConnectionBufferLimitBytes: 32768
   statPrefix: mock-extension-inserted-prefix

@@ -21,3 +21,5 @@
       name: regex-route
       route:
         cluster: regex-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
