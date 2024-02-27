@@ -10,7 +10,7 @@ metadata:
   name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
   selector:
@@ -28,8 +28,6 @@ spec:
         app.kubernetes.io/managed-by: envoy-gateway
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
-      annotations:
-        prometheus.io/scrape: "true"
     spec:
       automountServiceAccountToken: false
       containers:
@@ -153,11 +151,7 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
-            - name: env_a
-              value: env_a_value
-            - name: env_b
-              value: env_b_value
-          image: envoyproxy/envoy:v1.2.3
+          image: envoyproxy/envoy:distroless-dev
           imagePullPolicy: IfNotPresent
           lifecycle:
             preStop:
@@ -174,12 +168,9 @@ spec:
               name: EnvoyH-6658f727
               protocol: TCP
           resources:
-            limits:
-              cpu: 400m
-              memory: 2Gi
             requests:
-              cpu: 200m
-              memory: 1Gi
+              cpu: 100m
+              memory: 512Mi
           readinessProbe:
             httpGet:
               path: /ready
@@ -191,8 +182,6 @@ spec:
             failureThreshold: 3
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
-          securityContext:
-            privileged: true
           volumeMounts:
             - mountPath: /certs
               name: certs
@@ -202,9 +191,14 @@ spec:
         - args:
             - envoy
             - shutdown-manager
+            - --ready-timeout=40s
           command:
             - envoy-gateway
           env:
+            - name: env_a
+              value: env_a_value
+            - name: env_b
+              value: env_b_value
             - name: ENVOY_GATEWAY_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -215,7 +209,7 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
-          image: envoyproxy/gateway-dev:latest
+          image: envoyproxy/gateway-dev:v1.2.3
           imagePullPolicy: IfNotPresent
           lifecycle:
             preStop:
@@ -224,11 +218,16 @@ spec:
                   - envoy-gateway
                   - envoy
                   - shutdown
+                  - --drain-timeout=30s
+                  - --min-drain-duration=15s
           name: shutdown-manager
           resources:
+            limits:
+              cpu: 200m
+              memory: 96Mi
             requests:
-              cpu: 10m
-              memory: 32Mi
+              cpu: 100m
+              memory: 64Mi
           readinessProbe:
             httpGet:
               path: /healthz
@@ -249,13 +248,13 @@ spec:
             failureThreshold: 3
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
+          securityContext:
+            runAsUser: 1234
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 900
-      securityContext:
-        runAsUser: 1000
+      terminationGracePeriodSeconds: 330
       volumes:
         - name: certs
           secret:
