@@ -12,9 +12,10 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/types"
+	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
@@ -46,16 +47,20 @@ var ClientTimeoutTest = suite.ConformanceTest{
 			}
 
 			client := &http.Client{}
-			resp, err := client.Do(req)
-			if err != nil {
-				panic(err)
-			}
-			defer func() {
-				_ = resp.Body.Close()
-			}()
 
-			// return 408 instead of 400 when request timeout.
-			assert.Equal(t, http.StatusRequestTimeout, resp.StatusCode)
+			httputils.AwaitConvergence(t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					resp, err := client.Do(req)
+					if err != nil {
+						panic(err)
+					}
+					defer resp.Body.Close()
+
+					// return 408 instead of 400 when request timeout.
+					return http.StatusRequestTimeout == resp.StatusCode
+				})
 
 		})
 	},
