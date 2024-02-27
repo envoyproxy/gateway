@@ -9,10 +9,12 @@
 package tests
 
 import (
+	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/url"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
@@ -34,28 +36,27 @@ var ClientTimeoutTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/request-timeout",
-					Headers: map[string]string{
-						"x-large-header": largeHeader,
-					},
+			// Use raw http request to avoid chunked
+			req := &http.Request{
+				Method: "GET",
+				URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: "/request-timeout"},
+				Header: http.Header{
+					"x-large-size-header": []string{largeHeader},
 				},
-				Response: http.Response{
-					StatusCode: 408, // return 408 instead of 400 when request timeout.
-				},
-				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			client := &http.Client{}
+			resp, err := client.Do(req)
 			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
+				panic(err)
 			}
+			defer func() {
+				_ = resp.Body.Close()
+			}()
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			// return 408 instead of 400 when request timeout.
+			assert.Equal(t, http.StatusRequestTimeout, resp.StatusCode)
+
 		})
 	},
 }
