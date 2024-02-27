@@ -12,6 +12,8 @@ type Authorization struct {
 	// matches the action for the request is deny.
 	// If rules contains at least one Deny rule and none of them
 	// matches the action for the request is allow.
+	// If rules contains Allow and Deny,
+	// the Deny rules are overriding the Allow rules from the overlapping parts.
 	//
 	// +kubebuilder:validation:MinItems=1
 	Rules []Rule `json:"rules,omitempty"`
@@ -20,7 +22,7 @@ type Authorization struct {
 // Rule defines the single authorization rule.
 type Rule struct {
 	// ClientSelectors contains the client selector configuration.
-	// All selectors are and together and only if all selector are valid
+	// All selectors are AND'd together and only if all selector are valid
 	// the Action is performed.
 	//
 	// +kubebuilder:validation:MinItems=1
