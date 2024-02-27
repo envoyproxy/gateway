@@ -42,6 +42,7 @@ var ClientTimeoutTest = suite.ConformanceTest{
 				Method: "GET",
 				URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: "/request-timeout"},
 				Header: http.Header{
+					// larger enough to trigger request timeout
 					"x-large-size-header": []string{largeHeader},
 				},
 			}
