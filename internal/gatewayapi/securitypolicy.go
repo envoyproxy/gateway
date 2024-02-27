@@ -360,7 +360,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 
-	// Apply IR to all the routes within the specific Gateway
+	// Apply IR to all the routes within the specific Gateway that originated
+	// from the gateway to which this security policy was attached.
 	// If the feature is already set, then skip it, since it must have be
 	// set by a policy attaching to the route
 	//
@@ -370,7 +371,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
+	policyTarget := irStringKey(
+		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
+		string(policy.Spec.TargetRef.Name),
+	)
 	for _, http := range ir.HTTP {
+		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
 		for _, r := range http.Routes {
 			// Apply if not already set
 			if r.CORS == nil {

@@ -6631,6 +6631,21 @@ spec:
                 required:
                 - type
                 type: object
+              shutdown:
+                description: Shutdown defines configuration for graceful envoy shutdown
+                  process.
+                properties:
+                  drainTimeout:
+                    description: DrainTimeout defines the graceful drain timeout.
+                      This should be less than the pod's terminationGracePeriodSeconds.
+                      If unspecified, defaults to 600 seconds.
+                    type: string
+                  minDrainDuration:
+                    description: MinDrainDuration defines the minimum drain duration
+                      allowing time for endpoint deprogramming to complete. If unspecified,
+                      defaults to 5 seconds.
+                    type: string
+                type: object
               telemetry:
                 description: Telemetry defines telemetry parameters for managed proxies.
                 properties:

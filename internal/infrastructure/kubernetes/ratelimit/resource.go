@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -96,6 +97,20 @@ const (
 // GetServiceURL returns the URL for the rate limit service.
 func GetServiceURL(namespace string, dnsDomain string) string {
 	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
+}
+
+// LabelSelector returns the string slice form labels used for all envoy rate limit resources.
+func LabelSelector() []string {
+
+	rlLabelMap := rateLimitLabels()
+	retLabels := make([]string, 0, len(rlLabelMap))
+
+	for labelK, labelV := range rlLabelMap {
+		ls := strings.Join([]string{labelK, labelV}, "=")
+		retLabels = append(retLabels, ls)
+	}
+
+	return retLabels
 }
 
 // rateLimitLabels returns the labels used for all envoy rate limit resources.
@@ -307,7 +322,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		}
 	}
 
-	return resource.ExpectedProxyContainerEnv(rateLimitDeployment.Container, env)
+	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
 // Validate the ratelimit tls secret validating.

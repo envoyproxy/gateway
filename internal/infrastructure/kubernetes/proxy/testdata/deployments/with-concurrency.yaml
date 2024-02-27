@@ -53,6 +53,12 @@ spec:
                   fieldPath: metadata.name
           image: envoyproxy/envoy:distroless-dev
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /shutdown/ready
+                port: 19002
+                scheme: HTTP
           name: envoy
           ports:
             - containerPort: 8080
@@ -82,11 +88,61 @@ spec:
               readOnly: true
             - mountPath: /sds
               name: sds
+        - args:
+            - envoy
+            - shutdown-manager
+          command:
+            - envoy-gateway
+          env:
+            - name: ENVOY_GATEWAY_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: ENVOY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+          image: envoyproxy/gateway-dev:latest
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - envoy-gateway
+                  - envoy
+                  - shutdown
+          name: shutdown-manager
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 19002
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 19002
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 300
+      terminationGracePeriodSeconds: 900
       volumes:
         - name: certs
           secret:
