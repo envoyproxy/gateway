@@ -32,7 +32,7 @@ import (
 
 func TestProcessHTTPRoutes(t *testing.T) {
 	const (
-		defaultWait = time.Second * 60
+		defaultWait = time.Second * 10
 		defaultTick = time.Millisecond * 20
 	)
 
