@@ -139,14 +139,14 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		return false
 	}, defaultWait, defaultTick)
 
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
 	// Even though no gateways exist, the controller loads the empty resource map
 	// to support gateway deletions.
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		if !ok {
-			return false
-		}
-		_, ok = (*gatewayClassResources)[gc.Name]
+		_, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		return ok
 	}, defaultWait, defaultTick)
 }
@@ -201,11 +201,11 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	}, defaultWait, defaultTick)
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		if !ok {
-			return false
-		}
-		res, ok := (*gatewayClassResources)[gc.Name]
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -341,10 +341,16 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
 	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
-		gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
 		return res != nil && len(res.Gateways) == 1
 	}, defaultWait, defaultTick)
 
@@ -361,6 +367,8 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}, defaultWait, defaultTick)
 
 	gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
+	assert.NotNil(t, gatewayClassResources)
+
 	res := (*gatewayClassResources)[gc.Name]
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
@@ -888,18 +896,22 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 
 			require.Eventually(t, func() bool {
-				gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-				res := (*gatewayClassResources)[gc.Name]
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+				if !ok {
+					return false
+				}
 				return ok && len(res.HTTPRoutes) != 0
 			}, defaultWait, defaultTick)
+
 			gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
+			assert.NotNil(t, gatewayClassResources)
+
 			res := (*gatewayClassResources)[gc.Name]
 			assert.Equal(t, &testCase.route, res.HTTPRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
-				gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-				res, ok := (*gatewayClassResources)[testCase.route.Namespace]
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -918,8 +930,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 					return true
 				}
 
-				gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-				res, ok := (*gatewayClassResources)[gc.Name]
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -1036,21 +1047,22 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 
 			require.Eventually(t, func() bool {
-				gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-				res, ok := (*gatewayClassResources)[gc.Name]
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
 				return ok && len(res.TLSRoutes) != 0
 			}, defaultWait, defaultTick)
+
 			gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
+			assert.NotNil(t, gatewayClassResources)
+
 			res, _ := (*gatewayClassResources)[gc.Name]
 			assert.Equal(t, &testCase.route, res.TLSRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
-				gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-				res, ok := (*gatewayClassResources)[gc.Name]
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -1064,8 +1076,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 			// Ensure the Service is in the resource map.
 			require.Eventually(t, func() bool {
-				gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-				res, ok := (*gatewayClassResources)[gc.Name]
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -1192,10 +1203,13 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	require.NoError(t, cli.Create(ctx, &tlsRoute))
 	require.NoError(t, cli.Create(ctx, &httpRoute))
 
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
 	// Check that the Service is present in the resource map
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1210,8 +1224,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	// Delete the TLSRoute, and check if the Service is still present
 	require.NoError(t, cli.Delete(ctx, &tlsRoute))
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1226,8 +1239,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	// Delete the HTTPRoute, and check if the Service is also removed
 	require.NoError(t, cli.Delete(ctx, &httpRoute))
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1374,8 +1386,11 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}()
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1527,8 +1542,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}()
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1537,8 +1551,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}, defaultWait, defaultTick)
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1546,8 +1559,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}, defaultWait, defaultTick)
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1555,8 +1567,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}, defaultWait, defaultTick)
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1564,8 +1575,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}, defaultWait, defaultTick)
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1573,12 +1583,25 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}, defaultWait, defaultTick)
 
 	require.Eventually(t, func() bool {
-		gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-		res, ok := (*gatewayClassResources)[gc.Name]
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
 		return res != nil && len(res.GRPCRoutes) == 1
 	}, defaultWait, defaultTick)
 
+}
+
+func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*gatewayapi.Resources, bool) {
+	gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
+	if !ok {
+		return nil, false
+	}
+
+	res, ok := (*gatewayClassResources)[gatewayClassName]
+	if !ok {
+		return nil, false
+	}
+
+	return res, true
 }
