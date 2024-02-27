@@ -27,7 +27,7 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ## Test and customize circuit breaker settings
 
-This example will simulate a degraded backend that responds within 10 seconds by calling the `/delayed/10` endpoint of httpbin. The hey tool will be used to generate 100 concurrent requests. 
+This example will simulate a degraded backend that responds within 10 seconds by adding the `?delay=10s` query parameter to API calls. The hey tool will be used to generate 100 concurrent requests. 
 
 ```shell
 hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/?delay=10s
@@ -72,7 +72,7 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: httpbin
+    name: backend
     namespace: default
   circuitBreaker:
     maxPendingRequests: 0
@@ -83,7 +83,7 @@ EOF
 Execute the load simulation again.  
 
 ```shell
-hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/delay/10
+hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/?delay=10s
 ```
 
 ```console
@@ -121,4 +121,3 @@ With the new circuit breaker settings, and due to the slowness of the backend, o
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
 [Hey project]: https://github.com/rakyll/hey
-[Httpbin project]: https://github.com/postmanlabs/httpbin
