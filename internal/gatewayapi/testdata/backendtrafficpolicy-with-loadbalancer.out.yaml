@@ -85,16 +85,16 @@ backendTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'There are existing ClientTrafficPolicies that are overriding this
-        one on these routes: [default/httproute-1 default/httproute-2]'
-      reason: Overridden
-      status: "True"
-      type: Overridden
-    - lastTransitionTime: null
       message: BackendTrafficPolicy has been accepted.
       reason: Accepted
       status: "True"
       type: Accepted
+    - lastTransitionTime: null
+      message: 'This policy is being overridden by other backendTrafficPolicies for
+        these routes: [default/httproute-1 default/httproute-2]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

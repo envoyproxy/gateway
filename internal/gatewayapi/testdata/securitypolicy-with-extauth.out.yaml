@@ -189,6 +189,12 @@ securityPolicies:
       reason: Accepted
       status: "True"
       type: Accepted
+    - lastTransitionTime: null
+      message: 'This policy is being overridden by other securityPolicies for these
+        routes: [default/httproute-1]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
 xdsIR:
   default/gateway-1:
     accessLog:
