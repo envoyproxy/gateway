@@ -333,11 +333,13 @@ func TestDeployment(t *testing.T) {
 			bootstrap: `test bootstrap config`,
 		},
 		{
-			caseName: "enable-prometheus",
+			caseName: "disable-prometheus",
 			infra:    newTestInfra(),
 			telemetry: &egv1a1.ProxyTelemetry{
 				Metrics: &egv1a1.ProxyMetrics{
-					Prometheus: &egv1a1.ProxyPrometheusProvider{},
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
 				},
 			},
 		},
@@ -509,14 +511,6 @@ func TestDeployment(t *testing.T) {
 
 			if tc.telemetry != nil {
 				tc.infra.Proxy.Config.Spec.Telemetry = tc.telemetry
-			} else {
-				tc.infra.Proxy.Config.Spec.Telemetry = &egv1a1.ProxyTelemetry{
-					Metrics: &egv1a1.ProxyMetrics{
-						Prometheus: &egv1a1.ProxyPrometheusProvider{
-							Disable: true,
-						},
-					},
-				}
 			}
 
 			if len(tc.proxyLogging) > 0 {
@@ -548,6 +542,14 @@ func TestDeployment(t *testing.T) {
 				sort.Slice(env, func(i, j int) bool {
 					return env[i].Name > env[j].Name
 				})
+			}
+
+			if os.Getenv("UPDATE_TESTDATA") != "" {
+				deploymentYAML, err := yaml.Marshal(dp)
+				require.NoError(t, err)
+				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0644)
+				require.NoError(t, err)
+				return
 			}
 
 			sortEnv(dp.Spec.Template.Spec.Containers[0].Env)
