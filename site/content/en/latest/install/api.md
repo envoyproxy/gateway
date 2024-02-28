@@ -29,9 +29,11 @@ The Helm chart for Envoy Gateway
 | certgen.job.ttlSecondsAfterFinished | int | `0` |  |
 | certgen.rbac.annotations | object | `{}` |  |
 | certgen.rbac.labels | object | `{}` |  |
+| config.enabled | bool | `true` | Switch to false to prevent creating the configmap |
 | config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
+| config.nameOverride | string | `""` | Provide custom name of existing cm, or custom name of cm to be created |
 | createNamespace | bool | `false` |  |
 | deployment.envoyGateway.image.repository | string | `"${ImageRepository}"` |  |
 | deployment.envoyGateway.image.tag | string | `"${ImageTag}"` |  |
