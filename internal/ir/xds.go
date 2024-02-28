@@ -826,6 +826,8 @@ type DestinationSetting struct {
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
+
+	BackendTLS *TLSUpstreamConfig `json:"backendTLS,omitempty" yaml:"backendTLS,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1735,10 +1737,9 @@ type BackOffPolicy struct {
 	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
 }
 
-// TLSBundle contains tls certificate, private key and ca file in []byte format.
-// TLSBundle contains hostname and ca file in []byte format.
+// TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
-type TLSBundle struct {
-	Hostname string
-	CACert   TLSCACertificate
+type TLSUpstreamConfig struct {
+	SNI           string
+	CACertificate TLSCACertificate
 }

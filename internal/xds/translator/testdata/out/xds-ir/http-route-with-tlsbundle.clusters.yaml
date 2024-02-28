@@ -17,9 +17,9 @@
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
       commonTlsContext:
         validationContextSdsSecretConfig:
-          name: policy-btls/policies-ca
+          name: httproute/envoy-gateway/httproute-btls/rule/0
           sdsConfig:
             ads: {}
             resourceApiVersion: V3
-      sni: example.com
+      sni: '*'
   type: EDS

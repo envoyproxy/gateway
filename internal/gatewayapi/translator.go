@@ -18,6 +18,7 @@ import (
 const (
 	KindConfigMap           = "ConfigMap"
 	KindClientTrafficPolicy = "ClientTrafficPolicy"
+	KindBackendTLSPolicy    = "BackendTLSPolicy"
 	KindEnvoyProxy          = "EnvoyProxy"
 	KindGateway             = "Gateway"
 	KindGatewayClass        = "GatewayClass"

@@ -509,12 +509,18 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 	tsocket := &corev3.TransportSocket{}
 	tsocket = nil
 
-	if httpRoute.BackendTLS != nil {
-		CaSecret := buildXdsUpstreamTLSCASecret(*httpRoute.BackendTLS)
+	ca := mergeCaBytes(httpRoute.Destination.Settings)
+
+	if string(ca) != "" {
+		// use destination name as the ca secret name
+		caXdsSecretName := httpRoute.Destination.Name
+		CaSecret := buildXdsUpstreamTLSCASecret(caXdsSecretName, ca)
 		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
 			return err
 		}
-		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.BackendTLS)
+		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
+		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
+		temp, err := buildXdsUpstreamTLSSocketWthCert(caXdsSecretName, httpRoute.Hostname)
 		if err != nil {
 			return err
 		}
@@ -596,34 +602,33 @@ const (
 	EDS
 )
 
-func buildXdsUpstreamTLSCASecret(tlsConfig ir.TLSBundle) *tlsv3.Secret {
+func buildXdsUpstreamTLSCASecret(caSecretName string, caByte []byte) *tlsv3.Secret {
 	// Build the tls secret
 	return &tlsv3.Secret{
-		Name: tlsConfig.CACert.Name,
+		Name: caSecretName,
 		Type: &tlsv3.Secret_ValidationContext{
 			ValidationContext: &tlsv3.CertificateValidationContext{
 				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.CACert.Certificate},
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caByte},
 				},
 			},
 		},
 	}
 }
 
-func buildXdsUpstreamTLSSocketWthCert(tlsConfigs *ir.TLSBundle) (*corev3.TransportSocket, error) {
+func buildXdsUpstreamTLSSocketWthCert(caSecretName, hostname string) (*corev3.TransportSocket, error) {
 
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: nil,
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-					Name:      tlsConfigs.CACert.Name, //tlsConfigs.GetXdsCaSecretName(),
+					Name:      caSecretName,
 					SdsConfig: makeConfigSource(),
 				},
 			},
 		},
-		Sni:                tlsConfigs.Hostname,
-		AllowRenegotiation: false,
+		Sni: hostname,
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -637,4 +642,17 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfigs *ir.TLSBundle) (*corev3.Transpo
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func mergeCaBytes(dss []*ir.DestinationSetting) []byte {
+	mergedCa := ""
+	for _, ds := range dss {
+		if ds.BackendTLS != nil {
+			if mergedCa != "" {
+				mergedCa += "\n"
+			}
+			mergedCa += string(ds.BackendTLS.CACertificate.Certificate)
+		}
+	}
+	return []byte(mergedCa)
 }
