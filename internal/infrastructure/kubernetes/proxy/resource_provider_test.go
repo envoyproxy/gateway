@@ -547,6 +547,7 @@ func TestDeployment(t *testing.T) {
 			if os.Getenv("UPDATE_TESTDATA") != "" {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
+				// nolint: gosec
 				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0644)
 				require.NoError(t, err)
 				return
