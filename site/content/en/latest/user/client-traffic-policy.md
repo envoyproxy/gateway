@@ -410,7 +410,7 @@ Handling connection for 8888
 }
 ```
 
-### Enable HTTP request timeout
+### Enable HTTP Request Received timeout
 This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
 This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
 
