@@ -2004,6 +2004,7 @@ _Appears in:_
 | `backend` | _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ |  true  | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  | FailClosed is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailClosed is false, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailClosed is False. |
+| `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  | Telemetry defines telemetry configuration for RateLimit. |
 
 
 #### RateLimitDatabaseBackend
@@ -2030,6 +2031,34 @@ RateLimitDatabaseBackendType specifies the types of database backend to be used 
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
 
+
+
+#### RateLimitMetrics
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `prometheus` | _[RateLimitMetricsPrometheusProvider](#ratelimitmetricsprometheusprovider)_ |  true  | Prometheus defines the configuration for prometheus endpoint. |
+
+
+#### RateLimitMetricsPrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [RateLimitMetrics](#ratelimitmetrics)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
 
 
 #### RateLimitRedisSettings
@@ -2092,6 +2121,20 @@ _Appears in:_
 | `type` | _[RateLimitType](#ratelimittype)_ |  true  | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global" or "Local". |
 | `global` | _[GlobalRateLimit](#globalratelimit)_ |  false  | Global defines global rate limit configuration. |
 | `local` | _[LocalRateLimit](#localratelimit)_ |  false  | Local defines local rate limit configuration. |
+
+
+#### RateLimitTelemetry
+
+
+
+
+
+_Appears in:_
+- [RateLimit](#ratelimit)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
 
 
 #### RateLimitType
