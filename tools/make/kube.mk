@@ -196,11 +196,16 @@ run-benchmark: ## Run benchmark tests
 	kubectl create namespace nighthawk-test-server
 	kubectl -n nighthawk-test-server create configmap test-server-config --from-file=test/benchmark/test-server.yaml --output yaml
 	kubectl apply -f test/benchmark/benchmark-test-server.yaml
+	@$(call log, "Waiting for benchmark test server to be ready")
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n nighthawk-test-server deployment/nighthawk-test-server --for=condition=Available
-	@$(call log, "Waiting for benchmark test server to be ready")
+	@$(call log, "Deploying Prometheus to collect metrics")
+	curl -sL https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.71.2/bundle.yaml | kubectl create -f -
+	kubectl create -f test/benchmark/prometheus.yaml
+	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus-operator -n default
+	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus -n default
+	@$(call log, "Running benchmark")
 	WAIT_TIMEOUT=$(WAIT_TIMEOUT) RPS=$(RPS) CONNECTIONS=$(CONNECTIONS) DURATION=$(DURATION) sh test/benchmark/run-benchmark.sh
-	@$(call log, "Running benchmark tests")
 	
 
 .PHONY: delete-cluster
