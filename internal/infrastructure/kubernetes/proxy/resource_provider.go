@@ -147,6 +147,11 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		Spec: serviceSpec,
 	}
 
+	// apply merge patch to service
+	if merged, err := envoyServiceConfig.ApplyMergePatch(svc); err == nil {
+		svc = merged
+	}
+
 	return svc, nil
 }
 

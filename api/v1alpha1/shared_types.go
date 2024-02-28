@@ -268,6 +268,11 @@ type KubernetesServiceSpec struct {
 	// +kubebuilder:default:="Local"
 	// +optional
 	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
+
+	// Patch defines how to perform the patch operation to the service
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
