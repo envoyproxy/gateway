@@ -86,7 +86,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: envoy-gateway-config
+          name: {{ include "eg.configMapName" . }}
         name: envoy-gateway-config
       - name: certs
         secret:

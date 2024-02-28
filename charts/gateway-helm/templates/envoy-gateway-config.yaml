@@ -1,7 +1,8 @@
+{{- if .Values.config.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: envoy-gateway-config
+  name: {{ include "eg.configMapName" . }}
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
@@ -10,3 +11,4 @@ data:
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
     {{- toYaml .Values.config.envoyGateway | nindent 4 }}
+{{- end }}

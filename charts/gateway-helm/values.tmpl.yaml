@@ -26,6 +26,10 @@ deployment:
     labels: {}
 
 config:
+  # -- Switch to false to prevent creating the configmap
+  enabled: true
+  # -- Provide custom name of existing cm, or custom name of cm to be created
+  nameOverride: ""
   envoyGateway:
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

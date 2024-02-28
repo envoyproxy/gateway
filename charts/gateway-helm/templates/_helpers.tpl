@@ -60,3 +60,15 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Generate name for the envoy-gateway configmap	
+*/}}
+{{- define "eg.configMapName" -}}
+{{- if .Values.config.nameOverride -}}
+{{- .Values.config.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+envoy-gateway-config
+{{- end -}}
+{{- end -}}
+
