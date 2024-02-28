@@ -41,6 +41,10 @@ func TestLogger(t *testing.T) {
 	defaultLogger := DefaultLogger(v1alpha1.LogLevelInfo)
 	assert.NotNil(t, defaultLogger.logging)
 	assert.NotNil(t, defaultLogger.sugaredLogger)
+
+	fileLogger := FileLogger("/dev/stderr", "fl-test", v1alpha1.LogLevelInfo)
+	assert.NotNil(t, fileLogger.logging)
+	assert.NotNil(t, fileLogger.sugaredLogger)
 }
 
 func TestLoggerWithName(t *testing.T) {

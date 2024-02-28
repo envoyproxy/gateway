@@ -417,3 +417,22 @@ func (r *RouteParentContext) HasCondition(route RouteContext, condType gwapiv1.R
 	}
 	return false
 }
+
+// BackendRefContext represents a generic BackendRef object (HTTPBackendRef, GRPCBackendRef or BackendRef itself)
+type BackendRefContext any
+
+func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
+	rv := reflect.ValueOf(b)
+	br := rv.FieldByName("BackendRef")
+	if br.IsValid() {
+		backendRef := br.Interface().(gwapiv1.BackendRef)
+		return &backendRef
+
+	}
+	backendRef := b.(gwapiv1.BackendRef)
+	return &backendRef
+}
+
+func GetFilters(b BackendRefContext) any {
+	return reflect.ValueOf(b).FieldByName("Filters").Interface()
+}
