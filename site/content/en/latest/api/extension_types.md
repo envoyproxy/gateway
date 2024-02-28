@@ -108,7 +108,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules. If rules contains at least one Allow rule and none of them matches the action for the request is deny. If rules contains at least one Deny rule and none of them matches the action for the request is allow. If rules contains Allow and Deny, the Deny rules are overriding the Allow rules from the overlapping parts. |
+| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules. If rules contains at least one Allow rule and none of them matches the action for the request is deny. If rules contains at least one Deny rule and none of them matches the action for the request is allow. If rules contains Allow and Deny, and the request matches both, `Deny` takes precedence. |
 
 
 #### BackOffPolicy

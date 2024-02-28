@@ -52,8 +52,8 @@ spec:
                       contains at least one Allow rule and none of them matches the
                       action for the request is deny. If rules contains at least one
                       Deny rule and none of them matches the action for the request
-                      is allow. If rules contains Allow and Deny, the Deny rules are
-                      overriding the Allow rules from the overlapping parts.
+                      is allow. If rules contains Allow and Deny, and the request
+                      matches both, `Deny` takes precedence.
                     items:
                       description: Rule defines the single authorization rule.
                       properties:

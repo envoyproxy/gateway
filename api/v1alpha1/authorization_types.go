@@ -13,7 +13,7 @@ type Authorization struct {
 	// If rules contains at least one Deny rule and none of them
 	// matches the action for the request is allow.
 	// If rules contains Allow and Deny,
-	// the Deny rules are overriding the Allow rules from the overlapping parts.
+	// and the request matches both, `Deny` takes precedence.
 	//
 	// +kubebuilder:validation:MinItems=1
 	Rules []Rule `json:"rules,omitempty"`
