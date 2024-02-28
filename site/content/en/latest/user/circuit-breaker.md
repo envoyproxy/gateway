@@ -20,109 +20,17 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ### Install Envoy Gateway
 
-* Follow the installation step from the [Quickstart Guide](../quickstart) to install Envoy Gateway. There is no need to apply the quickstart manifests. 
-
-### Install the httpbin backend
-
-* We will use the [Httpbin project] as a backend in order to simulate a degraded service that responds slowly. Install `httpbin` and other Envoy Gateway resources (`GatewayClass`, `Gateway`, `HTTPRoute`) by applying the following manifests: 
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: eg
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: eg
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: httpbin
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: httpbin
-  labels:
-    app: httpbin
-    service: httpbin
-spec:
-  ports:
-    - name: http
-      port: 80
-      targetPort: 80
-  selector:
-    app: httpbin
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: httpbin
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: httpbin
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: httpbin
-        version: v1
-    spec:
-      serviceAccountName: httpbin
-      containers:
-        - image: docker.io/kennethreitz/httpbin
-          imagePullPolicy: IfNotPresent
-          name: httpbin
-          ports:
-            - containerPort: 80
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: httpbin
-spec:
-  parentRefs:
-    - name: eg
-  hostnames:
-    - "www.example.com"
-  rules:
-    - backendRefs:
-        - group: ""
-          kind: Service
-          name: httpbin
-          port: 80
-          weight: 1
-      matches:
-        - path:
-            type: PathPrefix
-            value: /
-
-EOF
-```
+* Follow the installation step from the [Quickstart Guide](../quickstart) to install Envoy Gateway and sample resources.
 
 ### Install the hey load testing tool
 * The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.   
 
 ## Test and customize circuit breaker settings
 
-This example will simulate a degraded backend that responds within 10 seconds by calling the `/delayed/10` endpoint of httpbin. The hey tool will be used to generate 100 concurrent requests. 
+This example will simulate a degraded backend that responds within 10 seconds by adding the `?delay=10s` query parameter to API calls. The hey tool will be used to generate 100 concurrent requests. 
 
 ```shell
-hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/delay/10
+hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/?delay=10s
 ```
 
 ```console
@@ -164,7 +72,7 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: httpbin
+    name: backend
     namespace: default
   circuitBreaker:
     maxPendingRequests: 0
@@ -175,7 +83,7 @@ EOF
 Execute the load simulation again.  
 
 ```shell
-hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/delay/10
+hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/?delay=10s
 ```
 
 ```console
@@ -213,4 +121,3 @@ With the new circuit breaker settings, and due to the slowness of the backend, o
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
 [Hey project]: https://github.com/rakyll/hey
-[Httpbin project]: https://github.com/postmanlabs/httpbin
