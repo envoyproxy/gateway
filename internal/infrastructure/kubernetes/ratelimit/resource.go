@@ -93,7 +93,7 @@ const (
 	// ReadinessPort is readiness port for readiness probe.
 	ReadinessPort  = 8080
 	StatsdPort     = 9125
-	PrometheusPort = 9102
+	PrometheusPort = 19001
 )
 
 // GetServiceURL returns the URL for the rate limit service.
@@ -179,6 +179,7 @@ func promStatsdExporterContainer() corev1.Container {
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command: []string{
 			"/bin/statsd_exporter",
+			fmt.Sprintf("--web.listen-address=:%d", PrometheusPort),
 			"--statsd.mapping-config=/etc/statsd-exporter/conf.yaml",
 		},
 		Ports: []corev1.ContainerPort{

@@ -112,6 +112,7 @@ spec:
           readOnly: true
       - command:
         - /bin/statsd_exporter
+        - --web.listen-address=:19001
         - --statsd.mapping-config=/etc/statsd-exporter/conf.yaml
         image: prom/statsd-exporter:v0.18.0
         imagePullPolicy: IfNotPresent
@@ -120,7 +121,7 @@ spec:
         - containerPort: 9125
           name: statsd
           protocol: TCP
-        - containerPort: 9102
+        - containerPort: 19001
           name: metrics
           protocol: TCP
         resources: {}
