@@ -132,6 +132,13 @@ traffic was routed to the foo backend service.
 ### JWT Claims Based Routing
 
 Users can route to a specific backend by matching on JWT claims.
+This can be achieved, by defining a SecurityPolicy with a jwt configuration that does the following
+* Converts jwt claims to headers, which can be used for header based routing
+* Sets the recomputeRoute field to `true`. This is required so that the incoming request matches on a fallback/catch all route where the JWT can be authenticated, the claims from the JWT can be converted to headers, and then the route match can be recomputed to match based on the updated headers.
+
+For this feature to work please make sure
+* you have a fallback route rule defined, the backend for this route rule can be invalid.
+* The SecurityPolicy is applied to both the fallback route as well as the route with the claim header matches, to avoid spoofing.
 
 ```shell
 cat <<EOF | kubectl apply -f -
