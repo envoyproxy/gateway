@@ -560,7 +560,7 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 				}
 
 				if err := validateCertificate(secretBytes); err != nil {
-					return fmt.Errorf("invalid certificate in secret %s: %v", caCertRef.Name, err)
+					return fmt.Errorf("invalid certificate in secret %s: %w", caCertRef.Name, err)
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
@@ -578,7 +578,7 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 				}
 
 				if err := validateCertificate([]byte(configMapBytes)); err != nil {
-					return fmt.Errorf("invalid certificate in configmap %s: %v", caCertRef.Name, err)
+					return fmt.Errorf("invalid certificate in configmap %s: %w", caCertRef.Name, err)
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)
