@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -95,4 +96,25 @@ func verifyHostname(cert *x509.Certificate, host *v1.Hostname) ([]string, error)
 	}
 
 	return nil, x509.HostnameError{Certificate: cert, Host: string(*host)}
+}
+
+func validateCertificate(data []byte) error {
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return fmt.Errorf("pem decode failed")
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, cert := range certs {
+		if now.After(cert.NotAfter) {
+			return fmt.Errorf("certificate is expired")
+		}
+		if now.Before(cert.NotBefore) {
+			return fmt.Errorf("certificate is not yet valid")
+		}
+	}
+	return nil
 }
