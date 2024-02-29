@@ -27,7 +27,7 @@ const (
 	ResourceKindService        = "Service"
 	ResourceKindDeployment     = "Deployment"
 	ResourceKindServiceAccount = "ServiceAccount"
-	appsApiVersion             = "apps/v1"
+	appsAPIVersion             = "apps/v1"
 )
 
 //go:embed statsd_conf.yaml
@@ -192,7 +192,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       ResourceKindDeployment,
-			APIVersion: appsApiVersion,
+			APIVersion: appsAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
@@ -236,7 +236,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			deployment.OwnerReferences = []metav1.OwnerReference{
 				{
 					Kind:       ResourceKindDeployment,
-					APIVersion: appsApiVersion,
+					APIVersion: appsAPIVersion,
 					Name:       "envoy-gateway",
 					UID:        uid,
 				},
