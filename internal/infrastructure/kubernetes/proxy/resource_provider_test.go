@@ -623,6 +623,18 @@ func TestService(t *testing.T) {
 				Type: &svcType,
 			},
 		},
+		{
+			caseName: "patch-service",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}}"),
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {

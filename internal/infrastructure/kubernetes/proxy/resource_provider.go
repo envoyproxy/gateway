@@ -147,6 +147,12 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		Spec: serviceSpec,
 	}
 
+	// apply merge patch to service
+	var err error
+	if svc, err = envoyServiceConfig.ApplyMergePatch(svc); err != nil {
+		return nil, err
+	}
+
 	return svc, nil
 }
 
@@ -268,8 +274,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// apply merge patch to deployment
-	if merged, err := deploymentConfig.ApplyMergePatch(deployment); err == nil {
-		deployment = merged
+	if deployment, err = deploymentConfig.ApplyMergePatch(deployment); err != nil {
+		return nil, err
 	}
 
 	return deployment, nil
