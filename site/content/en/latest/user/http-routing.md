@@ -196,6 +196,7 @@ spec:
             value: /
 EOF
 ```
+
 Get the JWT used for testing request authentication:
 
 ```shell
