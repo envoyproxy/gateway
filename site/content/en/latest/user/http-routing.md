@@ -129,7 +129,7 @@ curl -vvv --header "Host: bar.example.com" --header "env: canary" "http://${GATE
 A `200` status code should be returned and the body should include `"pod": "bar-canary-backend-*"` indicating the
 traffic was routed to the foo backend service.
 
-### JWT Claims Base Routing
+### JWT Claims Based Routing
 
 Users would like to route to a specific backend by matching on JWT claims, users can achieve this base on [JWT Authentication](./jwt-authentication.md) configuration.
 
