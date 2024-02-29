@@ -650,10 +650,6 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	return &ir.BasicAuth{Users: usersSecretBytes}, nil
 }
 

@@ -173,7 +173,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
-			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
+			backendRef := backendRef
+			ds, backendWeight := t.processDestination(backendRef, parentRef, httpRoute, resources)
 			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
@@ -468,7 +469,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		for _, backendRef := range rule.BackendRefs {
-			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
+			backendRef := backendRef
+			ds, backendWeight := t.processDestination(backendRef, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
@@ -1068,20 +1070,19 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // processDestination takes a backendRef and translates it into destination setting or sets error statuses and
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
-func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
+func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	parentRef *RouteParentContext,
 	route RouteContext,
 	resources *Resources) (ds *ir.DestinationSetting, backendWeight uint32) {
-
+	routeType := GetRouteType(route)
 	weight := uint32(1)
+	backendRef := GetBackendRef(backendRefContext)
 	if backendRef.Weight != nil {
 		weight = uint32(*backendRef.Weight)
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-
-	routeType := GetRouteType(route)
-	if !t.validateBackendRef(&backendRef, parentRef, route, resources, backendNamespace, routeType) {
+	if !t.validateBackendRef(backendRefContext, parentRef, route, resources, backendNamespace, routeType) {
 		return nil, weight
 	}
 

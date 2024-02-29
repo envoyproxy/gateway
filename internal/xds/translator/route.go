@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"strings"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -62,7 +63,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 			// If there are invalid backends then a weighted cluster is required for the route
 			routeAction = buildXdsWeightedRouteAction(httpRoute)
 		} else {
-			routeAction = buildXdsRouteAction(httpRoute.Destination.Name)
+			routeAction = buildXdsRouteAction(httpRoute)
 		}
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
@@ -207,11 +208,12 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(destName string) *routev3.RouteAction {
+func buildXdsRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 	return &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: destName,
+			Cluster: httpRoute.Destination.Name,
 		},
+		IdleTimeout: idleTimeout(httpRoute),
 	}
 }
 
@@ -239,7 +241,29 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 				Clusters: clusters,
 			},
 		},
+		IdleTimeout: idleTimeout(httpRoute),
 	}
+}
+
+func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+	if httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil {
+		if httpRoute.Timeout.HTTP.RequestTimeout != nil {
+			timeout := time.Hour // Default to 1 hour
+
+			// Ensure is not less than the request timeout
+			if timeout < httpRoute.Timeout.HTTP.RequestTimeout.Duration {
+				timeout = httpRoute.Timeout.HTTP.RequestTimeout.Duration
+			}
+
+			// Disable idle timeout when request timeout is disabled
+			if httpRoute.Timeout.HTTP.RequestTimeout.Duration == 0 {
+				timeout = 0
+			}
+
+			return durationpb.New(timeout)
+		}
+	}
+	return nil
 }
 
 func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
