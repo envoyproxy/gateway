@@ -131,7 +131,7 @@ traffic was routed to the foo backend service.
 
 ### JWT Claims Based Routing
 
-Users would like to route to a specific backend by matching on JWT claims, users can achieve this base on [JWT Authentication](./jwt-authentication.md) configuration.
+Users can route to a specific backend by matching on JWT claims.
 
 ```shell
 cat <<EOF | kubectl apply -f -
