@@ -25,6 +25,10 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
 
+		if err := validateCertificate(certData); err != nil {
+			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
+		}
+
 		certBlock, _ := pem.Decode(certData)
 		if certBlock == nil {
 			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey)

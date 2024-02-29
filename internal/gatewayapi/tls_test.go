@@ -105,7 +105,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			CertFile:    "malformed-encoding.pem",
 			KeyFile:     "rsa-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to decode pem data in tls.crt"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: pem decode failed"),
 		},
 		{
 			Name:        "malformed-key-pem-encoding",
@@ -119,7 +119,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			CertFile:    "malformed-cert.pem",
 			KeyFile:     "rsa-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to parse certificate in tls.crt: x509: malformed certificate"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: x509: malformed certificate"),
 		},
 		{
 			Name:        "malformed-pkcs8-key",
