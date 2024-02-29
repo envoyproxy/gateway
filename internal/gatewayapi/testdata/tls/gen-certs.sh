@@ -27,5 +27,5 @@ openssl req -new -x509 -days $CERT_VALIDITY_DAYS -key ecdsa-p256.key -out ecdsa-
 
 # ECDSA-p384
 
-	openssl ecparam -name secp384r1 -genkey -noout -out ecdsa-p384.key
-	openssl req -new -x509 -days $CERT_VALIDITY_DAYS -key ecdsa-p384.key -out ecdsa-p384-cert.pem -subj "/CN=foo.bar.com"
+openssl ecparam -name secp384r1 -genkey -noout -out ecdsa-p384.key
+openssl req -new -x509 -days $CERT_VALIDITY_DAYS -key ecdsa-p384.key -out ecdsa-p384-cert.pem -subj "/CN=foo.bar.com"
