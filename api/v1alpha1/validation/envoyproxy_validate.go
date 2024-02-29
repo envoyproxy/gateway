@@ -126,6 +126,15 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
 			}
 		}
+		if patch := spec.Provider.Kubernetes.EnvoyService.Patch; patch != nil {
+			if patch.Value.Raw == nil {
+				errs = append(errs, fmt.Errorf("envoy service patch object cannot be empty"))
+			}
+			if patch.Type != nil && *patch.Type != egv1a1.JSONMerge && *patch.Type != egv1a1.StrategicMerge {
+				errs = append(errs, fmt.Errorf("unsupported envoy service patch type %s", *patch.Type))
+			}
+		}
+
 	}
 	return errs
 }
