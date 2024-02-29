@@ -12,7 +12,7 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   progressDeadlineSeconds: 600
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -25,10 +25,6 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
-        prometheus.io/path: /stats/prometheus
-        prometheus.io/port: "19001"
-        prometheus.io/scrape: "true"
       creationTimestamp: null
       labels:
         app.kubernetes.io/component: proxy
@@ -90,15 +86,6 @@ spec:
                     stat_prefix: eg-ready-http
                     route_config:
                       name: local_route
-                      virtual_hosts:
-                      - name: prometheus_stats
-                        domains:
-                        - "*"
-                        routes:
-                        - match:
-                            prefix: /stats/prometheus
-                          route:
-                            cluster: prometheus_stats
                     http_filters:
                     - name: envoy.filters.http.health_check
                       typed_config:
@@ -112,19 +99,6 @@ spec:
                       typed_config:
                         "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             clusters:
-            - name: prometheus_stats
-              connect_timeout: 0.250s
-              type: STATIC
-              lb_policy: ROUND_ROBIN
-              load_assignment:
-                cluster_name: prometheus_stats
-                endpoints:
-                - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: 127.0.0.1
-                          port_value: 19000
             - connect_timeout: 10s
               load_assignment:
                 cluster_name: xds_cluster
@@ -181,7 +155,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/envoy:v1.2.3
+        image: envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -197,9 +171,6 @@ spec:
         - containerPort: 8443
           name: EnvoyH-6658f727
           protocol: TCP
-        - containerPort: 19001
-          name: metrics
-          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
@@ -210,14 +181,9 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
-          limits:
-            cpu: 400m
-            memory: 2Gi
           requests:
-            cpu: 200m
-            memory: 1Gi
-        securityContext:
-          privileged: true
+            cpu: 100m
+            memory: 512Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
@@ -279,8 +245,6 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      securityContext:
-        runAsUser: 1000
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 900
       volumes:
