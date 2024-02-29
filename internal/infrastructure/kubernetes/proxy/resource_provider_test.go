@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"sort"
@@ -27,6 +28,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+var (
+	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 const (
@@ -544,7 +549,7 @@ func TestDeployment(t *testing.T) {
 				})
 			}
 
-			if os.Getenv("UPDATE_TESTDATA") != "" {
+			if *overrideTestData {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint: gosec
