@@ -209,7 +209,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
-			if ruleRoute.BackendWeights.Invalid > 0 && ruleRoute.Destination == nil {
+			if ruleRoute.Destination == nil && ruleRoute.Redirect == nil {
 				ruleRoute.DirectResponse = &ir.DirectResponse{
 					StatusCode: 500,
 				}
@@ -493,7 +493,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
-			if ruleRoute.BackendWeights.Invalid > 0 && ruleRoute.Destination == nil {
+			if ruleRoute.Destination == nil && ruleRoute.Redirect == nil {
 				ruleRoute.DirectResponse = &ir.DirectResponse{
 					StatusCode: 500,
 				}
