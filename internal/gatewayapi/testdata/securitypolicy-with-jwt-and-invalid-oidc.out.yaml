@@ -209,6 +209,12 @@ securityPolicies:
       reason: Invalid
       status: "False"
       type: Accepted
+    - lastTransitionTime: null
+      message: 'This policy is being overridden by other securityPolicies for these
+        routes: [default/httproute-2]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
