@@ -36,10 +36,10 @@ func (s *watchAndReconcileSource) Start(ctx context.Context, eh handler.EventHan
 	go func() {
 		select {
 		case <-ctx.Done():
+			return
 		case <-s.condition:
 			// Triggers a reconcile
 			eh.Generic(ctx, event.GenericEvent{Object: s.object}, queue)
-
 		}
 	}()
 	return nil
