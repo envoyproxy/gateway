@@ -54,7 +54,7 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, make(chan struct{}))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1267,7 +1267,7 @@ func TestNamespacedProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, make(chan struct{}))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1327,7 +1327,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, make(chan struct{}))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
