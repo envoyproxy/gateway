@@ -11,20 +11,20 @@ package prometheus
 import (
 	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"time"
 
 	prom "github.com/prometheus/client_golang/api"
 	prompapiv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func Address(c client.Client, nn types.NamespacedName) (string, error) {
 	svc := &corev1.Service{}
 	if err := c.Get(context.TODO(), nn, svc); err != nil {
-		return "", fmt.Errorf("failed to get service: %v", err)
+		return "", fmt.Errorf("failed to get service: %w", err)
 	}
 	for _, ing := range svc.Status.LoadBalancer.Ingress {
 		if ing.IP != "" {
@@ -68,7 +68,7 @@ func QuerySum(address string, promQL string) (float64, error) {
 	}
 	got, err := sum(val)
 	if err != nil {
-		return 0, fmt.Errorf("could not find metric value: %v", err)
+		return 0, fmt.Errorf("could not find metric value: %w", err)
 	}
 	return got, nil
 }

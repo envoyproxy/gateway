@@ -10,15 +10,16 @@ package tests
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/test/e2e/utils/prometheus"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/test/e2e/utils/prometheus"
 )
 
 func init() {
@@ -48,7 +49,7 @@ var RetryTest = suite.ConformanceTest{
 			}
 
 			promAddr, err := prometheus.Address(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			promQL := fmt.Sprintf(`envoy_cluster_upstream_rq_retry{envoy_cluster_name="httproute/%s/%s/rule/0"}`, routeNN.Namespace, routeNN.Name)
 
 			before := float64(0)
