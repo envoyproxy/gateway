@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -23,6 +24,10 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
 	pkaSecretSet := make(map[string][]string)
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
+
+		if err := validateCertificate(certData); err != nil {
+			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
+		}
 
 		certBlock, _ := pem.Decode(certData)
 		if certBlock == nil {
@@ -95,4 +100,25 @@ func verifyHostname(cert *x509.Certificate, host *v1.Hostname) ([]string, error)
 	}
 
 	return nil, x509.HostnameError{Certificate: cert, Host: string(*host)}
+}
+
+func validateCertificate(data []byte) error {
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return fmt.Errorf("pem decode failed")
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, cert := range certs {
+		if now.After(cert.NotAfter) {
+			return fmt.Errorf("certificate is expired")
+		}
+		if now.Before(cert.NotBefore) {
+			return fmt.Errorf("certificate is not yet valid")
+		}
+	}
+	return nil
 }
