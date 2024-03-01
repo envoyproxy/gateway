@@ -121,12 +121,13 @@ run-e2e: prepare-e2e
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
 
 .PHONY: prepare-e2e
-prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector
+prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
 	@$(LOG_TARGET)
 	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
 	kubectl rollout status statefulset loki -n monitoring --timeout 5m
 	kubectl rollout status statefulset tempo -n monitoring --timeout 5m
 	kubectl rollout status deployment otel-collector -n monitoring --timeout 5m
+	kubectl rollout status deployment prometheus -n monitoring --timeout 5m
 
 .PHONY: prepare-helm-repo
 prepare-helm-repo:
@@ -134,6 +135,7 @@ prepare-helm-repo:
 	helm repo add fluent https://fluent.github.io/helm-charts
 	helm repo add grafana https://grafana.github.io/helm-charts
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 	helm repo update
 
 .PHONY: install-fluent-bit
@@ -150,6 +152,11 @@ install-loki:
 install-tempo:
 	@$(LOG_TARGET)
 	helm upgrade --install tempo grafana/tempo -f examples/tempo/helm-values.yaml -n monitoring --create-namespace --version $(TEMPO_CHART_VERSION)
+
+.PHONY: install-prometheus
+install-prometheus:
+	@$(LOG_TARGET)
+	helm upgrade --install prometheus prometheus-community/prometheus -f examples/prometheus/helm-values.yaml -n monitoring --create-namespace
 
 .PHONY: install-otel-collector
 install-otel-collector:
