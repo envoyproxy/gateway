@@ -31,8 +31,9 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: 'Secret envoy-gateway/tls-secret-ecdsa-1 must contain valid tls.crt
-          and tls.key, unable to validate certificate in tls.crt: certificate is expired.'
+        message: Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
+          be unique, matched certificate FQDN [foo.bar.com] has a conflicting algorithm
+          [ECDSA].
         reason: InvalidCertificateRef
         status: "False"
         type: ResolvedRefs
