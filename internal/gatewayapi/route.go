@@ -664,7 +664,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Timeout:               routeRoute.Timeout,
 					Retry:                 routeRoute.Retry,
 					IsHTTP2:               routeRoute.IsHTTP2,
-					BackendTLS:            routeRoute.BackendTLS,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
@@ -1149,7 +1148,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				uint32(*backendRef.Port))
 			endpoints = append(endpoints, ep)
 		}
-		backendTLS = t.processBackendTLSPolicy(backendRef, backendNamespace, parentRef, resources)
+		backendTLS = t.processBackendTLSPolicy(*backendRef, backendNamespace, parentRef, resources)
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
@@ -1166,7 +1165,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
-		BackendTLS:  backendTLS,
+		TLS:         backendTLS,
 	}
 	return ds, weight
 }
@@ -1349,7 +1348,7 @@ func GetTargetBackendReference(backendRef gwapiv1a1.BackendRef, namespace string
 	return ref
 }
 
-func TargetMatched(policy gwapiv1a1.BackendTLSPolicy, target gwapiv1a1.PolicyTargetReferenceWithSectionName) bool {
+func backendTLSTargetMatched(policy gwapiv1a1.BackendTLSPolicy, target gwapiv1a1.PolicyTargetReferenceWithSectionName) bool {
 
 	policyTarget := policy.Spec.TargetRef
 
@@ -1368,14 +1367,14 @@ func TargetMatched(policy gwapiv1a1.BackendTLSPolicy, target gwapiv1a1.PolicyTar
 func getBackendTLSPolicy(policies []*gwapiv1a1.BackendTLSPolicy, backendRef gwapiv1a1.BackendRef, backendNamespace string) *gwapiv1a1.BackendTLSPolicy {
 	target := GetTargetBackendReference(backendRef, backendNamespace)
 	for _, policy := range policies {
-		if TargetMatched(*policy, target) {
+		if backendTLSTargetMatched(*policy, target) {
 			return policy
 		}
 	}
 	return nil
 }
 
-func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a1.BackendRef, backendNamespace string) (error, *ir.TLSUpstreamConfig) {
+func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a1.BackendRef, backendNamespace string) (*ir.TLSUpstreamConfig, error) {
 
 	backendTLSPolicy := getBackendTLSPolicy(policies, backendRef, backendNamespace)
 
@@ -1401,13 +1400,13 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 				}
 				ca += crt
 			} else {
-				return fmt.Errorf("no ca found in configmap %s", cmap.Name), nil
+				return nil, fmt.Errorf("no ca found in configmap %s", cmap.Name)
 			}
 		}
 	}
 
 	if ca == "" {
-		return fmt.Errorf("no ca found in referred configmaps"), nil
+		return nil, fmt.Errorf("no ca found in referred configmaps")
 	}
 
 	tlsBundle.CACertificate.Certificate = []byte(ca)
@@ -1416,11 +1415,11 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 
 	tlsBundle.SNI = string(backendTLSPolicy.Spec.TLS.Hostname)
 
-	return nil, tlsBundle
+	return tlsBundle, nil
 }
 
 func (t *Translator) processBackendTLSPolicy(backendRef gwapiv1.BackendRef, backendNamespace string, parentRef *RouteParentContext, resources *Resources) *ir.TLSUpstreamConfig {
-	err, tlsBundle := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, backendRef, backendNamespace)
+	tlsBundle, err := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, backendRef, backendNamespace)
 	if err == nil && tlsBundle == nil {
 		return nil
 	}

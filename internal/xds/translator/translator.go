@@ -8,9 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/types/known/anypb"
 	"strings"
 	"time"
 
@@ -19,8 +16,11 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -506,31 +506,26 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		endpointType = EndpointTypeStatic
 	}
 
-	tsocket := &corev3.TransportSocket{}
-	tsocket = nil
+	var tSocket *corev3.TransportSocket
 
-	ca := mergeCaBytes(httpRoute.Destination.Settings)
-
-	if string(ca) != "" {
-		// use destination name as the ca secret name
-		caXdsSecretName := httpRoute.Destination.Name
-		CaSecret := buildXdsUpstreamTLSCASecret(caXdsSecretName, ca)
+	if httpRoute.Destination.Settings[0].TLS != nil {
+		CaSecret := buildXdsUpstreamTLSCASecret(httpRoute.Destination.Settings[0].TLS)
 		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
 			return err
 		}
 		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
 		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
-		temp, err := buildXdsUpstreamTLSSocketWthCert(caXdsSecretName, httpRoute.Hostname)
+		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.Destination.Settings[0].TLS)
 		if err != nil {
 			return err
 		}
-		tsocket = temp
+		tSocket = temp
 	}
 
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
-		tSocket:        tsocket,
+		tSocket:        tSocket,
 		endpointType:   endpointType,
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
@@ -602,33 +597,33 @@ const (
 	EDS
 )
 
-func buildXdsUpstreamTLSCASecret(caSecretName string, caByte []byte) *tlsv3.Secret {
+func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	// Build the tls secret
 	return &tlsv3.Secret{
-		Name: caSecretName,
+		Name: tlsConfig.CACertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
 			ValidationContext: &tlsv3.CertificateValidationContext{
 				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caByte},
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.CACertificate.Certificate},
 				},
 			},
 		},
 	}
 }
 
-func buildXdsUpstreamTLSSocketWthCert(caSecretName, hostname string) (*corev3.TransportSocket, error) {
+func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
 
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: nil,
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-					Name:      caSecretName,
+					Name:      tlsConfig.CACertificate.Name,
 					SdsConfig: makeConfigSource(),
 				},
 			},
 		},
-		Sni: hostname,
+		Sni: tlsConfig.SNI,
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -642,17 +637,4 @@ func buildXdsUpstreamTLSSocketWthCert(caSecretName, hostname string) (*corev3.Tr
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
-}
-
-func mergeCaBytes(dss []*ir.DestinationSetting) []byte {
-	mergedCa := ""
-	for _, ds := range dss {
-		if ds.BackendTLS != nil {
-			if mergedCa != "" {
-				mergedCa += "\n"
-			}
-			mergedCa += string(ds.BackendTLS.CACertificate.Certificate)
-		}
-	}
-	return []byte(mergedCa)
 }

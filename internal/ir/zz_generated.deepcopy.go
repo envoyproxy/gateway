@@ -353,8 +353,8 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 		*out = new(DestinationAddressType)
 		**out = **in
 	}
-	if in.BackendTLS != nil {
-		in, out := &in.BackendTLS, &out.BackendTLS
+	if in.TLS != nil {
+		in, out := &in.TLS, &out.TLS
 		*out = new(TLSUpstreamConfig)
 		(*in).DeepCopyInto(*out)
 	}
@@ -953,11 +953,6 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 	if in.Retry != nil {
 		in, out := &in.Retry, &out.Retry
 		*out = new(Retry)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.BackendTLS != nil {
-		in, out := &in.BackendTLS, &out.BackendTLS
-		*out = new(TLSBundle)
 		(*in).DeepCopyInto(*out)
 	}
 }

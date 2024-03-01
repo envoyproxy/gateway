@@ -110,7 +110,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
-	backendTlsPolicies []*egv1a2.BackendTLSPolicy,
+	backendTLSPolicies []*egv1a2.BackendTLSPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -139,7 +139,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
 	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
 	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
-	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTlsPolicies...)
+	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
 
 	return translateResult
 }
@@ -204,7 +204,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, gateways, routes, resources, xdsIR)
 
-	backendTlsPolicies := t.ProcessBackendTLSPolicies(
+	backendTLSPolicies := t.ProcessBackendTLSPoliciesAncestorRef(
 		resources.BackendTLSPolicies, gateways)
 
 	// Sort xdsIR based on the Gateway API spec
@@ -212,7 +212,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
-		securityPolicies, backendTlsPolicies, xdsIR, infraIR)
+		securityPolicies, backendTLSPolicies, xdsIR, infraIR)
 
 }
 

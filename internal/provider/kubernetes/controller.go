@@ -309,22 +309,22 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		r.processSecurityPolicySecretRefs(ctx, gwcResource, resourceMappings)
 
 		// Add all BackendTLSPolies
-		backendTlsPolicies := gwapiv1a2.BackendTLSPolicyList{}
-		if err := r.client.List(ctx, &backendTlsPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing BackendTLSPolicies: %v", err)
+		backendTLSPolicies := gwapiv1a2.BackendTLSPolicyList{}
+		if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 		}
 
-		for _, policy := range backendTlsPolicies.Items {
+		for _, policy := range backendTLSPolicies.Items {
 			policy := policy
 			// Discard Status to reduce memory consumption in watchable
 			// It will be recomputed by the gateway-api layer
 			policy.Status = gwapiv1a2.PolicyStatus{} // todo ?
-			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
+			resourcesMap[acceptedGC.Name].BackendTLSPolicies = append(resourcesMap[acceptedGC.Name].BackendTLSPolicies, &policy)
 		}
 
 		// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree
-		r.processBackendTLSPolicyConfigMapRefs(ctx, resourceTree, resourceMap)
-		
+		r.processBackendTLSPolicyConfigMapRefs(ctx, resourcesMap[acceptedGC.Name], resourceMappings)
+
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
 		for ns := range resourceMappings.allAssociatedNamespaces {
@@ -633,20 +633,6 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	}
 
 	// No ReferenceGrant found.
-	return nil, nil
-}
-
-func (r *gatewayAPIReconciler) findBackendTLSPolicy(ctx context.Context, targetBackend gwapiv1a2.PolicyTargetReferenceWithSectionName) (*gwapiv1a2.BackendTLSPolicy, error) {
-	backendTLSPolicyList := new(gwapiv1a2.BackendTLSPolicyList)
-	if err := r.client.List(ctx, backendTLSPolicyList); err != nil {
-		return nil, fmt.Errorf("failed to list backendTLSPolicies: %v", err)
-	}
-
-	for _, bacTLS := range backendTLSPolicyList.Items {
-		if gatewayapi.TargetMatched(bacTLS, targetBackend) {
-			return &bacTLS, nil
-		}
-	}
 	return nil, nil
 }
 

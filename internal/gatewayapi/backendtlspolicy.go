@@ -1,14 +1,19 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package gatewayapi
 
 import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
-func (t *Translator) ProcessBackendTLSPolicies(backendTlsPolicies []*v1alpha2.BackendTLSPolicy, gateways []*GatewayContext) []*v1alpha2.BackendTLSPolicy {
+func (t *Translator) ProcessBackendTLSPoliciesAncestorRef(backendTLSPolicies []*v1alpha2.BackendTLSPolicy, gateways []*GatewayContext) []*v1alpha2.BackendTLSPolicy {
 
 	var res []*v1alpha2.BackendTLSPolicy
 
-	for _, btlsPolicy := range backendTlsPolicies {
+	for _, btlsPolicy := range backendTLSPolicies {
 
 		policy := btlsPolicy.DeepCopy()
 		res = append(res, policy)
@@ -18,7 +23,7 @@ func (t *Translator) ProcessBackendTLSPolicies(backendTlsPolicies []*v1alpha2.Ba
 				exist := false
 				for _, gwContext := range gateways {
 					gw := gwContext.Gateway
-					if gw.Name == string(status.AncestorRef.Name) && gw.Namespace == string(NamespaceDerefOrAlpha(status.AncestorRef.Namespace, "default")) {
+					if gw.Name == string(status.AncestorRef.Name) && gw.Namespace == NamespaceDerefOrAlpha(status.AncestorRef.Namespace, "default") {
 						for _, lis := range gw.Spec.Listeners {
 							if lis.Name == *status.AncestorRef.SectionName {
 								exist = true
