@@ -213,7 +213,8 @@ TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/
 Test routing to the `foo-svc` backend by specifying a JWT Token with a claim `name: John Doe`.
 
 ```shell
-curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/"
+curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
+"foo-backend-6df8cc6b9f-fmwcg"
 ```
 
 Get another JWT used for testing request authentication:
@@ -222,10 +223,11 @@ Get another JWT used for testing request authentication:
 TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
 ```
 
-Test HTTP routing to the `bar-svc` backend base on the JWT Token to the request.
+Test HTTP routing to the `bar-svc` backenbackend by specifying a JWT Token with a claim `name: Tom`.
 
 ```shell
-curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/"
+curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
+"bar-backend-6688b8944c-s8htr"
 ```
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
