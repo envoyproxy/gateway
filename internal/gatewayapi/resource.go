@@ -21,6 +21,20 @@ import (
 type XdsIRMap map[string]*ir.Xds
 type InfraIRMap map[string]*ir.Infra
 
+// ControllerResources holds all the GatewayAPI resources per GatewayClass
+type ControllerResources []*Resources
+
+// DeepCopy creates a new ControllerResources.
+// It is handwritten since the tooling was unable to copy into a new slice
+func (in ControllerResources) DeepCopy() *ControllerResources {
+	if in == nil {
+		return nil
+	}
+	out := make(ControllerResources, len(in))
+	copy(out, in)
+	return &out
+}
+
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
 // +k8s:deepcopy-gen=true

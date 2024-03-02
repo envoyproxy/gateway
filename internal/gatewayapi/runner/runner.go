@@ -49,7 +49,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
-		func(update message.Update[string, *[]*gatewayapi.Resources], errChan chan error) {
+		func(update message.Update[string, *gatewayapi.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
 			// There is only 1 key which is the controller name

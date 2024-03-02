@@ -169,7 +169,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		return reconcile.Result{}, nil
 	}
 
-	gwcResources := make([]*gatewayapi.Resources, 0, len(acceptedGCs))
+	gwcResources := make(gatewayapi.ControllerResources, 0, len(acceptedGCs))
 	for _, acceptedGC := range acceptedGCs {
 		// Initialize resource types.
 		acceptedGC := acceptedGC

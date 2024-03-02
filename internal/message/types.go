@@ -21,7 +21,7 @@ import (
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *[]*gatewayapi.Resources]
+	GatewayAPIResources watchable.Map[string, *gatewayapi.ControllerResources]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -38,6 +38,16 @@ func (p *ProviderResources) GetResources() []*gatewayapi.Resources {
 
 	for _, v := range p.GatewayAPIResources.LoadAll() {
 		return *v
+	}
+
+	return nil
+}
+
+func (p *ProviderResources) GetResourcesByGatewayClass(name string) *gatewayapi.Resources {
+	for _, r := range p.GetResources() {
+		if r != nil && r.GatewayClass != nil && r.GatewayClass.Name == name {
+			return r
+		}
 	}
 
 	return nil
