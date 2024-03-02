@@ -67,31 +67,38 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 // Service returns the expected Service based on the provided infra.
 func (r *ResourceRender) Service() (*corev1.Service, error) {
 	var ports []corev1.ServicePort
+	configuredPorts := map[int32]bool{}
 	for _, listener := range r.infra.Listeners {
 		for _, port := range listener.Ports {
 			target := intstr.IntOrString{IntVal: port.ContainerPort}
-			protocol := corev1.ProtocolTCP
-			if port.Protocol == ir.UDPProtocolType {
-				protocol = corev1.ProtocolUDP
-			}
+			if alreadyHasHttp3, found := configuredPorts[port.ServicePort]; !found || !alreadyHasHttp3 {
+				if !found {
+					protocol := corev1.ProtocolTCP
+					if port.Protocol == ir.UDPProtocolType {
+						protocol = corev1.ProtocolUDP
+					}
 
-			p := corev1.ServicePort{
-				Name:       ExpectedResourceHashedName(port.Name),
-				Protocol:   protocol,
-				Port:       port.ServicePort,
-				TargetPort: target,
-			}
-			ports = append(ports, p)
-
-			if port.Protocol == ir.HTTPSProtocolType {
-				if listener.HTTP3 != nil {
 					p := corev1.ServicePort{
-						Name:       ExpectedResourceHashedName(port.Name + "-h3"),
-						Protocol:   corev1.ProtocolUDP,
+						Name:       ExpectedResourceHashedName(port.Name),
+						Protocol:   protocol,
 						Port:       port.ServicePort,
 						TargetPort: target,
 					}
 					ports = append(ports, p)
+					configuredPorts[port.ServicePort] = false
+				}
+
+				if port.Protocol == ir.HTTPSProtocolType {
+					if listener.HTTP3 != nil && !alreadyHasHttp3 {
+						p := corev1.ServicePort{
+							Name:       ExpectedResourceHashedName(port.Name + "-h3"),
+							Protocol:   corev1.ProtocolUDP,
+							Port:       port.ServicePort,
+							TargetPort: target,
+						}
+						ports = append(ports, p)
+						configuredPorts[port.ServicePort] = true
+					}
 				}
 			}
 		}
