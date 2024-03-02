@@ -247,6 +247,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 
 		if isMergeGatewaysEnabled(resources) {
 			t.MergeGateways = true
+			gwXdsIR.MergeGateways = true
 			irKey = string(t.GatewayClassName)
 
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))

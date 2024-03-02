@@ -77,7 +77,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
 	if err := t.processHTTPListenerXdsTranslation(
-		tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics); err != nil {
+		tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics, ir.MergeGateways); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -115,12 +115,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	accessLog *ir.AccessLog,
 	tracing *ir.Tracing,
 	metrics *ir.Metrics,
+	mergeGateways bool,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error
 	for _, httpListener := range httpListeners {
-		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
 
 		// Search for an existing listener, if it does not exist, create one.
@@ -149,7 +149,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				// If an existing listener exists, dont create a new filter chain
 				// for HTTP traffic, match on the Domains field within VirtualHosts
 				// within the same RouteConfiguration instead
-				addFilterChain = false
 				xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
 				if xdsRouteCfg == nil {
 					// skip this listener if failed to find xds route config
@@ -159,14 +158,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
-		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
+		if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false, mergeGateways); err != nil {
+			return err
+		}
+		if enabledHTTP3 {
+			if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true, mergeGateways); err != nil {
 				return err
-			}
-			if enabledHTTP3 {
-				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
-					return err
-				}
 			}
 		}
 

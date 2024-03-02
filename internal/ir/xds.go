@@ -81,6 +81,8 @@ type Xds struct {
 	UDP []*UDPListener `json:"udp,omitempty" yaml:"udp,omitempty"`
 	// EnvoyPatchPolicies is the intermediate representation of the EnvoyPatchPolicy resource
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
+	// MergeGateways indicates if this IR should be translated to work in the merged gateways scenario
+	MergeGateways bool `json:"mergeGateways,omitempty" yaml:"mergeGateways,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.

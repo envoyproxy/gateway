@@ -183,7 +183,7 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 }
 
 func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, mergeGateways bool) error {
 	al := buildXdsAccessLog(accesslog, false)
 
 	hcmTracing, err := buildHCMTracing(tracing)
@@ -274,20 +274,22 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		}},
 	}
 
-	if irListener.TLS != nil {
-		var tSocket *corev3.TransportSocket
-		if http3Listener {
-			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
-			if err != nil {
-				return err
+	if irListener.TLS != nil || mergeGateways {
+		if irListener.TLS != nil {
+			var tSocket *corev3.TransportSocket
+			if http3Listener {
+				tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
+				if err != nil {
+					return err
+				}
+			} else {
+				tSocket, err = buildXdsDownstreamTLSSocket(irListener.TLS)
+				if err != nil {
+					return err
+				}
 			}
-		} else {
-			tSocket, err = buildXdsDownstreamTLSSocket(irListener.TLS)
-			if err != nil {
-				return err
-			}
+			filterChain.TransportSocket = tSocket
 		}
-		filterChain.TransportSocket = tSocket
 		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
 			return err
 		}
