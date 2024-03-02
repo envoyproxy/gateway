@@ -2,7 +2,7 @@ deployment:
   envoyGateway:
     leaderElection:
       enabled: true
-      leaseDuration: 1s
+      leaseDuration: 18s
       retryPeriod: 2s
       renewDeadline: 10s
     image:

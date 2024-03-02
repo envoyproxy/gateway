@@ -43,6 +43,9 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svr.Namespace,
 		Controller:              config.Controller{NeedLeaderElection: ptr.To(false)},
+		LeaseDuration:           svr.LeaderElection.LeaseDuration,
+		RetryPeriod:             svr.LeaderElection.RetryPeriod,
+		RenewDeadline:           svr.LeaderElection.RenewDeadline,
 	}
 	if svr.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
