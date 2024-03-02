@@ -113,7 +113,7 @@ install-ratelimit:
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
-run-e2e: prepare-e2e
+run-e2e: install-e2e-telemetry
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
@@ -124,14 +124,20 @@ else
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --run-test $(E2E_RUN_TEST)
 endif
 
-.PHONY: prepare-e2e
-prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
+.PHONY: install-e2e-telemetry
+install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
 	@$(LOG_TARGET)
 	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
 	kubectl rollout status statefulset loki -n monitoring --timeout 5m
 	kubectl rollout status statefulset tempo -n monitoring --timeout 5m
 	kubectl rollout status deployment otel-collector -n monitoring --timeout 5m
 	kubectl rollout status deployment prometheus -n monitoring --timeout 5m
+
+.PHONY: uninstall-e2e-telemetry
+uninstall-e2e-telemetry:
+	@$(LOG_TARGET)
+	kubectl delete -f examples/loki/loki.yaml -n monitoring --ignore-not-found
+	helm delete $(shell helm list -n monitoring -q) -n monitoring
 
 .PHONY: prepare-helm-repo
 prepare-helm-repo:
