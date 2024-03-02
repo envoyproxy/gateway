@@ -6,6 +6,10 @@
 package gatewayapi
 
 import (
+	"cmp"
+	"reflect"
+
+	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -20,20 +24,6 @@ import (
 
 type XdsIRMap map[string]*ir.Xds
 type InfraIRMap map[string]*ir.Infra
-
-// ControllerResources holds all the GatewayAPI resources per GatewayClass
-type ControllerResources []*Resources
-
-// DeepCopy creates a new ControllerResources.
-// It is handwritten since the tooling was unable to copy into a new slice
-func (in ControllerResources) DeepCopy() *ControllerResources {
-	if in == nil {
-		return nil
-	}
-	out := make(ControllerResources, len(in))
-	copy(out, in)
-	return &out
-}
 
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
@@ -149,4 +139,34 @@ func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, ba
 		}
 	}
 	return endpointSlices
+}
+
+// ControllerResources holds all the GatewayAPI resources per GatewayClass
+type ControllerResources []*Resources
+
+// DeepCopy creates a new ControllerResources.
+// It is handwritten since the tooling was unable to copy into a new slice
+func (c *ControllerResources) DeepCopy() *ControllerResources {
+	if c == nil {
+		return nil
+	}
+	out := make(ControllerResources, len(*c))
+	copy(out, *c)
+	return &out
+}
+
+// Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
+func (c *ControllerResources) Equal(y *ControllerResources) bool {
+	// Deep copy to avoid modifying the original ordering.
+	c = c.DeepCopy()
+	c.sort()
+	y = y.DeepCopy()
+	y.sort()
+	return reflect.DeepEqual(c, y)
+}
+
+func (c *ControllerResources) sort() {
+	slices.SortFunc(*c, func(c1, c2 *Resources) int {
+		return cmp.Compare(c1.GatewayClass.Name, c2.GatewayClass.Name)
+	})
 }
