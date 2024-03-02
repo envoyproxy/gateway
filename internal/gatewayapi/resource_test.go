@@ -22,6 +22,28 @@ func TestEqualXds(t *testing.T) {
 		equal bool
 	}{
 		{
+			desc: "different resources",
+			a: &ControllerResources{
+				{
+					GatewayClass: &gwapiv1.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "foo",
+						},
+					},
+				},
+			},
+			b: &ControllerResources{
+				{
+					GatewayClass: &gwapiv1.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "bar",
+						},
+					},
+				},
+			},
+			equal: false,
+		},
+		{
 			desc: "same order resources are equal",
 			a: &ControllerResources{
 				{
