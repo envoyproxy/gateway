@@ -1,0 +1,92 @@
+mappings:
+  - match: "ratelimit.service.rate_limit.*.*.near_limit"
+    name: "ratelimit_service_rate_limit_near_limit"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+  - match: "ratelimit.service.rate_limit.*.*.over_limit"
+    name: "ratelimit_service_rate_limit_over_limit"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+  - match: "ratelimit.service.rate_limit.*.*.total_hits"
+    name: "ratelimit_service_rate_limit_total_hits"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+  - match: "ratelimit.service.rate_limit.*.*.within_limit"
+    name: "ratelimit_service_rate_limit_within_limit"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+
+  - match: "ratelimit.service.rate_limit.*.*.*.near_limit"
+    name: "ratelimit_service_rate_limit_near_limit"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+      key2: "$3"
+  - match: "ratelimit.service.rate_limit.*.*.*.over_limit"
+    name: "ratelimit_service_rate_limit_over_limit"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+      key2: "$3"
+  - match: "ratelimit.service.rate_limit.*.*.*.total_hits"
+    name: "ratelimit_service_rate_limit_total_hits"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+      key2: "$3"
+  - match: "ratelimit.service.rate_limit.*.*.*.within_limit"
+    name: "ratelimit_service_rate_limit_within_limit"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+      key2: "$3"
+
+  - match: "ratelimit.service.call.should_rate_limit.*"
+    name: "ratelimit_service_should_rate_limit_error"
+    match_metric_type: counter
+    labels:
+      err_type: "$1"
+
+  - match: "ratelimit_server.*.total_requests"
+    name: "ratelimit_service_total_requests"
+    match_metric_type: counter
+    labels:
+      grpc_method: "$1"
+
+  - match: "ratelimit_server.*.response_time"
+    name: "ratelimit_service_response_time_seconds"
+    timer_type: histogram
+    labels:
+      grpc_method: "$1"
+
+  - match: "ratelimit.service.config_load_success"
+    name: "ratelimit_service_config_load_success"
+    match_metric_type: counter
+  - match: "ratelimit.service.config_load_error"
+    name: "ratelimit_service_config_load_error"
+    match_metric_type: counter
+
+  - match: "ratelimit.service.rate_limit.*.*.*.shadow_mode"
+    name: "ratelimit_service_rate_limit_shadow_mode"
+    timer_type: "histogram"
+    labels:
+      domain: "$1"
+      key1: "$2"
+      key2: "$3"
+
+  - match: "."
+    match_type: "regex"
+    action: "drop"
+    name: "dropped"

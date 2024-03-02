@@ -559,6 +559,10 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 						"caCertificateRef not found in secret %s", caCertRef.Name)
 				}
 
+				if err := validateCertificate(secretBytes); err != nil {
+					return fmt.Errorf("invalid certificate in secret %s: %w", caCertRef.Name, err)
+				}
+
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
 
 			} else if string(*caCertRef.Kind) == KindConfigMap {
@@ -571,6 +575,10 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 				if !ok || len(configMapBytes) == 0 {
 					return fmt.Errorf(
 						"caCertificateRef not found in configMap %s", caCertRef.Name)
+				}
+
+				if err := validateCertificate([]byte(configMapBytes)); err != nil {
+					return fmt.Errorf("invalid certificate in configmap %s: %w", caCertRef.Name, err)
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)
