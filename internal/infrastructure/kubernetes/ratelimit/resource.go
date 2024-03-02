@@ -91,7 +91,9 @@ const (
 	// ReadinessPath is readiness path for readiness probe.
 	ReadinessPath = "/healthcheck"
 	// ReadinessPort is readiness port for readiness probe.
-	ReadinessPort = 8080
+	ReadinessPort  = 8080
+	StatsdPort     = 9125
+	PrometheusPort = 19001
 )
 
 // GetServiceURL returns the URL for the rate limit service.
@@ -163,7 +165,45 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 		},
 	}
 
+	if enablePrometheus(rateLimit) {
+		containers = append(containers, promStatsdExporterContainer())
+	}
+
 	return containers
+}
+
+func promStatsdExporterContainer() corev1.Container {
+	return corev1.Container{
+		Name:            "prom-statsd-exporter",
+		Image:           "prom/statsd-exporter:v0.18.0",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command: []string{
+			"/bin/statsd_exporter",
+			fmt.Sprintf("--web.listen-address=:%d", PrometheusPort),
+			"--statsd.mapping-config=/etc/statsd-exporter/conf.yaml",
+		},
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "statsd",
+				ContainerPort: StatsdPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          "metrics",
+				ContainerPort: PrometheusPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "statsd-exporter-config",
+				ReadOnly:  true,
+				MountPath: "/etc/statsd-exporter",
+			},
+		},
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+		TerminationMessagePath:   "/dev/termination-log",
+	}
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
@@ -213,6 +253,21 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 			},
 		},
 	})
+
+	if enablePrometheus(rateLimit) {
+		volumes = append(volumes, corev1.Volume{
+			Name: "statsd-exporter-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "statsd-exporter-config",
+					},
+					Optional:    ptr.To(true),
+					DefaultMode: ptr.To[int32](420),
+				},
+			},
+		})
+	}
 
 	return resource.ExpectedDeploymentVolumes(rateLimitDeployment.Pod, volumes)
 }

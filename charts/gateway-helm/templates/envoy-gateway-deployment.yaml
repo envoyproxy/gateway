@@ -66,6 +66,13 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: envoy-gateway
+        ports:
+        {{- range .Values.deployment.ports }}
+        - containerPort: {{ .port }}
+          name: {{ .name }}
+        {{- end}}
+        - containerPort: 19001
+          name: http-metrics
         readinessProbe:
           httpGet:
             path: /readyz

@@ -326,6 +326,25 @@ type RateLimit struct {
 	// otherwise, don't let the traffic pass and return 500.
 	// If not set, FailClosed is False.
 	FailClosed bool `json:"failClosed"`
+
+	// Telemetry defines telemetry configuration for RateLimit.
+	// +optional
+	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+}
+
+type RateLimitTelemetry struct {
+	// Metrics defines metrics configuration for RateLimit.
+	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+}
+
+type RateLimitMetrics struct {
+	// Prometheus defines the configuration for prometheus endpoint.
+	Prometheus *RateLimitMetricsPrometheusProvider `json:"prometheus,omitempty"`
+}
+
+type RateLimitMetricsPrometheusProvider struct {
+	// Disable the Prometheus endpoint.
+	Disable bool `json:"disable,omitempty"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with
