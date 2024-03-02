@@ -6,7 +6,9 @@
 package translator
 
 import (
+	"errors"
 	"strings"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -15,6 +17,12 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+const (
+	retryDefaultRetryOn             = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+	retryDefaultRetriableStatusCode = 503
+	retryDefaultNumRetries          = 2
 )
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
@@ -50,20 +58,26 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
+		var routeAction *routev3.RouteAction
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
-			routeAction := buildXdsWeightedRouteAction(httpRoute)
-			if httpRoute.Mirrors != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
-			}
-			router.Action = &routev3.Route_Route{Route: routeAction}
+			routeAction = buildXdsWeightedRouteAction(httpRoute)
 		} else {
-			routeAction := buildXdsRouteAction(httpRoute.Destination.Name)
-			if httpRoute.Mirrors != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
-			}
-			router.Action = &routev3.Route_Route{Route: routeAction}
+			routeAction = buildXdsRouteAction(httpRoute)
 		}
+		if httpRoute.Mirrors != nil {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
+		}
+		if !httpRoute.IsHTTP2 {
+			// Allow websocket upgrades for HTTP 1.1
+			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
+				{
+					UpgradeType: "websocket",
+				},
+			}
+		}
+		router.Action = &routev3.Route_Route{Route: routeAction}
 	}
 
 	// Hash Policy
@@ -75,6 +89,15 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	if router.GetRoute() != nil && httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil &&
 		httpRoute.Timeout.HTTP.RequestTimeout != nil {
 		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.HTTP.RequestTimeout.Duration)
+	}
+
+	// Retries
+	if router.GetRoute() != nil && httpRoute.Retry != nil {
+		if rp, err := buildRetryPolicy(httpRoute); err == nil {
+			router.GetRoute().RetryPolicy = rp
+		} else {
+			return nil, err
+		}
 	}
 
 	// Add per route filter configs to the route, if needed.
@@ -185,11 +208,12 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(destName string) *routev3.RouteAction {
+func buildXdsRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 	return &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: destName,
+			Cluster: httpRoute.Destination.Name,
 		},
+		IdleTimeout: idleTimeout(httpRoute),
 	}
 }
 
@@ -217,7 +241,29 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 				Clusters: clusters,
 			},
 		},
+		IdleTimeout: idleTimeout(httpRoute),
 	}
+}
+
+func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+	if httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil {
+		if httpRoute.Timeout.HTTP.RequestTimeout != nil {
+			timeout := time.Hour // Default to 1 hour
+
+			// Ensure is not less than the request timeout
+			if timeout < httpRoute.Timeout.HTTP.RequestTimeout.Duration {
+				timeout = httpRoute.Timeout.HTTP.RequestTimeout.Duration
+			}
+
+			// Disable idle timeout when request timeout is disabled
+			if httpRoute.Timeout.HTTP.RequestTimeout.Duration == 0 {
+				timeout = 0
+			}
+
+			return durationpb.New(timeout)
+		}
+	}
+	return nil
 }
 
 func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
@@ -372,4 +418,110 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 	}
 
 	return nil
+}
+
+func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
+	if route.Retry != nil {
+		rr := route.Retry
+		rp := &routev3.RetryPolicy{
+			RetryOn:              retryDefaultRetryOn,
+			RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},
+			NumRetries:           &wrapperspb.UInt32Value{Value: retryDefaultNumRetries},
+		}
+
+		if rr.NumRetries != nil {
+			rp.NumRetries = &wrapperspb.UInt32Value{Value: *rr.NumRetries}
+		}
+
+		if rr.RetryOn != nil {
+			if rr.RetryOn.Triggers != nil && len(rr.RetryOn.Triggers) > 0 {
+				if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
+					rp.RetryOn = ro
+				} else {
+					return nil, err
+				}
+			}
+
+			if rr.RetryOn.HTTPStatusCodes != nil && len(rr.RetryOn.HTTPStatusCodes) > 0 {
+				rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
+			}
+		}
+
+		if rr.PerRetry != nil {
+			if rr.PerRetry.Timeout != nil {
+				rp.PerTryTimeout = durationpb.New(rr.PerRetry.Timeout.Duration)
+			}
+
+			if rr.PerRetry.BackOff != nil {
+				bbo := false
+				rbo := &routev3.RetryPolicy_RetryBackOff{}
+				if rr.PerRetry.BackOff.BaseInterval != nil {
+					rbo.BaseInterval = durationpb.New(rr.PerRetry.BackOff.BaseInterval.Duration)
+					bbo = true
+				}
+
+				if rr.PerRetry.BackOff.MaxInterval != nil {
+					rbo.MaxInterval = durationpb.New(rr.PerRetry.BackOff.MaxInterval.Duration)
+					bbo = true
+				}
+
+				if bbo {
+					rp.RetryBackOff = rbo
+				}
+			}
+		}
+		return rp, nil
+	}
+
+	return nil, nil
+}
+
+func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {
+	ret := make([]uint32, len(codes))
+	for i, c := range codes {
+		ret[i] = uint32(c)
+	}
+	return ret
+}
+
+// buildRetryOn concatenates triggers to a comma-delimited string.
+// An error is returned if a trigger is not in the list of supported values (not likely, due to prior validations).
+func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
+	if len(triggers) == 0 {
+		return "", nil
+	}
+
+	lookup := map[ir.TriggerEnum]string{
+		ir.Error5XX:             "5xx",
+		ir.GatewayError:         "gateway-error",
+		ir.DisconnectRest:       "disconnect-reset",
+		ir.ConnectFailure:       "connect-failure",
+		ir.Retriable4XX:         "retriable-4xx",
+		ir.RefusedStream:        "refused-stream",
+		ir.RetriableStatusCodes: "retriable-status-codes",
+		ir.Cancelled:            "cancelled",
+		ir.DeadlineExceeded:     "deadline-exceeded",
+		ir.Internal:             "internal",
+		ir.ResourceExhausted:    "resource-exhausted",
+		ir.Unavailable:          "unavailable",
+	}
+
+	var b strings.Builder
+
+	if t, found := lookup[triggers[0]]; found {
+		b.WriteString(t)
+	} else {
+		return "", errors.New("unsupported RetryOn trigger")
+	}
+
+	for _, v := range triggers[1:] {
+		if t, found := lookup[v]; found {
+			b.WriteString(",")
+			b.WriteString(t)
+		} else {
+			return "", errors.New("unsupported RetryOn trigger")
+		}
+	}
+
+	return b.String(), nil
 }

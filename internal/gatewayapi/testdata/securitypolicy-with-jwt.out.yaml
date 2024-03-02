@@ -282,6 +282,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
+        isHTTP2: true
         jwt:
           providers:
           - audiences:
@@ -331,6 +332,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         jwt:
           providers:
           - audiences:

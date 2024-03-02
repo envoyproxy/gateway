@@ -18,7 +18,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	netutil "github.com/envoyproxy/gateway/internal/utils/net"
@@ -78,6 +85,8 @@ func (fw *fakePortForwarder) Stop() {}
 func (fw *fakePortForwarder) Address() string {
 	return fmt.Sprintf("localhost:%d", fw.localPort)
 }
+
+func (fw *fakePortForwarder) WaitForStop() {}
 
 func TestExtractAllConfigDump(t *testing.T) {
 	input, err := readInputConfig("in.all.json")
@@ -266,4 +275,268 @@ func sampleAggregatedConfigDump(configDump protoreflect.ProtoMessage) aggregated
 			defaultEnvoyGatewayPodName: configDump,
 		},
 	}
+}
+
+type fakeCLIClient struct {
+	pods []corev1.Pod
+	cm   *corev1.ConfigMap
+}
+
+func (f *fakeCLIClient) RESTConfig() *rest.Config {
+	return nil
+}
+
+func (f *fakeCLIClient) Pod(types.NamespacedName) (*corev1.Pod, error) {
+	return nil, nil
+}
+
+func (f *fakeCLIClient) PodsForSelector(string, ...string) (*corev1.PodList, error) {
+	return &corev1.PodList{Items: f.pods}, nil
+}
+
+func (f *fakeCLIClient) PodExec(types.NamespacedName, string, string) (stdout string, stderr string, err error) {
+	return "", "", nil
+}
+
+func (f *fakeCLIClient) Kube() kubernetes.Interface {
+	return fake.NewSimpleClientset(f.cm)
+}
+
+func TestFetchRunningRateLimitPods(t *testing.T) {
+
+	cases := []struct {
+		caseName      string
+		rlPods        []corev1.Pod
+		namespace     string
+		labelSelector []string
+		expectErr     error
+	}{
+		{
+			caseName: "normally obtain the rate limit pod of Running phase",
+			rlPods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "envoy-ratelimit-666457bc4c-c2td5",
+						Namespace: "envoy-gateway-system",
+						Labels: map[string]string{
+							"app.kubernetes.io/name":       "envoy-ratelimit",
+							"app.kubernetes.io/component":  "ratelimit",
+							"app.kubernetes.io/managed-by": "envoy-gateway",
+						},
+					},
+					Status: corev1.PodStatus{
+						Phase: corev1.PodRunning,
+						Conditions: []corev1.PodCondition{
+							{
+								Type:   corev1.PodReady,
+								Status: corev1.ConditionTrue,
+							},
+							{
+								Type:   corev1.ContainersReady,
+								Status: corev1.ConditionTrue,
+							},
+						},
+					},
+				},
+			},
+			namespace:     "envoy-gateway-system",
+			labelSelector: ratelimit.LabelSelector(),
+			expectErr:     nil,
+		},
+		{
+			caseName: "unable to obtain rate limit pod",
+			rlPods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "envoy-ratelimit-666457bc4c-c2td5",
+						Namespace: "envoy-gateway-system",
+					},
+					Status: corev1.PodStatus{
+						Phase: corev1.PodPending,
+					},
+				},
+			},
+			namespace:     "envoy-gateway-system",
+			labelSelector: ratelimit.LabelSelector(),
+			expectErr:     fmt.Errorf("please check that the rate limit instance starts properly"),
+		},
+	}
+
+	for _, tc := range cases {
+
+		t.Run(tc.caseName, func(t *testing.T) {
+
+			fakeCli := &fakeCLIClient{
+				pods: tc.rlPods,
+			}
+
+			_, err := fetchRunningRateLimitPods(fakeCli, tc.namespace, tc.labelSelector)
+			require.Equal(t, tc.expectErr, err)
+
+		})
+
+	}
+}
+
+func TestCheckEnableGlobalRateLimit(t *testing.T) {
+
+	cases := []struct {
+		caseName    string
+		egConfigMap *corev1.ConfigMap
+		expect      bool
+	}{
+		{
+			caseName: "global rate limit feature is enabled",
+			expect:   true,
+			egConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "envoy-gateway-config",
+					Namespace: "envoy-gateway-system",
+				},
+				Data: map[string]string{
+					"envoy-gateway.yaml": `
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+provider:
+  type: Kubernetes
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+rateLimit:
+  backend:
+    type: Redis
+    redis:
+      url: redis.redis-system.svc.cluster.local:6379
+`,
+				},
+			},
+		},
+		{
+			caseName: "global rate limit feature is not enabled",
+			expect:   false,
+			egConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "envoy-gateway-config",
+					Namespace: "envoy-gateway-system",
+				},
+				Data: map[string]string{
+					"envoy-gateway.yaml": `
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+provider:
+  type: Kubernetes
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+`,
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+
+		t.Run(tc.caseName, func(t *testing.T) {
+
+			fakeCli := &fakeCLIClient{
+				cm: tc.egConfigMap,
+			}
+
+			actual, err := checkEnableGlobalRateLimit(fakeCli)
+			require.Equal(t, tc.expect, actual)
+			require.NoError(t, err)
+
+		})
+
+	}
+}
+
+func TestExtractRateLimitConfig(t *testing.T) {
+
+	cases := []struct {
+		caseName     string
+		responseBody []byte
+		rlPod        types.NamespacedName
+	}{
+		{
+			caseName:     "rate limit configuration is extract normally",
+			responseBody: []byte("default/eg/http.httproute/default/backend/rule/0/match/0/*-key-rule-0-match-0_httproute/default/backend/rule/0/match/0/*-value-rule-0-match-0: unit=HOUR requests_per_unit=3, shadow_mode: false"),
+			rlPod: types.NamespacedName{
+				Name:      "envoy-ratelimit-666457bc4c-c2td5",
+				Namespace: "envoy-gateway-system",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+
+		t.Run(tc.caseName, func(t *testing.T) {
+
+			fw, err := newFakePortForwarder(tc.responseBody)
+			require.NoError(t, err)
+
+			out, err := extractRateLimitConfig(fw, tc.rlPod)
+			require.NoError(t, err)
+			require.NotEmpty(t, out)
+
+		})
+
+	}
+}
+
+func TestCheckRateLimitPodStatusReady(t *testing.T) {
+
+	cases := []struct {
+		caseName string
+		status   corev1.PodStatus
+		expect   bool
+	}{
+		{
+			caseName: "rate limit pod is ready",
+			expect:   true,
+			status: corev1.PodStatus{
+				Phase: corev1.PodRunning,
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   corev1.ContainersReady,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			},
+		},
+		{
+			caseName: "rate limit pod is not ready",
+			expect:   false,
+			status: corev1.PodStatus{
+				Phase: corev1.PodRunning,
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   corev1.ContainersReady,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+		},
+		{
+			caseName: "rate limit pod is running failed",
+			expect:   false,
+			status: corev1.PodStatus{
+				Phase: corev1.PodFailed,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			actual := checkRateLimitPodStatusReady(tc.status)
+			require.Equal(t, tc.expect, actual)
+		})
+	}
+
 }

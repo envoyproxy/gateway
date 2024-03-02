@@ -41,3 +41,18 @@ type HTTPTimeout struct {
 	// +optional
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
 }
+
+type ClientTimeout struct {
+	// Timeout settings for HTTP.
+	//
+	// +optional
+	HTTP *HTTPClientTimeout `json:"http,omitempty"`
+}
+
+type HTTPClientTimeout struct {
+	// The duration envoy waits for the complete request reception. This timer starts upon request
+	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+	//
+	// +optional
+	RequestReceivedTimeout *gwapiv1.Duration `json:"requestReceivedTimeout,omitempty"`
+}

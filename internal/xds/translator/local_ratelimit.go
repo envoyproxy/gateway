@@ -110,10 +110,6 @@ func (*localRateLimit) patchResources(*types.ResourceVersionTable,
 	return nil
 }
 
-func (*localRateLimit) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
-	return nil
-}
-
 func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	routeAction := route.GetRoute()
 

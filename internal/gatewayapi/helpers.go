@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -26,6 +27,8 @@ const (
 
 	L4Protocol = "L4"
 	L7Protocol = "L7"
+
+	caCertKey = "ca.crt"
 )
 
 type protocolPort struct {
@@ -124,7 +127,7 @@ func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*Gatew
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if !IsRefToGateway(parentRef, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}) {
+		if !IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
 			continue
 		}
 
@@ -389,7 +392,11 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
 }
 
 func irTLSListenerConfigName(secret *v1.Secret) string {
-	return fmt.Sprintf("%s-%s", secret.Namespace, secret.Name)
+	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+}
+
+func irTLSCACertName(namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
 func isMergeGatewaysEnabled(resources *Resources) bool {

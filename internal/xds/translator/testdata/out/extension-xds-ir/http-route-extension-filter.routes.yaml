@@ -29,3 +29,5 @@
           value: foo.example.io/v1alpha1
       route:
         cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -145,6 +145,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				Forward:             true,
 			}
 
+			if irProvider.RecomputeRoute != nil {
+				jwtProvider.ClearRouteCache = *irProvider.RecomputeRoute
+			}
+
 			if irProvider.ExtractFrom != nil {
 				jwtProvider.FromHeaders = buildJwtFromHeaders(irProvider.ExtractFrom.Headers)
 				jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies
@@ -331,10 +335,6 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 	}
 
 	return false
-}
-
-func (*jwt) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
-	return nil
 }
 
 // buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct

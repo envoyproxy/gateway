@@ -125,6 +125,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
@@ -147,4 +148,5 @@ xdsIR:
           name: :path
           suffix: /ExampleExact
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*

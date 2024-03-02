@@ -17,12 +17,15 @@ import (
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
+	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
@@ -86,6 +89,44 @@ func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 	}
 }
 
+func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {
+	if clientIPDetection != nil && clientIPDetection.XForwardedFor != nil && clientIPDetection.XForwardedFor.NumTrustedHops != nil {
+		return *clientIPDetection.XForwardedFor.NumTrustedHops
+	}
+	return 0
+}
+
+func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettings) []*corev3.TypedExtensionConfig {
+	// Return early if settings are nil
+	if clientIPDetection == nil {
+		return nil
+	}
+
+	var extensionConfig []*corev3.TypedExtensionConfig
+
+	// Custom header extension
+	if clientIPDetection.CustomHeader != nil {
+		var rejectWithStatus *typev3.HttpStatus
+		if ptr.Deref(clientIPDetection.CustomHeader.FailClosed, false) {
+			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
+		}
+
+		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
+			HeaderName:       clientIPDetection.CustomHeader.Name,
+			RejectWithStatus: rejectWithStatus,
+
+			AllowExtensionToSetAddressAsTrusted: true,
+		})
+
+		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
+			Name:        "envoy.extensions.http.original_ip_detection.custom_header",
+			TypedConfig: customHeaderConfigAny,
+		})
+	}
+
+	return extensionConfig
+}
+
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
 func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, accesslog *ir.AccessLog) *listenerv3.Listener {
@@ -107,6 +148,9 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 }
 
@@ -130,6 +174,9 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
 			QuicOptions:            &listenerv3.QuicProtocolOptions{},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
 	return xdsListener
@@ -153,9 +200,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	}
 
 	// Client IP detection
-	var xffNumTrustedHops uint32
-	if irListener.ClientIPDetection != nil && irListener.ClientIPDetection.XForwardedFor != nil {
-		xffNumTrustedHops = ptr.Deref(irListener.ClientIPDetection.XForwardedFor.NumTrustedHops, 0)
+	var useRemoteAddress = true
+	var originalIPDetectionExtensions = originalIPDetectionExtensions(irListener.ClientIPDetection)
+	if originalIPDetectionExtensions != nil {
+		useRemoteAddress = false
 	}
 
 	mgr := &hcmv3.HttpConnectionManager{
@@ -170,12 +218,15 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
+		// Hide the Envoy proxy in the Server header by default
+		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress:  &wrappers.BoolValue{Value: true},
-		XffNumTrustedHops: xffNumTrustedHops,
+		UseRemoteAddress:              &wrappers.BoolValue{Value: useRemoteAddress},
+		XffNumTrustedHops:             xffNumTrustedHops(irListener.ClientIPDetection),
+		OriginalIpDetectionExtensions: originalIPDetectionExtensions,
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},
 		MergeSlashes:                 irListener.Path.MergeSlashes,
@@ -186,6 +237,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		Tracing: hcmTracing,
 	}
 
+	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil && irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
+		mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
+	}
+
 	// Add the proxy protocol filter if needed
 	patchProxyProtocolFilter(xdsListener, irListener)
 
@@ -193,14 +248,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		// always enable grpc stats filter
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
-	} else {
-		// Allow websocket upgrades for HTTP 1.1
-		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-		mgr.UpgradeConfigs = []*hcmv3.HttpConnectionManager_UpgradeConfig{
-			{
-				UpgradeType: "websocket",
-			},
-		}
 	}
 
 	if http3Listener {
@@ -387,7 +434,6 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 				TlsParams:     buildTLSParams(tlsConfig),
 				AlpnProtocols: buildALPNProtocols(tlsConfig.ALPNProtocols),
 			},
-			RequireClientCertificate: &wrappers.BoolValue{Value: false},
 		},
 	}
 
@@ -398,6 +444,16 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 				Name:      tlsConfig.Name,
 				SdsConfig: makeConfigSource(),
 			})
+	}
+
+	if tlsConfig.CACertificate != nil {
+		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.DownstreamTlsContext.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+				Name:      tlsConfig.CACertificate.Name,
+				SdsConfig: makeConfigSource(),
+			},
+		}
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -428,6 +484,16 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 				Name:      tlsConfig.Name,
 				SdsConfig: makeConfigSource(),
 			})
+	}
+
+	if tlsConfig.CACertificate != nil {
+		tlsCtx.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+				Name:      tlsConfig.CACertificate.Name,
+				SdsConfig: makeConfigSource(),
+			},
+		}
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -492,8 +558,7 @@ func buildALPNProtocols(alpn []string) []string {
 	return alpn
 }
 
-func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
-	// Build the tls secret
+func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
@@ -503,6 +568,19 @@ func buildXdsDownstreamTLSSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 				},
 				PrivateKey: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+				},
+			},
+		},
+	}
+}
+
+func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate) *tlsv3.Secret {
+	return &tlsv3.Secret{
+		Name: caCertificate.Name,
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: &tlsv3.CertificateValidationContext{
+				TrustedCa: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
 				},
 			},
 		},

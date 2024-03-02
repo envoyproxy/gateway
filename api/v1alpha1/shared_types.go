@@ -9,6 +9,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 const (
@@ -19,7 +20,13 @@ const (
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
-	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
+	DefaultEnvoyProxyImage = "envoyproxy/envoy:distroless-dev"
+	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
+	DefaultShutdownManagerCPUResourceRequests = "10m"
+	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
+	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
+	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
+	DefaultShutdownManagerImage = "envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.
@@ -52,6 +59,11 @@ const (
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
+	// Patch defines how to perform the patch operation to deployment
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
+
 	// Replicas is the number of desired pods. Defaults to 1.
 	//
 	// +optional
@@ -256,6 +268,11 @@ type KubernetesServiceSpec struct {
 	// +kubebuilder:default:="Local"
 	// +optional
 	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
+
+	// Patch defines how to perform the patch operation to the service
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
@@ -363,4 +380,32 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	//
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+}
+
+// HTTPStatus defines the http status code.
+// +kubebuilder:validation:Minimum=100
+// +kubebuilder:validation:Maximum=600
+// +kubebuilder:validation:ExclusiveMaximum=true
+type HTTPStatus int
+
+// MergeType defines the type of merge operation
+type MergeType string
+
+const (
+	// StrategicMerge indicates a strategic merge patch type
+	StrategicMerge MergeType = "StrategicMerge"
+	// JSONMerge indicates a JSON merge patch type
+	JSONMerge MergeType = "JSONMerge"
+)
+
+// KubernetesPatchSpec defines how to perform the patch operation
+type KubernetesPatchSpec struct {
+	// Type is the type of merge operation to perform
+	//
+	// By default, StrategicMerge is used as the patch type.
+	// +optional
+	Type *MergeType `json:"type,omitempty"`
+
+	// Object contains the raw configuration for merged object
+	Value apiextensionsv1.JSON `json:"value"`
 }

@@ -24,39 +24,41 @@ import (
 )
 
 var (
-	ErrListenerNameEmpty                    = errors.New("field Name must be specified")
-	ErrListenerAddressInvalid               = errors.New("field Address must be a valid IP address")
-	ErrListenerPortInvalid                  = errors.New("field Port specified is invalid")
-	ErrHTTPListenerHostnamesEmpty           = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPListenerSNIsEmpty                 = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty                   = errors.New("field ServerCertificate must be specified")
-	ErrTLSPrivateKey                        = errors.New("field PrivateKey must be specified")
-	ErrHTTPRouteNameEmpty                   = errors.New("field Name must be specified")
-	ErrHTTPRouteHostnameEmpty               = errors.New("field Hostname must be specified")
-	ErrDestinationNameEmpty                 = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid              = errors.New("field Address must be a valid IP or FQDN address")
-	ErrDestEndpointPortInvalid              = errors.New("field Port specified is invalid")
-	ErrStringMatchConditionInvalid          = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
-	ErrStringMatchNameIsEmpty               = errors.New("field Name must be specified")
-	ErrDirectResponseStatusInvalid          = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus            = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
-	ErrRedirectUnsupportedScheme            = errors.New("only http and https are supported for the scheme in redirect filters")
-	ErrHTTPPathModifierDoubleReplace        = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
-	ErrHTTPPathModifierNoReplace            = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
-	ErrAddHeaderEmptyName                   = errors.New("header modifier filter cannot configure a header without a name to be added")
-	ErrAddHeaderDuplicate                   = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
-	ErrRemoveHeaderDuplicate                = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrLoadBalancerInvalid                  = errors.New("loadBalancer setting is invalid, only one setting can be set")
-	ErrHealthCheckTimeoutInvalid            = errors.New("field HealthCheck.Timeout must be specified")
-	ErrHealthCheckIntervalInvalid           = errors.New("field HealthCheck.Interval must be specified")
-	ErrHealthCheckUnhealthyThresholdInvalid = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
-	ErrHealthCheckHealthyThresholdInvalid   = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
-	ErrHealthCheckerInvalid                 = errors.New("health checker setting is invalid, only one health checker can be set")
-	ErrHCHTTPPathInvalid                    = errors.New("field HTTPHealthChecker.Path should be specified")
-	ErrHCHTTPMethodInvalid                  = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
-	ErrHCHTTPExpectedStatusesInvalid        = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
-	ErrHealthCheckPayloadInvalid            = errors.New("one of Text, Binary fields must be set in payload")
-	ErrHTTPStatusInvalid                    = errors.New("HTTPStatus should be in [200,600)")
+	ErrListenerNameEmpty                       = errors.New("field Name must be specified")
+	ErrListenerAddressInvalid                  = errors.New("field Address must be a valid IP address")
+	ErrListenerPortInvalid                     = errors.New("field Port specified is invalid")
+	ErrHTTPListenerHostnamesEmpty              = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTCPListenerSNIsEmpty                    = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTLSServerCertEmpty                      = errors.New("field ServerCertificate must be specified")
+	ErrTLSPrivateKey                           = errors.New("field PrivateKey must be specified")
+	ErrHTTPRouteNameEmpty                      = errors.New("field Name must be specified")
+	ErrHTTPRouteHostnameEmpty                  = errors.New("field Hostname must be specified")
+	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
+	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
+	ErrDestEndpointPortInvalid                 = errors.New("field Port specified is invalid")
+	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
+	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
+	ErrRedirectUnsupportedStatus               = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedScheme               = errors.New("only http and https are supported for the scheme in redirect filters")
+	ErrHTTPPathModifierDoubleReplace           = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
+	ErrHTTPPathModifierNoReplace               = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
+	ErrAddHeaderEmptyName                      = errors.New("header modifier filter cannot configure a header without a name to be added")
+	ErrAddHeaderDuplicate                      = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
+	ErrRemoveHeaderDuplicate                   = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrLoadBalancerInvalid                     = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrHealthCheckTimeoutInvalid               = errors.New("field HealthCheck.Timeout must be specified")
+	ErrHealthCheckIntervalInvalid              = errors.New("field HealthCheck.Interval must be specified")
+	ErrHealthCheckUnhealthyThresholdInvalid    = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
+	ErrHealthCheckHealthyThresholdInvalid      = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
+	ErrHealthCheckerInvalid                    = errors.New("health checker setting is invalid, only one health checker can be set")
+	ErrHCHTTPPathInvalid                       = errors.New("field HTTPHealthChecker.Path should be specified")
+	ErrHCHTTPMethodInvalid                     = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
+	ErrHCHTTPExpectedStatusesInvalid           = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHealthCheckPayloadInvalid               = errors.New("one of Text, Binary fields must be set in payload")
+	ErrHTTPStatusInvalid                       = errors.New("HTTPStatus should be in [200,600)")
+	ErrOutlierDetectionBaseEjectionTimeInvalid = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
+	ErrOutlierDetectionIntervalInvalid         = errors.New("field OutlierDetection.Interval must be specified")
 
 	redacted = []byte("[redacted]")
 )
@@ -209,9 +211,8 @@ type HTTPListener struct {
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
-	// SuppressEnvoyHeaders controls if "x-envoy-" headers are suppressed by the HTTP Router filter
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
-	SuppressEnvoyHeaders bool `json:"suppressEnvoyHeaders,omitempty" yaml:"suppressEnvoyHeaders,omitempty"`
+	// Headers configures special header management for the listener
+	Headers *HeaderSettings `json:"headers,omitempty" yaml:"headers,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
@@ -224,6 +225,8 @@ type HTTPListener struct {
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
+	// ClientTimeout sets the timeout configuration for downstream connections
+	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -274,6 +277,8 @@ const (
 type TLSConfig struct {
 	// Certificates contains the set of certificates associated with this listener
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
+	// CACertificate to verify the client
+	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
 	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
 	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
@@ -297,6 +302,15 @@ type TLSCertificate struct {
 	ServerCertificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey []byte `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+}
+
+// TLSCACertificate holds CA Certificate to validate clients
+// +k8s:deepcopy-gen=true
+type TLSCACertificate struct {
+	// Name of the Secret object.
+	Name string `json:"name" yaml:"name"`
+	// Certificate content.
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
 
 func (t TLSCertificate) Validate() error {
@@ -368,6 +382,30 @@ type HTTP10Settings struct {
 	DefaultHost *string `json:"defaultHost,omitempty" yaml:"defaultHost,omitempty"`
 }
 
+// HeaderSettings provides configuration related to header processing on the listener.
+// +k8s:deepcopy-gen=true
+type HeaderSettings struct {
+	// EnableEnvoyHeaders controls if "x-envoy-" headers are added by the HTTP Router filter.
+	// The default is to suppress these headers.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
+	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
+}
+
+// ClientTimeout sets the timeout configuration for downstream connections
+// +k8s:deepcopy-gen=true
+type ClientTimeout struct {
+	// Timeout settings for HTTP.
+	HTTP *HTTPClientTimeout `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// HTTPClientTimeout set the configuration for client HTTP.
+// +k8s:deepcopy-gen=true
+type HTTPClientTimeout struct {
+	// The duration envoy waits for the complete request reception. This timer starts upon request
+	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
+}
+
 // HTTPRoute holds the route information associated with the HTTP Route
 // +k8s:deepcopy-gen=true
 type HTTPRoute struct {
@@ -375,6 +413,8 @@ type HTTPRoute struct {
 	Name string `json:"name" yaml:"name"`
 	// Hostname that the route matches against
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
+	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
+	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
 	// HeaderMatches define the match conditions on the request headers for this route.
@@ -418,7 +458,7 @@ type HTTPRoute struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
-	// HealthCheck defines the configuration for active health checking on the upstream.
+	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
@@ -428,6 +468,10 @@ type HTTPRoute struct {
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Request and connection timeout settings
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// TcpKeepalive settings associated with the upstream client connection.
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// Retry settings
+	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -498,6 +542,12 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
+	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
+	// These cookies are set by the oauth filter, including: BearerToken,
+	// OauthHMAC, OauthExpires, IdToken, and RefreshToken.
+	CookieSuffix string `json:"cookieSuffix,omitempty"`
 }
 
 type OIDCProvider struct {
@@ -1399,9 +1449,36 @@ type CircuitBreaker struct {
 // HealthCheck defines health check settings
 // +k8s:deepcopy-gen=true
 type HealthCheck struct {
+	Active *ActiveHealthCheck `json:"active,omitempty" yaml:"active,omitempty"`
+
+	Passive *OutlierDetection `json:"passive,omitempty" yaml:"passive,omitempty"`
+}
+
+// OutlierDetection defines passive health check settings
+// +k8s:deepcopy-gen=true
+type OutlierDetection struct {
+	// Interval defines the time between passive health checks.
+	Interval *metav1.Duration `json:"interval,omitempty"`
+	// SplitExternalLocalOriginErrors enables splitting of errors between external and local origin.
+	SplitExternalLocalOriginErrors *bool `json:"splitExternalLocalOriginErrors,omitempty" yaml:"splitExternalLocalOriginErrors,omitempty"`
+	// ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
+	ConsecutiveLocalOriginFailures *uint32 `json:"consecutiveLocalOriginFailures,omitempty" yaml:"consecutiveLocalOriginFailures,omitempty"`
+	// ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection.
+	ConsecutiveGatewayErrors *uint32 `json:"consecutiveGatewayErrors,omitempty" yaml:"consecutiveGatewayErrors,omitempty"`
+	// Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection.
+	Consecutive5xxErrors *uint32 `json:"consecutive5XxErrors,omitempty" yaml:"consecutive5XxErrors,omitempty"`
+	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
+	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
+	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
+	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
+}
+
+// ActiveHealthCheck defines active health check settings
+// +k8s:deepcopy-gen=true
+type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	Timeout *metav1.Duration `json:"timeout"`
-	// Interval defines the time between health checks.
+	// Interval defines the time between active health checks.
 	Interval *metav1.Duration `json:"interval"`
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
 	UnhealthyThreshold *uint32 `json:"unhealthyThreshold"`
@@ -1416,39 +1493,50 @@ type HealthCheck struct {
 // Validate the fields within the HealthCheck structure.
 func (h *HealthCheck) Validate() error {
 	var errs error
+	if h.Active != nil {
+		if h.Active.Timeout != nil && h.Active.Timeout.Duration == 0 {
+			errs = errors.Join(errs, ErrHealthCheckTimeoutInvalid)
+		}
+		if h.Active.Interval != nil && h.Active.Interval.Duration == 0 {
+			errs = errors.Join(errs, ErrHealthCheckIntervalInvalid)
+		}
+		if h.Active.UnhealthyThreshold != nil && *h.Active.UnhealthyThreshold == 0 {
+			errs = errors.Join(errs, ErrHealthCheckUnhealthyThresholdInvalid)
+		}
+		if h.Active.HealthyThreshold != nil && *h.Active.HealthyThreshold == 0 {
+			errs = errors.Join(errs, ErrHealthCheckHealthyThresholdInvalid)
+		}
 
-	if h.Timeout != nil && h.Timeout.Duration == 0 {
-		errs = errors.Join(errs, ErrHealthCheckTimeoutInvalid)
-	}
-	if h.Interval != nil && h.Interval.Duration == 0 {
-		errs = errors.Join(errs, ErrHealthCheckIntervalInvalid)
-	}
-	if h.UnhealthyThreshold != nil && *h.UnhealthyThreshold == 0 {
-		errs = errors.Join(errs, ErrHealthCheckUnhealthyThresholdInvalid)
-	}
-	if h.HealthyThreshold != nil && *h.HealthyThreshold == 0 {
-		errs = errors.Join(errs, ErrHealthCheckHealthyThresholdInvalid)
-	}
+		matchCount := 0
+		if h.Active.HTTP != nil {
+			matchCount++
+		}
+		if h.Active.TCP != nil {
+			matchCount++
+		}
+		if matchCount > 1 {
+			errs = errors.Join(errs, ErrHealthCheckerInvalid)
+		}
 
-	matchCount := 0
-	if h.HTTP != nil {
-		matchCount++
-	}
-	if h.TCP != nil {
-		matchCount++
-	}
-	if matchCount != 1 {
-		errs = errors.Join(errs, ErrHealthCheckerInvalid)
-	}
-
-	if h.HTTP != nil {
-		if err := h.HTTP.Validate(); err != nil {
-			errs = errors.Join(errs, err)
+		if h.Active.HTTP != nil {
+			if err := h.Active.HTTP.Validate(); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+		if h.Active.TCP != nil {
+			if err := h.Active.TCP.Validate(); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		}
 	}
-	if h.TCP != nil {
-		if err := h.TCP.Validate(); err != nil {
-			errs = errors.Join(errs, err)
+
+	if h.Passive != nil {
+		if h.Passive.BaseEjectionTime != nil && h.Passive.BaseEjectionTime.Duration == 0 {
+			errs = errors.Join(errs, ErrOutlierDetectionBaseEjectionTimeInvalid)
+		}
+
+		if h.Passive.Interval != nil && h.Passive.Interval.Duration == 0 {
+			errs = errors.Join(errs, ErrOutlierDetectionIntervalInvalid)
 		}
 	}
 
@@ -1589,4 +1677,59 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP connection.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+}
+
+// Retry define the retry policy configuration.
+// +k8s:deepcopy-gen=true
+type Retry struct {
+	// NumRetries is the number of retries to be attempted. Defaults to 2.
+	NumRetries *uint32 `json:"numRetries,omitempty"`
+
+	// RetryOn specifies the retry trigger condition.
+	RetryOn *RetryOn `json:"retryOn,omitempty"`
+
+	// PerRetry is the retry policy to be applied per retry attempt.
+	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
+}
+
+type TriggerEnum egv1a1.TriggerEnum
+
+const (
+	Error5XX             = TriggerEnum(egv1a1.Error5XX)
+	GatewayError         = TriggerEnum(egv1a1.GatewayError)
+	DisconnectRest       = TriggerEnum(egv1a1.DisconnectRest)
+	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
+	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
+	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)
+	RetriableStatusCodes = TriggerEnum(egv1a1.RetriableStatusCodes)
+	Cancelled            = TriggerEnum(egv1a1.Cancelled)
+	DeadlineExceeded     = TriggerEnum(egv1a1.DeadlineExceeded)
+	Internal             = TriggerEnum(egv1a1.Internal)
+	ResourceExhausted    = TriggerEnum(egv1a1.ResourceExhausted)
+	Unavailable          = TriggerEnum(egv1a1.Unavailable)
+)
+
+// +k8s:deepcopy-gen=true
+type RetryOn struct {
+	// Triggers specifies the retry trigger condition(Http/Grpc).
+	Triggers []TriggerEnum `json:"triggers,omitempty"`
+
+	// HttpStatusCodes specifies the http status codes to be retried.
+	HTTPStatusCodes []HTTPStatus `json:"httpStatusCodes,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type PerRetryPolicy struct {
+	// Timeout is the timeout per retry attempt.
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Backoff is the backoff policy to be applied per retry attempt.
+	BackOff *BackOffPolicy `json:"backOff,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type BackOffPolicy struct {
+	// BaseInterval is the base interval between retries.
+	BaseInterval *metav1.Duration `json:"baseInterval,omitempty"`
+	// MaxInterval is the maximum interval between retries.
+	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
 }

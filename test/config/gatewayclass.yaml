@@ -59,3 +59,6 @@ spec:
           environment:
             name: ENVOY_GATEWAY_NAMESPACE
             defaultValue: "envoy-gateway-system"
+  shutdown:
+    drainTimeout: 15s
+

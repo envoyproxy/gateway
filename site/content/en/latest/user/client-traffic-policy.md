@@ -332,7 +332,7 @@ Curl the admin interface port to fetch the configured value for `xff_num_trusted
 ```shell
 curl -s 'http://localhost:19000/config_dump?resource=dynamic_listeners' \
   | jq -r '.configs[0].active_state.listener.default_filter_chain.filters[0].typed_config 
-      | with_entries(select(.key | match("xff|remote_address")))'
+      | with_entries(select(.key | match("xff|remote_address|original_ip")))'
 ```
 
 You should expect to see the following:
@@ -408,6 +408,60 @@ Handling connection for 8888
  "pod": "backend-58d58f745-8psnc"
 * Connection #0 to host localhost left intact
 }
+```
+
+### Enable HTTP Request Received Timeout
+
+This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
+This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  timeout:
+    http:
+      requestReceivedTimeout: 2s
+EOF
+```
+
+Curl the example app through Envoy proxy:
+
+```shell
+curl -v http://$GATEWAY_HOST/get \
+  -H "Host: www.example.com" \
+  -H "Content-Length: 10000"
+```
+
+You should expect `428` response status after 2s:
+
+```shell
+curl -v http://$GATEWAY_HOST/get \
+  -H "Host: www.example.com" \
+  -H "Content-Length: 10000"
+*   Trying 172.18.255.200:80...
+* Connected to 172.18.255.200 (172.18.255.200) port 80
+> GET /get HTTP/1.1
+> Host: www.example.com
+> User-Agent: curl/8.4.0
+> Accept: */*
+> Content-Length: 10000
+>
+< HTTP/1.1 408 Request Timeout
+< content-length: 15
+< content-type: text/plain
+< date: Tue, 27 Feb 2024 07:38:27 GMT
+< connection: close
+<
+* Closing connection
+request timeout
 ```
 
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy

@@ -139,6 +139,7 @@ xdsIR:
             spec:
               data: stuff
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

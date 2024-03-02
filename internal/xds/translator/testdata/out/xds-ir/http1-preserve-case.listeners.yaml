@@ -17,6 +17,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         httpProtocolOptions:
           headerKeyFormat:
             statefulFormatter:
@@ -31,10 +32,10 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -56,6 +57,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         httpProtocolOptions:
           enableTrailers: true
           headerKeyFormat:
@@ -71,9 +73,9 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: second-listener
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768

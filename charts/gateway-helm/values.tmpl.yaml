@@ -36,11 +36,7 @@ config:
         default: info
 
 envoyGatewayMetricsService:
-  ports:
-    - name: http
-      port: 19001
-      protocol: TCP
-      targetPort: 19001
+  port: 19001
 
 createNamespace: false
 

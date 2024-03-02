@@ -430,7 +430,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -444,17 +445,14 @@
                             },
                             "routeConfigName": "envoy-gateway-system/eg/http"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
-                          "upgradeConfigs": [
-                            {
-                              "upgradeType": "websocket"
-                            }
-                          ],
                           "useRemoteAddress": true
                         }
                       }
                     ]
                   },
+                  "drainType": "MODIFY_ONLY",
                   "name": "envoy-gateway-system/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -483,7 +481,12 @@
                         },
                         "name": "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com",
                         "route": {
-                          "cluster": "httproute/envoy-gateway-system/backend/rule/0"
+                          "cluster": "httproute/envoy-gateway-system/backend/rule/0",
+                          "upgradeConfigs": [
+                            {
+                              "upgradeType": "websocket"
+                            }
+                          ]
                         },
                         "typedPerFilterConfig": {
                           "envoy.filters.http.jwt_authn": {

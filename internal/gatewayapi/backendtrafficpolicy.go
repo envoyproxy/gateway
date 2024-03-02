@@ -16,6 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -23,6 +24,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -66,12 +68,12 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 	}
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
-		key := types.NamespacedName{
-			Name:      gw.GetName(),
-			Namespace: gw.GetNamespace(),
-		}
+		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
+
+	// Map of Gateway to the routes attached to it
+	gatewayRouteMap := make(map[string]sets.Set[string])
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
@@ -87,6 +89,26 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 			route := resolveBTPolicyRouteTargetRef(policy, routeMap)
 			if route == nil {
 				continue
+			}
+
+			// Find the Gateway that the route belongs to and add it to the
+			// gatewayRouteMap, which will be used to check policy overrides
+			for _, p := range GetParentReferences(route) {
+				if p.Kind == nil || *p.Kind == KindGateway {
+					namespace := route.GetNamespace()
+					if p.Namespace != nil {
+						namespace = string(*p.Namespace)
+					}
+					gw := types.NamespacedName{
+						Namespace: namespace,
+						Name:      string(p.Name),
+					}.String()
+
+					if _, ok := gatewayRouteMap[gw]; !ok {
+						gatewayRouteMap[gw] = make(sets.Set[string])
+					}
+					gatewayRouteMap[gw].Insert(utils.NamespacedName(route).String())
+				}
 			}
 
 			t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR)
@@ -112,6 +134,24 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 
 			message := "BackendTrafficPolicy has been accepted."
 			status.SetBackendTrafficPolicyAcceptedIfUnset(&policy.Status, message)
+
+			// Check if this policy is overridden by other policies targeting at
+			// route level
+			gw := utils.NamespacedName(gateway).String()
+			if r, ok := gatewayRouteMap[gw]; ok {
+				// Maintain order here to ensure status/string does not change with the same data
+				routes := r.UnsortedList()
+				sort.Strings(routes)
+				message := fmt.Sprintf(
+					"This policy is being overridden by other backendTrafficPolicies for these routes: %v",
+					routes)
+				status.SetBackendTrafficPolicyCondition(policy,
+					egv1a1.PolicyConditionOverridden,
+					metav1.ConditionTrue,
+					egv1a1.PolicyReasonOverridden,
+					message,
+				)
+			}
 		}
 	}
 
@@ -250,6 +290,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
 		to *ir.Timeout
+		ka *ir.TCPKeepalive
+		rt *ir.Retry
 	)
 
 	// Build IR
@@ -272,6 +314,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
 	}
+	if policy.Spec.TCPKeepalive != nil {
+		ka = t.buildTCPKeepAlive(policy)
+	}
+	if policy.Spec.Retry != nil {
+		rt = t.buildRetry(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -285,6 +333,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.HealthCheck = hc
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
+					r.TCPKeepalive = ka
+					r.Retry = rt
 
 					// some timeout setting originate from the route
 					if policy.Spec.Timeout != nil {
@@ -307,6 +357,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		cb *ir.CircuitBreaker
 		fi *ir.FaultInjection
 		ct *ir.Timeout
+		ka *ir.TCPKeepalive
+		rt *ir.Retry
 	)
 
 	// Build IR
@@ -328,6 +380,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
 	}
+	if policy.Spec.TCPKeepalive != nil {
+		ka = t.buildTCPKeepAlive(policy)
+	}
+	if policy.Spec.Retry != nil {
+		rt = t.buildRetry(policy)
+	}
 
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -336,7 +394,15 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
+	policyTarget := irStringKey(
+		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
+		string(policy.Spec.TargetRef.Name),
+	)
 	for _, http := range ir.HTTP {
+		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
 		for _, r := range http.Routes {
 			// Apply if not already set
 			if r.RateLimit == nil {
@@ -356,6 +422,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.FaultInjection == nil {
 				r.FaultInjection = fi
+			}
+			if r.TCPKeepalive == nil {
+				r.TCPKeepalive = ka
+			}
+			if r.Retry == nil {
+				r.Retry = rt
 			}
 
 			if policy.Spec.Timeout != nil {
@@ -687,12 +759,44 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 }
 
 func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
+	if policy.Spec.HealthCheck == nil {
+		return nil
+	}
+	irhc := &ir.HealthCheck{}
+	if policy.Spec.HealthCheck.Passive != nil {
+		irhc.Passive = t.buildPassiveHealthCheck(policy)
+	}
+	if policy.Spec.HealthCheck.Active != nil {
+		irhc.Active = t.buildActiveHealthCheck(policy)
+	}
+	return irhc
+}
+
+func (t *Translator) buildPassiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.OutlierDetection {
+	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Passive == nil {
+		return nil
+	}
+
+	hc := policy.Spec.HealthCheck.Passive
+	irOD := &ir.OutlierDetection{
+		Interval:                       hc.Interval,
+		SplitExternalLocalOriginErrors: hc.SplitExternalLocalOriginErrors,
+		ConsecutiveLocalOriginFailures: hc.ConsecutiveLocalOriginFailures,
+		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
+		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
+		BaseEjectionTime:               hc.BaseEjectionTime,
+		MaxEjectionPercent:             hc.MaxEjectionPercent,
+	}
+	return irOD
+}
+
+func (t *Translator) buildActiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.ActiveHealthCheck {
 	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Active == nil {
 		return nil
 	}
 
 	hc := policy.Spec.HealthCheck.Active
-	irHC := &ir.HealthCheck{
+	irHC := &ir.ActiveHealthCheck{
 		Timeout:            hc.Timeout,
 		Interval:           hc.Interval,
 		UnhealthyThreshold: hc.UnhealthyThreshold,
@@ -811,6 +915,15 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 				cb.MaxPendingRequests = &ui32
 			} else {
 				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests))
+				return nil
+			}
+		}
+
+		if pcb.MaxRequestsPerConnection != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+				cb.MaxRequestsPerConnection = &ui32
+			} else {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection))
 				return nil
 			}
 		}
@@ -939,4 +1052,123 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 		}
 	}
 	return fi
+}
+
+func (t *Translator) buildTCPKeepAlive(policy *egv1a1.BackendTrafficPolicy) *ir.TCPKeepalive {
+	var ka *ir.TCPKeepalive
+	if policy.Spec.TCPKeepalive != nil {
+		pka := policy.Spec.TCPKeepalive
+		ka = &ir.TCPKeepalive{}
+
+		if pka.Probes != nil {
+			ka.Probes = pka.Probes
+		}
+
+		if pka.IdleTime != nil {
+			d, err := time.ParseDuration(string(*pka.IdleTime))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Keep Alive", fmt.Sprintf("invalid IdleTime value %s", *pka.IdleTime))
+				return nil
+			}
+			ka.IdleTime = ptr.To(uint32(d.Seconds()))
+		}
+
+		if pka.Interval != nil {
+			d, err := time.ParseDuration(string(*pka.Interval))
+			if err != nil {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "TCP Keep Alive", fmt.Sprintf("invalid Interval value %s", *pka.Interval))
+				return nil
+			}
+			ka.Interval = ptr.To(uint32(d.Seconds()))
+		}
+
+	}
+	return ka
+}
+
+func (t *Translator) buildRetry(policy *egv1a1.BackendTrafficPolicy) *ir.Retry {
+	var rt *ir.Retry
+	if policy.Spec.Retry != nil {
+		prt := policy.Spec.Retry
+		rt = &ir.Retry{}
+
+		if prt.NumRetries != nil {
+			rt.NumRetries = ptr.To(uint32(*prt.NumRetries))
+		}
+
+		if prt.RetryOn != nil {
+			ro := &ir.RetryOn{}
+			bro := false
+			if prt.RetryOn.HTTPStatusCodes != nil {
+				ro.HTTPStatusCodes = makeIrStatusSet(prt.RetryOn.HTTPStatusCodes)
+				bro = true
+			}
+
+			if prt.RetryOn.Triggers != nil {
+				ro.Triggers = makeIrTriggerSet(prt.RetryOn.Triggers)
+				bro = true
+			}
+
+			if bro {
+				rt.RetryOn = ro
+			}
+		}
+
+		if prt.PerRetry != nil {
+			pr := &ir.PerRetryPolicy{}
+			bpr := false
+
+			if prt.PerRetry.Timeout != nil {
+				pr.Timeout = prt.PerRetry.Timeout
+				bpr = true
+			}
+
+			if prt.PerRetry.BackOff != nil {
+				if prt.PerRetry.BackOff.MaxInterval != nil || prt.PerRetry.BackOff.BaseInterval != nil {
+					bop := &ir.BackOffPolicy{}
+					if prt.PerRetry.BackOff.MaxInterval != nil {
+						bop.MaxInterval = prt.PerRetry.BackOff.MaxInterval
+					}
+
+					if prt.PerRetry.BackOff.BaseInterval != nil {
+						bop.BaseInterval = prt.PerRetry.BackOff.BaseInterval
+					}
+					pr.BackOff = bop
+					bpr = true
+				}
+			}
+
+			if bpr {
+				rt.PerRetry = pr
+			}
+		}
+	}
+
+	return rt
+}
+
+func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
+	var irStatuses []ir.HTTPStatus
+	// deduplicate http statuses
+	statusSet := make(map[egv1a1.HTTPStatus]bool, len(in))
+	for _, r := range in {
+		if _, ok := statusSet[r]; !ok {
+			statusSet[r] = true
+			irStatuses = append(irStatuses, ir.HTTPStatus(r))
+		}
+	}
+	return irStatuses
+}
+
+func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
+	var irTriggers []ir.TriggerEnum
+	// deduplicate http statuses
+	triggerSet := make(map[egv1a1.TriggerEnum]bool, len(in))
+	for _, r := range in {
+		if _, ok := triggerSet[r]; !ok {
+			triggerSet[r] = true
+			irTriggers = append(irTriggers, ir.TriggerEnum(r))
+		}
+	}
+	return irTriggers
 }

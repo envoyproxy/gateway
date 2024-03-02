@@ -185,8 +185,15 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
 			for t := range httpListener.TLS.Certificates {
-				secret := buildXdsDownstreamTLSSecret(httpListener.TLS.Certificates[t])
+				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[t])
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+
+			if httpListener.TLS.CACertificate != nil {
+				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate)
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -287,11 +294,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostsList...)
 
-		// Add per-route filter configs to the route config.
-		if err := patchRouteCfgWithPerRouteConfig(xdsRouteCfg, httpListener); err != nil {
-			errs = errors.Join(errs, err)
-		}
-
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
 		if err := patchResources(tCtx, httpListener.Routes); err != nil {
@@ -357,8 +359,14 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 
 		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
 			for _, s := range tcpListener.TLS.Terminate.Certificates {
-				secret := buildXdsDownstreamTLSSecret(s)
+				secret := buildXdsTLSCertSecret(s)
 				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+			if tcpListener.TLS.Terminate.CACertificate != nil {
+				caSecret := buildXdsTLSCaCertSecret(tcpListener.TLS.Terminate.CACertificate)
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -507,6 +515,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		healthCheck:    httpRoute.HealthCheck,
 		http1Settings:  http1Settings,
 		timeout:        httpRoute.Timeout,
+		tcpkeepalive:   httpRoute.TCPKeepalive,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

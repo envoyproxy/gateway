@@ -1,0 +1,43 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        retryPolicy:
+          numRetries: 5
+          perTryTimeout: 0.250s
+          retriableStatusCodes:
+          - 429
+          - 503
+          retryBackOff:
+            baseInterval: 0.100s
+            maxInterval: 10s
+          retryOn: connect-failure,retriable-status-codes
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - foo
+    name: first-listener/foo
+    routes:
+    - match:
+        prefix: /
+      name: second-route-defaults
+      route:
+        cluster: first-route-dest
+        retryPolicy:
+          numRetries: 2
+          retriableStatusCodes:
+          - 503
+          retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar
+    name: first-listener/bar

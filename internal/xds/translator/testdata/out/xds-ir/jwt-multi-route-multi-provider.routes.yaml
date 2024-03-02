@@ -10,6 +10,8 @@
       name: first-route-www.test.com
       route:
         cluster: first-route-www.test.com-dest
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
@@ -19,6 +21,8 @@
       name: second-route-www.test.com
       route:
         cluster: second-route-www.test.com-dest
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig

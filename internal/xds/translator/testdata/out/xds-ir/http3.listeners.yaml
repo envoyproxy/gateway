@@ -3,6 +3,7 @@
       address: 0.0.0.0
       portValue: 10443
       protocol: UDP
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -20,6 +21,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -28,9 +30,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/tls
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.quic
@@ -45,7 +46,6 @@
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
-          requireClientCertificate: false
   name: envoy-gateway/gateway-1/tls-quic
   udpListenerConfig:
     downstreamSocketConfig: {}
@@ -54,6 +54,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10443
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -69,6 +70,7 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -77,9 +79,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/tls
+        serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls

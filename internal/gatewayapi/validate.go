@@ -22,8 +22,13 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func (t *Translator) validateBackendRef(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
+func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
 	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind) bool {
+	if !t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind) {
+		return false
+	}
+	backendRef := GetBackendRef(backendRefContext)
+
 	if !t.validateBackendRefGroup(backendRef, parentRef, route) {
 		return false
 	}
@@ -77,6 +82,32 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 		)
 		return false
 	}
+	return true
+}
+
+func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, parentRef *RouteParentContext, route RouteContext, routeKind gwapiv1.Kind) bool {
+	var filtersLen int
+	switch routeKind {
+	case KindHTTPRoute:
+		filters := GetFilters(backendRef).([]gwapiv1.HTTPRouteFilter)
+		filtersLen = len(filters)
+	case KindGRPCRoute:
+		filters := GetFilters(backendRef).([]gwapiv1a2.GRPCRouteFilter)
+		filtersLen = len(filters)
+	default:
+		return true
+	}
+
+	if filtersLen > 0 {
+		parentRef.SetCondition(route,
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"UnsupportedRefValue",
+			"The filters field within BackendRef is not supported",
+		)
+		return false
+	}
+
 	return true
 }
 
@@ -207,8 +238,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
 		return true
-
 	}
+
 	// Any condition on the listener apart from Programmed=true indicates an error.
 	if !(lConditions[0].Type == string(gwapiv1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
 		hasProgrammedCond := false
@@ -735,23 +766,76 @@ func (t *Translator) validateHostname(hostname string) error {
 func (t *Translator) validateSecretRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretRef gwapiv1b1.SecretObjectReference,
+	secretObjRef gwapiv1b1.SecretObjectReference,
 	resources *Resources) (*v1.Secret, error) {
-	if secretRef.Group != nil && string(*secretRef.Group) != "" {
-		return nil, errors.New("secret ref group must be unspecified/empty")
-	}
 
-	if secretRef.Kind != nil && string(*secretRef.Kind) != KindSecret {
-		return nil, fmt.Errorf("secret ref kind must be %s", KindSecret)
+	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
+		return nil, err
 	}
 
 	secretNamespace := from.namespace
+	if secretObjRef.Namespace != nil {
+		secretNamespace = string(*secretObjRef.Namespace)
+	}
+	secret := resources.GetSecret(secretNamespace, string(secretObjRef.Name))
+
+	if secret == nil {
+		return nil, fmt.Errorf(
+			"secret %s/%s does not exist", secretNamespace, secretObjRef.Name)
+	}
+
+	return secret, nil
+}
+
+func (t *Translator) validateConfigMapRef(
+	allowCrossNamespace bool,
+	from crossNamespaceFrom,
+	secretObjRef gwapiv1b1.SecretObjectReference,
+	resources *Resources) (*v1.ConfigMap, error) {
+
+	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
+		return nil, err
+	}
+
+	configMapNamespace := from.namespace
+	if secretObjRef.Namespace != nil {
+		configMapNamespace = string(*secretObjRef.Namespace)
+	}
+	configMap := resources.GetConfigMap(configMapNamespace, string(secretObjRef.Name))
+
+	if configMap == nil {
+		return nil, fmt.Errorf(
+			"configmap %s/%s does not exist", configMapNamespace, secretObjRef.Name)
+	}
+
+	return configMap, nil
+}
+
+func (t *Translator) validateSecretObjectRef(
+	allowCrossNamespace bool,
+	from crossNamespaceFrom,
+	secretRef gwapiv1b1.SecretObjectReference,
+	resources *Resources) error {
+	var kind string
+	if secretRef.Group != nil && string(*secretRef.Group) != "" {
+		return errors.New("secret ref group must be unspecified/empty")
+	}
+
+	if secretRef.Kind == nil { // nolint
+		kind = KindSecret
+	} else if string(*secretRef.Kind) == KindSecret {
+		kind = KindSecret
+	} else if string(*secretRef.Kind) == KindConfigMap {
+		kind = KindConfigMap
+	} else {
+		return fmt.Errorf("secret ref kind must be %s", KindSecret)
+	}
 
 	if secretRef.Namespace != nil &&
 		string(*secretRef.Namespace) != "" &&
 		string(*secretRef.Namespace) != from.namespace {
 		if !allowCrossNamespace {
-			return nil, fmt.Errorf(
+			return fmt.Errorf(
 				"secret ref namespace must be unspecified/empty or %s",
 				from.namespace)
 		}
@@ -760,29 +844,20 @@ func (t *Translator) validateSecretRef(
 			from,
 			crossNamespaceTo{
 				group:     "",
-				kind:      KindSecret,
+				kind:      kind,
 				namespace: string(*secretRef.Namespace),
 				name:      string(secretRef.Name),
 			},
 			resources.ReferenceGrants,
 		) {
-			return nil,
-				fmt.Errorf(
-					"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
-					*secretRef.Namespace, secretRef.Name)
+			return fmt.Errorf(
+				"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+				*secretRef.Namespace, secretRef.Name)
 		}
 
-		secretNamespace = string(*secretRef.Namespace)
 	}
 
-	secret := resources.GetSecret(secretNamespace, string(secretRef.Name))
-
-	if secret == nil {
-		return nil, fmt.Errorf(
-			"secret %s/%s does not exist", secretNamespace, secretRef.Name)
-	}
-
-	return secret, nil
+	return nil
 }
 
 // TODO: zhaohuabing combine this function with the one in the route translator

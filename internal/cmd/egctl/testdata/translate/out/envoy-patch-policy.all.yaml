@@ -199,6 +199,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -207,10 +208,10 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
-                  upgradeConfigs:
-                  - upgradeType: websocket
                   useRemoteAddress: true
+            drainType: MODIFY_ONLY
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump

@@ -10,6 +10,8 @@
       name: first-route
       route:
         cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
 - ignorePortInHostMatching: true
   name: second-listener
   virtualHosts:
@@ -22,3 +24,5 @@
       name: second-route
       route:
         cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
