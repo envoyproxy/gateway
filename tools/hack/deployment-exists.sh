@@ -9,15 +9,15 @@ exist_timeout=25
 end=$((SECONDS+exist_timeout))
 
 while true; do
-      deployment=$(kubectl get deployment -l "$DEPLOYMENT_LABEL_SELECTOR" -o "$DEPLOYMENT_NAMESPACE" -n)
+      deployment=$(kubectl get deployment -l "$DEPLOYMENT_LABEL_SELECTOR" -o name -n "$DEPLOYMENT_NAMESPACE")
       if [ -n "$deployment" ]; then
-        echo "Deployment exists."
+        echo "$deployment exists"
         break
     else
-        echo "Waiting for deployment to exist..."
+        echo "Waiting for deployment with label selectors = \"$DEPLOYMENT_LABEL_SELECTOR\" to exists in namespace: \"$DEPLOYMENT_NAMESPACE\""
     fi
     if [ $SECONDS -gt $end ]; then
-        echo "Timeout waiting for deployment to exist."
+        echo "The timeout for waiting for a deployment to exists has passed."
         exit 1
     fi
     sleep 5
