@@ -11,7 +11,7 @@ spec:
     namespace: gateway-conformance-infra
   circuitBreaker:
     maxConnections: 0
-    maxRequests: 0
+    maxParallelRequests: 0
     maxPendingRequests: 0
 ---
 apiVersion: gateway.networking.k8s.io/v1
