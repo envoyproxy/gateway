@@ -71,7 +71,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	for _, listener := range r.infra.Listeners {
 		for _, port := range listener.Ports {
 			target := intstr.IntOrString{IntVal: port.ContainerPort}
-			if alreadyHasHttp3, found := configuredPorts[port.ServicePort]; !found || !alreadyHasHttp3 {
+			if alreadyHasHttp3, found := configuredPorts[port.ContainerPort]; !found || !alreadyHasHttp3 {
 				if !found {
 					protocol := corev1.ProtocolTCP
 					if port.Protocol == ir.UDPProtocolType {
