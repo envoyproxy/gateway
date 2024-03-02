@@ -118,7 +118,11 @@ run-e2e: prepare-e2e
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
+else
+	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --run-test $(E2E_RUN_TEST)
+endif
 
 .PHONY: prepare-e2e
 prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector
