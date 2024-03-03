@@ -17,7 +17,7 @@ http:
         - 429
         - 503
         triggers:
-        - disconnect-reset
+        - reset
         - connect-failure
         - retriable-status-codes
       perRetry:

@@ -1697,7 +1697,7 @@ type TriggerEnum egv1a1.TriggerEnum
 const (
 	Error5XX             = TriggerEnum(egv1a1.Error5XX)
 	GatewayError         = TriggerEnum(egv1a1.GatewayError)
-	DisconnectRest       = TriggerEnum(egv1a1.DisconnectRest)
+	Reset                = TriggerEnum(egv1a1.Reset)
 	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
 	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
 	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)
