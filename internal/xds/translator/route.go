@@ -10,8 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
+
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -427,6 +430,15 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			RetryOn:              retryDefaultRetryOn,
 			RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},
 			NumRetries:           &wrapperspb.UInt32Value{Value: retryDefaultNumRetries},
+			RetryHostPredicate: []*routev3.RetryPolicy_RetryHostPredicate{
+				{
+					Name: "envoy.retry_host_predicates.previous_hosts",
+					ConfigType: &routev3.RetryPolicy_RetryHostPredicate_TypedConfig{
+						TypedConfig: protocov.ToAny(&previoushost.PreviousHostsPredicate{}),
+					},
+				},
+			},
+			HostSelectionRetryMaxAttempts: 5,
 		}
 
 		if rr.NumRetries != nil {

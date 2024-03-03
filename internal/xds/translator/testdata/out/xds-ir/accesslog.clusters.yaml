@@ -1,4 +1,9 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - retryBudget:
+        budgetPercent:
+          value: 100
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -12,7 +17,12 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - retryBudget:
+        budgetPercent:
+          value: 100
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
