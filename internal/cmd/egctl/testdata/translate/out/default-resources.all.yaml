@@ -674,6 +674,11 @@ xds:
       dynamicActiveClusters:
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - retryBudget:
+                budgetPercent:
+                  value: 100
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -690,6 +695,11 @@ xds:
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - retryBudget:
+                budgetPercent:
+                  value: 100
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -711,6 +721,11 @@ xds:
                 http2ProtocolOptions: {}
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - retryBudget:
+                budgetPercent:
+                  value: 100
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -727,6 +742,11 @@ xds:
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - retryBudget:
+                budgetPercent:
+                  value: 100
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -743,6 +763,11 @@ xds:
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - retryBudget:
+                budgetPercent:
+                  value: 100
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
