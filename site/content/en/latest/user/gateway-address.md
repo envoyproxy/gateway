@@ -2,26 +2,23 @@
 title: "Gateway Address"
 ---
 
-The Gateway API provides an optional [Addresses][] field through which Envoy Gateway can set addresses for Envoy Proxy Service. The currently supported addresses are:
+The Gateway API provides an optional [Addresses][] field through which Envoy Gateway can set addresses for Envoy Proxy Service.
+Depending on the Service Type, the addresses of gateway can be used as:
 
-- [External IPs](#External-IPs)
+- [External IPs](#external-ips)
+- [Cluster IP](#cluster-ip)
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 
 ## External IPs
 
-Using the addresses in `Gateway.Spec.Addresses` as the [External IPs][] of Envoy Proxy Service, this will __require__ the address to be of type `IPAddress`.
+Using the addresses in `Gateway.Spec.Addresses` as the [External IPs][] of Envoy Proxy Service, 
+this will __require__ the address to be of type `IPAddress` and the [ServiceType][] to be of `LoadBalancer` or `NodePort`.
 
-Install the GatewayClass, Gateway from quickstart:
-
-```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
-```
-
-Set the address of the Gateway, the address settings here are for reference only:
+The Envoy Gateway deploys Envoy Proxy Service as `LoadBalancer` by default, 
+so you can set the address of the Gateway directly (the address settings here are for reference only):
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{
@@ -56,5 +53,13 @@ envoy-gateway-metrics-service   ClusterIP      10.96.124.73    <none>        844
 
 __Note:__ If the `Gateway.Spec.Addresses` is explicitly set, it will be the only addresses that populates the Gateway status.
 
+## Cluster IP
+
+Using the addresses in `Gateway.Spec.Addresses` as the [Cluster IP][] of Envoy Proxy Service,
+this will __require__ the address to be of type `IPAddress` and the [ServiceType][] to be of `ClusterIP`.
+
+
 [Addresses]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayAddress
 [External IPs]: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+[Cluster IP]: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip
+[ServiceType]: ../../api/extension_types#servicetype

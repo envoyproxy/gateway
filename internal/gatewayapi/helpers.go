@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -126,7 +127,7 @@ func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*Gatew
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if !IsRefToGateway(parentRef, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}) {
+		if !IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
 			continue
 		}
 

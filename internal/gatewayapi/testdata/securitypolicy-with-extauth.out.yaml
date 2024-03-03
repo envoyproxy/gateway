@@ -189,6 +189,12 @@ securityPolicies:
       reason: Accepted
       status: "True"
       type: Accepted
+    - lastTransitionTime: null
+      message: 'This policy is being overridden by other securityPolicies for these
+        routes: [default/httproute-1]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
 xdsIR:
   default/gateway-1:
     accessLog:
@@ -233,6 +239,7 @@ xdsIR:
           - header1
           - header2
         hostname: www.foo.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
@@ -267,30 +274,9 @@ xdsIR:
             - header2
             path: /auth
         hostname: www.bar.com
+        isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        directResponse:
-          statusCode: 404
-        hostname: www.foo.com
-        name: www_foo_com/catch-all-return-404
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        directResponse:
-          statusCode: 404
-        hostname: www.bar.com
-        name: www_bar_com/catch-all-return-404
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /

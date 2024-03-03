@@ -1,10 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: null
   labels:
-    app.kubernetes.io/name: envoy-ratelimit
     app.kubernetes.io/component: ratelimit
     app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy-ratelimit
   name: envoy-ratelimit
   namespace: envoy-gateway-system
   ownerReferences:
@@ -13,22 +14,23 @@ metadata:
     name: envoy-gateway
     uid: test-owner-reference-uid-for-deployment
 spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app.kubernetes.io/name: envoy-ratelimit
       app.kubernetes.io/component: ratelimit
       app.kubernetes.io/managed-by: envoy-gateway
+      app.kubernetes.io/name: envoy-ratelimit
+  strategy:
+    type: RollingUpdate
   template:
     metadata:
+      creationTimestamp: null
       labels:
-        app.kubernetes.io/name: envoy-ratelimit
         app.kubernetes.io/component: ratelimit
         app.kubernetes.io/managed-by: envoy-gateway
-      annotations:
-        prometheus.io/scrape: "true"
+        app.kubernetes.io/name: envoy-ratelimit
     spec:
       automountServiceAccountToken: false
       containers:
@@ -50,7 +52,7 @@ spec:
         - name: LOG_LEVEL
           value: info
         - name: USE_STATSD
-          value: "true"
+          value: "false"
         - name: CONFIG_TYPE
           value: GRPC_XDS_SOTW
         - name: CONFIG_GRPC_XDS_SERVER_URL
@@ -60,43 +62,28 @@ spec:
         - name: GRPC_SERVER_USE_TLS
           value: "true"
         - name: GRPC_SERVER_TLS_CERT
-          value: "/certs/tls.crt"
+          value: /certs/tls.crt
         - name: GRPC_SERVER_TLS_KEY
-          value: "/certs/tls.key"
+          value: /certs/tls.key
         - name: GRPC_SERVER_TLS_CA_CERT
-          value: "/certs/ca.crt"
+          value: /certs/ca.crt
         - name: CONFIG_GRPC_XDS_SERVER_USE_TLS
           value: "true"
         - name: CONFIG_GRPC_XDS_CLIENT_TLS_CERT
-          value: "/certs/tls.crt"
+          value: /certs/tls.crt
         - name: CONFIG_GRPC_XDS_CLIENT_TLS_KEY
-          value: "/certs/tls.key"
+          value: /certs/tls.key
         - name: CONFIG_GRPC_XDS_SERVER_TLS_CACERT
-          value: "/certs/ca.crt"
+          value: /certs/ca.crt
         - name: FORCE_START_WITHOUT_INITIAL_CONFIG
           value: "true"
-        image: custom-image
+        image: envoyproxy/ratelimit:master
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:
         - containerPort: 8081
           name: grpc
           protocol: TCP
-        securityContext:
-          privileged: true
-        resources:
-          limits:
-            cpu: 400m
-            memory: 2Gi
-          requests:
-            cpu: 200m
-            memory: 1Gi
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-        - mountPath: /certs
-          name: certs
-          readOnly: true
         readinessProbe:
           failureThreshold: 3
           httpGet:
@@ -106,26 +93,24 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /certs
+          name: certs
+          readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-ratelimit
-      securityContext:
-        runAsUser: 1000
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: cloud.google.com/gke-nodepool
-                operator: In
-                values:
-                - router-node
       terminationGracePeriodSeconds: 300
       volumes:
       - name: certs
         secret:
-          secretName: envoy-rate-limit
           defaultMode: 420
-  revisionHistoryLimit: 10
-  progressDeadlineSeconds: 600
+          secretName: envoy-rate-limit
+status: {}

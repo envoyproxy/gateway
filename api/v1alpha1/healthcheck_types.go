@@ -160,12 +160,6 @@ type TCPActiveHealthChecker struct {
 	Receive *ActiveHealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
 }
 
-// HTTPStatus defines the http status code.
-// +kubebuilder:validation:Minimum=100
-// +kubebuilder:validation:Maximum=600
-// +kubebuilder:validation:ExclusiveMaximum=true
-type HTTPStatus int
-
 // ActiveHealthCheckPayloadType is the type of the payload.
 // +kubebuilder:validation:Enum=Text;Binary
 type ActiveHealthCheckPayloadType string

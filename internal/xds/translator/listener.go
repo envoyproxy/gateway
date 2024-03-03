@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
@@ -147,6 +148,9 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 }
 
@@ -170,6 +174,9 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
 			QuicOptions:            &listenerv3.QuicProtocolOptions{},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
 	return xdsListener
@@ -230,6 +237,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		Tracing: hcmTracing,
 	}
 
+	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil && irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
+		mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
+	}
+
 	// Add the proxy protocol filter if needed
 	patchProxyProtocolFilter(xdsListener, irListener)
 
@@ -237,14 +248,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		// always enable grpc stats filter
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
-	} else {
-		// Allow websocket upgrades for HTTP 1.1
-		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-		mgr.UpgradeConfigs = []*hcmv3.HttpConnectionManager_UpgradeConfig{
-			{
-				UpgradeType: "websocket",
-			},
-		}
 	}
 
 	if http3Listener {

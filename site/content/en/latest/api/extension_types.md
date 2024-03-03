@@ -97,6 +97,21 @@ _Appears in:_
 
 
 
+#### BackOffPolicy
+
+
+
+
+
+_Appears in:_
+- [PerRetryPolicy](#perretrypolicy)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `baseInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | BaseInterval is the base interval between retries. |
+| `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set. The default is 10 times the base_interval |
+
+
 #### BackendTrafficPolicy
 
 
@@ -149,6 +164,7 @@ _Appears in:_
 | `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  | Circuit Breaker settings for the upstream connections and requests. If not set, circuit breakers will be enabled with the default thresholds |
+| `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions. If not set, retry will be disabled. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 | `compression` | _[Compression](#compression) array_ |  false  | The compression config for the http streams. |
 
@@ -865,6 +881,7 @@ _Appears in:_
 | `concurrency` | _integer_ |  false  | Concurrency defines the number of worker threads to run. If unset, it defaults to the number of cpuset threads on the platform. |
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
+| `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
 
 
 
@@ -1198,6 +1215,7 @@ HTTPStatus defines the http status code.
 
 _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
+- [RetryOn](#retryon)
 
 
 
@@ -1357,7 +1375,8 @@ _Appears in:_
 | `issuer` | _string_ |  false  | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
 | `audiences` | _string array_ |  false  | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` | _[RemoteJWKS](#remotejwks)_ |  true  | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
-| `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  true  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `recomputeRoute` | _boolean_ |  false  | RecomputeRoute clears the route cache and recalculates the routing decision. This field must be enabled if the headers generated from the claim are used for route matching decisions. If the recomputation selects a new route, features targeting the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  | ExtractFrom defines different ways to extract the JWT token from HTTP request. If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema or access_token from query parameters. |
 
 
@@ -1402,6 +1421,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to deployment |
 | `replicas` | _integer_ |  false  | Replicas is the number of desired pods. Defaults to 1. |
 | `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ |  false  | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
@@ -1424,6 +1444,22 @@ _Appears in:_
 | `maxReplicas` | _integer_ |  true  | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
 | `metrics` | _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#metricspec-v2-autoscaling) array_ |  false  | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
 | `behavior` | _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#horizontalpodautoscalerbehavior-v2-autoscaling)_ |  false  | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
+
+
+#### KubernetesPatchSpec
+
+
+
+KubernetesPatchSpec defines how to perform the patch operation
+
+_Appears in:_
+- [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
+- [KubernetesServiceSpec](#kubernetesservicespec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[MergeType](#mergetype)_ |  false  | Type is the type of merge operation to perform <br /><br /> By default, StrategicMerge is used as the patch type. |
+| `value` | _[JSON](#json)_ |  true  | Object contains the raw configuration for merged object |
 
 
 #### KubernetesPodSpec
@@ -1466,6 +1502,7 @@ _Appears in:_
 | `allocateLoadBalancerNodePorts` | _boolean_ |  false  | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` | _string_ |  false  | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
 | `externalTrafficPolicy` | _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ |  false  | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to the service |
 
 
 #### KubernetesWatchMode
@@ -1559,6 +1596,8 @@ LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
+
+
 
 
 
@@ -1681,6 +1720,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `escapedSlashesAction` | _[PathEscapedSlashAction](#pathescapedslashaction)_ |  false  | EscapedSlashesAction determines how %2f, %2F, %5c, or %5C sequences in the path URI should be handled. The default is UnescapeAndRedirect. |
 | `disableMergeSlashes` | _boolean_ |  false  | DisableMergeSlashes allows disabling the default configuration of merging adjacent slashes in the path. Note that slash merging is not part of the HTTP spec and is provided for convenience. |
+
+
+#### PerRetryPolicy
+
+
+
+
+
+_Appears in:_
+- [Retry](#retry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout is the timeout per retry attempt. |
+| `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential back-off algorithm for retries. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
 #### ProviderType
@@ -1952,6 +2006,7 @@ _Appears in:_
 | `backend` | _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ |  true  | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  | FailClosed is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailClosed is false, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailClosed is False. |
+| `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  | Telemetry defines telemetry configuration for RateLimit. |
 
 
 #### RateLimitDatabaseBackend
@@ -1978,6 +2033,34 @@ RateLimitDatabaseBackendType specifies the types of database backend to be used 
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
 
+
+
+#### RateLimitMetrics
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `prometheus` | _[RateLimitMetricsPrometheusProvider](#ratelimitmetricsprometheusprovider)_ |  true  | Prometheus defines the configuration for prometheus endpoint. |
+
+
+#### RateLimitMetricsPrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [RateLimitMetrics](#ratelimitmetrics)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
 
 
 #### RateLimitRedisSettings
@@ -2040,6 +2123,20 @@ _Appears in:_
 | `type` | _[RateLimitType](#ratelimittype)_ |  true  | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global" or "Local". |
 | `global` | _[GlobalRateLimit](#globalratelimit)_ |  false  | Global defines global rate limit configuration. |
 | `local` | _[LocalRateLimit](#localratelimit)_ |  false  | Local defines local rate limit configuration. |
+
+
+#### RateLimitTelemetry
+
+
+
+
+
+_Appears in:_
+- [RateLimit](#ratelimit)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
 
 
 #### RateLimitType
@@ -2133,6 +2230,37 @@ _Appears in:_
 
 
 
+#### Retry
+
+
+
+Retry defines the retry strategy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `numRetries` | _integer_ |  false  | NumRetries is the number of retries to be attempted. Defaults to 2. |
+| `retryOn` | _[RetryOn](#retryon)_ |  false  | RetryOn specifies the retry trigger condition. <br /><br /> If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
+| `perRetry` | _[PerRetryPolicy](#perretrypolicy)_ |  false  | PerRetry is the retry policy to be applied per retry attempt. |
+
+
+#### RetryOn
+
+
+
+
+
+_Appears in:_
+- [Retry](#retry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
+| `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried. The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
+
+
 #### SecurityPolicy
 
 
@@ -2207,6 +2335,21 @@ ServiceType string describes ingress methods for a service
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
+
+
+#### ShutdownConfig
+
+
+
+ShutdownConfig defines configuration for graceful envoy shutdown process.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `drainTimeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds. If unspecified, defaults to 600 seconds. |
+| `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete. If unspecified, defaults to 5 seconds. |
 
 
 #### SlowStart
@@ -2378,6 +2521,17 @@ _Underlying type:_ _string_
 
 _Appears in:_
 - [TracingProvider](#tracingprovider)
+
+
+
+#### TriggerEnum
+
+_Underlying type:_ _string_
+
+TriggerEnum specifies the conditions that trigger retries.
+
+_Appears in:_
+- [RetryOn](#retryon)
 
 
 

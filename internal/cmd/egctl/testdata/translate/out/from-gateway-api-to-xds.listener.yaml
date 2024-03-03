@@ -57,9 +57,8 @@ xds:
                   routeConfigName: default/eg/http
                 serverHeaderTransformation: PASS_THROUGH
                 statPrefix: http
-                upgradeConfigs:
-                - upgradeType: websocket
                 useRemoteAddress: true
+          drainType: MODIFY_ONLY
           name: default/eg/http
           perConnectionBufferLimitBytes: 32768
     - activeState:
@@ -126,6 +125,7 @@ xds:
                 serverHeaderTransformation: PASS_THROUGH
                 statPrefix: http
                 useRemoteAddress: true
+          drainType: MODIFY_ONLY
           name: default/eg/grpc
           perConnectionBufferLimitBytes: 32768
     - activeState:
@@ -148,6 +148,7 @@ xds:
             socketAddress:
               address: 0.0.0.0
               portValue: 8443
+          drainType: MODIFY_ONLY
           filterChains:
           - filterChainMatch:
               serverNames:
@@ -193,6 +194,7 @@ xds:
             socketAddress:
               address: 0.0.0.0
               portValue: 1234
+          drainType: MODIFY_ONLY
           filterChains:
           - filters:
             - name: envoy.filters.network.tcp_proxy

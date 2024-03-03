@@ -19,6 +19,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -27,6 +28,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -60,12 +62,12 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	}
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
-		key := types.NamespacedName{
-			Name:      gw.GetName(),
-			Namespace: gw.GetNamespace(),
-		}
+		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
+
+	// Map of Gateway to the routes attached to it
+	gatewayRouteMap := make(map[string]sets.Set[string])
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
@@ -81,6 +83,26 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			route := resolveSecurityPolicyRouteTargetRef(policy, routeMap)
 			if route == nil {
 				continue
+			}
+
+			// Find the Gateway that the route belongs to and add it to the
+			// gatewayRouteMap, which will be used to check policy overrides
+			for _, p := range GetParentReferences(route) {
+				if p.Kind == nil || *p.Kind == KindGateway {
+					namespace := route.GetNamespace()
+					if p.Namespace != nil {
+						namespace = string(*p.Namespace)
+					}
+					gw := types.NamespacedName{
+						Namespace: namespace,
+						Name:      string(p.Name),
+					}.String()
+
+					if _, ok := gatewayRouteMap[gw]; !ok {
+						gatewayRouteMap[gw] = make(sets.Set[string])
+					}
+					gatewayRouteMap[gw].Insert(utils.NamespacedName(route).String())
+				}
 			}
 
 			err := t.translateSecurityPolicyForRoute(policy, route, resources, xdsIR)
@@ -120,6 +142,24 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			} else {
 				message := "SecurityPolicy has been accepted."
 				status.SetSecurityPolicyAccepted(&policy.Status, message)
+			}
+
+			// Check if this policy is overridden by other policies targeting
+			// at route level
+			gw := utils.NamespacedName(gateway).String()
+			if r, ok := gatewayRouteMap[gw]; ok {
+				// Maintain order here to ensure status/string does not change with the same data
+				routes := r.UnsortedList()
+				sort.Strings(routes)
+				message := fmt.Sprintf(
+					"This policy is being overridden by other securityPolicies for these routes: %v",
+					routes)
+				status.SetSecurityPolicyCondition(policy,
+					egv1a1.PolicyConditionOverridden,
+					metav1.ConditionTrue,
+					egv1a1.PolicyReasonOverridden,
+					message,
+				)
 			}
 		}
 	}
@@ -362,7 +402,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 
-	// Apply IR to all the routes within the specific Gateway
+	// Apply IR to all the routes within the specific Gateway that originated
+	// from the gateway to which this security policy was attached.
 	// If the feature is already set, then skip it, since it must have be
 	// set by a policy attaching to the route
 	//
@@ -372,7 +413,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
+	policyTarget := irStringKey(
+		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
+		string(policy.Spec.TargetRef.Name),
+	)
 	for _, http := range ir.HTTP {
+		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
 		for _, r := range http.Routes {
 			// Apply if not already set
 			if r.CORS == nil {
@@ -494,6 +543,9 @@ func (t *Translator) buildOIDC(
 		logoutPath = *oidc.LogoutPath
 	}
 
+	// Generate a unique cookie suffix for oauth filters
+	suffix := utils.Digest32(string(policy.UID))
+
 	return &ir.OIDC{
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
@@ -502,6 +554,7 @@ func (t *Translator) buildOIDC(
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,
+		CookieSuffix: suffix,
 	}, nil
 }
 
@@ -637,10 +690,6 @@ func (t *Translator) buildBasicAuth(
 		return nil, fmt.Errorf(
 			"users secret not found in secret %s/%s",
 			usersSecret.Namespace, usersSecret.Name)
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	return &ir.BasicAuth{Users: usersSecretBytes}, nil

@@ -14,7 +14,8 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.basic_auth_first-route
+        - disabled: true
+          name: envoy.filters.http.basic_auth_first-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
             users:
@@ -33,8 +34,7 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

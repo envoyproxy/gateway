@@ -150,19 +150,9 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        directResponse:
-          statusCode: 404
-        hostname: gateway.envoyproxy.io
-        name: gateway_envoyproxy_io/catch-all-return-404
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /

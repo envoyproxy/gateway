@@ -14,7 +14,8 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.oauth2_first-route
+        - disabled: true
+          name: envoy.filters.http.oauth2_first-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
@@ -26,6 +27,12 @@
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
               credentials:
                 clientId: client.oauth.foo.com
+                cookieNames:
+                  bearerToken: BearerToken-5F93C2E4
+                  idToken: IdToken-5F93C2E4
+                  oauthExpires: OauthExpires-5F93C2E4
+                  oauthHmac: OauthHMAC-5F93C2E4
+                  refreshToken: RefreshToken-5F93C2E4
                 hmacSecret:
                   name: first-route/oauth2/hmac_secret
                   sdsConfig:
@@ -48,7 +55,8 @@
                 cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
-        - name: envoy.filters.http.oauth2_second-route
+        - disabled: true
+          name: envoy.filters.http.oauth2_second-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
@@ -60,6 +68,12 @@
               authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
               credentials:
                 clientId: client.oauth.bar.com
+                cookieNames:
+                  bearerToken: BearerToken-5f93c2e4
+                  idToken: IdToken-5f93c2e4
+                  oauthExpires: OauthExpires-5f93c2e4
+                  oauthHmac: OauthHMAC-5f93c2e4
+                  refreshToken: RefreshToken-5f93c2e4
                 hmacSecret:
                   name: second-route/oauth2/hmac_secret
                   sdsConfig:
@@ -96,8 +110,7 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

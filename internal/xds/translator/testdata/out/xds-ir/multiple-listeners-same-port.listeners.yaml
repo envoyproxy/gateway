@@ -28,9 +28,8 @@
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -60,8 +59,6 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls
@@ -104,8 +101,6 @@
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls

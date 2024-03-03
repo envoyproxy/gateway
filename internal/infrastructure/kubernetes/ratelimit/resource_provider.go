@@ -6,6 +6,9 @@
 package ratelimit
 
 import (
+	_ "embed"
+	"strconv"
+
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -24,7 +27,11 @@ const (
 	ResourceKindService        = "Service"
 	ResourceKindDeployment     = "Deployment"
 	ResourceKindServiceAccount = "ServiceAccount"
+	appsAPIVersion             = "apps/v1"
 )
+
+//go:embed statsd_conf.yaml
+var statsConf string
 
 type ResourceRender struct {
 	// Namespace is the Namespace used for managed infra.
@@ -51,9 +58,36 @@ func (r *ResourceRender) Name() string {
 	return InfraName
 }
 
-// ConfigMap is deprecated since ratelimit supports xds grpc config server.
+func enablePrometheus(rl *egv1a1.RateLimit) bool {
+	if rl != nil &&
+		rl.Telemetry != nil &&
+		rl.Telemetry.Metrics.Prometheus != nil {
+		return !rl.Telemetry.Metrics.Prometheus.Disable
+	}
+
+	return true
+}
+
+// ConfigMap returns the expected rate limit ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
-	return nil, nil
+	if !enablePrometheus(r.rateLimit) {
+		return nil, nil
+	}
+
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.Namespace,
+			Name:      "statsd-exporter-config",
+			Labels:    rateLimitLabels(),
+		},
+		Data: map[string]string{
+			"conf.yaml": statsConf,
+		},
+	}, nil
 }
 
 // Service returns the expected rate limit Service based on the provided infra.
@@ -139,13 +173,18 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	const apiVersion = "apps/v1"
-
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment)
 	labels := rateLimitLabels()
 	selector := resource.GetSelector(labels)
 
 	var annotations map[string]string
+	if enablePrometheus(r.rateLimit) {
+		annotations = map[string]string{
+			"prometheus.io/path":   "/metrics",
+			"prometheus.io/port":   strconv.Itoa(PrometheusPort),
+			"prometheus.io/scrape": "true",
+		}
+	}
 	if r.rateLimitDeployment.Pod.Annotations != nil {
 		annotations = r.rateLimitDeployment.Pod.Annotations
 	}
@@ -153,7 +192,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       ResourceKindDeployment,
-			APIVersion: apiVersion,
+			APIVersion: appsAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
@@ -197,12 +236,17 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			deployment.OwnerReferences = []metav1.OwnerReference{
 				{
 					Kind:       ResourceKindDeployment,
-					APIVersion: apiVersion,
+					APIVersion: appsAPIVersion,
 					Name:       "envoy-gateway",
 					UID:        uid,
 				},
 			}
 		}
+	}
+
+	// apply merge patch to deployment
+	if merged, err := r.rateLimitDeployment.ApplyMergePatch(deployment); err == nil {
+		deployment = merged
 	}
 
 	return deployment, nil

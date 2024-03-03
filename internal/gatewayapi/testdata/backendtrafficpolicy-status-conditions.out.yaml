@@ -76,6 +76,12 @@ backendTrafficPolicies:
       reason: Accepted
       status: "True"
       type: Accepted
+    - lastTransitionTime: null
+      message: 'This policy is being overridden by other backendTrafficPolicies for
+        these routes: [envoy-gateway/httproute-1]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -360,6 +366,7 @@ xdsIR:
         directResponse:
           statusCode: 500
         hostname: '*'
+        isHTTP2: false
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -390,4 +397,5 @@ xdsIR:
           exact: foo
           name: magic
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*

@@ -54,6 +54,6 @@ egctl config envoy-proxy all <instance_name>
 # Retrieve listener information about proxy configuration from envoy 
 egctl config envoy-proxy listener <instance_name>
 
-# Retrieve information about envoy gateway
-egctl config envoy-gateway
+# Retrieve the relevant rate limit configuration from the Rate Limit instance
+egctl config envoy-ratelimit
 ```

@@ -28,9 +28,8 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -68,9 +67,8 @@
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -94,6 +92,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10082
+  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -119,6 +118,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10083
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy

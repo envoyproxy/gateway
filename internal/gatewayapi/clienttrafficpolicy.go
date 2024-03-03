@@ -21,6 +21,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -64,10 +65,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 			}
 
 			// Check for conflicts
-			key := types.NamespacedName{
-				Name:      gateway.Name,
-				Namespace: gateway.Namespace,
-			}
+			key := utils.NamespacedName(gateway)
 
 			// Check if another policy targeting the same section exists
 			section := string(*(policy.Spec.TargetRef.SectionName))
@@ -290,7 +288,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) error {
 	// Find IR
-	irKey := irStringKey(l.gateway.Namespace, l.gateway.Name)
+	irKey := t.getIRKey(l.gateway)
 	// It must exist since we've already finished processing the gateways
 	gwXdsIR := xdsIR[irKey]
 
@@ -323,6 +321,11 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
+
+		// Translate Client Timeout Settings
+		if err := translateClientTimeout(policy.Spec.Timeout, httpIR); err != nil {
+			return err
+		}
 
 		// Translate HTTP1 Settings
 		if err := translateHTTP1Settings(policy.Spec.HTTP1, httpIR); err != nil {
@@ -393,6 +396,35 @@ func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPLis
 	if pathSettings.EscapedSlashesAction != nil {
 		httpIR.Path.EscapedSlashesAction = ir.PathEscapedSlashAction(*pathSettings.EscapedSlashesAction)
 	}
+}
+
+func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTPListener) error {
+	if clientTimeout == nil {
+		return nil
+	}
+
+	if clientTimeout.HTTP != nil {
+		if clientTimeout.HTTP.RequestReceivedTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestReceivedTimeout))
+			if err != nil {
+				return err
+			}
+			switch {
+			case httpIR.Timeout == nil:
+				httpIR.Timeout = &ir.ClientTimeout{}
+				fallthrough
+
+			case httpIR.Timeout.HTTP == nil:
+				httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
+			}
+
+			httpIR.Timeout.HTTP.RequestReceivedTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+	}
+
+	return nil
 }
 
 func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {
@@ -527,6 +559,10 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 						"caCertificateRef not found in secret %s", caCertRef.Name)
 				}
 
+				if err := validateCertificate(secretBytes); err != nil {
+					return fmt.Errorf("invalid certificate in secret %s: %w", caCertRef.Name, err)
+				}
+
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
 
 			} else if string(*caCertRef.Kind) == KindConfigMap {
@@ -539,6 +575,10 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 				if !ok || len(configMapBytes) == 0 {
 					return fmt.Errorf(
 						"caCertificateRef not found in configMap %s", caCertRef.Name)
+				}
+
+				if err := validateCertificate([]byte(configMapBytes)); err != nil {
+					return fmt.Errorf("invalid certificate in configmap %s: %w", caCertRef.Name, err)
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)

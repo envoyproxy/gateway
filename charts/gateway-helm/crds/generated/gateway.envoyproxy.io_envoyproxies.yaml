@@ -8,6 +8,8 @@ metadata:
 spec:
   group: gateway.envoyproxy.io
   names:
+    categories:
+    - envoy-gateway
     kind: EnvoyProxy
     listKind: EnvoyProxyList
     plural: envoyproxies
@@ -2012,6 +2014,22 @@ spec:
                               - name
                               type: object
                             type: array
+                          patch:
+                            description: Patch defines how to perform the patch operation
+                              to deployment
+                            properties:
+                              type:
+                                description: "Type is the type of merge operation
+                                  to perform \n By default, StrategicMerge is used
+                                  as the patch type."
+                                type: string
+                              value:
+                                description: Object contains the raw configuration
+                                  for merged object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - value
+                            type: object
                           pod:
                             description: Pod defines the desired specification of
                               pod.
@@ -6579,6 +6597,22 @@ spec:
                             x-kubernetes-validations:
                             - message: loadBalancerIP must be a valid IPv4 address
                               rule: self.matches(r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+                          patch:
+                            description: Patch defines how to perform the patch operation
+                              to the service
+                            properties:
+                              type:
+                                description: "Type is the type of merge operation
+                                  to perform \n By default, StrategicMerge is used
+                                  as the patch type."
+                                type: string
+                              value:
+                                description: Object contains the raw configuration
+                                  for merged object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - value
+                            type: object
                           type:
                             default: LoadBalancer
                             description: Type determines how the Service is exposed.
@@ -6614,6 +6648,21 @@ spec:
                     type: string
                 required:
                 - type
+                type: object
+              shutdown:
+                description: Shutdown defines configuration for graceful envoy shutdown
+                  process.
+                properties:
+                  drainTimeout:
+                    description: DrainTimeout defines the graceful drain timeout.
+                      This should be less than the pod's terminationGracePeriodSeconds.
+                      If unspecified, defaults to 600 seconds.
+                    type: string
+                  minDrainDuration:
+                    description: MinDrainDuration defines the minimum drain duration
+                      allowing time for endpoint deprogramming to complete. If unspecified,
+                      defaults to 5 seconds.
+                    type: string
                 type: object
               telemetry:
                 description: Telemetry defines telemetry parameters for managed proxies.

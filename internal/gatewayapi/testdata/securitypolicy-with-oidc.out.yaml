@@ -86,7 +86,7 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - www.foo.com
+    - www.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -97,7 +97,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /
+          value: /bar
   status:
     parents:
     - conditions:
@@ -139,6 +139,7 @@ securityPolicies:
     creationTimestamp: null
     name: policy-for-http-route
     namespace: default
+    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
     oidc:
       clientID: client2.oauth.foo.com
@@ -174,6 +175,7 @@ securityPolicies:
     creationTimestamp: null
     name: policy-for-gateway-discover-endpoints
     namespace: envoy-gateway
+    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
     oidc:
       clientID: client1.apps.googleusercontent.com
@@ -197,6 +199,12 @@ securityPolicies:
       reason: Accepted
       status: "True"
       type: Accepted
+    - lastTransitionTime: null
+      message: 'This policy is being overridden by other securityPolicies for these
+        routes: [default/httproute-1]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -226,10 +234,12 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: www.example.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_example_com
         oidc:
           clientID: client2.oauth.foo.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
+          cookieSuffix: 5f93c2e4
           logoutPath: /foo/logout
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
@@ -256,11 +266,13 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: www.foo.com
-        name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
+        hostname: www.example.com
+        isHTTP2: false
+        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
         oidc:
           clientID: client1.apps.googleusercontent.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
+          cookieSuffix: b0a1b740
           logoutPath: /bar/logout
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
@@ -272,15 +284,4 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        directResponse:
-          statusCode: 404
-        hostname: www.example.com
-        name: www_example_com/catch-all-return-404
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
+          prefix: /bar

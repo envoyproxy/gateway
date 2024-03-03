@@ -225,6 +225,8 @@ type HTTPListener struct {
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
+	// ClientTimeout sets the timeout configuration for downstream connections
+	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -389,6 +391,21 @@ type HeaderSettings struct {
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
 }
 
+// ClientTimeout sets the timeout configuration for downstream connections
+// +k8s:deepcopy-gen=true
+type ClientTimeout struct {
+	// Timeout settings for HTTP.
+	HTTP *HTTPClientTimeout `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// HTTPClientTimeout set the configuration for client HTTP.
+// +k8s:deepcopy-gen=true
+type HTTPClientTimeout struct {
+	// The duration envoy waits for the complete request reception. This timer starts upon request
+	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
+}
+
 // HTTPRoute holds the route information associated with the HTTP Route
 // +k8s:deepcopy-gen=true
 type HTTPRoute struct {
@@ -396,6 +413,8 @@ type HTTPRoute struct {
 	Name string `json:"name" yaml:"name"`
 	// Hostname that the route matches against
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
+	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
+	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
 	// HeaderMatches define the match conditions on the request headers for this route.
@@ -451,6 +470,8 @@ type HTTPRoute struct {
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// TcpKeepalive settings associated with the upstream client connection.
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// Retry settings
+	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -521,6 +542,12 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
+	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
+	// These cookies are set by the oauth filter, including: BearerToken,
+	// OauthHMAC, OauthExpires, IdToken, and RefreshToken.
+	CookieSuffix string `json:"cookieSuffix,omitempty"`
 }
 
 type OIDCProvider struct {
@@ -1650,4 +1677,59 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP connection.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+}
+
+// Retry define the retry policy configuration.
+// +k8s:deepcopy-gen=true
+type Retry struct {
+	// NumRetries is the number of retries to be attempted. Defaults to 2.
+	NumRetries *uint32 `json:"numRetries,omitempty"`
+
+	// RetryOn specifies the retry trigger condition.
+	RetryOn *RetryOn `json:"retryOn,omitempty"`
+
+	// PerRetry is the retry policy to be applied per retry attempt.
+	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
+}
+
+type TriggerEnum egv1a1.TriggerEnum
+
+const (
+	Error5XX             = TriggerEnum(egv1a1.Error5XX)
+	GatewayError         = TriggerEnum(egv1a1.GatewayError)
+	DisconnectRest       = TriggerEnum(egv1a1.DisconnectRest)
+	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
+	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
+	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)
+	RetriableStatusCodes = TriggerEnum(egv1a1.RetriableStatusCodes)
+	Cancelled            = TriggerEnum(egv1a1.Cancelled)
+	DeadlineExceeded     = TriggerEnum(egv1a1.DeadlineExceeded)
+	Internal             = TriggerEnum(egv1a1.Internal)
+	ResourceExhausted    = TriggerEnum(egv1a1.ResourceExhausted)
+	Unavailable          = TriggerEnum(egv1a1.Unavailable)
+)
+
+// +k8s:deepcopy-gen=true
+type RetryOn struct {
+	// Triggers specifies the retry trigger condition(Http/Grpc).
+	Triggers []TriggerEnum `json:"triggers,omitempty"`
+
+	// HttpStatusCodes specifies the http status codes to be retried.
+	HTTPStatusCodes []HTTPStatus `json:"httpStatusCodes,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type PerRetryPolicy struct {
+	// Timeout is the timeout per retry attempt.
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Backoff is the backoff policy to be applied per retry attempt.
+	BackOff *BackOffPolicy `json:"backOff,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type BackOffPolicy struct {
+	// BaseInterval is the base interval between retries.
+	BaseInterval *metav1.Duration `json:"baseInterval,omitempty"`
+	// MaxInterval is the maximum interval between retries.
+	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
 }
