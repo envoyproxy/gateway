@@ -11,6 +11,7 @@ WAIT_TIMEOUT ?= 15m
 FLUENT_BIT_CHART_VERSION ?= 0.30.4
 OTEL_COLLECTOR_CHART_VERSION ?= 0.73.1
 TEMPO_CHART_VERSION ?= 1.3.1
+E2E_RUN_TEST ?=
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
