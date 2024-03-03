@@ -10,6 +10,12 @@ on:
     paths-ignore:
     - "**/*.png"
 
+# Limit workflow run or job concurrency,
+# avoid workflow failed when merge more than one PR in short time.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   latest-release:
     runs-on: ubuntu-22.04
