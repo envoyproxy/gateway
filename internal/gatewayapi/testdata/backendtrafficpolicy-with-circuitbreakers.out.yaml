@@ -254,9 +254,9 @@ xdsIR:
           invalid: 0
           valid: 0
         circuitBreaker:
-          MaxParallelRetries: 1024
           maxConnections: 2048
           maxParallelRequests: 4294967295
+          maxParallelRetries: 1024
           maxPendingRequests: 1
           maxRequestsPerConnection: 1
         destination:
@@ -290,9 +290,9 @@ xdsIR:
           invalid: 0
           valid: 0
         circuitBreaker:
-          MaxParallelRetries: 24
           maxConnections: 42
           maxParallelRequests: 42
+          maxParallelRetries: 24
           maxPendingRequests: 42
           maxRequestsPerConnection: 42
         destination:
