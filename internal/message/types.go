@@ -94,12 +94,14 @@ type PolicyStatuses struct {
 	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *egv1a1.BackendTrafficPolicyStatus]
 	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]
 	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *egv1a1.SecurityPolicyStatus]
+	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 }
 
 func (p *PolicyStatuses) Close() {
 	p.ClientTrafficPolicyStatuses.Close()
 	p.SecurityPolicyStatuses.Close()
 	p.EnvoyPatchPolicyStatuses.Close()
+	p.BackendTLSPolicyStatuses.Close()
 }
 
 // XdsIR message

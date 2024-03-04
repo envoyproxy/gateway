@@ -19,6 +19,8 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -504,10 +506,26 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		endpointType = EndpointTypeStatic
 	}
 
+	var tSocket *corev3.TransportSocket
+
+	if httpRoute.Destination.Settings[0].TLS != nil {
+		CaSecret := buildXdsUpstreamTLSCASecret(httpRoute.Destination.Settings[0].TLS)
+		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
+			return err
+		}
+		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
+		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
+		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.Destination.Settings[0].TLS)
+		if err != nil {
+			return err
+		}
+		tSocket = temp
+	}
+
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
-		tSocket:        nil,
+		tSocket:        tSocket,
 		endpointType:   endpointType,
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
@@ -571,4 +589,52 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return err
 	}
 	return nil
+}
+
+const (
+	DefaultEndpointType EndpointType = iota
+	Static
+	EDS
+)
+
+func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
+	// Build the tls secret
+	return &tlsv3.Secret{
+		Name: tlsConfig.CACertificate.Name,
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: &tlsv3.CertificateValidationContext{
+				TrustedCa: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.CACertificate.Certificate},
+				},
+			},
+		},
+	}
+}
+
+func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
+
+	tlsCtx := &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificateSdsSecretConfigs: nil,
+			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+					Name:      tlsConfig.CACertificate.Name,
+					SdsConfig: makeConfigSource(),
+				},
+			},
+		},
+		Sni: tlsConfig.SNI,
+	}
+
+	tlsCtxAny, err := anypb.New(tlsCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketTLS,
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: tlsCtxAny,
+		},
+	}, nil
 }

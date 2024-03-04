@@ -155,6 +155,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					key := utils.NamespacedName(securityPolicy)
 					r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
 				}
+				for _, backendTLSPolicy := range result.BackendTLSPolicies {
+					backendTLSPolicy := backendTLSPolicy
+					key := utils.NamespacedName(backendTLSPolicy)
+					r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
+				}
 			}
 			// Delete keys
 			// There is a 1:1 mapping between infra and xds IR keys
