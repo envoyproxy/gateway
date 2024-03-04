@@ -100,11 +100,6 @@ conformance: create-cluster kube-install-image kube-deploy run-conformance delet
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
-RPS ?= 1000
-CONNECTIONS ?= 1
-DURATION ?= 90
-HTTPROUTE_NUM ?= 1
-
 .PHONY: benchmark
 benchmark: create-cluster kube-install-image kube-deploy run-benchmark 
 

@@ -4,6 +4,28 @@ on:
     branches:
     - "main"
     - "release/v*"
+  workflow_dispatch:
+    inputs:
+      rps:
+        description: "The target requests-per-second rate. Default: 1000"
+        default: '1000'
+        type: string
+        required: false
+      connections:
+        description: "The maximum allowed number of concurrent connections per event loop. HTTP/1 only. Default: 100."
+        default: '100'
+        type: string
+        required: false
+      duration:
+        description: "The number of seconds that the test should run. Default: 90."
+        default: '90'
+        type: string
+        required: false
+      httproute_num:
+        description: "The number of httproutes that the test should apply. Default: 1."
+        default: '1'
+        type: string
+        required: false
 
 jobs:
   benchmark-test:
@@ -22,8 +44,10 @@ jobs:
         env:
           KIND_NODE_TAG: v1.29.0
           IMAGE_PULL_POLICY: IfNotPresent
-          TAG: latest
-          WAIT_TIMEOUT: 180s
+          RPS: ${{ github.event.inputs.rps || 1000 }}
+          CONNECTIONS: ${{ github.event.inputs.connections || 100 }}
+          DURATION: ${{ github.event.inputs.duration || 90 }}
+          HTTPROUTE_NUM: ${{ github.event.inputs.httproute_num || 1 }}
         run: make benchmark
       
      # - name: Setup Kubernetes
