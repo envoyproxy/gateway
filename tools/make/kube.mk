@@ -205,7 +205,7 @@ run-benchmark: ## Run benchmark tests
 	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus-operator -n default
 	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus -n default
 	@$(call log, "Running benchmark")
-	WAIT_TIMEOUT=$(WAIT_TIMEOUT) RPS=$(RPS) CONNECTIONS=$(CONNECTIONS) DURATION=$(DURATION) sh test/benchmark/run-benchmark.sh
+	WAIT_TIMEOUT=$(WAIT_TIMEOUT) RPS=$(RPS) CONNECTIONS=$(CONNECTIONS) DURATION=$(DURATION) HTTPROUTE=$(HTTPROUTE_MUM) sh test/benchmark/run-benchmark.sh
 	
 
 .PHONY: delete-cluster
