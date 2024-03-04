@@ -26,7 +26,10 @@ var (
 
 // caCertificateKey is the key name for accessing TLS CA certificate bundles
 // in Kubernetes Secrets.
-const caCertificateKey = "ca.crt"
+const (
+	caCertificateKey = "ca.crt"
+	hmacSecretKey    = "hmac-secret"
+)
 
 func newSecret(secretType corev1.SecretType, name string, namespace string, data map[string][]byte) corev1.Secret {
 	return corev1.Secret{
@@ -75,6 +78,13 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 				caCertificateKey:        certs.CACertificate,
 				corev1.TLSCertKey:       certs.EnvoyRateLimitCertificate,
 				corev1.TLSPrivateKeyKey: certs.EnvoyRateLimitPrivateKey,
+			}),
+		newSecret(
+			corev1.SecretTypeTLS,
+			"envoy-oidc-hmac",
+			namespace,
+			map[string][]byte{
+				hmacSecretKey: certs.OIDCHMACSecret,
 			}),
 	}
 }

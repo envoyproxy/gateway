@@ -72,6 +72,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					GatewayClassName:        v1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					Namespace:               r.Namespace,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator

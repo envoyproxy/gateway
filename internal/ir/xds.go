@@ -179,6 +179,7 @@ func (x Xds) Printable() *Xds {
 			// Omit field
 			if route.OIDC != nil {
 				route.OIDC.ClientSecret = redacted
+				route.OIDC.HMACSecret = redacted
 			}
 			if route.BasicAuth != nil {
 				route.BasicAuth.Users = redacted
@@ -526,8 +527,10 @@ type OIDC struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key "client-secret".
-
 	ClientSecret []byte `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
+
+	// HMACSecret is the secret used to sign the HMAC of the OAuth2 filter cookies.
+	HMACSecret []byte `json:"hmacSecret,omitempty" yaml:"hmacSecret,omitempty"`
 
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).

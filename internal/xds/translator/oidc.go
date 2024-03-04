@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 
@@ -306,7 +305,6 @@ func buildOAuth2ClientSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 }
 
 func buildOAuth2HMACSecret(route *ir.HTTPRoute) (*tlsv3.Secret, error) {
-	hmac, err := generateHMACSecretKey()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate hmack secret key: %w", err)
 	}
@@ -316,7 +314,7 @@ func buildOAuth2HMACSecret(route *ir.HTTPRoute) (*tlsv3.Secret, error) {
 			GenericSecret: &tlsv3.GenericSecret{
 				Secret: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{
-						InlineBytes: hmac,
+						InlineBytes: route.OIDC.HMACSecret,
 					},
 				},
 			},
@@ -332,22 +330,6 @@ func oauth2ClientSecretName(route *ir.HTTPRoute) string {
 
 func oauth2HMACSecretName(route *ir.HTTPRoute) string {
 	return fmt.Sprintf("%s/oauth2/hmac_secret", route.Name)
-}
-
-func generateHMACSecretKey() ([]byte, error) {
-	// Set the desired length of the secret key in bytes
-	keyLength := 32
-
-	// Create a byte slice to hold the random bytes
-	key := make([]byte, keyLength)
-
-	// Read random bytes from the cryptographically secure random number generator
-	_, err := rand.Read(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return key, nil
 }
 
 // patchRoute patches the provided route with the oauth2 config if applicable.
