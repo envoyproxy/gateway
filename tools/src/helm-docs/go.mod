@@ -1,8 +1,9 @@
 module github.com/envoyproxy/gateway/tools/src/helm-docs
 
 go 1.21
+toolchain go1.22.0
 
-require github.com/norwoodj/helm-docs v1.12.0
+require github.com/norwoodj/helm-docs v1.13.1
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -30,8 +31,8 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.16.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/crypto v0.20.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
