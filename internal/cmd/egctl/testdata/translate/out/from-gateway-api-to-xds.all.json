@@ -376,7 +376,8 @@
                       "retryBudget": {
                         "budgetPercent": {
                           "value": 100
-                        }
+                        },
+                        "minRetryConcurrency": 100
                       }
                     }
                   ]
@@ -409,7 +410,8 @@
                       "retryBudget": {
                         "budgetPercent": {
                           "value": 100
-                        }
+                        },
+                        "minRetryConcurrency": 100
                       }
                     }
                   ]
@@ -450,7 +452,8 @@
                       "retryBudget": {
                         "budgetPercent": {
                           "value": 100
-                        }
+                        },
+                        "minRetryConcurrency": 100
                       }
                     }
                   ]
@@ -483,7 +486,8 @@
                       "retryBudget": {
                         "budgetPercent": {
                           "value": 100
-                        }
+                        },
+                        "minRetryConcurrency": 100
                       }
                     }
                   ]
@@ -516,7 +520,8 @@
                       "retryBudget": {
                         "budgetPercent": {
                           "value": 100
-                        }
+                        },
+                        "minRetryConcurrency": 100
                       }
                     }
                   ]

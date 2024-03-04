@@ -3,6 +3,7 @@
     - retryBudget:
         budgetPercent:
           value: 100
+        minRetryConcurrency: 100
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 31s

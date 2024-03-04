@@ -276,8 +276,12 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
 		Priority: corev3.RoutingPriority_DEFAULT,
+		// concurrent retries limit = max(100, current-active-requests)
 		RetryBudget: &clusterv3.CircuitBreakers_Thresholds_RetryBudget{
 			BudgetPercent: &xdstype.Percent{
+				Value: 100,
+			},
+			MinRetryConcurrency: &wrapperspb.UInt32Value{
 				Value: 100,
 			},
 		},
