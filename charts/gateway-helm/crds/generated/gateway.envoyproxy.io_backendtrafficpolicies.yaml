@@ -805,7 +805,7 @@ spec:
                           enum:
                           - 5xx
                           - gateway-error
-                          - disconnect-reset
+                          - reset
                           - connect-failure
                           - retriable-4xx
                           - refused-stream

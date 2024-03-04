@@ -1,4 +1,9 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - retryBudget:
+        budgetPercent:
+          value: 100
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -22,7 +27,12 @@
               name: preserve_case
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - retryBudget:
+        budgetPercent:
+          value: 100
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
