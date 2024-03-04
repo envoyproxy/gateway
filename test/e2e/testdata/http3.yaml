@@ -19,6 +19,8 @@ metadata:
 spec:
   parentRefs:
     - name: http3-gateway
+  hostnames:
+    - "www.example.com"
   rules:
     - backendRefs:
         - kind: Service

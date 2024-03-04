@@ -43,27 +43,26 @@ var HTTP3Test = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http3-route", Namespace: namespace}
 			gwNN := types.NamespacedName{Name: "http3-gateway", Namespace: namespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			server := "www.example.com"
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/get",
 					Headers: map[string]string{
-						"Host": "www.example.com",
+						"User-Agent":        "quic-go HTTP/3",
+						"X-Envoy-Internal":  "true",
+						"X-Forwarded-Proto": "https",
 					},
 				},
 				Response: http.Response{
 					StatusCode: 200,
-					Headers: map[string]string{
-						"User-Agent":      "curl/7.84.0-DEV",
-						"X-Forwarded-For": "https",
-					},
 				},
 				Namespace: namespace,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTPS", "https")
-			req.CertPem = []byte("-----BEGIN CERTIFICATE-----\nMIIDOzCCAiOgAwIBAgIULZP//n+WsdygxEtcJUFrsxz27wQwDQYJKoZIhvcNAQEL\nBQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv\nbTAeFw0yNDAxMjExNzEwMDRaFw0zNDAxMTgxNzEwMDRaMC0xFTATBgNVBAoMDGV4\nYW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQCjtTC0OjUyYeb5N8iTWXrUYJ56aDxjmA7uHz4NK5dQ\ngGkmvTLxFbQ6mJSkwBRwtVslJfl9xR7/bJhXwcA+oha0DBOuGfeXrJzy8+ax6dAX\nwzZYdfnMzW0U2MP6mfh3TwnFTywyvCanI3dZaQ1d46chHFHcoxYAoarc0SCwj+LW\nrxvuXrvCwUKWz/UY2jEIw0WkLBZ4j7ZlxTNCQAUZMYUHZzFP0R0CxSpFCi6cRrDW\nDy7RgsLrYuAr9YHKIEXmpyTukF5/gZOUGsl8S7ndQgL4n6r8qKxRZOdIlkmi/As/\nFf2nRg5kwECxwx3HkrSJqtuLgCuCpCur88+edujU1CztAgMBAAGjUzBRMB0GA1Ud\nDgQWBBSpvaIWmBrdqoWTyAZwx58wcJgbazAfBgNVHSMEGDAWgBSpvaIWmBrdqoWT\nyAZwx58wcJgbazAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAv\nsEbjaQiLj9KJXWh7jUB8iQZMEh4oyB1oHbsUrqf03QEMlh/cuTChn4+kmzW4K6EN\nh2mnsVMnX5ZegEFkvXcEVgAc1QFbyAB4j2L4EM4kaQ8+quKsS9N8O9qHvUmiMg3R\nVlEYwpIN/DqiHQBY22IV5KxmRZDaDqlJMOi8WjQAh5AnSo0WZC3PnDgHuMDxcOaZ\n7cw2p1/RdaFZB9Va00g5JsSl2GtaibW3oWDFJAGKH+04lz/bT3lcVv0R4ADsF3qv\noBj2wtFDiqjj5dqe6/QtJCMkNDCbbzw2buogzuPBplE0Z4WtsWaQIq4MBnfGi8AF\n+sSBiMU4B9gf4oU93U2m\n-----END CERTIFICATE-----")
-			req.KeyPem = []byte("-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCjtTC0OjUyYeb5\nN8iTWXrUYJ56aDxjmA7uHz4NK5dQgGkmvTLxFbQ6mJSkwBRwtVslJfl9xR7/bJhX\nwcA+oha0DBOuGfeXrJzy8+ax6dAXwzZYdfnMzW0U2MP6mfh3TwnFTywyvCanI3dZ\naQ1d46chHFHcoxYAoarc0SCwj+LWrxvuXrvCwUKWz/UY2jEIw0WkLBZ4j7ZlxTNC\nQAUZMYUHZzFP0R0CxSpFCi6cRrDWDy7RgsLrYuAr9YHKIEXmpyTukF5/gZOUGsl8\nS7ndQgL4n6r8qKxRZOdIlkmi/As/Ff2nRg5kwECxwx3HkrSJqtuLgCuCpCur88+e\ndujU1CztAgMBAAECggEACrVe4MyARNIBy2e3pih/qqCW/+pNbaAEIAA+rUVenJcz\nFE6NecGB8dBKbtwaqi8OwydmAnEFwKRa8xNF2ZhS3wb9iuarcF+L6loudburOewH\neXIJe6OstjpMrYSWARXpjXTK7xb+z0bjDHVHo3kxVO7hjaAZtRkI0HDEkDrFQOYw\nzpYhQwJVCp5/ZHY4M7bzjWHySdIt/K+lyTLPSF3b6d/aNWQK1iQbQ4gPFJeW2wZP\nkj8zeSxTSxD6psahrjho/SXfGNTNq1m5jOM9fjR3BB/DPS3IBTXDl5IUOFCsFmd/\nu5CnXOX5RJJl/+gMFWEM25RNYEcFrNUpcSS67r1i+QKBgQDTlpBL9BCvTnWGl5Ru\nPL4u+AIgK4foKA1aczXAGZ5/oeCdcXpqdBvCQPBHjXZnQngbZ5tkR5fcXM376wrl\n4E+AOetbeYfJjvlRm9L6QmlFY/Nlv3McBDM4KGh6ZeiWjyR2yqgGtRO/kk3oFQ+p\npYeN+t0Fu9lO++fqUNt8yxsgtQKBgQDGEdUQfIdwAgokW/uWj5PZmOuaUkcKwcX4\nt2+4Gz/b5QE0pBCvpmrb33SriUrKBSQnzvU0r70Ig2wndY6ulfcb5sUieM/LHZiR\npxtDqVIKpQiXLHo4iycn6tY7lKqwWsCqXUxjB5JMfW1IeEzj4XexeRly4sLDapS4\nSJNe5GVWWQKBgHsY7XpC1DIpg1Z6eXBpBnxs7U+qA7edFae5v1uzi/LVSshObNni\nEwRAo4n9UxVgJmBLNqxwunkJxQz7AawbhCUljTf6zHUHKSXBck0GthgYvlJDv8Rc\n7S+O0rni8B4nyR8TaA3+6y5Y/9o15pbcJrEDcfMUBqldBN/ditRflbjBAoGAdD+D\nDWoJE3Qe/7f8sSETZWKa5LfleirARnli2Gslz6lYS8z+/hhuHx3HG+Y4PtlFnxeY\nUpPSHm0DzSTx2QWrQnTuvoypaEy2fsXU+qElxZmWsSMpmIYTNRpfIhjfFSIucc7Q\nRk7rTnlO6nmwpw5tcXvhs8vjA05Ket4doFPsJgECgYAEVrbe2182Z2bG0xacHPJw\nZ3SJAh8JEj9MG1Cj0M3COP+iCWR2JDk0F7bsDDhpEZrPtyF1Ea0i1YpFDJEAXmIw\nZaHfywv9wqkv+1/T15O9qHZ3GDkyRTqD//HgdGbVBWF3AyPzXkW5EM35A4qUVq7I\nKe1vZDEBEfK/Mq/DJ877sg==\n-----END PRIVATE KEY-----")
-			cReq, cResp, err := CaptureRoundTrip(req)
+			req := http.MakeRequest(t, &expectedResponse, server+":443", "HTTPS", "https")
+			req.CertPem = []byte("-----BEGIN CERTIFICATE-----\nMIIDOzCCAiOgAwIBAgIUZTLKDkhVrxfgt9megu5uiSRwRxswDQYJKoZIhvcNAQEL\nBQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv\nbTAeFw0yNDAzMDIxNDU3MTJaFw0yNTAzMDIxNDU3MTJaMC0xFTATBgNVBAoMDGV4\nYW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQDJBSwf0XJkglooQbzQ6Io/M7gwmbhTjpQPX7P2/ZV6\ncdFsXBUF0X91wABtCtibv+x4if+yvPhHzBERzhjwwQitKZiewhOFoSz5ZyKT8HXd\n+Y06iRzWEnGi2i/98YiBFsG1xc5mHTLgyi6PjJDzGVdsNrL7pE8aM3R9sGrkG4PZ\n5ZWFlpbxX9eUz9dplLfLX7jKETbyKsiwcHihXAY4mdpuaUVifz35tSpnQ3P/RoNw\nNl7/gvRKqSK1a5ByYqVANV/c+O1R9MaR8kG9Cmj2PZPZm4vW/bJIs2R7z6ygGiDx\n4GyMT4MA52pk/dDkV2EtvFk5JFXoMjNPcNRGjuusRe17AgMBAAGjUzBRMB0GA1Ud\nDgQWBBQXeg9HF7TIRHUWOsF5dd0m68zbxTAfBgNVHSMEGDAWgBQXeg9HF7TIRHUW\nOsF5dd0m68zbxTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCS\nO7hTBUp3MjsOBGXmuuDPatz0eR05Dq4O6Etsn9KVRND0o8iULqYGPMsozkueRc0y\n/Ra1aTbNXm0n5gwNBgJeSOIOfLN0r0L5uBFSMjTPAo6qPkDzK5gXHfzpoxgDYCEy\nSuzYOIHliWoG6K2ldfMx7psMe3ZiR9SA5evOv3VKJDrrhO57niRmDhZKsADWDUFH\nyyximSiPKjFJLJ+7B4N+7TAmxDjMd2vre7qfRL/AFTc7zIkQBG+JoXbusOw1yGcm\n8IV50ZroyupxND625FgawISPYUelwS39x4jA7QNH0Tzgzp+Ao0N8Ck9H4waNcJt8\njk27Qn0mC7RsIqb981eH\n-----END CERTIFICATE-----")
+			req.Server = server
+			cReq, cResp, err := CaptureRoundTrip(req, gwAddr)
 			if err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
@@ -75,22 +74,30 @@ var HTTP3Test = suite.ConformanceTest{
 	},
 }
 
-func CaptureRoundTrip(request roundtripper.Request) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
-	transport, err := httpTransport(request)
+func CaptureRoundTrip(request roundtripper.Request, gwAddr string) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+	transport, err := httpTransport(request, gwAddr)
 	if err != nil {
 		return nil, nil, err
 	}
 	return defaultRoundTrip(request, transport)
 }
 
-func httpTransport(request roundtripper.Request) (*http3.RoundTripper, error) {
+func httpTransport(request roundtripper.Request, gwAddr string) (*http3.RoundTripper, error) {
+
 	transport := &http3.RoundTripper{
 		QuicConfig: &quic.Config{
 			Tracer: qlog.DefaultTracer,
 		},
+		Dial: func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
+			if request.URL.Host == "www.example.com" {
+				addr = gwAddr
+				return quic.DialAddrEarly(ctx, addr, tlsCfg, cfg)
+			}
+			return nil, nil
+		},
 	}
-	if request.Server != "" && len(request.CertPem) != 0 && len(request.KeyPem) != 0 {
-		tlsConfig, err := tlsClientConfig(request.Server, request.CertPem, request.KeyPem)
+	if request.Server != "" && len(request.CertPem) != 0 {
+		tlsConfig, err := tlsClientConfig(request.Server, request.CertPem)
 		if err != nil {
 			return nil, err
 		}
@@ -99,17 +106,11 @@ func httpTransport(request roundtripper.Request) (*http3.RoundTripper, error) {
 	return transport, nil
 }
 
-func tlsClientConfig(server string, certPem []byte, keyPem []byte) (*tls.Config, error) {
-	// Create a certificate from the provided cert and key
-	cert, err := tls.X509KeyPair(certPem, keyPem)
-	if err != nil {
-		return nil, fmt.Errorf("unexpected error creating cert: %w", err)
-	}
-
+func tlsClientConfig(server string, certPem []byte) (*tls.Config, error) {
 	// Add the provided cert as a trusted CA
 	certPool := x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(certPem) {
-		return nil, fmt.Errorf("unexpected error adding trusted CA: %w", err)
+		return nil, fmt.Errorf("unexpected error adding trusted CA")
 	}
 
 	if server == "" {
@@ -120,9 +121,8 @@ func tlsClientConfig(server string, certPem []byte, keyPem []byte) (*tls.Config,
 	// Disable G402: TLS MinVersion too low. (gosec)
 	// #nosec G402
 	return &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		ServerName:   server,
-		RootCAs:      certPool,
+		ServerName: server,
+		RootCAs:    certPool,
 	}, nil
 }
 
