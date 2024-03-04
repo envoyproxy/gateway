@@ -370,11 +370,6 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
-                "circuitBreakers": {
-                  "thresholds": [
-                    {}
-                  ]
-                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -397,11 +392,6 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
-                "circuitBreakers": {
-                  "thresholds": [
-                    {}
-                  ]
-                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -432,11 +422,6 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
-                "circuitBreakers": {
-                  "thresholds": [
-                    {}
-                  ]
-                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -459,11 +444,6 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
-                "circuitBreakers": {
-                  "thresholds": [
-                    {}
-                  ]
-                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -486,11 +466,6 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
-                "circuitBreakers": {
-                  "thresholds": [
-                    {}
-                  ]
-                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },

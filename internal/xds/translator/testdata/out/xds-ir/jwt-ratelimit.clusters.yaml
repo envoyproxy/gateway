@@ -1,7 +1,4 @@
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -15,10 +12,7 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -32,10 +26,7 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -49,10 +40,7 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -75,10 +63,7 @@
             filename: /etc/ssl/certs/ca-certificates.crt
       sni: 192.168.1.250
   type: EDS
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY

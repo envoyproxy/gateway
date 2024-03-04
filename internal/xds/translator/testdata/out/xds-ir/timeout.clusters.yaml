@@ -1,7 +1,4 @@
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 31s
   dnsLookupFamily: V4_ONLY

@@ -1,7 +1,4 @@
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -25,10 +22,7 @@
               name: preserve_case
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
-- circuitBreakers:
-    thresholds:
-    - {}
-  commonLbConfig:
+- commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY

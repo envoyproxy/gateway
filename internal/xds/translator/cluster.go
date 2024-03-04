@@ -145,7 +145,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 	}
 
-	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+	if args.circuitBreaker != nil {
+		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+	}
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
