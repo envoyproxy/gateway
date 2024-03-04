@@ -372,13 +372,7 @@
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
                 "circuitBreakers": {
                   "thresholds": [
-                    {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
-                    }
+                    {}
                   ]
                 },
                 "commonLbConfig": {
@@ -405,13 +399,7 @@
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
                 "circuitBreakers": {
                   "thresholds": [
-                    {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
-                    }
+                    {}
                   ]
                 },
                 "commonLbConfig": {
@@ -446,13 +434,7 @@
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
                 "circuitBreakers": {
                   "thresholds": [
-                    {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
-                    }
+                    {}
                   ]
                 },
                 "commonLbConfig": {
@@ -479,13 +461,7 @@
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
                 "circuitBreakers": {
                   "thresholds": [
-                    {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
-                    }
+                    {}
                   ]
                 },
                 "commonLbConfig": {
@@ -512,13 +488,7 @@
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
                 "circuitBreakers": {
                   "thresholds": [
-                    {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
-                    }
+                    {}
                   ]
                 },
                 "commonLbConfig": {

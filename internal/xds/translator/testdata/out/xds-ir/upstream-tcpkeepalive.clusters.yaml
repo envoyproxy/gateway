@@ -1,8 +1,6 @@
 - circuitBreakers:
     thresholds:
-    - retryBudget:
-        budgetPercent:
-          value: 100
+    - {}
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s

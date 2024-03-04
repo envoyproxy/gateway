@@ -6,9 +6,7 @@ xds:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
         circuitBreakers:
           thresholds:
-          - retryBudget:
-              budgetPercent:
-                value: 100
+          - {}
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
@@ -27,9 +25,7 @@ xds:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
         circuitBreakers:
           thresholds:
-          - retryBudget:
-              budgetPercent:
-                value: 100
+          - {}
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s

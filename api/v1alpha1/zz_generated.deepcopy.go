@@ -346,6 +346,11 @@ func (in *CircuitBreaker) DeepCopyInto(out *CircuitBreaker) {
 		*out = new(int64)
 		**out = **in
 	}
+	if in.MaxParallelRetries != nil {
+		in, out := &in.MaxParallelRetries, &out.MaxParallelRetries
+		*out = new(int64)
+		**out = **in
+	}
 	if in.MaxRequestsPerConnection != nil {
 		in, out := &in.MaxRequestsPerConnection, &out.MaxRequestsPerConnection
 		*out = new(int64)
