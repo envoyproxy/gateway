@@ -89,9 +89,8 @@ func httpTransport(request roundtripper.Request, gwAddr string) (*http3.RoundTri
 			Tracer: qlog.DefaultTracer,
 		},
 		Dial: func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
-			if request.URL.Host == "www.example.com" {
-				addr = gwAddr
-				return quic.DialAddrEarly(ctx, addr, tlsCfg, cfg)
+			if addr == "www.example.com:443" {
+				return quic.DialAddrEarly(ctx, gwAddr, tlsCfg, cfg)
 			}
 			return nil, nil
 		},
