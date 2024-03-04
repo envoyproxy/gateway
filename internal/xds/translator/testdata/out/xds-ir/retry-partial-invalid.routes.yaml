@@ -24,7 +24,7 @@
           - name: envoy.retry_host_predicates.previous_hosts
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
-          retryOn: connect-failure,retriable-status-codes
+          retryOn: reset,connect-failure,retriable-status-codes
         upgradeConfigs:
         - upgradeType: websocket
   - domains:

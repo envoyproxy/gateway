@@ -506,7 +506,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	lookup := map[ir.TriggerEnum]string{
 		ir.Error5XX:             "5xx",
 		ir.GatewayError:         "gateway-error",
-		ir.DisconnectRest:       "disconnect-reset",
+		ir.Reset:                "reset",
 		ir.ConnectFailure:       "connect-failure",
 		ir.Retriable4XX:         "retriable-4xx",
 		ir.RefusedStream:        "refused-stream",
