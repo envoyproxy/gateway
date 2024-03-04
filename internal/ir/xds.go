@@ -825,6 +825,8 @@ type DestinationSetting struct {
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
+
+	TLS *TLSUpstreamConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1697,7 +1699,7 @@ type TriggerEnum egv1a1.TriggerEnum
 const (
 	Error5XX             = TriggerEnum(egv1a1.Error5XX)
 	GatewayError         = TriggerEnum(egv1a1.GatewayError)
-	DisconnectRest       = TriggerEnum(egv1a1.DisconnectRest)
+	Reset                = TriggerEnum(egv1a1.Reset)
 	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
 	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
 	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)
@@ -1732,4 +1734,11 @@ type BackOffPolicy struct {
 	BaseInterval *metav1.Duration `json:"baseInterval,omitempty"`
 	// MaxInterval is the maximum interval between retries.
 	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
+}
+
+// TLSUpstreamConfig contains sni and ca file in []byte format.
+// +k8s:deepcopy-gen=true
+type TLSUpstreamConfig struct {
+	SNI           string
+	CACertificate TLSCACertificate
 }

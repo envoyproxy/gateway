@@ -366,10 +366,8 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		return cli.Get(ctx, key, gw) == nil
 	}, defaultWait, defaultTick)
 
-	gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-	assert.NotNil(t, gatewayClassResources)
-
-	res := (*gatewayClassResources)[gc.Name]
+	res := resources.GetResourcesByGatewayClass(gc.Name)
+	assert.NotNil(t, res)
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
 	// with an updated status if the spec has not changed
@@ -903,10 +901,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 				return ok && len(res.HTTPRoutes) != 0
 			}, defaultWait, defaultTick)
 
-			gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-			assert.NotNil(t, gatewayClassResources)
-
-			res := (*gatewayClassResources)[gc.Name]
+			res := resources.GetResourcesByGatewayClass(gc.Name)
+			assert.NotNil(t, res)
 			assert.Equal(t, &testCase.route, res.HTTPRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
@@ -1054,10 +1050,8 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 				return ok && len(res.TLSRoutes) != 0
 			}, defaultWait, defaultTick)
 
-			gatewayClassResources, _ := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-			assert.NotNil(t, gatewayClassResources)
-
-			res, _ := (*gatewayClassResources)[gc.Name]
+			res := resources.GetResourcesByGatewayClass(gc.Name)
+			assert.NotNil(t, res)
 			assert.Equal(t, &testCase.route, res.TLSRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
@@ -1593,13 +1587,8 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 }
 
 func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*gatewayapi.Resources, bool) {
-	gatewayClassResources, ok := resources.GatewayAPIResources.Load(egv1a1.GatewayControllerName)
-	if !ok {
-		return nil, false
-	}
-
-	res, ok := (*gatewayClassResources)[gatewayClassName]
-	if !ok {
+	res := resources.GetResourcesByGatewayClass(gatewayClassName)
+	if res == nil {
 		return nil, false
 	}
 
