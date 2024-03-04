@@ -103,6 +103,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 RPS ?= 1000
 CONNECTIONS ?= 1
 DURATION ?= 90
+HTTPROUTE_NUM ?= 1
 
 .PHONY: benchmark
 benchmark: create-cluster kube-install-image kube-deploy run-benchmark 
@@ -199,13 +200,13 @@ run-benchmark: ## Run benchmark tests
 	@$(call log, "Waiting for benchmark test server to be ready")
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n nighthawk-test-server deployment/nighthawk-test-server --for=condition=Available
-	@$(call log, "Deploying Prometheus to collect metrics")
-	curl -sL https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.71.2/bundle.yaml | kubectl create -f -
-	kubectl create -f test/benchmark/prometheus.yaml
-	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus-operator -n default
-	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus -n default
+#	@$(call log, "Deploying Prometheus to collect metrics")
+#	curl -sL https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.71.2/bundle.yaml | kubectl create -f -
+#	kubectl create -f test/benchmark/prometheus.yaml
+#	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus-operator -n default
+#	kubectl wait --for=condition=Ready pods -l  app.kubernetes.io/name=prometheus -n default
 	@$(call log, "Running benchmark")
-	WAIT_TIMEOUT=$(WAIT_TIMEOUT) RPS=$(RPS) CONNECTIONS=$(CONNECTIONS) DURATION=$(DURATION) HTTPROUTE=$(HTTPROUTE_MUM) sh test/benchmark/run-benchmark.sh
+	WAIT_TIMEOUT=$(WAIT_TIMEOUT) RPS=$(RPS) CONNECTIONS=$(CONNECTIONS) DURATION=$(DURATION) HTTPROUTE_NUM=$(HTTPROUTE_NUM) sh test/benchmark/run-benchmark.sh
 	
 
 .PHONY: delete-cluster

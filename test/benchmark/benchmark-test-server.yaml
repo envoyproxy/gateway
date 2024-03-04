@@ -1,5 +1,3 @@
-### Nighthawk test server configuration
-
 ### Nighthawk test server deployment
 apiVersion: apps/v1
 kind: Deployment
