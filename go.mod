@@ -57,7 +57,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.14.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	go.uber.org/mock v0.3.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
 )
 
 require (
