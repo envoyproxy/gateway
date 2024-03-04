@@ -92,6 +92,9 @@ xds:
     dynamicActiveClusters:
     - cluster:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        circuitBreakers:
+          thresholds:
+          - maxRetries: 1024
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s

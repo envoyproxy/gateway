@@ -145,9 +145,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 	}
 
-	if args.circuitBreaker != nil {
-		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
-	}
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
@@ -278,6 +276,9 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
 		Priority: corev3.RoutingPriority_DEFAULT,
+		MaxRetries: &wrapperspb.UInt32Value{
+			Value: uint32(1024),
+		},
 	}
 
 	if circuitBreaker != nil {
