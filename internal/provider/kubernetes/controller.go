@@ -319,11 +319,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Discard Status to reduce memory consumption in watchable
 			// It will be recomputed by the gateway-api layer
 			policy.Status = gwapiv1a2.PolicyStatus{} // todo ?
-			resourcesMap[acceptedGC.Name].BackendTLSPolicies = append(resourcesMap[acceptedGC.Name].BackendTLSPolicies, &policy)
+			gwcResource.BackendTLSPolicies = append(gwcResource.BackendTLSPolicies, &policy)
 		}
 
 		// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree
-		r.processBackendTLSPolicyConfigMapRefs(ctx, resourcesMap[acceptedGC.Name], resourceMappings)
+		r.processBackendTLSPolicyConfigMapRefs(ctx, gwcResource, resourceMappings)
 
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
