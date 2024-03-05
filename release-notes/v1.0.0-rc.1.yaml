@@ -8,7 +8,7 @@ changes:
       Added user guide for fault injection
       Added user guide for EnvoyProxy extraArgs
       Updated crd-ref-docs to 0.0.10
-      Addded `Type` and `required` for CRD API doc
+      Added `Type` and `required` for CRD API doc
       Updated Envoy proxy image to envoy:distroless-dev in main
       Add user guide for Timeouts in ClientTrafficPolicy
       Add user guide for JWT claim base routing
