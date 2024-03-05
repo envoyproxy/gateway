@@ -773,13 +773,11 @@ spec:
     spec:
       serviceAccountName: http3-backend
       containers:
-      - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+      - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         imagePullPolicy: IfNotPresent
         name: backend
         ports:
         - containerPort: 3000
-        command: ["sysctl"]
-        args: ["-w", "net.core.rmem_max=2500000"]
         env:
         - name: POD_NAME
           valueFrom:

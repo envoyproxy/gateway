@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	httpv1 "net/http"
+	"net/http/httputil"
 	"testing"
 	"time"
 
@@ -157,11 +158,27 @@ func defaultRoundTrip(request roundtripper.Request, transport *http3.RoundTrippe
 		}
 	}
 
+	var dumpReq []byte
+	dumpReq, err = httputil.DumpRequestOut(req, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fmt.Printf("Sending Request:\n%s\n\n", formatDump(dumpReq, "< "))
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer resp.Body.Close()
+
+	var dumpResp []byte
+	dumpResp, err = httputil.DumpResponse(resp, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fmt.Printf("Received Response:\n%s\n\n", formatDump(dumpResp, "< "))
 
 	cReq := &roundtripper.CapturedRequest{}
 
