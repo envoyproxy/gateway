@@ -339,22 +339,30 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 // findXdsHTTPRouteConfigName finds the name of the route config associated with the
 // http connection manager within the default filter chain and returns an empty string if
 // not found.
-func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
-	if xdsListener == nil || xdsListener.DefaultFilterChain == nil || xdsListener.DefaultFilterChain.Filters == nil {
+func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener, port uint32) string {
+	if xdsListener == nil {
 		return ""
 	}
 
-	for _, filter := range xdsListener.DefaultFilterChain.Filters {
-		if filter.Name == wellknown.HTTPConnectionManager {
-			m := new(hcmv3.HttpConnectionManager)
-			if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
-				return ""
+	for _, chain := range xdsListener.FilterChains {
+		if chain.FilterChainMatch == nil ||
+			chain.FilterChainMatch.DestinationPort == nil ||
+			chain.FilterChainMatch.DestinationPort.Value != port {
+
+			continue
+		}
+		for _, filter := range chain.Filters {
+			if filter.Name == wellknown.HTTPConnectionManager {
+				m := new(hcmv3.HttpConnectionManager)
+				if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
+					return ""
+				}
+				rds := m.GetRds()
+				if rds == nil {
+					return ""
+				}
+				return rds.GetRouteConfigName()
 			}
-			rds := m.GetRds()
-			if rds == nil {
-				return ""
-			}
-			return rds.GetRouteConfigName()
 		}
 	}
 	return ""

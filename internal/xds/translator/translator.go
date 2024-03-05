@@ -145,7 +145,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		} else if httpListener.TLS == nil {
 			// Find the route config associated with this listener that
 			// maps to the default filter chain for http traffic
-			routeName := findXdsHTTPRouteConfigName(xdsListener)
+			routeName := findXdsHTTPRouteConfigName(xdsListener, httpListener.Port)
 			if routeName != "" {
 				// If an existing listener exists, dont create a new filter chain
 				// for HTTP traffic, match on the Domains field within VirtualHosts
