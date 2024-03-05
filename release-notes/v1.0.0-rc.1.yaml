@@ -132,4 +132,4 @@ changes:
     change: |
       Added Support for egctl x status
       Added Support for egctl experimental dashboard envoy-proxy
-      Added Support for egctl ratelimit config
+      Added Support for egctl config ratelimit
