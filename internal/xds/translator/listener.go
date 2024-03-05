@@ -293,22 +293,20 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		}
 
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
-	} else {
+	} else if !havePortMatch(xdsListener, irListener.Port) {
 		// No TLS, so create a matcher based on the port if one doesn't yet exist.
 		// Conflicts between listeners should have been detected in the GWAPI->IR
 		// translation level already.
-		if !havePortMatch(xdsListener, filterChain, irListener.Port) {
-			filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
-				DestinationPort: wrapperspb.UInt32(irListener.Port),
-			}
-			xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
+		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
+			DestinationPort: wrapperspb.UInt32(irListener.Port),
 		}
+		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	}
 
 	return nil
 }
 
-func havePortMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, port uint32) bool {
+func havePortMatch(xdsListener *listenerv3.Listener, port uint32) bool {
 	for _, filter := range xdsListener.FilterChains {
 		if filter.FilterChainMatch != nil &&
 			filter.FilterChainMatch.ServerNames == nil &&
