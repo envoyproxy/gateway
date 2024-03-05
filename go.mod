@@ -3,6 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.21
 
 require (
+	fortio.org/fortio v1.63.3
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.12.0
@@ -31,7 +32,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.24.0
 	go.opentelemetry.io/proto/otlp v1.1.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb
 	golang.org/x/sys v0.17.0
 	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
@@ -47,6 +48,14 @@ require (
 	sigs.k8s.io/gateway-api v1.0.0
 	sigs.k8s.io/mcs-api v0.1.0
 	sigs.k8s.io/yaml v1.4.0
+)
+
+require (
+	fortio.org/dflag v1.7.0 // indirect
+	fortio.org/log v1.12.0 // indirect
+	fortio.org/sets v1.0.3 // indirect
+	fortio.org/struct2env v0.4.0 // indirect
+	fortio.org/version v1.0.3 // indirect
 )
 
 require (
