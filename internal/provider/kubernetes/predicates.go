@@ -504,5 +504,17 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return false
 	}
 
+	btlsList := &gwapiv1a2.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
+
+	if len(btlsList.Items) == 0 {
+		return false
+	}
+
 	return true
 }

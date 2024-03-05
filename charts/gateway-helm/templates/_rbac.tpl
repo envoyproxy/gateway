@@ -139,6 +139,7 @@ apiGroups:
 - gateway.networking.k8s.io
 resources:
 - gatewayclasses
+- backendtlspolicies
 verbs:
 - get
 - list
@@ -164,6 +165,7 @@ apiGroups:
 - gateway.networking.k8s.io
 resources:
 - gatewayclasses/status
+- backendtlspolicies/status
 verbs:
 - update
 {{- end }}
