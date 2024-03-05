@@ -26,6 +26,10 @@ backendTrafficPolicies:
         baseEjectionTime: 2m30s
         interval: 1s
         maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -60,9 +64,13 @@ backendTrafficPolicies:
         type: TCP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 3m0s
-        interval: 1s
-        maxEjectionPercent: 100
+        baseEjectionTime: 10s
+        interval: 10s
+        maxEjectionPercent: 10
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -100,6 +108,10 @@ backendTrafficPolicies:
         baseEjectionTime: 2m40s
         interval: 8ms
         maxEjectionPercent: 11
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -139,6 +151,10 @@ backendTrafficPolicies:
         baseEjectionTime: 2m40s
         interval: 2s
         maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -458,6 +474,10 @@ xdsIR:
             baseEjectionTime: 2m40s
             interval: 2s
             maxEjectionPercent: 100
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            splitExternalLocalOriginErrors: false
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
@@ -500,9 +520,13 @@ xdsIR:
             timeout: 1s
             unhealthyThreshold: 3
           passive:
-            baseEjectionTime: 3m0s
-            interval: 1s
-            maxEjectionPercent: 100
+            baseEjectionTime: 10s
+            interval: 10s
+            maxEjectionPercent: 10
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            splitExternalLocalOriginErrors: false
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
@@ -537,6 +561,10 @@ xdsIR:
             baseEjectionTime: 2m40s
             interval: 8ms
             maxEjectionPercent: 11
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            splitExternalLocalOriginErrors: false
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
@@ -574,6 +602,10 @@ xdsIR:
             baseEjectionTime: 2m30s
             interval: 1s
             maxEjectionPercent: 100
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            splitExternalLocalOriginErrors: false
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
