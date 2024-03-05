@@ -1,8 +1,6 @@
 - circuitBreakers:
     thresholds:
-    - retryBudget:
-        budgetPercent:
-          value: 100
+    - maxRetries: 1024
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -19,9 +17,7 @@
   type: EDS
 - circuitBreakers:
     thresholds:
-    - retryBudget:
-        budgetPercent:
-          value: 100
+    - maxRetries: 1024
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -38,9 +34,7 @@
   type: EDS
 - circuitBreakers:
     thresholds:
-    - retryBudget:
-        budgetPercent:
-          value: 100
+    - maxRetries: 1024
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -76,9 +70,7 @@
   type: STRICT_DNS
 - circuitBreakers:
     thresholds:
-    - retryBudget:
-        budgetPercent:
-          value: 100
+    - maxRetries: 1024
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s

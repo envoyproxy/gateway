@@ -305,9 +305,6 @@ func buildOAuth2ClientSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 }
 
 func buildOAuth2HMACSecret(route *ir.HTTPRoute) (*tlsv3.Secret, error) {
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate hmack secret key: %w", err)
-	}
 	hmacSecret := &tlsv3.Secret{
 		Name: oauth2HMACSecretName(route),
 		Type: &tlsv3.Secret_GenericSecret{
