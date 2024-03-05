@@ -89,11 +89,11 @@ changes:
       Fixed multiple reconciling by implementing comparable interface for ir.Infra
       Fixed EndpointSlice with empty conditions {}
       Fixed error handling when parsing the http request timeout
-      Added Support for validating regex before sending to Envoy 
+      Added Support for validating regex before sending to Envoy
       Fixed no status when EnvoyPatchPolicy is disabled
       Fixed printable for xds and infra IRs
       Fixed skip backendRefs with weight set to 0
-      Added Support for setting spec.addresses.value into ClusterIP when Service Type is ClusterIP 
+      Added Support for setting spec.addresses.value into ClusterIP when Service Type is ClusterIP
       Fixed AND Header matches in ratelimiting not working
       Added unsupported status condition for filters within BackendRef
       Added list instead of map for Provider Resources for order stability
@@ -101,7 +101,7 @@ changes:
       Fixed match mergedGateways irKey for ClientTrafficPolicy
       Added suffix for oauth cookies to prevent multiple oauth filters from overwriting each other's cookies.
       Fixed Policies should apply only to gateways they were attached to when mergeGateways is true
-      Fixed listener status is not surfaced for gateways when MergeGateways enabled 
+      Fixed listener status is not surfaced for gateways when MergeGateways enabled
       Fixed grpcroute websocket not working by moving web socket upgrade config from hcm to route
       Added Support for overriding condition to BackendTrafficPolicy and SecurityPolicy
       Fixed configure idle timeout when timeout is set on HTTPRoute
@@ -120,7 +120,7 @@ changes:
 
   - area: xds
     change: |
-      Added Support for eds cache 
+      Added Support for eds cache
       Bumps go-control-plane to v0.12.0
       Fixed deprecated field error when using RequestHeaderModifier filter
       Fixed envoy rejects XDS at runtime losing all routes on restart
