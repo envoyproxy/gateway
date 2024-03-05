@@ -35,17 +35,13 @@ type urlCluster struct {
 }
 
 // url2Cluster returns a urlCluster from the provided url.
-func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
+func url2Cluster(strURL string) (*urlCluster, error) {
 	epType := EndpointTypeDNS
 
 	// The URL should have already been validated in the gateway API translator.
 	u, err := url.Parse(strURL)
 	if err != nil {
 		return nil, err
-	}
-
-	if secure && u.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 
 	var port uint64

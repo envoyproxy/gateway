@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: gateway-conformance-infra
+  labels:
+    app: keycloak
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http-keycloak
+      protocol: TCP
+  selector:
+    app: keycloak
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keycloak
+  namespace: gateway-conformance-infra
+  labels:
+    app: keycloak
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: gateway-conformance-infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: keycloak
+        version: v1
+    spec:
+      serviceAccountName: keycloak
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:23.0.6
+          imagePullPolicy: IfNotPresent
+          args:
+            - "start-dev"
+          ports:
+            - name: keycloak
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: admin
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            tcpSocket:
+              port: 8080
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: setup-keycloak
+  namespace: gateway-conformance-infra
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-keycloak
+          image: busybox:stable
+          command: ["sh", "-c", "until nc -v -z -w3 keycloak 80; do sleep 2; done"]
+      containers:
+        - name: setup-keycloak
+          image: quay.io/keycloak/keycloak:23.0.6
+          command: ["bash", "/opt/keycloak/scripts/setup.sh"]
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: admin
+          volumeMounts:
+            - name: setup-script
+              mountPath: /opt/keycloak/scripts
+      volumes:
+        - name: setup-script
+          configMap:
+            name: setup-keycloak
+      restartPolicy: Never
+  backoffLimit: 4
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: setup-keycloak
+  namespace: gateway-conformance-infra
+data:
+  setup.sh: |
+    KEYCLOAK_SERVER="http://keycloak"
+    REALM="master"
+    USERNAME=oidcuser                  # This is the user name that will be used for user authentication in Authorization Code Flow
+    PASSWORD=oidcpassword              # This is the user password that will be used for user authentication in Authorization Code Flow
+    CLIENT_ID=oidctest
+    CLIENT_SECRET=oidctest-client-secret
+    REDIRECT_URL=http://www.example.com/myapp/oauth2/callback
+
+    set -ex
+
+    /opt/keycloak/bin/kcadm.sh create users \
+    -s username="${USERNAME}" \
+    -s enabled=true \
+    --server "${KEYCLOAK_SERVER}" \
+    --realm "${REALM}" \
+    --user "${KEYCLOAK_ADMIN}" \
+    --password "${KEYCLOAK_ADMIN_PASSWORD}"
+
+    /opt/keycloak/bin/kcadm.sh set-password \
+    --username "${USERNAME}" \
+    --new-password "${PASSWORD}" \
+    --server "${KEYCLOAK_SERVER}" \
+    --realm "${REALM}" \
+    --user "${KEYCLOAK_ADMIN}" \
+    --password "${KEYCLOAK_ADMIN_PASSWORD}"
+
+    /opt/keycloak/bin/kcreg.sh create \
+    -s clientId="${CLIENT_ID}" \
+    -s secret="${CLIENT_SECRET}" \
+    -s "redirectUris=[\"${REDIRECT_URL}\"]" \
+    -s consentRequired=false \
+    --server "${KEYCLOAK_SERVER}" \
+    --realm "${REALM}" \
+    --user "${KEYCLOAK_ADMIN}" \
+    --password "${KEYCLOAK_ADMIN_PASSWORD}"
