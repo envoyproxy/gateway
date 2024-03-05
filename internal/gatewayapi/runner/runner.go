@@ -272,34 +272,44 @@ func (r *Runner) getDeletableStatus() *DeletableStatus {
 func (r *Runner) deleteStatusKeys(ds *DeletableStatus) {
 	for key := range ds.GatewayStatusKeys {
 		r.ProviderResources.GatewayStatuses.Delete(key)
+		delete(ds.GatewayStatusKeys, key)
 	}
 	for key := range ds.HTTPRouteStatusKeys {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)
+		delete(ds.HTTPRouteStatusKeys, key)
 	}
 	for key := range ds.GRPCRouteStatusKeys {
 		r.ProviderResources.GRPCRouteStatuses.Delete(key)
+		delete(ds.GRPCRouteStatusKeys, key)
 	}
 	for key := range ds.TLSRouteStatusKeys {
 		r.ProviderResources.TLSRouteStatuses.Delete(key)
+		delete(ds.TLSRouteStatusKeys, key)
 	}
 	for key := range ds.TCPRouteStatusKeys {
 		r.ProviderResources.TCPRouteStatuses.Delete(key)
+		delete(ds.TCPRouteStatusKeys, key)
 	}
 	for key := range ds.UDPRouteStatusKeys {
 		r.ProviderResources.UDPRouteStatuses.Delete(key)
+		delete(ds.UDPRouteStatusKeys, key)
 	}
 
 	for key := range ds.ClientTrafficPolicyStatusKeys {
 		r.ProviderResources.ClientTrafficPolicyStatuses.Delete(key)
+		delete(ds.ClientTrafficPolicyStatusKeys, key)
 	}
 	for key := range ds.BackendTrafficPolicyStatusKeys {
 		r.ProviderResources.BackendTrafficPolicyStatuses.Delete(key)
+		delete(ds.BackendTrafficPolicyStatusKeys, key)
 	}
 	for key := range ds.SecurityPolicyStatusKeys {
 		r.ProviderResources.SecurityPolicyStatuses.Delete(key)
+		delete(ds.SecurityPolicyStatusKeys, key)
 	}
 	for key := range ds.BackendTLSPolicyStatusKeys {
 		r.ProviderResources.BackendTLSPolicyStatuses.Delete(key)
+		delete(ds.BackendTLSPolicyStatusKeys, key)
 	}
 }
 

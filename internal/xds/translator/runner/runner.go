@@ -8,7 +8,6 @@ package runner
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/types"
 	ktypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -92,7 +91,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				// Get current status keys and mark them as deletable temporarily
-				deletableStatus := make(map[types.NamespacedName]bool)
+				deletableStatus := make(map[ktypes.NamespacedName]bool)
 				for key := range r.ProviderResources.EnvoyPatchPolicyStatuses.LoadAll() {
 					deletableStatus[key] = true
 				}
