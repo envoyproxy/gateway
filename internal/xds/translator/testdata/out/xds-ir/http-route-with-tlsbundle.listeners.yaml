@@ -2,7 +2,10 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10080
-  defaultFilterChain:
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filterChainMatch:
+      destinationPort: 10080
     filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
@@ -29,6 +32,5 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
-  drainType: MODIFY_ONLY
   name: envoy-gateway/gateway-btls/http
   perConnectionBufferLimitBytes: 32768

@@ -294,15 +294,31 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	} else {
-		// Add the HTTP filter chain as the default filter chain
-		// Make sure one does not exist
-		if xdsListener.DefaultFilterChain != nil {
-			return errors.New("default filter chain already exists")
+		// No TLS, so create a matcher based on the port if one doesn't yet exist.
+		// Conflicts between listeners should have been detected in the GWAPI->IR
+		// translation level already.
+		if !havePortMatch(xdsListener, filterChain, irListener.Port) {
+			filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
+				DestinationPort: wrapperspb.UInt32(irListener.Port),
+			}
+			xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 		}
-		xdsListener.DefaultFilterChain = filterChain
 	}
 
 	return nil
+}
+
+func havePortMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, port uint32) bool {
+	for _, filter := range xdsListener.FilterChains {
+		if filter.FilterChainMatch != nil &&
+			filter.FilterChainMatch.ServerNames == nil &&
+			filter.FilterChainMatch.DestinationPort != nil &&
+			filter.FilterChainMatch.DestinationPort.Value == port {
+
+			return true
+		}
+	}
+	return false
 }
 
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {

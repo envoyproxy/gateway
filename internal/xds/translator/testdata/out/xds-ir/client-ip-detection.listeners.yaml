@@ -2,7 +2,10 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 8081
-  defaultFilterChain:
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filterChainMatch:
+      destinationPort: 8081
     filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
@@ -28,14 +31,16 @@
         statPrefix: http
         useRemoteAddress: true
         xffNumTrustedHops: 2
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
       portValue: 8082
-  defaultFilterChain:
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filterChainMatch:
+      destinationPort: 8082
     filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
@@ -66,14 +71,16 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: false
-  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
       portValue: 8083
-  defaultFilterChain:
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filterChainMatch:
+      destinationPort: 8083
     filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
@@ -106,6 +113,5 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: false
-  drainType: MODIFY_ONLY
   name: third-listener
   perConnectionBufferLimitBytes: 32768
