@@ -3,70 +3,82 @@ date: Nov 1, 2023
 changes:
   - area: documentation
     change: |
-      Added user guide for local rate limit
-      Added user guide for circuit breaker
-      Added user guide for fault injection
-      Added user guide for EnvoyProxy extraArgs
-      Updated crd-ref-docs to 0.0.10
+      Added User Guide for local rate limit
+      Added User Guide for circuit breaker
+      Added User Guide for fault injection
+      Added User Guide for EnvoyProxy extraArgs
+      Added User Guide for Timeouts in ClientTrafficPolicy
+      Added User Guide for JWT claim base routing
+      Added User Guide for HTTP Timeout
+      Added User Guide for Retry in BackendTrafficPolicy
+      Added User Guide for basic auth
+      Added User Guide for OIDC
+      Added User Guide for ClientTrafficPolicy
+      Added User Guide for BackendTrafficPolicy
       Added `Type` and `required` for CRD API doc
+      Updated crd-ref-docs to 0.0.10
       Updated Envoy proxy image to envoy:distroless-dev in main
-      Add user guide for Timeouts in ClientTrafficPolicy
-      Add user guide for JWT claim base routing
-      Add user guide for HTTP Timeout
-      Added user guide for Retry in BackendTrafficPolicy
 
 
   - area: installation
     change: |
-      Added Support for pulling envoyGateway image from a private registry
-      Added Support for configuring resources for certgen job
-      Added Support for configuring affinity for EnvoyGateway pod
+      Added Support for Pulling envoyGateway image from a private registry
+      Added Support for Configuring resources for certgen job
+      Added Support for Configuring affinity for EnvoyGateway pod
 
   - area: api
     change: |
-      Added ImagePullSecrets to PodSpec in EnvoyProxy CRD
+      Added Support for Downstream QUIC/HTTP3 in ClientTrafficPolicy CRD
+      Added Support for Downstream MTLS in ClientTrafficPolicy CRD
       Added Support for enabling EnvoyHeaders in ClientTrafficPolicy CRD
-      Added NodeSelector to PodSpec in EnvoyProxy CRD
-      Added TopologySpreadConstraints to PodSpec in EnvoyProxy CRD
-      Added Support for fault injection in BackendTrafficPolicy CRD
-      Added Support for mergepatch to envoyproxy/ratelimit deployment in EnvoyProxy CRD
-      Added Support for mergepatch to envoyproxy service in EnvoyProxy CRD
-      Added Support for disableMergeSlash and escapedSlashesAction in ClientTrafficPolicy CRD
-      Added Support for redirectURL and signoutPath to OIDC in SecurityPolicy CRD
-      Added Support for connection timeouts in BackendTrafficPolicy CRD
-      Added Validation for envoy gateway watch mode field in EnvoyGateway Configuration
-      Added Support for configuring externalTrafficPolicy to the envoy service in EnvoyProxy CRD
-      Added Support for extractFrom headers and params to JWT in SecurityPolicy CRD
-      Added Support for External authorization in SecurityPolicy CRD
-      Added Support for Timeout in BackendTrafficPolicy CRD
-      Added Support for secret resource in EnvoyPatchPolicy CRD
-      Added Support for `From` field to JSONPatchOperation in EnvoyPatchPolicy CRD
-      Added Support for compressor/decompressor in BackendTrafficPolicy CRD
-      Added Support for downstream mtls in ClientTrafficPolicy CRD
+      Added Support for DisableMergeSlash and escapedSlashesAction in ClientTrafficPolicy CRD
       Added Support for EnableTrailers in HTTP/1.1 in ClientTrafficPolicy CRD
-      Added Support for Envoy extra args in EnvoyProxy CRD
-      Added Support for LabelSelector type for NamespaceSelectors in EnvoyGateway Configuration
-      Added Support for preserving header letter-case on HTTP/1 in ClientTrafficPolicy CRD
-      Added Support for upstream max requests per connection to CircuitBreaker in BackendTrafficPolicy CRD
-      Added Support for making the value optional for JSONPatchOperation in EnvoyPatchPolicy CRD
+      Added Support for Preserving header letter-case on HTTP/1 in ClientTrafficPolicy CRD
       Added Support for enabling HTTP/1.0 and HTTP/0.9 in ClientTrafficPolicy CRD
       Added Support for Client IP Detection using XFF in ClientTrafficPolicy CRD
-      Added Support for Passive Health Checks in BackendTrafficPolicy CRD
       Added Support for Client IP Detection using Custom Header in ClientTrafficPolicy CRD
+      Added Support for Connection Timeouts in ClientTrafficPolicy CRD
+      Added Support for Common TLS configuration properties in ClientTrafficPolicy CRD
+      Added Support for Proxy protocol in ClientTrafficPolicy CRD
+      Added Support for TCPKeepAlive in ClientTrafficPolicy CRD
+      Added Support for Local rate limit in BackendTrafficPolicy CRD
+      Added Support for CircuitBreaker in BackendTrafficPolicy CRD
+      Added Support for Fault injection in BackendTrafficPolicy CRD
+      Added Support for Passive Health Checks in BackendTrafficPolicy CRD
+      Added Support for Active Health Checks in BackendTrafficPolicy CRD
+      Added Support for Connection Timeouts in BackendTrafficPolicy CRD
+      Added Support for Compressor/Decompressor in BackendTrafficPolicy CRD
+      Added Support for Retry in BackendTrafficPolicy CRD
+      Added Support for Slow start mode in BackendTrafficPolicy CRD
+      Added Support for Proxy protocol in BackendTrafficPolicy CRD
       Added Support for TCPKeepAlive in BackendTrafficPolicy CRD
-      Added Support for connection timeouts in ClientTrafficPolicy CRD
-      Added Support for recomputeRoute field to JWT in SecurityPolicy CRD
+      Added Support for OIDC in SecurityPolicy CRD
+      Added Support for Basic Auth in SecurityPolicy CRD
+      Added Support for RedirectURL and signoutPath to OIDC in SecurityPolicy CRD
+      Added Support for ExtractFrom headers and params to JWT in SecurityPolicy CRD
+      Added Support for External authorization in SecurityPolicy CRD
+      Added Support for RecomputeRoute field to JWT in SecurityPolicy CRD
+      Added Support for AllowCredentials knob to CORS setting in SecurityPolicy CRD
+      Added Support for Extract from different identifier to JWT in SecurityPolicy CRD
+      Added Support for Secret resource in EnvoyPatchPolicy CRD
+      Added Support for Making the value optional for JSONPatchOperation in EnvoyPatchPolicy CRD
+      Added Support for `From` field to JSONPatchOperation in EnvoyPatchPolicy CRD
+      Added Support for MergeGateways in EnvoyPatchPolicy CRD
+      Added Support for Upstream TLS by implementing BackendTLSPolicy CRD
+      Added Support for LabelSelector type for NamespaceSelectors in EnvoyGateway Configuration
+      Added Support for ratelimit prometheus in EnvoyGateway Configuration
       Added Support for Gracefully drain listeners before envoy shutdown on pod termination in EnvoyProxy CRD
-      Added Support for Retry in BackendTrafficPolicy
-      Fixed allow passing empty metrics config
-      Added envoy-gateway crd categories
-      Added Support for ratelimit prometheus
-      Added Support for max_retries to circuitbreakers in BackendTrafficPolicy CRD
-
+      Added Support for Configuring externalTrafficPolicy to the envoy service in EnvoyProxy CRD
+      Added Support for Envoy extra args in EnvoyProxy CRD
+      Added Support for Mergepatch to envoyproxy/ratelimit deployment in EnvoyProxy CRD
+      Added Support for Mergepatch to envoyproxy service in EnvoyProxy CRD
+      Added Support for NodeSelector to PodSpec in EnvoyProxy CRD
+      Added Support for HorizontalPodAutoscaler in EnvoyProxy CRD
+      Added Support for TopologySpreadConstraints to PodSpec in EnvoyProxy CRD
+      Added Support for ImagePullSecrets to PodSpec in EnvoyProxy CRD
 
     breaking-change: |
       Use wildcard to match AllowOrigins to CORS in SecurityPolicy CRD
-      Move healthCheck to healthCheck.active
 
   - area: conformance
     change: |
@@ -85,47 +97,51 @@ changes:
 
   - area: translator
     change: |
-      Fixed prefix match to prevent mismatching routes with the same prefix
-      Fixed multiple reconciling by implementing comparable interface for ir.Infra
+      Fixed Prefix match to prevent mismatching routes with the same prefix
+      Fixed Multiple reconciling by implementing comparable interface for ir.Infra
       Fixed EndpointSlice with empty conditions {}
-      Fixed error handling when parsing the http request timeout
-      Added Support for validating regex before sending to Envoy
-      Fixed no status when EnvoyPatchPolicy is disabled
-      Fixed printable for xds and infra IRs
-      Fixed skip backendRefs with weight set to 0
-      Added Support for setting spec.addresses.value into ClusterIP when Service Type is ClusterIP
+      Fixed Error handling when parsing the http request timeout
+      Fixed No status when EnvoyPatchPolicy is disabled
+      Fixed Printable for xds and infra IRs
+      Fixed Skip backendRefs with weight set to 0
       Fixed AND Header matches in ratelimiting not working
-      Added unsupported status condition for filters within BackendRef
-      Added list instead of map for Provider Resources for order stability
-      Fixed deletion logics when no gatewayclasses exist
-      Fixed match mergedGateways irKey for ClientTrafficPolicy
-      Added suffix for oauth cookies to prevent multiple oauth filters from overwriting each other's cookies.
+      Fixed Deletion logics when no gatewayclasses exist
+      Fixed Match mergedGateways irKey for ClientTrafficPolicy
       Fixed Policies should apply only to gateways they were attached to when mergeGateways is true
-      Fixed listener status is not surfaced for gateways when MergeGateways enabled
-      Fixed grpcroute websocket not working by moving web socket upgrade config from hcm to route
+      Fixed Listener status is not surfaced for gateways when MergeGateways enabled
+      Fixed GRPCroute websocket not working by moving web socket upgrade config from hcm to route
+      Fixed Configure idle timeout when timeout is set on HTTPRoute
+      Fixed Relaxing HTTPS restriction for OIDC token endpoint
+      Fixed Panic when translating routes with empty backends
+      Fixed Xds translation should be done in a best-effort manner
+      Added Support for validating regex before sending to Envoy
+      Added Support for setting spec.addresses.value into ClusterIP when Service Type is ClusterIP
+      Added Unsupported status condition for filters within BackendRef
+      Added List instead of map for Provider Resources for order stability
+      Added Suffix for oauth cookies to prevent multiple oauth filters from overwriting each other's cookies
       Added Support for overriding condition to BackendTrafficPolicy and SecurityPolicy
-      Fixed configure idle timeout when timeout is set on HTTPRoute
-      Fixed relaxing HTTPS restriction for OIDC token endpoint
-      Added Validate for CA Cert in ClientTrafficPolicy
-      Fixed panic when translating routes with empty backends
       Added Support for default retry budget and retry host predicate
+      Added Support for implementing gateway.spec.infrastructure
+      Added Validation for CA Cert in ClientTrafficPolicy
 
 
   - area: providers
     change: |
+      Added Support for multiple GatewayClass per controller
       Added SecurityPolicyIndexers in Kubernetes Provider
-      Fixed the Finalizer logic when deleting Gatewayclasses
       Added Support for generating HMAC secret in CertGen Job
+      Fixed Finalizer logic when deleting Gatewayclasses
+      Fixed MergeGateways panics when restarting control plane
 
 
   - area: xds
     change: |
-      Added Support for eds cache
-      Bumps go-control-plane to v0.12.0
-      Fixed deprecated field error when using RequestHeaderModifier filter
-      Fixed envoy rejects XDS at runtime losing all routes on restart
+      Added Support for EDS cache
       Added Support for ADS cache to ensure the rule order
-      Fixed requests not matching defined routes trigger per-route filters
+      Fixed Deprecated field error when using RequestHeaderModifier filter
+      Fixed Envoy rejects XDS at runtime losing all routes on restart
+      Fixed Requests not matching defined routes trigger per-route filters
+      Bumped go-control-plane to v0.12.0
 
 
   - area: cli
