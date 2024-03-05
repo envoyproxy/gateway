@@ -5,7 +5,7 @@ envoyproxy:
     name: test
     namespace: envoy-gateway-system
   spec:
-    mergeGateways: true 
+    mergeGateways: true
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -15,13 +15,13 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-      - hostname: "*.192.168.0.15.nip.io"
-        name: http
-        protocol: HTTP
-        port: 80
-        allowedRoutes:
-          namespaces:
-            from: All
+    - hostname: "*.192.168.0.15.nip.io"
+      name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
@@ -103,17 +103,17 @@ securityPolicies:
       maxAge: 600s
       allowCredentials: true
 clientTrafficPolicies:
-  - apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: ClientTrafficPolicy
-    metadata:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: default
+    name: target-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mfqjpuycbgjrtdww
       namespace: default
-      name: target-gateway
-    spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: mfqjpuycbgjrtdww
-        namespace: default
-      timeout:
-        http:
-          requestReceivedTimeout: "5s"
+    timeout:
+      http:
+        requestReceivedTimeout: "5s"
