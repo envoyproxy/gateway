@@ -221,7 +221,10 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 10080
-            defaultFilterChain:
+            drainType: MODIFY_ONLY
+            filterChains:
+            - filterChainMatch:
+                destinationPort: 10080
               filters:
               - name: envoy.filters.network.http_connection_manager
                 typedConfig:
@@ -274,7 +277,6 @@ xds:
                   serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
-            drainType: MODIFY_ONLY
             name: envoy-gateway-system/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
