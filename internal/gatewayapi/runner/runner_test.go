@@ -14,7 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -107,7 +108,7 @@ func TestGetIRKeysToDelete(t *testing.T) {
 	}
 }
 
-func TestDeletableStatus(t *testing.T) {
+func TestDeleteStatusKeys(t *testing.T) {
 	// Setup
 	pResources := new(message.ProviderResources)
 	xdsIR := new(message.XdsIR)
@@ -127,9 +128,95 @@ func TestDeletableStatus(t *testing.T) {
 	err = r.Start(ctx)
 	require.NoError(t, err)
 
-	// No status is set
-	ds1 := r.getDeletableStatus()
-	require.Empty(t, len(ds1.GatewayStatusKeys))
+	// A new status gets stored
+	keys := []types.NamespacedName{
+		{
+			Name:      "test1",
+			Namespace: "test-namespace",
+		},
+		{
+			Name:      "test2",
+			Namespace: "test-namespace",
+		},
+		{
+			Name:      "test3",
+			Namespace: "test-namespace",
+		},
+		{
+			Name:      "test4",
+			Namespace: "test-namespace",
+		},
+		{
+			Name:      "test5",
+			Namespace: "test-namespace",
+		},
+		{
+			Name:      "test6",
+			Namespace: "test-namespace",
+		},
+		{
+			Name:      "test7",
+			Namespace: "test-namespace",
+		},
+	}
+
+	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
+	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
+	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1a2.GRPCRouteStatus{})
+	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
+	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
+	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
+	r.ProviderResources.UDPRouteStatuses.Store(keys[6], &gwapiv1a2.UDPRouteStatus{})
+
+	// Checks that the keys are successfully stored to DeletableStatus and watchable maps
+	ds := r.getDeletableStatus()
+
+	require.True(t, ds.GatewayStatusKeys[keys[0]])
+	require.True(t, ds.HTTPRouteStatusKeys[keys[1]])
+	require.True(t, ds.GRPCRouteStatusKeys[keys[2]])
+	require.True(t, ds.TLSRouteStatusKeys[keys[3]])
+	require.True(t, ds.TCPRouteStatusKeys[keys[4]])
+	require.True(t, ds.UDPRouteStatusKeys[keys[5]])
+	require.True(t, ds.UDPRouteStatusKeys[keys[6]])
+
+	require.Equal(t, 1, r.ProviderResources.GatewayStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.HTTPRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.GRPCRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.TLSRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.TCPRouteStatuses.Len())
+	require.Equal(t, 2, r.ProviderResources.UDPRouteStatuses.Len())
+
+	// Delete all keys except the last UDPRouteStatus key
+	delete(ds.UDPRouteStatusKeys, keys[6])
+	r.deleteStatusKeys(ds)
+
+	require.Equal(t, 0, r.ProviderResources.GatewayStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.HTTPRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.GRPCRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.TLSRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.TCPRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.UDPRouteStatuses.Len())
+}
+
+func TestDeleteAllStatusKeys(t *testing.T) {
+	// Setup
+	pResources := new(message.ProviderResources)
+	xdsIR := new(message.XdsIR)
+	infraIR := new(message.InfraIR)
+	cfg, err := config.New()
+	require.NoError(t, err)
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResources,
+		XdsIR:             xdsIR,
+		InfraIR:           infraIR,
+		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
+	})
+	ctx := context.Background()
+
+	// Start
+	err = r.Start(ctx)
+	require.NoError(t, err)
 
 	// A new status gets stored
 	keys := []types.NamespacedName{
@@ -145,50 +232,50 @@ func TestDeletableStatus(t *testing.T) {
 			Name:      "test3",
 			Namespace: "test-namespace",
 		},
-	}
-	statuses := []v1.GatewayStatus{
 		{
-			Addresses: []v1.GatewayStatusAddress{
-				{
-					Value: "192.168.0.1",
-				},
-			},
+			Name:      "test4",
+			Namespace: "test-namespace",
 		},
 		{
-			Addresses: []v1.GatewayStatusAddress{
-				{
-					Value: "192.168.0.2",
-				},
-			},
+			Name:      "test5",
+			Namespace: "test-namespace",
 		},
 		{
-			Addresses: []v1.GatewayStatusAddress{
-				{
-					Value: "192.168.0.3",
-				},
-			},
+			Name:      "test6",
+			Namespace: "test-namespace",
 		},
 	}
-	r.ProviderResources.GatewayStatuses.Store(keys[0], &statuses[0])
-	r.ProviderResources.GatewayStatuses.Store(keys[1], &statuses[1])
-	r.ProviderResources.GatewayStatuses.Store(keys[2], &statuses[2])
 
-	// getDeletableStatus: Checks that the keys are successfully stored
-	ds2 := r.getDeletableStatus()
-	require.True(t, ds2.GatewayStatusKeys[keys[0]])
-	require.True(t, ds2.GatewayStatusKeys[keys[1]])
-	require.True(t, ds2.GatewayStatusKeys[keys[2]])
-	require.Equal(t, 3, r.ProviderResources.GatewayStatuses.Len())
+	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
+	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
+	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1a2.GRPCRouteStatus{})
+	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
+	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
+	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
 
-	// deleteStatusKeys: Delete the third key by removing the first
-	// and second key from deletables
-	delete(ds2.GatewayStatusKeys, keys[0])
-	delete(ds2.GatewayStatusKeys, keys[1])
-	r.deleteStatusKeys(ds2)
-	require.Empty(t, len(ds2.GatewayStatusKeys))
-	require.Equal(t, 2, r.ProviderResources.GatewayStatuses.Len())
+	// Checks that the keys are successfully stored to DeletableStatus and watchable maps
+	ds := r.getDeletableStatus()
 
-	// deleteAllStatusKeys: Delete remaining keys
+	require.True(t, ds.GatewayStatusKeys[keys[0]])
+	require.True(t, ds.HTTPRouteStatusKeys[keys[1]])
+	require.True(t, ds.GRPCRouteStatusKeys[keys[2]])
+	require.True(t, ds.TLSRouteStatusKeys[keys[3]])
+	require.True(t, ds.TCPRouteStatusKeys[keys[4]])
+	require.True(t, ds.UDPRouteStatusKeys[keys[5]])
+
+	require.Equal(t, 1, r.ProviderResources.GatewayStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.HTTPRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.GRPCRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.TLSRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.TCPRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.UDPRouteStatuses.Len())
+
+	// Delete all keys
 	r.deleteAllStatusKeys()
 	require.Equal(t, 0, r.ProviderResources.GatewayStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.HTTPRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.GRPCRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.TLSRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.TCPRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.UDPRouteStatuses.Len())
 }
