@@ -98,6 +98,7 @@ resources:
 - tcproutes
 - tlsroutes
 - udproutes
+- backendtlspolicies
 verbs:
 - get
 - list
@@ -114,6 +115,7 @@ resources:
 - tcproutes/status
 - tlsroutes/status
 - udproutes/status
+- backendtlspolicies/status
 verbs:
 - update
 {{- end }}
@@ -139,7 +141,6 @@ apiGroups:
 - gateway.networking.k8s.io
 resources:
 - gatewayclasses
-- backendtlspolicies
 verbs:
 - get
 - list
@@ -165,7 +166,6 @@ apiGroups:
 - gateway.networking.k8s.io
 resources:
 - gatewayclasses/status
-- backendtlspolicies/status
 verbs:
 - update
 {{- end }}
