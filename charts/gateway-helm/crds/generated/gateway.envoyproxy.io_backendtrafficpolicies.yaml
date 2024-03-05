@@ -69,6 +69,15 @@ spec:
                     maximum: 4294967295
                     minimum: 0
                     type: integer
+                  maxParallelRetries:
+                    default: 1024
+                    description: The maximum number of parallel retries that Envoy
+                      will make to the referenced backend defined within a xRoute
+                      rule.
+                    format: int64
+                    maximum: 4294967295
+                    minimum: 0
+                    type: integer
                   maxPendingRequests:
                     default: 1024
                     description: The maximum number of pending requests that Envoy
