@@ -77,6 +77,7 @@ type Certificates struct {
 	EnvoyPrivateKey           []byte
 	EnvoyRateLimitCertificate []byte
 	EnvoyRateLimitPrivateKey  []byte
+	OIDCHMACSecret            []byte
 }
 
 // certificateRequest defines a certificate request.
@@ -153,6 +154,11 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 			return nil, err
 		}
 
+		oidcHMACSecret, err := generateHMACSecret()
+		if err != nil {
+			return nil, err
+		}
+
 		return &Certificates{
 			CACertificate:             caCertPEM,
 			EnvoyGatewayCertificate:   egCert,
@@ -161,6 +167,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 			EnvoyPrivateKey:           envoyKey,
 			EnvoyRateLimitCertificate: envoyRateLimitCert,
 			EnvoyRateLimitPrivateKey:  envoyRateLimitKey,
+			OIDCHMACSecret:            oidcHMACSecret,
 		}, nil
 	default:
 		// Envoy Gateway, e.g. self-signed CA, is the only supported certificate provider.
@@ -284,4 +291,20 @@ func kubeServiceNames(service, namespace, dnsName string) []string {
 		fmt.Sprintf("%s.%s.svc", service, namespace),
 		fmt.Sprintf("%s.%s.svc.%s", service, namespace, dnsName),
 	}
+}
+
+func generateHMACSecret() ([]byte, error) {
+	// Set the desired length of the secret key in bytes
+	keyLength := 32
+
+	// Create a byte slice to hold the random bytes
+	key := make([]byte, keyLength)
+
+	// Read random bytes from the cryptographically secure random number generator
+	_, err := rand.Read(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate hmack secret key: %w", err)
+	}
+
+	return key, nil
 }

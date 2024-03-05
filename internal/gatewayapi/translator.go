@@ -93,6 +93,9 @@ type Translator struct {
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
+
+	// Namespace is the namespace that Envoy Gateway runs in.
+	Namespace string
 }
 
 type TranslateResult struct {
