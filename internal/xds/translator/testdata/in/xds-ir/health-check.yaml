@@ -27,6 +27,10 @@ http:
         baseEjectionTime: 180s
         interval: 2s
         maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
     destination:
       name: "first-route-dest"
       settings:
@@ -52,6 +56,10 @@ http:
         baseEjectionTime: 180s
         interval: 1s
         maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
     destination:
       name: "second-route-dest"
       settings:
@@ -75,6 +83,10 @@ http:
         baseEjectionTime: 160s
         interval: 1s
         maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
     destination:
       name: "third-route-dest"
       settings:
@@ -98,6 +110,10 @@ http:
         baseEjectionTime: 180s
         interval: 1s
         maxEjectionPercent: 90
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: true
     destination:
       name: "fourth-route-dest"
       settings:
