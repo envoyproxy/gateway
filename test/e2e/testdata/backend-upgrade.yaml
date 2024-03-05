@@ -9,13 +9,13 @@ spec:
     kind: HTTPRoute
     name: http-backend-upgrade
     namespace: gateway-conformance-infra
-  circuitBreaker: # increase circuit breaker to accommodate for test QPS
+  circuitBreaker:
     maxParallelRequests: 10000
     maxConnections: 10000
     maxPendingRequests: 10000
   retry:
     retryOn:
-      triggers: # reset and connect-failure are the common failures when pods restart
+      triggers:
       - connect-failure
       - reset
     numRetries: 10
