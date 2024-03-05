@@ -80,7 +80,7 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 				corev1.TLSPrivateKeyKey: certs.EnvoyRateLimitPrivateKey,
 			}),
 		newSecret(
-			corev1.SecretTypeTLS,
+			corev1.SecretTypeOpaque,
 			"envoy-oidc-hmac",
 			namespace,
 			map[string][]byte{

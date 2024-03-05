@@ -36,6 +36,7 @@ const (
 	defaultRedirectPath = "/oauth2/callback"
 	defaultLogoutPath   = "/logout"
 
+	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	oidcHMACSecretKey  = "hmac-secret"
 )

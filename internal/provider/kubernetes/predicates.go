@@ -27,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
+// nolint: gosec
 const oidcHMACSecretName = "envoy-oidc-hmac"
 
 // hasMatchingController returns true if the provided object is a GatewayClass

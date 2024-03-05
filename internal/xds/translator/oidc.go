@@ -275,11 +275,7 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 			errs = errors.Join(errs, err)
 		}
 
-		hmacSecret, err := buildOAuth2HMACSecret(route)
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
-		if err := addXdsSecret(tCtx, hmacSecret); err != nil {
+		if err := addXdsSecret(tCtx, buildOAuth2HMACSecret(route)); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -304,7 +300,7 @@ func buildOAuth2ClientSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 	return clientSecret
 }
 
-func buildOAuth2HMACSecret(route *ir.HTTPRoute) (*tlsv3.Secret, error) {
+func buildOAuth2HMACSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 	hmacSecret := &tlsv3.Secret{
 		Name: oauth2HMACSecretName(route),
 		Type: &tlsv3.Secret_GenericSecret{
@@ -318,7 +314,7 @@ func buildOAuth2HMACSecret(route *ir.HTTPRoute) (*tlsv3.Secret, error) {
 		},
 	}
 
-	return hmacSecret, nil
+	return hmacSecret
 }
 
 func oauth2ClientSecretName(route *ir.HTTPRoute) string {
