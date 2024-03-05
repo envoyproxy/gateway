@@ -99,7 +99,7 @@ func oauth2FilterName(route *ir.HTTPRoute) string {
 }
 
 func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
-	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
+	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			err     error
 		)
 
-		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
+		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -231,13 +231,6 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		// TODO huabing: add support for custom CA and client certificate.
-		tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
-		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-
 		ds = &ir.DestinationSetting{
 			Weight: ptr.To[uint32](1),
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(
@@ -246,12 +239,22 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			},
 		}
 
-		if err = addXdsCluster(tCtx, &xdsClusterArgs{
+		clusterArgs := &xdsClusterArgs{
 			name:         cluster.name,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      tSocket,
 			endpointType: cluster.endpointType,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		}
+		if cluster.tls {
+			tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
+			if err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			clusterArgs.tSocket = tSocket
+		}
+
+		if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
 	}
