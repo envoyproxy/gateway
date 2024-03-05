@@ -164,7 +164,7 @@ func defaultRoundTrip(request roundtripper.Request, transport *http3.RoundTrippe
 		return nil, nil, err
 	}
 
-	fmt.Printf("Sending Request:\n%s\n\n", formatDump(dumpReq, "< "))
+	fmt.Printf("Sending Request:\n%s\n\n", formatDump(dumpReq, "<? "))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -178,7 +178,7 @@ func defaultRoundTrip(request roundtripper.Request, transport *http3.RoundTrippe
 		return nil, nil, err
 	}
 
-	fmt.Printf("Received Response:\n%s\n\n", formatDump(dumpResp, "< "))
+	fmt.Printf("Received Response:\n%s\n\n", formatDump(dumpResp, "<? "))
 
 	cReq := &roundtripper.CapturedRequest{}
 
