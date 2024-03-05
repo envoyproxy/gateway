@@ -778,6 +778,8 @@ spec:
         name: backend
         ports:
         - containerPort: 3000
+        command: ["sysctl"]
+        args: ["-w", "net.core.rmem_max=2500000"]
         env:
         - name: POD_NAME
           valueFrom:
