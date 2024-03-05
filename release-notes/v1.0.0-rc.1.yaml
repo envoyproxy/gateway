@@ -1,0 +1,135 @@
+date: Nov 1, 2023
+
+changes:
+  - area: documentation
+    change: |
+      Added user guide for local rate limit
+      Added user guide for circuit breaker
+      Added user guide for fault injection
+      Added user guide for EnvoyProxy extraArgs
+      Updated crd-ref-docs to 0.0.10
+      Addded `Type` and `required` for CRD API doc
+      Updated Envoy proxy image to envoy:distroless-dev in main
+      Add user guide for Timeouts in ClientTrafficPolicy
+      Add user guide for JWT claim base routing
+      Add user guide for HTTP Timeout
+      Added user guide for Retry in BackendTrafficPolicy
+
+
+  - area: installation
+    change: |
+      Added Support for pulling envoyGateway image from a private registry
+      Added Support for configuring resources for certgen job
+      Added Support for configuring affinity for EnvoyGateway pod
+
+  - area: api
+    change: |
+      Added ImagePullSecrets to PodSpec in EnvoyProxy CRD
+      Added Support for enabling EnvoyHeaders in ClientTrafficPolicy CRD
+      Added NodeSelector to PodSpec in EnvoyProxy CRD
+      Added TopologySpreadConstraints to PodSpec in EnvoyProxy CRD
+      Added Support for fault injection in BackendTrafficPolicy CRD
+      Added Support for mergepatch to envoyproxy/ratelimit deployment in EnvoyProxy CRD
+      Added Support for mergepatch to envoyproxy service in EnvoyProxy CRD
+      Added Support for disableMergeSlash and escapedSlashesAction in ClientTrafficPolicy CRD
+      Added Support for redirectURL and signoutPath to OIDC in SecurityPolicy CRD
+      Added Support for connection timeouts in BackendTrafficPolicy CRD
+      Added Validation for envoy gateway watch mode field in EnvoyGateway Configuration
+      Added Support for configuring externalTrafficPolicy to the envoy service in EnvoyProxy CRD
+      Added Support for extractFrom headers and params to JWT in SecurityPolicy CRD
+      Added Support for External authorization in SecurityPolicy CRD
+      Added Support for Timeout in BackendTrafficPolicy CRD
+      Added Support for secret resource in EnvoyPatchPolicy CRD
+      Added Support for `From` field to JSONPatchOperation in EnvoyPatchPolicy CRD
+      Added Support for compressor/decompressor in BackendTrafficPolicy CRD
+      Added Support for downstream mtls in ClientTrafficPolicy CRD
+      Added Support for EnableTrailers in HTTP/1.1 in ClientTrafficPolicy CRD
+      Added Support for Envoy extra args in EnvoyProxy CRD
+      Added Support for LabelSelector type for NamespaceSelectors in EnvoyGateway Configuration
+      Added Support for preserving header letter-case on HTTP/1 in ClientTrafficPolicy CRD
+      Added Support for upstream max requests per connection to CircuitBreaker in BackendTrafficPolicy CRD
+      Added Support for making the value optional for JSONPatchOperation in EnvoyPatchPolicy CRD
+      Added Support for enabling HTTP/1.0 and HTTP/0.9 in ClientTrafficPolicy CRD
+      Added Support for Client IP Detection using XFF in ClientTrafficPolicy CRD
+      Added Support for Passive Health Checks in BackendTrafficPolicy CRD
+      Added Support for Client IP Detection using Custom Header in ClientTrafficPolicy CRD
+      Added Support for TCPKeepAlive in BackendTrafficPolicy CRD
+      Added Support for connection timeouts in ClientTrafficPolicy CRD
+      Added Support for recomputeRoute field to JWT in SecurityPolicy CRD
+      Added Support for Gracefully drain listeners before envoy shutdown on pod termination in EnvoyProxy CRD
+      Added Support for Retry in BackendTrafficPolicy
+      Fixed allow passing empty metrics config
+      Added envoy-gateway crd categories
+      Added Support for ratelimit prometheus
+      Added Support for max_retries to circuitbreakers in BackendTrafficPolicy CRD
+
+
+    breaking-change: |
+      Use wildcard to match AllowOrigins to CORS in SecurityPolicy CRD
+      Move healthCheck to healthCheck.active
+
+  - area: conformance
+    change: |
+      Replaced backend image from gcr.io/k8s-staging-ingressconformance/echoserver to gcr.io/k8s-staging-gateway-api/echo-basic
+
+
+  - area: testing
+    change: |
+      Added e2e test for header case-preserving
+      Added LoadBalancerIP validation to prevent trailing period
+      Added e2e test for Timeout in ClientTrafficPolicy
+      Added e2e test for jwt claim base routing
+      Added e2e test for OIDC
+      Added e2e test for BackendTrafficPolicy Retry
+
+
+  - area: translator
+    change: |
+      Fixed prefix match to prevent mismatching routes with the same prefix
+      Fixed multiple reconciling by implementing comparable interface for ir.Infra
+      Fixed EndpointSlice with empty conditions {}
+      Fixed error handling when parsing the http request timeout
+      Added Support for validating regex before sending to Envoy 
+      Fixed no status when EnvoyPatchPolicy is disabled
+      Fixed printable for xds and infra IRs
+      Fixed skip backendRefs with weight set to 0
+      Added Support for setting spec.addresses.value into ClusterIP when Service Type is ClusterIP 
+      Fixed AND Header matches in ratelimiting not working
+      Added unsupported status condition for filters within BackendRef
+      Added list instead of map for Provider Resources for order stability
+      Fixed deletion logics when no gatewayclasses exist
+      Fixed match mergedGateways irKey for ClientTrafficPolicy
+      Added suffix for oauth cookies to prevent multiple oauth filters from overwriting each other's cookies.
+      Fixed Policies should apply only to gateways they were attached to when mergeGateways is true
+      Fixed listener status is not surfaced for gateways when MergeGateways enabled 
+      Fixed grpcroute websocket not working by moving web socket upgrade config from hcm to route
+      Added Support for overriding condition to BackendTrafficPolicy and SecurityPolicy
+      Fixed configure idle timeout when timeout is set on HTTPRoute
+      Fixed relaxing HTTPS restriction for OIDC token endpoint
+      Added Validate for CA Cert in ClientTrafficPolicy
+      Fixed panic when translating routes with empty backends
+      Added Support for default retry budget and retry host predicate
+
+
+  - area: providers
+    change: |
+      Added SecurityPolicyIndexers in Kubernetes Provider
+      Fixed the Finalizer logic when deleting Gatewayclasses
+      Added Support for generating HMAC secret in CertGen Job
+
+
+  - area: xds
+    change: |
+      Added Support for eds cache 
+      Bumps go-control-plane to v0.12.0
+      Fixed deprecated field error when using RequestHeaderModifier filter
+      Fixed envoy rejects XDS at runtime losing all routes on restart
+      Added Support for ADS cache to ensure the rule order
+      Fixed requests not matching defined routes trigger per-route filters
+
+
+  - area: cli
+    change: |
+      Added Support for egctl x status
+      Added Support for egctl experimental dashboard envoy-proxy
+      Added Support for egctl ratelimit config
