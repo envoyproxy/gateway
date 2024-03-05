@@ -3,9 +3,7 @@
     - maxConnections: 1
       maxPendingRequests: 1
       maxRequests: 1
-      retryBudget:
-        budgetPercent:
-          value: 100
+      maxRetries: 2
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s

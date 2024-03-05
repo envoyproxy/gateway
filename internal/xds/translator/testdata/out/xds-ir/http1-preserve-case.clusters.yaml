@@ -1,8 +1,6 @@
 - circuitBreakers:
     thresholds:
-    - retryBudget:
-        budgetPercent:
-          value: 100
+    - maxRetries: 1024
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -29,9 +27,7 @@
                 '@type': type.googleapis.com/envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
 - circuitBreakers:
     thresholds:
-    - retryBudget:
-        budgetPercent:
-          value: 100
+    - maxRetries: 1024
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s

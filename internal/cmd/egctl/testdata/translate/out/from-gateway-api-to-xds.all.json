@@ -373,11 +373,7 @@
                 "circuitBreakers": {
                   "thresholds": [
                     {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
+                      "maxRetries": 1024
                     }
                   ]
                 },
@@ -406,11 +402,7 @@
                 "circuitBreakers": {
                   "thresholds": [
                     {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
+                      "maxRetries": 1024
                     }
                   ]
                 },
@@ -447,11 +439,7 @@
                 "circuitBreakers": {
                   "thresholds": [
                     {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
+                      "maxRetries": 1024
                     }
                   ]
                 },
@@ -480,11 +468,7 @@
                 "circuitBreakers": {
                   "thresholds": [
                     {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
+                      "maxRetries": 1024
                     }
                   ]
                 },
@@ -513,11 +497,7 @@
                 "circuitBreakers": {
                   "thresholds": [
                     {
-                      "retryBudget": {
-                        "budgetPercent": {
-                          "value": 100
-                        }
-                      }
+                      "maxRetries": 1024
                     }
                   ]
                 },

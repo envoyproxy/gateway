@@ -450,13 +450,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						MaxConnections:      valMax,
 						MaxPendingRequests:  valMin,
 						MaxParallelRequests: nil,
+						MaxParallelRetries:  nil,
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: " invalid config: min and max valyues",
+			desc: " invalid config: min and max values",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				valOverMax := pointer.Int64(4294967296)
 				valUnderMin := pointer.Int64(-1)
@@ -473,10 +474,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						MaxPendingRequests:       valUnderMin,
 						MaxParallelRequests:      valOverMax,
 						MaxRequestsPerConnection: valUnderMin,
+						MaxParallelRetries:       valOverMax,
 					},
 				}
 			},
 			wantErrors: []string{
+				"spec.circuitBreaker.MaxParallelRetries: Invalid value: 4294967296: spec.circuitBreaker.MaxParallelRetries in body should be less than or equal to 4294967295",
 				"spec.circuitBreaker.maxRequestsPerConnection: Invalid value: -1: spec.circuitBreaker.maxRequestsPerConnection in body should be greater than or equal to 0",
 				"spec.circuitBreaker.maxParallelRequests: Invalid value: 4294967296: spec.circuitBreaker.maxParallelRequests in body should be less than or equal to 4294967295",
 				"spec.circuitBreaker.maxPendingRequests: Invalid value: -1: spec.circuitBreaker.maxPendingRequests in body should be greater than or equal to 0",

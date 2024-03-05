@@ -276,10 +276,8 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
 		Priority: corev3.RoutingPriority_DEFAULT,
-		RetryBudget: &clusterv3.CircuitBreakers_Thresholds_RetryBudget{
-			BudgetPercent: &xdstype.Percent{
-				Value: 100,
-			},
+		MaxRetries: &wrapperspb.UInt32Value{
+			Value: uint32(1024),
 		},
 	}
 
@@ -299,6 +297,12 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 		if circuitBreaker.MaxParallelRequests != nil {
 			cbt.MaxRequests = &wrapperspb.UInt32Value{
 				Value: *circuitBreaker.MaxParallelRequests,
+			}
+		}
+
+		if circuitBreaker.MaxParallelRetries != nil {
+			cbt.MaxRetries = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxParallelRetries,
 			}
 		}
 	}

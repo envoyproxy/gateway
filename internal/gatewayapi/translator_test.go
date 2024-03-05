@@ -77,6 +77,7 @@ func TestTranslate(t *testing.T) {
 				GatewayClassName:        "envoy-gateway-class",
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
+				Namespace:               "envoy-gateway-system",
 			}
 
 			// Add common test fixtures

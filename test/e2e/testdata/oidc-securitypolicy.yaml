@@ -1,0 +1,79 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-oidc
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp              # This is the path that will be protected by OIDC
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-without-oidc
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /public            # This is the path that will be public
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-keycloak
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["keycloak.gateway-conformance-infra"]
+  rules:
+  - backendRefs:
+    - name: keycloak
+      port: 80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: oidctest-secret
+data:
+  client-secret: b2lkY3Rlc3QtY2xpZW50LXNlY3JldA==   # base64 encoding of "oidctest-client-secret"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-test
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-oidc
+  oidc:
+    provider:
+      issuer: "http://keycloak.gateway-conformance-infra/realms/master"
+      authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
+    clientID: "oidctest"
+    clientSecret:
+      name: "oidctest-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"

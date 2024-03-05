@@ -919,6 +919,15 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 			}
 		}
 
+		if pcb.MaxParallelRetries != nil {
+			if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
+				cb.MaxParallelRetries = &ui32
+			} else {
+				setBackendTrafficPolicyTranslationErrorCondition(policy, "Circuit Breaker", fmt.Sprintf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries))
+				return nil
+			}
+		}
+
 		if pcb.MaxRequestsPerConnection != nil {
 			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
 				cb.MaxRequestsPerConnection = &ui32
@@ -927,6 +936,7 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) *i
 				return nil
 			}
 		}
+
 	}
 
 	return cb

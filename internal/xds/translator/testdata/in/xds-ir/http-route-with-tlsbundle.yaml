@@ -1,0 +1,34 @@
+http:
+  - address: 0.0.0.0
+    hostnames:
+      - '*'
+    isHTTP2: false
+    name: envoy-gateway/gateway-btls/http
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/envoy-gateway/httproute-btls/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 10.244.0.11
+                  port: 8080
+              protocol: HTTP
+              tls:
+                CACertificate:
+                  certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                  name: policy-btls/policies-ca
+                SNI: example.com
+              weight: 1
+        hostname: '*'
+        name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /exact
+          name: ""

@@ -72,6 +72,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					GatewayClassName:        v1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					Namespace:               r.Namespace,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -154,6 +155,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					securityPolicy := securityPolicy
 					key := utils.NamespacedName(securityPolicy)
 					r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+				}
+				for _, backendTLSPolicy := range result.BackendTLSPolicies {
+					backendTLSPolicy := backendTLSPolicy
+					key := utils.NamespacedName(backendTLSPolicy)
+					r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
 				}
 			}
 			// Delete keys

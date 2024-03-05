@@ -27,6 +27,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
+// nolint: gosec
+const oidcHMACSecretName = "envoy-oidc-hmac"
+
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
 // or false otherwise.
@@ -153,6 +156,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isOIDCHMACSecret(&nsName) {
+		return true
+	}
+
 	return false
 }
 
@@ -200,6 +207,14 @@ func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedNa
 	}
 
 	return len(ctpList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isOIDCHMACSecret(nsName *types.NamespacedName) bool {
+	oidcHMACSecret := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      oidcHMACSecretName,
+	}
+	return *nsName == oidcHMACSecret
 }
 
 // validateServiceForReconcile tries finding the owning Gateway of the Service
@@ -501,6 +516,18 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 	}
 
 	if len(ctpList.Items) == 0 {
+		return false
+	}
+
+	btlsList := &gwapiv1a2.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
+
+	if len(btlsList.Items) == 0 {
 		return false
 	}
 
