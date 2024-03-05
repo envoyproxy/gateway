@@ -308,6 +308,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// Add the referenced Secrets in SecurityPolicies to the resourceTree
 		r.processSecurityPolicySecretRefs(ctx, gwcResource, resourceMappings)
 
+		// Add the OIDC HMAC Secret to the resourceTree
+		r.processOIDCHMACSecret(ctx, gwcResource)
+
 		// Add all BackendTLSPolies
 		backendTLSPolicies := gwapiv1a2.BackendTLSPolicyList{}
 		if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
@@ -432,6 +435,35 @@ func (r *gatewayAPIReconciler) processSecurityPolicySecretRefs(
 			}
 		}
 	}
+}
+
+// processOIDCHMACSecret adds the OIDC HMAC Secret to the resourceTree.
+// The OIDC HMAC Secret is created by the CertGen job and is used by SecurityPolicy
+// to configure OAuth2 filters.
+func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resourceTree *gatewayapi.Resources) {
+	var (
+		secret corev1.Secret
+		err    error
+	)
+
+	err = r.client.Get(ctx,
+		types.NamespacedName{Namespace: r.namespace, Name: oidcHMACSecretName},
+		&secret,
+	)
+
+	// we don't return an error here, because we want to continue reconciling
+	// despite that the OIDC HMAC secret can't be found.
+	// If the OIDC HMAC Secret is missing, the SecurityPolicy with OIDC will be
+	// marked as invalid in its status when translating to IR.
+	if err != nil {
+		r.log.Error(err,
+			"failed to process OIDC HMAC Secret",
+			"namespace", r.namespace, "name", oidcHMACSecretName)
+		return
+	}
+
+	resourceTree.Secrets = append(resourceTree.Secrets, &secret)
+	r.log.Info("processing OIDC HMAC Secret", "namespace", r.namespace, "name", oidcHMACSecretName)
 }
 
 // processSecretRef adds the referenced Secret to the resourceTree if it's valid.
