@@ -49,7 +49,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
-		func(update message.Update[string, *gatewayapi.GatewayClassResources], errChan chan error) {
+		func(update message.Update[string, *gatewayapi.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
 			// There is only 1 key which is the controller name
@@ -65,11 +65,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				curKeys = append(curKeys, key)
 			}
 
-			for gc, resources := range *val {
+			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
 					GatewayControllerName:   r.Server.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:        v1.ObjectName(gc),
+					GatewayClassName:        v1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 				}
@@ -145,6 +145,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				for _, securityPolicy := range result.SecurityPolicies {
 					key := utils.NamespacedName(securityPolicy)
 					r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+				}
+				for _, backendTLSPolicy := range result.BackendTLSPolicies {
+					backendTLSPolicy := backendTLSPolicy
+					key := utils.NamespacedName(backendTLSPolicy)
+					r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
 				}
 			}
 			// Delete keys

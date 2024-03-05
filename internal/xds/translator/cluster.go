@@ -144,9 +144,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 
 	}
-	if args.circuitBreaker != nil {
-		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
-	}
+
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
 	}
@@ -272,25 +272,38 @@ func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_
 }
 
 func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
+	// Always allow the same amount of retries as regular requests to handle surges in retries
+	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
 		Priority: corev3.RoutingPriority_DEFAULT,
+		MaxRetries: &wrapperspb.UInt32Value{
+			Value: uint32(1024),
+		},
 	}
 
-	if circuitBreaker.MaxConnections != nil {
-		cbt.MaxConnections = &wrapperspb.UInt32Value{
-			Value: *circuitBreaker.MaxConnections,
+	if circuitBreaker != nil {
+		if circuitBreaker.MaxConnections != nil {
+			cbt.MaxConnections = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxConnections,
+			}
 		}
-	}
 
-	if circuitBreaker.MaxPendingRequests != nil {
-		cbt.MaxPendingRequests = &wrapperspb.UInt32Value{
-			Value: *circuitBreaker.MaxPendingRequests,
+		if circuitBreaker.MaxPendingRequests != nil {
+			cbt.MaxPendingRequests = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxPendingRequests,
+			}
 		}
-	}
 
-	if circuitBreaker.MaxParallelRequests != nil {
-		cbt.MaxRequests = &wrapperspb.UInt32Value{
-			Value: *circuitBreaker.MaxParallelRequests,
+		if circuitBreaker.MaxParallelRequests != nil {
+			cbt.MaxRequests = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxParallelRequests,
+			}
+		}
+
+		if circuitBreaker.MaxParallelRetries != nil {
+			cbt.MaxRetries = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxParallelRetries,
+			}
 		}
 	}
 

@@ -1,4 +1,7 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -29,7 +32,10 @@
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -58,7 +64,10 @@
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -85,7 +94,10 @@
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY

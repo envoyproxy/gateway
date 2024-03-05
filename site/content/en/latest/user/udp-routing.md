@@ -12,22 +12,13 @@ For additional information, refer to Envoy's [UDP proxy documentation][].
 
 ## Prerequisites
 
-Install Envoy Gateway:
-
-```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
-```
-
-Wait for Envoy Gateway to become available:
-
-```shell
-kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-```
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Installation
 
 Install CoreDNS in the Kubernetes cluster as the example backend. The installed CoreDNS is listening on
- UDP port 53 for DNS lookups.
+UDP port 53 for DNS lookups.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/udp-routing-example-backend.yaml

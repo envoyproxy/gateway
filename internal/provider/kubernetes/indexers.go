@@ -37,6 +37,7 @@ const (
 	backendSecurityPolicyIndex = "backendSecurityPolicyIndex"
 	configMapCtpIndex          = "configMapCtpIndex"
 	secretCtpIndex             = "secretCtpIndex"
+	configMapBtlsIndex         = "configMapBtlsIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -480,4 +481,33 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return secretReferences
+}
+
+// addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap objects that are
+// referenced in BackendTLSPolicy objects. This helps in querying for BackendTLSPolicies that are
+// affected by a particular ConfigMap CRUD.
+func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configMapBtlsIndexFunc(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a2.BackendTLSPolicy)
+	var configMapReferences []string
+	if btls.Spec.TLS.CACertRefs != nil {
+		for _, caCertRef := range btls.Spec.TLS.CACertRefs {
+			if string(caCertRef.Kind) == gatewayapi.KindConfigMap {
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: btls.Namespace,
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
 }
