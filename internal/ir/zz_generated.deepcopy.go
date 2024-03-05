@@ -1322,6 +1322,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = make([]byte, len(*in))
 		copy(*out, *in)
 	}
+	if in.HMACSecret != nil {
+		in, out := &in.HMACSecret, &out.HMACSecret
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
+	}
 	if in.Scopes != nil {
 		in, out := &in.Scopes, &out.Scopes
 		*out = make([]string, len(*in))
