@@ -666,10 +666,6 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		return fmt.Errorf("error parsing token endpoint URL: %w", err)
 	}
 
-	if parsedURL.Scheme != "https" {
-		return fmt.Errorf("token endpoint URL scheme must be https: %s", tokenEndpoint)
-	}
-
 	if ip, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
 		if ip.Unmap().Is4() {
 			return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
