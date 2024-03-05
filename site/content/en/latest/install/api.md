@@ -38,8 +38,8 @@ The Helm chart for Envoy Gateway
 | deployment.envoyGateway.imagePullPolicy | string | `"Always"` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.leaderElection.enabled | bool | `true` |  |
-| deployment.envoyGateway.leaderElection.leaseDuration | string | `"1s"` |  |
-| deployment.envoyGateway.leaderElection.renew_deadline | string | `"10s"` |  |
+| deployment.envoyGateway.leaderElection.leaseDuration | string | `"18s"` |  |
+| deployment.envoyGateway.leaderElection.renewDeadline | string | `"10s"` |  |
 | deployment.envoyGateway.leaderElection.retryPeriod | string | `"2s"` |  |
 | deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |

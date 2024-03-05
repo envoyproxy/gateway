@@ -50,6 +50,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		if r.EnvoyGateway.RateLimit != nil {
 			go r.enableRateLimitInfra(ctx)
 		}
+		r.Logger.Info("started")
 	}
 
 	// Wait for leader if leader election is enabled
@@ -60,13 +61,11 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 				return
 			case <-r.Elected:
 				initInfra()
-				r.Logger.Info("started")
 			}
 		}()
 		return
 	}
 	initInfra()
-	r.Logger.Info("started")
 	return
 }
 

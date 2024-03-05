@@ -70,15 +70,15 @@ func New() (*Server, error) {
 	}, nil
 }
 
-func parseEnvDuration(envVar string, duration **time.Duration) error {
+func parseEnvDuration(envVar string) (*time.Duration, error) {
 	if value := os.Getenv(envVar); value != "" {
 		if parsedDuration, err := time.ParseDuration(value); err == nil {
-			*duration = &parsedDuration
+			return &parsedDuration, nil
 		} else {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func withLeaderElectionSettings() (*LeaderElection, error) {
@@ -86,15 +86,21 @@ func withLeaderElectionSettings() (*LeaderElection, error) {
 		Enabled: true,
 	}
 
-	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RENEW_DEADLINE", &le.RenewDeadline); err != nil {
+	if duration, err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RENEW_DEADLINE"); err == nil {
+		le.RenewDeadline = duration
+	} else {
 		return nil, err
 	}
 
-	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION", &le.LeaseDuration); err != nil {
+	if duration, err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION"); err == nil {
+		le.LeaseDuration = duration
+	} else {
 		return nil, err
 	}
 
-	if err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RETRY_PERIOD", &le.RetryPeriod); err != nil {
+	if duration, err := parseEnvDuration("ENVOY_GATEWAY_LEADER_ELECTION_RETRY_PERIOD"); err == nil {
+		le.RetryPeriod = duration
+	} else {
 		return nil, err
 	}
 

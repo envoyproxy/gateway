@@ -81,9 +81,8 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources,
 
 	// Emit elected & continue with deployment of infra resources
 	go func() {
-		if <-mgr.Elected(); true {
-			close(elected)
-		}
+		<-mgr.Elected()
+		close(elected)
 	}()
 
 	return &Provider{
