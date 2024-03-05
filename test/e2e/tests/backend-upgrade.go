@@ -12,6 +12,7 @@ import (
 	"context"
 	"io"
 	"net/url"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"testing"
 	"time"
 
@@ -33,8 +34,6 @@ func init() {
 	ConformanceTests = append(ConformanceTests, BackendUpgradeTest)
 }
 
-const restartDeploymentTimeout = 2 * time.Minute
-
 var BackendUpgradeTest = suite.ConformanceTest{
 	ShortName:   "BackendUpgrade",
 	Description: "Rolling backend pods should not lead to failures",
@@ -54,6 +53,7 @@ var BackendUpgradeTest = suite.ConformanceTest{
 			loadSuccess := make(chan bool)
 
 			t.Log("Starting load generation")
+			// Run load async and continue to restart deployment
 			go runLoadAndWait(t, loadSuccess, aborter, reqURL.String())
 
 			t.Log("Restarting deployment")
@@ -70,9 +70,7 @@ var BackendUpgradeTest = suite.ConformanceTest{
 			result := <-loadSuccess
 			if !result {
 				t.Errorf("Load test failed")
-				time.Sleep(1 * time.Hour)
 			}
-
 		})
 	},
 }
@@ -80,12 +78,12 @@ var BackendUpgradeTest = suite.ConformanceTest{
 // runs a load test with options described in opts
 // the done channel is used to notify caller of execution result
 // the execution may end due to an external abort or timeout
-func runLoadAndWait(t *testing.T, done chan bool, aborter *periodic.Aborter, reqURL string) {
+func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
 	opts := fhttp.HTTPRunnerOptions{
 		RunnerOptions: periodic.RunnerOptions{
 			QPS: 5000,
 			// allow some overhead time for setting up workers and tearing down after restart
-			Duration:   restartDeploymentTimeout + restartDeploymentTimeout/2,
+			Duration:   timeoutConfig.CreateTimeout + timeoutConfig.CreateTimeout/2,
 			NumThreads: 50,
 			Stop:       aborter,
 			Out:        io.Discard,
@@ -94,7 +92,6 @@ func runLoadAndWait(t *testing.T, done chan bool, aborter *periodic.Aborter, req
 			URL: reqURL,
 		},
 	}
-	t.Log("Starting load generation")
 	res, err := fhttp.RunHTTPTest(&opts)
 	if err != nil {
 		done <- false
@@ -115,7 +112,7 @@ func runLoadAndWait(t *testing.T, done chan bool, aborter *periodic.Aborter, req
 	done <- false
 }
 
-func restartDeploymentAndWaitForNewPods(t *testing.T, c client.Client, dNN types.NamespacedName) error {
+func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, dNN types.NamespacedName) error {
 	t.Helper()
 	const kubeRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
 
@@ -137,7 +134,7 @@ func restartDeploymentAndWaitForNewPods(t *testing.T, c client.Client, dNN types
 		return err
 	}
 
-	return wait.PollUntilContextTimeout(ctx, 1*time.Second, 1*time.Minute, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, 1*time.Second, timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		// wait for replicaset with the same annotation to reach ready status
 		podList := &corev1.PodList{}
 		listOpts := []client.ListOption{
