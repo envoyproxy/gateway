@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/types"
 	ktypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -90,6 +91,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					return
 				}
 
+				// Get current status keys and mark them as deletable temporarily
+				deletableStatus := make(map[types.NamespacedName]bool)
+				for key := range r.ProviderResources.EnvoyPatchPolicyStatuses.LoadAll() {
+					deletableStatus[key] = true
+				}
+
 				// Publish EnvoyPatchPolicyStatus
 				for _, e := range result.EnvoyPatchPolicyStatuses {
 					key := ktypes.NamespacedName{
@@ -97,12 +104,18 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						Namespace: e.Namespace,
 					}
 					r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					delete(deletableStatus, key)
 				}
 				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
 				result.EnvoyPatchPolicyStatuses = nil
 
 				// Publish
 				r.Xds.Store(key, result)
+
+				// Delete all the deletable status keys
+				for key := range deletableStatus {
+					r.ProviderResources.EnvoyPatchPolicyStatuses.Delete(key)
+				}
 			}
 		},
 	)
