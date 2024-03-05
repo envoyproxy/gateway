@@ -1,11 +1,34 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: benchmark-test-server-1
+  name: benchmark-test-server-1-1
   namespace: nighthawk-test-server
 spec:
   parentRefs:
-    - name: benchmark
+    - name: benchmark-gateway-1
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: nighthawk-test-server
+          namespace: nighthawk-test-server
+          port: 8080
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: benchmark-test-server-2-1
+  namespace: nighthawk-test-server
+spec:
+  parentRefs:
+    - name: benchmark-gateway-2
   hostnames:
     - "www.example.com"
   rules:

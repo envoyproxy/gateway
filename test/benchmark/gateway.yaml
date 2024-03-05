@@ -1,7 +1,22 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: benchmark
+  name: benchmark-gateway-1
+  namespace: nighthawk-test-server
+spec:
+  gatewayClassName: envoy-gateway
+  listeners:
+  - name: http
+    port: 8081
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: benchmark-gateway-2
   namespace: nighthawk-test-server
 spec:
   gatewayClassName: envoy-gateway

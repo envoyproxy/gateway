@@ -1,52 +1,52 @@
-#apiVersion: v1
-#kind: ServiceAccount
-#metadata:
-#  name: prometheus
-#---
-#apiVersion: rbac.authorization.k8s.io/v1
-#kind: ClusterRole
-#metadata:
-#  name: prometheus
-#rules:
-#- apiGroups: [""]
-#  resources:
-#  - nodes
-#  - nodes/metrics
-#  - services
-#  - endpoints
-#  - pods
-#  verbs: ["get", "list", "watch"]
-#- apiGroups: [""]
-#  resources:
-#  - configmaps
-#  verbs: ["get"]
-#- apiGroups:
-#  - networking.k8s.io
-#  resources:
-#  - ingresses
-#  verbs: ["get", "list", "watch"]
-#- nonResourceURLs: ["/metrics"]
-#  verbs: ["get"]
-#---
-#apiVersion: rbac.authorization.k8s.io/v1
-#kind: ClusterRoleBinding
-#metadata:
-#  name: prometheus
-#roleRef:
-#  apiGroup: rbac.authorization.k8s.io
-#  kind: ClusterRole
-#  name: prometheus
-#subjects:
-#- kind: ServiceAccount
-#  name: prometheus
-#  namespace: default
-#---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/metrics
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["get"]
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default
+---
 # Prometheus ServiceMonitor Object to monitor EG control plane metrics
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: eg-control-plane
-  #namespace: envoy-gateway-system
+  namespace: envoy-gateway-system
   labels:
     team: benchmark
 spec:
@@ -63,7 +63,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: eg-dateplane
-  #namespace: envoy-gateway-system
+  namespace: envoy-gateway-system
   labels:
     team: benchmark
 spec:
@@ -80,7 +80,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: benchmark
-  #namespace: nighthawk-test-server
+  namespace: nighthawk-test-server
   labels:
     team: benchmark
 spec:
@@ -97,7 +97,7 @@ kind: Prometheus
 metadata:
   name: prometheus
 spec:
-  #serviceAccountName: prometheus
+  serviceAccountName: prometheus
   serviceMonitorSelector:
     matchLabels:
       team: benchmark
