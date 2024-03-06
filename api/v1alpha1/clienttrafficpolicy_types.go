@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -88,6 +89,18 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Timeout *ClientTimeout `json:"timeout,omitempty"`
+	// Connection includes client connection settings.
+	//
+	// +optional
+	Connection *Connection `json:"connection,omitempty"`
+}
+
+// Connection allows users to configure connection-level settings
+type Connection struct {
+	// ConnectionBufferLimit provides configuration for the maximum buffer size for incoming connections.
+	//
+	// +optional
+	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"
 }
 
 // HeaderSettings providess configuration options for headers on the listener.
