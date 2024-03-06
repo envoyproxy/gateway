@@ -45,10 +45,12 @@ import (
 const (
 	gatewayAPIType = "gateway-api"
 	xdsType        = "xds"
+	irType         = "ir"
 )
 
 type TranslationResult struct {
 	gatewayapi.Resources
+	Ir  gatewayapi.TranslateResult
 	Xds map[string]interface{} `json:"xds,omitempty"`
 }
 
@@ -130,7 +132,7 @@ func getValidInputTypesStr() string {
 }
 
 func validOutputTypes() []string {
-	return []string{xdsType, gatewayAPIType}
+	return []string{xdsType, gatewayAPIType, irType}
 }
 
 func findInvalidOutputType(outTypes []string) string {
@@ -243,6 +245,13 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				}
 				result.Xds = res
 			}
+			if outType == irType {
+				res, err := translateGatewayAPIToIR(resources)
+				if err != nil {
+					return err
+				}
+				result.Ir = *res
+			}
 		}
 		// Print
 		if err = printOutput(w, result, output); err != nil {
@@ -252,6 +261,24 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		return nil
 	}
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
+}
+
+func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.TranslateResult, error) {
+	if resources.GatewayClass == nil {
+		return nil, fmt.Errorf("the GatewayClass resource is required")
+	}
+
+	t := &gatewayapi.Translator{
+		GatewayControllerName:   "dummy",
+		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:  false,
+		EnvoyPatchPolicyEnabled: false,
+		Namespace:               "dummy",
+	}
+
+	result := t.Translate(resources)
+
+	return result, nil
 }
 
 func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
