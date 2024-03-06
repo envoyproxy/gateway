@@ -26,7 +26,7 @@ const (
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
-	DefaultShutdownManagerImage = "envoyproxy/gateway:v1.0.0-rc.1"
+	DefaultShutdownManagerImage = "envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:19f2079f"
 	// HTTPProtocol is the common-used http protocol.
