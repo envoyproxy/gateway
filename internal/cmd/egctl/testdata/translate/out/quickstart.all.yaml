@@ -13,17 +13,17 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2024-03-06T08:03:42Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2024-03-06T08:03:42Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2024-03-06T08:03:42Z"
+      - lastTransitionTime: null
         message: Listener references have been resolved
         reason: ResolvedRefs
         status: "True"
@@ -59,12 +59,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2024-03-06T08:03:42Z"
+      - lastTransitionTime: null
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2024-03-06T08:03:42Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -122,4 +122,3 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-
