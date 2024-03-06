@@ -825,12 +825,12 @@ func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChec
 		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
 	}
 
-	var irStatuses []ir.HTTPStatus
 	// deduplicate http statuses
 	statusSet := sets.NewInt()
 	for _, r := range h.ExpectedStatuses {
 		statusSet.Insert(int(r))
 	}
+	irStatuses := make([]ir.HTTPStatus, 0, statusSet.Len())
 
 	for _, r := range statusSet.List() {
 		irStatuses = append(irStatuses, ir.HTTPStatus(r))
