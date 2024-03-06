@@ -1746,6 +1746,6 @@ type BackOffPolicy struct {
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
-	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty", yaml:"useSystemTrustStore,omitempty"`
+	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 }
