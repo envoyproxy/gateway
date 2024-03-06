@@ -2,7 +2,7 @@ module github.com/envoyproxy/gateway/tools/src/helm-docs
 
 go 1.22
 
-require github.com/norwoodj/helm-docs v1.12.0
+require github.com/norwoodj/helm-docs v1.13.0
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
