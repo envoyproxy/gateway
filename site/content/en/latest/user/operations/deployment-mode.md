@@ -410,6 +410,6 @@ Handling connection for 8889
 ```
 
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[Namespaced deployment mode]: ../../api/extension_types#kuberneteswatchmode
+[Namespaced deployment mode]: ../../../api/extension_types#kuberneteswatchmode
 [issue1231]: https://github.com/envoyproxy/gateway/issues/1231
 [issue1117]: https://github.com/envoyproxy/gateway/issues/1117

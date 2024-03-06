@@ -128,9 +128,9 @@ kubectl delete secret/basic-auth
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
 
-[SecurityPolicy]: ../../design/security-policy/
+[SecurityPolicy]: ../../../design/security-policy/
 [http Basic authentication]: https://tools.ietf.org/html/rfc2617
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

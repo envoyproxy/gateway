@@ -9,7 +9,7 @@ Envoy Gateway supports the following retry settings:
 - **RetryOn**: specifies the retry trigger condition.
 - **PerRetryPolicy**: is the retry policy to be applied per retry attempt.
 
-Envoy Gateway introduces a new CRD called [BackendTrafficPolicy](../../api/extension_types#backendtrafficpolicy) that allows the user to describe their desired retry settings. This instantiated resource can be linked to a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/), [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) or [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/) resource.
+Envoy Gateway introduces a new CRD called [BackendTrafficPolicy](../../../api/extension_types#backendtrafficpolicy) that allows the user to describe their desired retry settings. This instantiated resource can be linked to a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/), [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) or [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/) resource.
 
 **Note**: There are distinct circuit breaker counters for each `BackendReference` in an `xRoute` rule. Even if a `BackendTrafficPolicy` targets a `Gateway`, each `BackendReference` in that gateway still has separate circuit breaker counter.
 

@@ -121,10 +121,10 @@ kubectl delete secret/my-app-client-secret
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
 
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
-[SecurityPolicy]: ../../design/security-policy/
+[SecurityPolicy]: ../../../design/security-policy/
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

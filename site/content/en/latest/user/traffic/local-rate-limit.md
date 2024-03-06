@@ -276,7 +276,7 @@ you should use [Global Rate Limiting][].
 
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting
-[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/

@@ -368,5 +368,5 @@ EOF
 ```
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [egctl translate]: ../egctl/#validating-gateway-api-configuration

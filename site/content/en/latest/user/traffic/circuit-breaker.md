@@ -116,7 +116,7 @@ With the new circuit breaker settings, and due to the slowness of the backend, o
 * Upstream traffic was limited, alleviating the pressure on the degraded service. 
 
 [Envoy Circuit Breakers]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking
-[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/

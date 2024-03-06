@@ -233,8 +233,8 @@ across versions for these reasons
 * Envoy Gateway might alter the xDS translation creating a different xDS output
 such as changing the `name` field of resources.
 
-[EnvoyPatchPolicy]: ../../api/extension_types#envoypatchpolicy
-[EnvoyGateway]: ../../api/extension_types#envoygateway
+[EnvoyPatchPolicy]: ../../../api/extension_types#envoypatchpolicy
+[EnvoyGateway]: ../../../api/extension_types#envoygateway
 [JSON Patch]: https://datatracker.ietf.org/doc/html/rfc6902
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
 [Local Reply Modification]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/local_reply

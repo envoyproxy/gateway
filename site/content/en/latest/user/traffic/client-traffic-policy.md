@@ -464,5 +464,5 @@ curl -v http://$GATEWAY_HOST/get \
 request timeout
 ```
 
-[ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
-[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

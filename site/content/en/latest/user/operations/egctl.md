@@ -824,7 +824,7 @@ product     backend   ResolvedRefs   True      ResolvedRefs
 
 
 [Multi-tenancy]: ../deployment-mode#multi-tenancy
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../../api/extension_types#envoyproxy
 
 
 ## egctl experimental dashboard
