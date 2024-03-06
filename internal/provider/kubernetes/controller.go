@@ -182,68 +182,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
-		for backendRef := range resourceMappings.allAssociatedBackendRefs {
-			backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService)
-			r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
-				"name", string(backendRef.Name))
-
-			var endpointSliceLabelKey string
-			switch backendRefKind {
-			case gatewayapi.KindService:
-				service := new(corev1.Service)
-				err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
-				if err != nil {
-					r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				} else {
-					resourceMappings.allAssociatedNamespaces[service.Namespace] = struct{}{}
-					gwcResource.Services = append(gwcResource.Services, service)
-					r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				}
-				endpointSliceLabelKey = discoveryv1.LabelServiceName
-
-			case gatewayapi.KindServiceImport:
-				serviceImport := new(mcsapi.ServiceImport)
-				err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
-				if err != nil {
-					r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				} else {
-					resourceMappings.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
-					gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
-					r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				}
-				endpointSliceLabelKey = mcsapi.LabelServiceName
-			}
-
-			// Retrieve the EndpointSlices associated with the service
-			endpointSliceList := new(discoveryv1.EndpointSliceList)
-			opts := []client.ListOption{
-				client.MatchingLabels(map[string]string{
-					endpointSliceLabelKey: string(backendRef.Name),
-				}),
-				client.InNamespace(string(*backendRef.Namespace)),
-			}
-			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
-				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
-					backendRefKind, string(backendRef.Name))
-			} else {
-				for _, endpointSlice := range endpointSliceList.Items {
-					endpointSlice := endpointSlice
-					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
-						"name", endpointSlice.Name)
-					gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
-				}
-			}
-		}
-
-		// Add all ReferenceGrants to the resourceTree
-		for _, referenceGrant := range resourceMappings.allAssociatedRefGrants {
-			gwcResource.ReferenceGrants = append(gwcResource.ReferenceGrants, referenceGrant)
-		}
-
 		// Add all EnvoyPatchPolicies
 		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
 		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
@@ -305,8 +243,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gwcResource.SecurityPolicies = append(gwcResource.SecurityPolicies, &policy)
 		}
 
-		// Add the referenced Secrets in SecurityPolicies to the resourceTree
-		r.processSecurityPolicySecretRefs(ctx, gwcResource, resourceMappings)
+		// Add the referenced Resources in SecurityPolicies to the resourceTree
+		r.processSecurityPolicyObjectRefs(ctx, gwcResource, resourceMappings)
 
 		// Add the OIDC HMAC Secret to the resourceTree
 		r.processOIDCHMACSecret(ctx, gwcResource)
@@ -327,6 +265,69 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree
 		r.processBackendTLSPolicyConfigMapRefs(ctx, gwcResource, resourceMappings)
+
+		// Add the referenced BackendRefs and their associated EndpointSlices to the resourceTree
+		for backendRef := range resourceMappings.allAssociatedBackendRefs {
+			backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService)
+			r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
+				"name", string(backendRef.Name))
+
+			var endpointSliceLabelKey string
+			switch backendRefKind {
+			case gatewayapi.KindService:
+				service := new(corev1.Service)
+				err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
+				if err != nil {
+					r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				} else {
+					resourceMappings.allAssociatedNamespaces[service.Namespace] = struct{}{}
+					gwcResource.Services = append(gwcResource.Services, service)
+					r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				}
+				endpointSliceLabelKey = discoveryv1.LabelServiceName
+
+			case gatewayapi.KindServiceImport:
+				serviceImport := new(mcsapi.ServiceImport)
+				err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
+				if err != nil {
+					r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				} else {
+					resourceMappings.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
+					gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
+					r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				}
+				endpointSliceLabelKey = mcsapi.LabelServiceName
+			}
+
+			// Retrieve the EndpointSlices associated with the service
+			endpointSliceList := new(discoveryv1.EndpointSliceList)
+			opts := []client.ListOption{
+				client.MatchingLabels(map[string]string{
+					endpointSliceLabelKey: string(backendRef.Name),
+				}),
+				client.InNamespace(string(*backendRef.Namespace)),
+			}
+			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
+					backendRefKind, string(backendRef.Name))
+			} else {
+				for _, endpointSlice := range endpointSliceList.Items {
+					endpointSlice := endpointSlice
+					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
+						"name", endpointSlice.Name)
+					gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
+				}
+			}
+		}
+
+		// Add all ReferenceGrants to the resourceTree
+		for _, referenceGrant := range resourceMappings.allAssociatedRefGrants {
+			gwcResource.ReferenceGrants = append(gwcResource.ReferenceGrants, referenceGrant)
+		}
 
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
@@ -392,13 +393,16 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	return reconcile.Result{}, nil
 }
 
-// processSecurityPolicySecretRefs adds the referenced Secrets in SecurityPolicies
+// processSecurityPolicyObjectRefs adds the referenced resources in SecurityPolicies
 // to the resourceTree
-func (r *gatewayAPIReconciler) processSecurityPolicySecretRefs(
+// - Secrets for OIDC and BasicAuth
+// - BackendRefs for ExAuth
+func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
 	for _, policy := range resourceTree.SecurityPolicies {
 		oidc := policy.Spec.OIDC
 
+		// Add the referenced Secrets in OIDC to the resourceTree
 		if oidc != nil {
 			if err := r.processSecretRef(
 				ctx,
@@ -419,6 +423,8 @@ func (r *gatewayAPIReconciler) processSecurityPolicySecretRefs(
 					"policy", policy, "secretRef", oidc.ClientSecret)
 			}
 		}
+
+		// Add the referenced Secrets in BasicAuth to the resourceTree
 		basicAuth := policy.Spec.BasicAuth
 		if basicAuth != nil {
 			if err := r.processSecretRef(
@@ -432,6 +438,50 @@ func (r *gatewayAPIReconciler) processSecurityPolicySecretRefs(
 				r.log.Error(err,
 					"failed to process BasicAuth SecretRef for SecurityPolicy",
 					"policy", policy, "secretRef", basicAuth.Users)
+			}
+		}
+
+		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
+		extAuth := policy.Spec.ExtAuth
+		if extAuth != nil {
+			var backendRef gwapiv1.BackendObjectReference
+			if extAuth.GRPC != nil {
+				backendRef = extAuth.GRPC.BackendRef
+			} else {
+				backendRef = extAuth.HTTP.BackendRef
+			}
+
+			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
+			resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				Group:     backendRef.Group,
+				Kind:      backendRef.Kind,
+				Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+				Name:      backendRef.Name,
+			}] = struct{}{}
+
+			if backendNamespace != policy.Namespace {
+				from := ObjectKindNamespacedName{
+					kind:      gatewayapi.KindHTTPRoute,
+					namespace: policy.Namespace,
+					name:      policy.Name,
+				}
+				to := ObjectKindNamespacedName{
+					kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+					namespace: backendNamespace,
+					name:      string(backendRef.Name),
+				}
+				refGrant, err := r.findReferenceGrant(ctx, from, to)
+				switch {
+				case err != nil:
+					r.log.Error(err, "failed to find ReferenceGrant")
+				case refGrant == nil:
+					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+				default:
+					resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+					r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+						"name", refGrant.Name)
+				}
 			}
 		}
 	}
