@@ -49,9 +49,8 @@ const (
 )
 
 type TranslationResult struct {
-	gatewayapi.Resources
-	Ir  gatewayapi.TranslateResult
-	Xds map[string]interface{} `json:"xds,omitempty"`
+	gatewayapi.TranslateResult `json:",omitempty"`
+	Xds                        map[string]interface{} `json:"xds,omitempty"`
 }
 
 func newTranslateCommand() *cobra.Command {
@@ -95,6 +94,9 @@ func newTranslateCommand() *cobra.Command {
   # Translate Gateway API Resources into All xDS Resources in YAML output,
   # also print the Gateway API Resources with updated status in the same output.
   egctl experimental translate --from gateway-api --to gateway-api,xds --type all --output yaml --file <input file>
+
+  # Translate Gateway API Resources into IR in YAML output,
+  egctl experimental translate --from gateway-api --to ir --output yaml --file <input file>
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, dnsDomain)
@@ -250,7 +252,9 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				if err != nil {
 					return err
 				}
-				result.Ir = *res
+				result.Resources = res.Resources
+				result.XdsIR = res.XdsIR
+				result.InfraIR = res.InfraIR
 			}
 		}
 		// Print
@@ -269,11 +273,19 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 	}
 
 	t := &gatewayapi.Translator{
-		GatewayControllerName:   "dummy",
+		GatewayControllerName:   egv1a1.GatewayControllerName,
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  false,
-		EnvoyPatchPolicyEnabled: false,
-		Namespace:               "dummy",
+		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
+		EnvoyPatchPolicyEnabled: true,
+	}
+
+	// Fix the services in the resources section so that they have an IP address - this prevents nasty
+	// errors in the translation.
+	for _, svc := range resources.Services {
+		if svc.Spec.ClusterIP == "" {
+			svc.Spec.ClusterIP = "10.96.1.2"
+		}
 	}
 
 	result := t.Translate(resources)
