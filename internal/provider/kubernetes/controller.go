@@ -136,195 +136,78 @@ func newResourceMapping() *resourceMappings {
 // same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
 // be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+	var (
+		managedGCs []*gwapiv1.GatewayClass
+		err        error
+	)
 	r.log.Info("reconciling gateways")
 
-	var gatewayClasses gwapiv1.GatewayClassList
-	if err := r.client.List(ctx, &gatewayClasses); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %w", err)
-	}
-
-	var cc controlledClasses
-
-	for _, gwClass := range gatewayClasses.Items {
-		gwClass := gwClass
-		if gwClass.Spec.ControllerName == r.classController {
-			// The gatewayclass was marked for deletion and the finalizer removed,
-			// so clean-up dependents.
-			if !gwClass.DeletionTimestamp.IsZero() &&
-				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
-				r.log.Info("gatewayclass marked for deletion")
-				cc.removeMatch(&gwClass)
-				continue
-			}
-
-			cc.addMatch(&gwClass)
-		}
+	// Get the GatewayClasses managed by the Envoy Gateway Controller.
+	managedGCs, err = r.managedGatewayClasses(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
-	acceptedGCs := cc.matchedClasses
-	if acceptedGCs == nil {
+	if managedGCs == nil {
 		r.resources.GatewayAPIResources.Delete(string(r.classController))
 		r.log.Info("no accepted gatewayclass")
 		return reconcile.Result{}, nil
 	}
 
-	gwcResources := make(gatewayapi.ControllerResources, 0, len(acceptedGCs))
-	for _, acceptedGC := range acceptedGCs {
+	// Collect all the Gateway API resources, Envoy Gateway customized resources,
+	// and their referenced resources for the managed GatewayClasses, and store
+	// them per GatewayClass.
+	// For example:
+	// - Gateway API resources: Gateways, xRoutes ...
+	// - Envoy Gateway customized resources: EnvoyPatchPolicies, ClientTrafficPolicies, BackendTrafficPolicies ...
+	// - Referenced resources: Services, ServiceImports, EndpointSlices, Secrets, ConfigMaps ...
+	gwcResources := make(gatewayapi.ControllerResources, 0, len(managedGCs))
+	for _, managedGC := range managedGCs {
 		// Initialize resource types.
-		acceptedGC := acceptedGC
+		managedGC := managedGC
 		gwcResource := gatewayapi.NewResources()
-		gwcResource.GatewayClass = acceptedGC
+		gwcResource.GatewayClass = managedGC
 		gwcResources = append(gwcResources, gwcResource)
 		resourceMappings := newResourceMapping()
 
-		if err := r.processGateways(ctx, acceptedGC, resourceMappings, gwcResource); err != nil {
+		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
+		if err = r.processGateways(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// Add all EnvoyPatchPolicies
-		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
+		// Add all EnvoyPatchPolicies to the resourceTree
+		if err = r.processEnvoyPatchPolicies(ctx, gwcResource); err != nil {
+			return reconcile.Result{}, err
 		}
 
-		for _, policy := range envoyPatchPolicies.Items {
-			policy := policy
-			// Discard Status to reduce memory consumption in watchable
-			// It will be recomputed by the gateway-api layer
-			policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
-
-			gwcResource.EnvoyPatchPolicies = append(gwcResource.EnvoyPatchPolicies, &policy)
+		// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
+		if err = r.processClientTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			return reconcile.Result{}, err
 		}
 
-		// Add all ClientTrafficPolicies
-		clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
-		if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
+		// Add all BackendTrafficPolicies to the resourceTree
+		if err = r.processBackendTrafficPolicies(ctx, gwcResource); err != nil {
+			return reconcile.Result{}, err
 		}
 
-		for _, policy := range clientTrafficPolicies.Items {
-			policy := policy
-			// Discard Status to reduce memory consumption in watchable
-			// It will be recomputed by the gateway-api layer
-			policy.Status = egv1a1.ClientTrafficPolicyStatus{}
-			gwcResource.ClientTrafficPolicies = append(gwcResource.ClientTrafficPolicies, &policy)
-
+		// Add all SecurityPolicies and their referenced resources to the resourceTree
+		if err = r.processSecurityPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			return reconcile.Result{}, err
 		}
 
-		// Add the referenced ConfigMaps in ClientTrafficPolicies to the resourceTree
-		r.processCtpConfigMapRefs(ctx, gwcResource, resourceMappings)
-
-		// Add all BackendTrafficPolicies
-		backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
-		if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
+		// Add all BackendTLSPolies to the resourceTree
+		if err = r.processBackendTLSPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			return reconcile.Result{}, err
 		}
 
-		for _, policy := range backendTrafficPolicies.Items {
-			policy := policy
-			// Discard Status to reduce memory consumption in watchable
-			// It will be recomputed by the gateway-api layer
-			policy.Status = egv1a1.BackendTrafficPolicyStatus{}
-			gwcResource.BackendTrafficPolicies = append(gwcResource.BackendTrafficPolicies, &policy)
-		}
-
-		// Add all SecurityPolicies
-		securityPolicies := egv1a1.SecurityPolicyList{}
-		if err := r.client.List(ctx, &securityPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing SecurityPolicies: %w", err)
-		}
-
-		for _, policy := range securityPolicies.Items {
-			policy := policy
-			// Discard Status to reduce memory consumption in watchable
-			// It will be recomputed by the gateway-api layer
-			policy.Status = egv1a1.SecurityPolicyStatus{}
-			gwcResource.SecurityPolicies = append(gwcResource.SecurityPolicies, &policy)
-		}
-
-		// Add the referenced Resources in SecurityPolicies to the resourceTree
-		r.processSecurityPolicyObjectRefs(ctx, gwcResource, resourceMappings)
-
-		// Add the OIDC HMAC Secret to the resourceTree
-		r.processOIDCHMACSecret(ctx, gwcResource)
-
-		// Add all BackendTLSPolies
-		backendTLSPolicies := gwapiv1a2.BackendTLSPolicyList{}
-		if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing BackendTLSPolicies: %w", err)
-		}
-
-		for _, policy := range backendTLSPolicies.Items {
-			policy := policy
-			// Discard Status to reduce memory consumption in watchable
-			// It will be recomputed by the gateway-api layer
-			policy.Status = gwapiv1a2.PolicyStatus{} // todo ?
-			gwcResource.BackendTLSPolicies = append(gwcResource.BackendTLSPolicies, &policy)
-		}
-
-		// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree
-		r.processBackendTLSPolicyConfigMapRefs(ctx, gwcResource, resourceMappings)
-
-		// Add the referenced BackendRefs and their associated EndpointSlices to the resourceTree
-		for backendRef := range resourceMappings.allAssociatedBackendRefs {
-			backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService)
-			r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
-				"name", string(backendRef.Name))
-
-			var endpointSliceLabelKey string
-			switch backendRefKind {
-			case gatewayapi.KindService:
-				service := new(corev1.Service)
-				err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
-				if err != nil {
-					r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				} else {
-					resourceMappings.allAssociatedNamespaces[service.Namespace] = struct{}{}
-					gwcResource.Services = append(gwcResource.Services, service)
-					r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				}
-				endpointSliceLabelKey = discoveryv1.LabelServiceName
-
-			case gatewayapi.KindServiceImport:
-				serviceImport := new(mcsapi.ServiceImport)
-				err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
-				if err != nil {
-					r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				} else {
-					resourceMappings.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
-					gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
-					r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
-				}
-				endpointSliceLabelKey = mcsapi.LabelServiceName
-			}
-
-			// Retrieve the EndpointSlices associated with the service
-			endpointSliceList := new(discoveryv1.EndpointSliceList)
-			opts := []client.ListOption{
-				client.MatchingLabels(map[string]string{
-					endpointSliceLabelKey: string(backendRef.Name),
-				}),
-				client.InNamespace(string(*backendRef.Namespace)),
-			}
-			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
-				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
-					backendRefKind, string(backendRef.Name))
-			} else {
-				for _, endpointSlice := range endpointSliceList.Items {
-					endpointSlice := endpointSlice
-					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
-						"name", endpointSlice.Name)
-					gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
-				}
-			}
-		}
+		// Add the referenced services, ServiceImports, and EndpointSlices in
+		// the collected BackendRefs to the resourceTree.
+		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
+		r.processBackendRefs(ctx, gwcResource, resourceMappings)
 
 		// Add all ReferenceGrants to the resourceTree
+		// TODO: zhaohuabing remove allAssociatedRefGrants from resourceMappings and directly add to gwcResource
 		for _, referenceGrant := range resourceMappings.allAssociatedRefGrants {
 			gwcResource.ReferenceGrants = append(gwcResource.ReferenceGrants, referenceGrant)
 		}
@@ -345,22 +228,22 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Process the parametersRef of the accepted GatewayClass.
-		if acceptedGC.Spec.ParametersRef != nil && acceptedGC.DeletionTimestamp == nil {
-			if err := r.processParamsRef(ctx, acceptedGC, gwcResource); err != nil {
+		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+			if err := r.processParamsRef(ctx, managedGC, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				if err := r.updateStatusForGatewayClass(ctx, acceptedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
+				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
 					r.log.Error(err, "unable to update GatewayClass status")
 				}
-				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
+				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
 				return reconcile.Result{}, err
 			}
 		}
 
 		if gwcResource.EnvoyProxy != nil && gwcResource.EnvoyProxy.Spec.MergeGateways != nil {
-			r.mergeGateways[acceptedGC.Name] = *gwcResource.EnvoyProxy.Spec.MergeGateways
+			r.mergeGateways[managedGC.Name] = *gwcResource.EnvoyProxy.Spec.MergeGateways
 		}
 
-		if err := r.updateStatusForGatewayClass(ctx, acceptedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
+		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 			r.log.Error(err, "unable to update GatewayClass status")
 			return reconcile.Result{}, err
 		}
@@ -369,28 +252,120 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			r.log.Info("No gateways found for accepted gatewayclass")
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
-			if err := r.removeFinalizer(ctx, acceptedGC); err != nil {
+			if err := r.removeFinalizer(ctx, managedGC); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
-					acceptedGC.Name))
+					managedGC.Name))
 				return reconcile.Result{}, err
 			}
 		} else {
 			// finalize the accepted GatewayClass.
-			if err := r.addFinalizer(ctx, acceptedGC); err != nil {
+			if err := r.addFinalizer(ctx, managedGC); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
-					acceptedGC.Name))
+					managedGC.Name))
 				return reconcile.Result{}, err
 			}
 		}
 	}
+
+	// Store the Gateway Resources for the GatewayClass.
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
-
 	r.resources.GatewayAPIResources.Store(string(r.classController), &gwcResources)
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+// managedGatewayClasses returns a list of GatewayClass objects that are managed by the Envoy Gateway Controller.
+func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gwapiv1.GatewayClass, error) {
+	var gatewayClasses gwapiv1.GatewayClassList
+	if err := r.client.List(ctx, &gatewayClasses); err != nil {
+		return nil, fmt.Errorf("error listing gatewayclasses: %w", err)
+	}
+
+	var cc controlledClasses
+
+	for _, gwClass := range gatewayClasses.Items {
+		gwClass := gwClass
+		if gwClass.Spec.ControllerName == r.classController {
+			// The gatewayclass was marked for deletion and the finalizer removed,
+			// so clean-up dependents.
+			if !gwClass.DeletionTimestamp.IsZero() &&
+				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
+				r.log.Info("gatewayclass marked for deletion")
+				cc.removeMatch(&gwClass)
+				continue
+			}
+
+			cc.addMatch(&gwClass)
+		}
+	}
+
+	return cc.matchedClasses, nil
+}
+
+// processBackendRefs adds the referenced resources in BackendRefs to the resourceTree, including:
+// - Services
+// - ServiceImports
+// - EndpointSlices
+func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResource *gatewayapi.Resources, resourceMappings *resourceMappings) {
+	for backendRef := range resourceMappings.allAssociatedBackendRefs {
+		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService)
+		r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
+			"name", string(backendRef.Name))
+
+		var endpointSliceLabelKey string
+		switch backendRefKind {
+		case gatewayapi.KindService:
+			service := new(corev1.Service)
+			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
+			if err != nil {
+				r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			} else {
+				resourceMappings.allAssociatedNamespaces[service.Namespace] = struct{}{}
+				gwcResource.Services = append(gwcResource.Services, service)
+				r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			}
+			endpointSliceLabelKey = discoveryv1.LabelServiceName
+
+		case gatewayapi.KindServiceImport:
+			serviceImport := new(mcsapi.ServiceImport)
+			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
+			if err != nil {
+				r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			} else {
+				resourceMappings.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
+				gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
+				r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			}
+			endpointSliceLabelKey = mcsapi.LabelServiceName
+		}
+
+		// Retrieve the EndpointSlices associated with the service
+		endpointSliceList := new(discoveryv1.EndpointSliceList)
+		opts := []client.ListOption{
+			client.MatchingLabels(map[string]string{
+				endpointSliceLabelKey: string(backendRef.Name),
+			}),
+			client.InNamespace(string(*backendRef.Namespace)),
+		}
+		if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+			r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
+				backendRefKind, string(backendRef.Name))
+		} else {
+			for _, endpointSlice := range endpointSliceList.Items {
+				endpointSlice := endpointSlice
+				r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
+					"name", endpointSlice.Name)
+				gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
+			}
+		}
+	}
 }
 
 // processSecurityPolicyObjectRefs adds the referenced resources in SecurityPolicies
@@ -399,6 +374,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 // - BackendRefs for ExAuth
 func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	// we don't return errors from this method, because we want to continue reconciling
+	// the rest of the SecurityPolicies despite that one reference is invalid. This
+	// allows Envoy Gateway to continue serving traffic even if some SecurityPolicies
+	// are invalid.
+	//
+	// This SecurityPolicy will be marked as invalid in its status when translating
+	// to IR because the referenced secret can't be found.
 	for _, policy := range resourceTree.SecurityPolicies {
 		oidc := policy.Spec.OIDC
 
@@ -412,12 +394,6 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				policy.Namespace,
 				policy.Name,
 				oidc.ClientSecret); err != nil {
-				// we don't return an error here, because we want to continue
-				// reconciling the rest of the SecurityPolicies despite that this
-				// secret reference is invalid.
-				// This SecurityPolicy will be marked as invalid in its status
-				// when translating to IR because the referenced secret can't be
-				// found.
 				r.log.Error(err,
 					"failed to process OIDC SecretRef for SecurityPolicy",
 					"policy", policy, "secretRef", oidc.ClientSecret)
@@ -501,7 +477,7 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 		&secret,
 	)
 
-	// we don't return an error here, because we want to continue reconciling
+	// We don't return an error here, because we want to continue reconciling
 	// despite that the OIDC HMAC secret can't be found.
 	// If the OIDC HMAC Secret is missing, the SecurityPolicy with OIDC will be
 	// marked as invalid in its status when translating to IR.
@@ -718,14 +694,14 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
-	// Find gateways for the acceptedGC
+func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	// Find gateways for the managedGC
 	// Find the Gateways that reference this Class.
 	gatewayList := &gwapiv1.GatewayList{}
 	if err := r.client.List(ctx, gatewayList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, acceptedGC.Name),
+		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, managedGC.Name),
 	}); err != nil {
-		r.log.Info("no associated Gateways found for GatewayClass", "name", acceptedGC.Name)
+		r.log.Info("no associated Gateways found for GatewayClass", "name", managedGC.Name)
 		return err
 	}
 
@@ -799,6 +775,107 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 		resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
 	}
 
+	return nil
+}
+
+// processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
+func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, resourceTree *gatewayapi.Resources) error {
+	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
+	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+		return fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
+	}
+
+	for _, policy := range envoyPatchPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
+
+		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+	}
+	return nil
+}
+
+// processClientTrafficPolicies adds ClientTrafficPolicies to the resourceTree
+func (r *gatewayAPIReconciler) processClientTrafficPolicies(
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
+		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
+	}
+
+	for _, policy := range clientTrafficPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
+	}
+
+	r.processCtpConfigMapRefs(ctx, resourceTree, resourceMap)
+
+	return nil
+}
+
+// processBackendTrafficPolicies adds BackendTrafficPolicies to the resourceTree
+func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *gatewayapi.Resources) error {
+	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
+	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
+	}
+
+	for _, policy := range backendTrafficPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.BackendTrafficPolicyStatus{}
+		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
+	}
+	return nil
+}
+
+// processSecurityPolicies adds SecurityPolicies and their referenced resources to the resourceTree
+func (r *gatewayAPIReconciler) processSecurityPolicies(
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	securityPolicies := egv1a1.SecurityPolicyList{}
+	if err := r.client.List(ctx, &securityPolicies); err != nil {
+		return fmt.Errorf("error listing SecurityPolicies: %w", err)
+	}
+
+	for _, policy := range securityPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.SecurityPolicyStatus{}
+		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
+	}
+
+	// Add the referenced Resources in SecurityPolicies to the resourceTree
+	r.processSecurityPolicyObjectRefs(ctx, resourceTree, resourceMap)
+
+	// Add the OIDC HMAC Secret to the resourceTree
+	r.processOIDCHMACSecret(ctx, resourceTree)
+	return nil
+}
+
+// processBackendTLSPolicies adds BackendTLSPolicies and their referenced resources to the resourceTree
+func (r *gatewayAPIReconciler) processBackendTLSPolicies(
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	backendTLSPolicies := gwapiv1a2.BackendTLSPolicyList{}
+	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
+		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
+	}
+
+	for _, policy := range backendTLSPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = gwapiv1a2.PolicyStatus{} // todo ?
+		resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
+	}
+
+	// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree.
+	r.processBackendTLSPolicyConfigMapRefs(ctx, resourceTree, resourceMap)
 	return nil
 }
 
