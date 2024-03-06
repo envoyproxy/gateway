@@ -93,7 +93,10 @@ func extAuthFilterName(route *ir.HTTPRoute) string {
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
-	config := &extauthv3.ExtAuthz{}
+	config := &extauthv3.ExtAuthz{
+		TransportApiVersion: corev3.ApiVersion_V3,
+		FailureModeAllow:    false,
+	}
 
 	var headersToExtAuth []*matcherv3.StringMatcher
 	for _, header := range extAuth.HeadersToExtAuth {
