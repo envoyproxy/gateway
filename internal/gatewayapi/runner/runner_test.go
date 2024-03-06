@@ -169,7 +169,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	r.ProviderResources.UDPRouteStatuses.Store(keys[6], &gwapiv1a2.UDPRouteStatus{})
 
 	// Checks that the keys are successfully stored to DeletableStatus and watchable maps
-	ds := r.getDeletableStatus()
+	ds := r.getAllStatuses()
 
 	require.True(t, ds.GatewayStatusKeys[keys[0]])
 	require.True(t, ds.HTTPRouteStatusKeys[keys[1]])
@@ -254,7 +254,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
 
 	// Checks that the keys are successfully stored to DeletableStatus and watchable maps
-	ds := r.getDeletableStatus()
+	ds := r.getAllStatuses()
 
 	require.True(t, ds.GatewayStatusKeys[keys[0]])
 	require.True(t, ds.HTTPRouteStatusKeys[keys[1]])
