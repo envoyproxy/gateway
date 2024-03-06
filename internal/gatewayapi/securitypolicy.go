@@ -182,10 +182,10 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf(
 			"Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetSecurityPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -204,14 +204,6 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// Gateway not found
 	if !ok {
-		message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
-
-		status.SetSecurityPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -246,10 +238,10 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf(
 			"Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetSecurityPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -269,17 +261,6 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Route not found
 	if !ok {
-		message := fmt.Sprintf(
-			"%s/%s/%s not found.",
-			policy.Spec.TargetRef.Kind,
-			string(*targetNs), policy.Spec.TargetRef.Name)
-
-		status.SetSecurityPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
