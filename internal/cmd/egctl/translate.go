@@ -49,8 +49,10 @@ const (
 )
 
 type TranslationResult struct {
-	gatewayapi.TranslateResult `json:",omitempty"`
-	Xds                        map[string]interface{} `json:"xds,omitempty"`
+	gatewayapi.Resources
+	XdsIR   gatewayapi.XdsIRMap    `json:"xdsIR,omitempty" yaml:"xdsIR,omitempty"`
+	InfraIR gatewayapi.InfraIRMap  `json:"infraIR,omitempty" yaml:"infraIR,omitempty"`
+	Xds     map[string]interface{} `json:"xds,omitempty"`
 }
 
 func newTranslateCommand() *cobra.Command {
