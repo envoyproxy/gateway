@@ -64,7 +64,7 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
