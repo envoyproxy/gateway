@@ -27,12 +27,14 @@ func TestRunner(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
+	pResource := new(message.ProviderResources)
 	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
-		Server: *cfg,
-		XdsIR:  xdsIR,
-		Xds:    xds,
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		Xds:               xds,
 	})
 
 	ctx := context.Background()
@@ -103,13 +105,16 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
+	pResource := new(message.ProviderResources)
+
 	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
-		Server:           *cfg,
-		XdsIR:            xdsIR,
-		Xds:              xds,
-		ExtensionManager: &extManagerMock{},
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		Xds:               xds,
+		ExtensionManager:  &extManagerMock{},
 	})
 
 	ctx := context.Background()

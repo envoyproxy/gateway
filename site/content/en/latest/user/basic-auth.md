@@ -31,14 +31,13 @@ saved hash.
 Note: only SHA hash algorithm is supported for now.
 
 ```shell
-$ htpasswd -cbs .htpasswd foo bar
-Adding password for user foo
+htpasswd -cbs .htpasswd foo bar
 ```
 
 You can also add more users to the file:
 
 ```shell
-$ htpasswd -bs .htpasswd foo1 bar1
+htpasswd -bs .htpasswd foo1 bar1
 ```
 
 ### Create a kubernetes secret
@@ -46,8 +45,7 @@ $ htpasswd -bs .htpasswd foo1 bar1
 Next, create a kubernetes secret with the generated .htpasswd file in the previous step.
 
 ```shell
-$ kubectl create secret generic basic-auth --from-file=.htpasswd
-secret "basic-auth" created
+kubectl create secret generic basic-auth --from-file=.htpasswd
 ```
 
 ### Create a SecurityPolicy
