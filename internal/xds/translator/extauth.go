@@ -137,6 +137,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	var (
 		uri              string
 		headersToBackend []*matcherv3.StringMatcher
+		service          = new(extauthv3.HttpService)
 	)
 
 	u := url.URL{
@@ -149,6 +150,16 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	}
 	uri = u.String()
 
+	service.ServerUri = &corev3.HttpUri{
+		Uri: uri,
+		HttpUpstreamType: &corev3.HttpUri_Cluster{
+			Cluster: http.Destination.Name,
+		},
+		Timeout: &duration.Duration{
+			Seconds: defaultExtServiceRequestTimeout,
+		},
+	}
+
 	for _, header := range http.HeadersToBackend {
 		headersToBackend = append(headersToBackend, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
@@ -157,22 +168,15 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		})
 	}
 
-	return &extauthv3.HttpService{
-		ServerUri: &corev3.HttpUri{
-			Uri: uri,
-			HttpUpstreamType: &corev3.HttpUri_Cluster{
-				Cluster: http.Destination.Name,
-			},
-			Timeout: &duration.Duration{
-				Seconds: defaultExtServiceRequestTimeout,
-			},
-		},
-		AuthorizationResponse: &extauthv3.AuthorizationResponse{
+	if len(headersToBackend) > 0 {
+		service.AuthorizationResponse = &extauthv3.AuthorizationResponse{
 			AllowedUpstreamHeaders: &matcherv3.ListStringMatcher{
 				Patterns: headersToBackend,
 			},
-		},
+		}
 	}
+
+	return service
 }
 
 func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
