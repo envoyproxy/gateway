@@ -91,6 +91,7 @@ htpasswd -bs .htpasswd foo1 bar1
 
 ### Create a basic-auth secret
 
+
 Next, create a kubernetes secret with the generated .htpasswd file in the previous step.
 
 ```shell
@@ -158,6 +159,7 @@ You should see `401 Unauthorized` in the response, indicating that the request i
 < content-type: text/plain
 < date: Wed, 06 Mar 2024 15:59:36 GMT
 <
+
 * Connection #0 to host 127.0.0.1 left intact
 User authentication failed. Missing username and password.
 ```
