@@ -103,6 +103,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				// TODO: Log something here
 				return nil
 			}
+			if args.proxyProtocol != nil {
+				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
+			}
 			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
 				Name: fmt.Sprintf("destination-tls-config-%d", i),
 				Match: &structpb.Struct{
