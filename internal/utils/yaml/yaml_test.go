@@ -67,6 +67,7 @@ b:
 `,
 		},
 		{
+			name: "merge-slice",
 			yaml1: `a: a
 b:
 - b1
