@@ -23,6 +23,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
@@ -91,6 +92,27 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
 	} else if args.tSocket != nil {
 		cluster.TransportSocket = args.tSocket
+	}
+
+	for i, ds := range args.settings {
+		if ds.TLS != nil {
+			// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
+			// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
+			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
+			if err != nil {
+				// TODO: Log something here
+				return nil
+			}
+			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
+				Name: fmt.Sprintf("destination-tls-config-%d", i),
+				Match: &structpb.Struct{
+					Fields: map[string]*structpb.Value{
+						"matcher-index": structpb.NewStringValue(fmt.Sprintf("tls-%d", i)),
+					},
+				},
+				TransportSocket: socket,
+			})
+		}
 	}
 
 	if args.endpointType == EndpointTypeStatic {
@@ -336,8 +358,22 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 
 		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
 
+		var metadata *corev3.Metadata
+		if ds.TLS != nil {
+			metadata = &corev3.Metadata{
+				FilterMetadata: map[string]*structpb.Struct{
+					"envoy.transport_socket_match": {
+						Fields: map[string]*structpb.Value{
+							"matcher-index": structpb.NewStringValue(fmt.Sprintf("tls-%d", i)),
+						},
+					},
+				},
+			}
+		}
+
 		for _, irEp := range ds.Endpoints {
 			lbEndpoint := &endpointv3.LbEndpoint{
+				Metadata: metadata,
 				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 					Endpoint: &endpointv3.Endpoint{
 						Address: &corev3.Address{

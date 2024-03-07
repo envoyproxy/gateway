@@ -14,15 +14,19 @@
   name: httproute/envoy-gateway/httproute-btls/rule/0
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
-  transportSocket:
-    name: envoy.transport_sockets.tls
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      commonTlsContext:
-        validationContextSdsSecretConfig:
-          name: policy-btls/policies-ca
-          sdsConfig:
-            ads: {}
-            resourceApiVersion: V3
-      sni: example.com
+  transportSocketMatches:
+  - match:
+      matcher-index: tls-0
+    name: destination-tls-config-0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          validationContextSdsSecretConfig:
+            name: policy-btls/policies-ca
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        sni: example.com
   type: EDS

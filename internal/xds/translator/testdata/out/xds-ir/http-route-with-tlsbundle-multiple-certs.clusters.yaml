@@ -23,8 +23,24 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext:
-          validationContext:
-            trustedCa:
-              filename: /etc/ssl/certs/ca-certificates.crt
+          validationContextSdsSecretConfig:
+            name: policy-btls/policies-ca2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        sni: bar.example.com
+  - match:
+      matcher-index: tls-1
+    name: destination-tls-config-1
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          validationContextSdsSecretConfig:
+            name: policy-btls/policies-ca
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
         sni: example.com
   type: EDS

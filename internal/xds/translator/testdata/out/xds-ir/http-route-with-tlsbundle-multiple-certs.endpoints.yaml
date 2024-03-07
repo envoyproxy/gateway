@@ -4,7 +4,7 @@
     - endpoint:
         address:
           socketAddress:
-            address: 10.244.0.11
+            address: 10.244.0.12
             portValue: 8080
       loadBalancingWeight: 1
       metadata:
@@ -14,3 +14,17 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.11
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            matcher-index: tls-1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
