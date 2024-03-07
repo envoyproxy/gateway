@@ -510,8 +510,10 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 
 	if httpRoute.Destination.Settings[0].TLS != nil {
 		CaSecret := buildXdsUpstreamTLSCASecret(httpRoute.Destination.Settings[0].TLS)
-		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
-			return err
+		if CaSecret != nil {
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
+				return err
+			}
 		}
 		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
 		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
@@ -599,6 +601,9 @@ const (
 
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	// Build the tls secret
+	if tlsConfig.UseSystemTrustStore {
+		return nil
+	}
 	return &tlsv3.Secret{
 		Name: tlsConfig.CACertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
@@ -613,17 +618,42 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
 
-	tlsCtx := &tlsv3.UpstreamTlsContext{
-		CommonTlsContext: &tlsv3.CommonTlsContext{
-			TlsCertificateSdsSecretConfigs: nil,
-			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-					Name:      tlsConfig.CACertificate.Name,
-					SdsConfig: makeConfigSource(),
+	var tlsCtx *tlsv3.UpstreamTlsContext
+
+	if tlsConfig.UseSystemTrustStore {
+		tlsCtx = &tlsv3.UpstreamTlsContext{
+			CommonTlsContext: &tlsv3.CommonTlsContext{
+				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
+					ValidationContext: &tlsv3.CertificateValidationContext{
+						TrustedCa: &corev3.DataSource{
+							Specifier: &corev3.DataSource_Filename{
+								// This is the default location for the system trust store
+								// on Debian derivatives like the envoy-proxy image being used by the infrastructure
+								// controller.
+								// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
+								// TODO: allow customizing this value via EnvoyGateway so that if a non-standard
+								// envoy image is being used, this can be modified to match
+								Filename: "/etc/ssl/certs/ca-certificates.crt",
+							},
+						},
+					},
 				},
 			},
-		},
-		Sni: tlsConfig.SNI,
+			Sni: tlsConfig.SNI,
+		}
+	} else {
+		tlsCtx = &tlsv3.UpstreamTlsContext{
+			CommonTlsContext: &tlsv3.CommonTlsContext{
+				TlsCertificateSdsSecretConfigs: nil,
+				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+						Name:      tlsConfig.CACertificate.Name,
+						SdsConfig: makeConfigSource(),
+					},
+				},
+			},
+			Sni: tlsConfig.SNI,
+		}
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)

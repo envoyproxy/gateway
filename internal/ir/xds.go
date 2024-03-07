@@ -310,7 +310,7 @@ type TLSCertificate struct {
 // +k8s:deepcopy-gen=true
 type TLSCACertificate struct {
 	// Name of the Secret object.
-	Name string `json:"name" yaml:"name"`
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
@@ -1742,6 +1742,7 @@ type BackOffPolicy struct {
 // TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
-	SNI           string
-	CACertificate TLSCACertificate
+	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
+	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
+	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 }
