@@ -293,30 +293,16 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		}
 
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
-	} else if !havePortMatch(xdsListener, irListener.Port) {
-		// No TLS, so create a matcher based on the port if one doesn't yet exist.
-		// Conflicts between listeners should have been detected in the GWAPI->IR
-		// translation level already.
-		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
-			DestinationPort: wrapperspb.UInt32(irListener.Port),
+	} else {
+		// Add the HTTP filter chain as the default filter chain
+		// Make sure one does not exist
+		if xdsListener.DefaultFilterChain != nil {
+			return errors.New("default filter chain already exists")
 		}
-		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
+		xdsListener.DefaultFilterChain = filterChain
 	}
 
 	return nil
-}
-
-func havePortMatch(xdsListener *listenerv3.Listener, port uint32) bool {
-	for _, filter := range xdsListener.FilterChains {
-		if filter.FilterChainMatch != nil &&
-			filter.FilterChainMatch.ServerNames == nil &&
-			filter.FilterChainMatch.DestinationPort != nil &&
-			filter.FilterChainMatch.DestinationPort.Value == port {
-
-			return true
-		}
-	}
-	return false
 }
 
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
@@ -337,30 +323,22 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 // findXdsHTTPRouteConfigName finds the name of the route config associated with the
 // http connection manager within the default filter chain and returns an empty string if
 // not found.
-func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener, port uint32) string {
-	if xdsListener == nil {
+func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
+	if xdsListener == nil || xdsListener.DefaultFilterChain == nil || xdsListener.DefaultFilterChain.Filters == nil {
 		return ""
 	}
 
-	for _, chain := range xdsListener.FilterChains {
-		if chain.FilterChainMatch == nil ||
-			chain.FilterChainMatch.DestinationPort == nil ||
-			chain.FilterChainMatch.DestinationPort.Value != port {
-
-			continue
-		}
-		for _, filter := range chain.Filters {
-			if filter.Name == wellknown.HTTPConnectionManager {
-				m := new(hcmv3.HttpConnectionManager)
-				if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
-					return ""
-				}
-				rds := m.GetRds()
-				if rds == nil {
-					return ""
-				}
-				return rds.GetRouteConfigName()
+	for _, filter := range xdsListener.DefaultFilterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			m := new(hcmv3.HttpConnectionManager)
+			if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
+				return ""
 			}
+			rds := m.GetRds()
+			if rds == nil {
+				return ""
+			}
+			return rds.GetRouteConfigName()
 		}
 	}
 	return ""

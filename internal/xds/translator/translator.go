@@ -122,6 +122,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	// errors and return them at the end.
 	var errs error
 	for _, httpListener := range httpListeners {
+		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
 
 		// Search for an existing listener, if it does not exist, create one.
@@ -145,11 +146,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		} else if httpListener.TLS == nil {
 			// Find the route config associated with this listener that
 			// maps to the default filter chain for http traffic
-			routeName := findXdsHTTPRouteConfigName(xdsListener, httpListener.Port)
+			routeName := findXdsHTTPRouteConfigName(xdsListener)
 			if routeName != "" {
 				// If an existing listener exists, dont create a new filter chain
 				// for HTTP traffic, match on the Domains field within VirtualHosts
 				// within the same RouteConfiguration instead
+				addFilterChain = false
 				xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
 				if xdsRouteCfg == nil {
 					// skip this listener if failed to find xds route config
@@ -159,12 +161,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
-		if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
-			return err
-		}
-		if enabledHTTP3 {
-			if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
+		if addFilterChain {
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
 				return err
+			}
+			if enabledHTTP3 {
+				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
+					return err
+				}
 			}
 		}
 

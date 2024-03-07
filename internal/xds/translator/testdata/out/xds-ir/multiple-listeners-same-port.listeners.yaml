@@ -2,6 +2,33 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: third-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
   drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
@@ -88,34 +115,6 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-  - filterChainMatch:
-      destinationPort: 10080
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        mergeSlashes: true
-        normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: third-listener
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
-        useRemoteAddress: true
   - filterChainMatch:
       serverNames:
       - bar.com
