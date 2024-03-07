@@ -1382,7 +1382,13 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 		return nil, nil
 	}
 
-	tlsBundle := &ir.TLSUpstreamConfig{}
+	tlsBundle := &ir.TLSUpstreamConfig{
+		SNI:                 string(backendTLSPolicy.Spec.TLS.Hostname),
+		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.TLS.WellKnownCACerts, "") == gwapiv1a1.WellKnownCACertSystem,
+	}
+	if tlsBundle.UseSystemTrustStore {
+		return tlsBundle, nil
+	}
 
 	caRefMap := make(map[string]string)
 
@@ -1408,12 +1414,10 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 	if ca == "" {
 		return nil, fmt.Errorf("no ca found in referred configmaps")
 	}
-
-	tlsBundle.CACertificate.Certificate = []byte(ca)
-
-	tlsBundle.CACertificate.Name = fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
-
-	tlsBundle.SNI = string(backendTLSPolicy.Spec.TLS.Hostname)
+	tlsBundle.CACertificate = &ir.TLSCACertificate{
+		Certificate: []byte(ca),
+		Name:        fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+	}
 
 	return tlsBundle, nil
 }

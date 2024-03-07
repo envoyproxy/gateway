@@ -1,0 +1,32 @@
+http:
+  - address: 0.0.0.0
+    hostnames:
+      - '*'
+    isHTTP2: false
+    name: envoy-gateway/gateway-btls/http
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/envoy-gateway/httproute-btls/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 10.244.0.11
+                  port: 8080
+              protocol: HTTP
+              tls:
+                sni: example.com
+                useSystemTrustStore: true
+              weight: 1
+        hostname: '*'
+        name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /exact
+          name: ""
