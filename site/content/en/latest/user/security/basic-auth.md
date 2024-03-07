@@ -71,7 +71,7 @@ kubectl patch gateway eg --type=json --patch '[{
 ### Create a .htpasswd file
 First, create a [.htpasswd][.htpasswd] file with the username and password you want to use for authentication. 
 
-Note: We recommend users to enable HTTPS when using Basic Authentication.
+Note: Please always use HTTPS with Basic Authentication. This prevents credentials from being transmitted in plain text.
 
 The input password won't be saved, instead, a hash will be generated and saved in the output file. When a request
 tries to access protected resources, the password in the "Authorization" HTTP header will be hashed and compared with the 
