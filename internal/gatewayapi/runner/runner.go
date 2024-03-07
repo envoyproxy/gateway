@@ -10,6 +10,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -356,23 +357,10 @@ func (r *Runner) deleteAllStatusKeys() {
 // based on the difference between the current keys and the
 // new keys parameters passed to the function.
 func getIRKeysToDelete(curKeys, newKeys []string) []string {
-	var delKeys []string
-	remaining := make(map[string]bool)
+	curSet := sets.NewString(curKeys...)
+	newSet := sets.NewString(newKeys...)
 
-	// Add all current keys to the remaining map
-	for _, key := range curKeys {
-		remaining[key] = true
-	}
+	delSet := curSet.Difference(newSet)
 
-	// Delete newKeys from the remaining map
-	// to get keys that need to be deleted
-	for _, key := range newKeys {
-		delete(remaining, key)
-	}
-
-	for key := range remaining {
-		delKeys = append(delKeys, key)
-	}
-
-	return delKeys
+	return delSet.List()
 }
