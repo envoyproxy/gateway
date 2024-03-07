@@ -8,20 +8,16 @@ package validation
 import (
 	"errors"
 	"fmt"
-	"net/netip"
-	"reflect"
-
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/testing/protocmp"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"sigs.k8s.io/yaml"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
+	"net/netip"
 )
 
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
@@ -140,40 +136,31 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 }
 
 func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
+	// Validate user bootstrap config
 	defaultBootstrap := &bootstrapv3.Bootstrap{}
 	// TODO: need validate when enable prometheus?
 	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
 	if err != nil {
 		return err
 	}
+	if err := proto.FromYAML([]byte(defaultBootstrapStr), defaultBootstrap); err != nil {
+		return fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
+	}
+	if err := defaultBootstrap.Validate(); err != nil {
+		return fmt.Errorf("default bootstrap validation failed: %w", err)
+	}
 
+	// Validate user bootstrap config
 	userBootstrapStr, err := bootstrap.ApplyBootstrapConfig(boostrapConfig, defaultBootstrapStr)
 	if err != nil {
 		return err
 	}
-
-	jsonData, err := yaml.YAMLToJSON([]byte(userBootstrapStr))
-	if err != nil {
-		return fmt.Errorf("unable to convert user bootstrap to json: %w", err)
-	}
-
 	userBootstrap := &bootstrapv3.Bootstrap{}
-	if err := protojson.Unmarshal(jsonData, userBootstrap); err != nil {
-		return fmt.Errorf("unable to unmarshal user bootstrap: %w", err)
+	if err := proto.FromYAML([]byte(userBootstrapStr), userBootstrap); err != nil {
+		return fmt.Errorf("failed to parse default bootstrap config: %w", err)
 	}
-
-	// Call Validate method
 	if err := userBootstrap.Validate(); err != nil {
 		return fmt.Errorf("validation failed for user bootstrap: %w", err)
-	}
-
-	jsonData, err = yaml.YAMLToJSON([]byte(defaultBootstrapStr))
-	if err != nil {
-		return fmt.Errorf("unable to convert default bootstrap to json: %w", err)
-	}
-
-	if err := protojson.Unmarshal(jsonData, defaultBootstrap); err != nil {
-		return fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
 	}
 
 	// Ensure dynamic resources config is same
@@ -196,9 +183,8 @@ func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 			break
 		}
 	}
-
-	// nolint // Circumvents this error "Error: copylocks: call of reflect.DeepEqual copies lock value:"
-	if userXdsCluster == nil || !reflect.DeepEqual(*userXdsCluster.LoadAssignment, *defaultXdsCluster.LoadAssignment) {
+	if userXdsCluster == nil ||
+		cmp.Diff(userXdsCluster.LoadAssignment, defaultXdsCluster.LoadAssignment, protocmp.Transform()) != "" {
 		return fmt.Errorf("xds_cluster's loadAssigntment cannot be modified")
 	}
 

@@ -41,6 +41,10 @@ func mergeBootstrap(base, override string) (string, error) {
 
 	proto.Merge(dst, src)
 
+	if err := dst.Validate(); err != nil {
+		return "", fmt.Errorf("failed to validate merged bootstrap config: %w", err)
+	}
+
 	data, err := proto.ToYAML(dst)
 	if err != nil {
 		return "", fmt.Errorf("failed to convert proto message to YAML: %w", err)
