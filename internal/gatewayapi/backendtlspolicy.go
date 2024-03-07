@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -164,9 +163,9 @@ func getBackendTLSBundle(policies []*gwapiv1a2.BackendTLSPolicy, configmaps []*c
 	return tlsBundle, nil
 }
 
-func (t *Translator) ProcessBackendTLSPoliciesAncestorRef(backendTLSPolicies []*v1alpha2.BackendTLSPolicy, gateways []*GatewayContext) []*v1alpha2.BackendTLSPolicy {
+func (t *Translator) ProcessBackendTLSPoliciesAncestorRef(backendTLSPolicies []*gwapiv1a2.BackendTLSPolicy, gateways []*GatewayContext) []*gwapiv1a2.BackendTLSPolicy {
 
-	var res []*v1alpha2.BackendTLSPolicy
+	var res []*gwapiv1a2.BackendTLSPolicy
 
 	for _, btlsPolicy := range backendTLSPolicies {
 
@@ -195,7 +194,7 @@ func (t *Translator) ProcessBackendTLSPoliciesAncestorRef(backendTLSPolicies []*
 				}
 			}
 		} else {
-			policy.Status.Ancestors = []v1alpha2.PolicyAncestorStatus{}
+			policy.Status.Ancestors = []gwapiv1a2.PolicyAncestorStatus{}
 		}
 	}
 
