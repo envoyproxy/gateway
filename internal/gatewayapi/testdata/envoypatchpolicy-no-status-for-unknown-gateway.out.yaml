@@ -1,3 +1,2 @@
-envoyPatchPolicies:
-infraIR:
-xdsIR:
+infraIR: {}
+xdsIR: {}

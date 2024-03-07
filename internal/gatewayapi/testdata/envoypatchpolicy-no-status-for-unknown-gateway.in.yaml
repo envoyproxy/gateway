@@ -11,10 +11,3 @@ envoyPatchPolicies:
       kind: Gateway
       name: unknown-gateway
       namespace: envoy-gateway
-    jsonPatches:
-      - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-        name: "envoy-gateway-gateway-1-http"
-        operation:
-          op: replace
-          path: "/per_connection_buffer_limit_bytes"
-          value: "1024"

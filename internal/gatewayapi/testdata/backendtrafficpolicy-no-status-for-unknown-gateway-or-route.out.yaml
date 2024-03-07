@@ -2,24 +2,28 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: target-unknown-httproute
+    namespace: envoy-gateway
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
       namespace: envoy-gateway
+  status: {}
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: target-unknown-gateway
+    namespace: envoy-gateway
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
       namespace: envoy-gateway
-infraIR:
-xdsIR:
+  status: {}
+infraIR: {}
+xdsIR: {}
