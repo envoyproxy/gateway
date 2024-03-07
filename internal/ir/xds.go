@@ -16,6 +16,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/yaml"
 
@@ -714,53 +715,49 @@ func (h HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddRequestHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.AddRequestHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if !occurred[header.Name] {
-				occurred[header.Name] = true
-			} else {
+			if occurred.Has(header.Name) {
 				errs = errors.Join(errs, ErrAddHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header.Name)
 		}
 	}
 	if len(h.RemoveRequestHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.RemoveRequestHeaders {
-			if !occurred[header] {
-				occurred[header] = true
-			} else {
+			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header)
 		}
 	}
 	if len(h.AddResponseHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.AddResponseHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if !occurred[header.Name] {
-				occurred[header.Name] = true
-			} else {
+			if occurred.Has(header.Name) {
 				errs = errors.Join(errs, ErrAddHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header.Name)
 		}
 	}
 	if len(h.RemoveResponseHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.RemoveResponseHeaders {
-			if !occurred[header] {
-				occurred[header] = true
-			} else {
+			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header)
 		}
 	}
 	if h.LoadBalancer != nil {
