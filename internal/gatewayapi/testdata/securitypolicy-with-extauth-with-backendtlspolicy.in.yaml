@@ -119,6 +119,9 @@ referenceGrants:
         - group: gateway.envoyproxy.io
           kind: SecurityPolicy
           namespace: default
+        - group: gateway.networking.k8s.io
+          kind: BackendTLSPolicy
+          namespace: default
       to:
         - group: ''
           kind: Service

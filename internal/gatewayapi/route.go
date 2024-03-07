@@ -1148,6 +1148,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				uint32(*backendRef.Port))
 			endpoints = append(endpoints, ep)
 		}
+
 		backendTLS = t.processBackendTLSPolicy(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1357,99 +1358,4 @@ func GetTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, name
 		}(),
 	}
 	return ref
-}
-
-func backendTLSTargetMatched(policy gwapiv1a2.BackendTLSPolicy, target gwapiv1a2.PolicyTargetReferenceWithSectionName) bool {
-
-	policyTarget := policy.Spec.TargetRef
-
-	if target.Group == policyTarget.Group &&
-		target.Kind == policyTarget.Kind &&
-		target.Name == policyTarget.Name &&
-		NamespaceDerefOr(policyTarget.Namespace, policy.Namespace) == string(*target.Namespace) {
-		if policyTarget.SectionName != nil && *policyTarget.SectionName != *target.SectionName {
-			return false
-		}
-		return true
-	}
-	return false
-}
-
-func getBackendTLSPolicy(policies []*gwapiv1a2.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a2.BackendTLSPolicy {
-	target := GetTargetBackendReference(backendRef, backendNamespace)
-	for _, policy := range policies {
-		if backendTLSTargetMatched(*policy, target) {
-			return policy
-		}
-	}
-	return nil
-}
-
-func getBackendTLSBundle(policies []*gwapiv1a2.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) (*ir.TLSUpstreamConfig, error) {
-
-	backendTLSPolicy := getBackendTLSPolicy(policies, backendRef, backendNamespace)
-
-	if backendTLSPolicy == nil {
-		return nil, nil
-	}
-
-	tlsBundle := &ir.TLSUpstreamConfig{
-		SNI:                 string(backendTLSPolicy.Spec.TLS.Hostname),
-		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.TLS.WellKnownCACerts, "") == gwapiv1a2.WellKnownCACertSystem,
-	}
-	if tlsBundle.UseSystemTrustStore {
-		return tlsBundle, nil
-	}
-
-	caRefMap := make(map[string]string)
-
-	for _, caRef := range backendTLSPolicy.Spec.TLS.CACertRefs {
-		caRefMap[string(caRef.Name)] = string(caRef.Kind)
-	}
-
-	ca := ""
-
-	for _, cmap := range configmaps {
-		if kind, ok := caRefMap[cmap.Name]; ok && kind == cmap.Kind {
-			if crt, dataOk := cmap.Data["ca.crt"]; dataOk {
-				if ca != "" {
-					ca += "\n"
-				}
-				ca += crt
-			} else {
-				return nil, fmt.Errorf("no ca found in configmap %s", cmap.Name)
-			}
-		}
-	}
-
-	if ca == "" {
-		return nil, fmt.Errorf("no ca found in referred configmaps")
-	}
-	tlsBundle.CACertificate = &ir.TLSCACertificate{
-		Certificate: []byte(ca),
-		Name:        fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
-	}
-
-	return tlsBundle, nil
-}
-
-// TODO zhaohuabing Do we need to check the cross namespace reference from BackendTLSPolicy to Service?
-func (t *Translator) processBackendTLSPolicy(backendRef gwapiv1.BackendObjectReference, backendNamespace string, parent gwapiv1a2.ParentReference, resources *Resources) *ir.TLSUpstreamConfig {
-	tlsBundle, err := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, backendRef, backendNamespace)
-	if err == nil && tlsBundle == nil {
-		return nil
-	}
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
-	ancestor := gwapiv1a2.PolicyAncestorStatus{
-		AncestorRef:    parent,
-		ControllerName: gwapiv1.GatewayController(t.GatewayControllerName),
-	}
-	if err != nil {
-		messeg := status.Error2ConditionMsg(err)
-		status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1a2.PolicyReasonInvalid, messeg)
-		return nil
-	} else {
-		status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a2.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1a2.PolicyReasonAccepted, "BackendTLSPolicy is Accepted")
-		return tlsBundle
-	}
 }

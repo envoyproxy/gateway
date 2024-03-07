@@ -21,6 +21,9 @@ func (t *Translator) ProcessBackendTLSPoliciesAncestorRef(backendTLSPolicies []*
 
 		if policy.Status.Ancestors != nil {
 			for k, status := range policy.Status.Ancestors {
+				if status.AncestorRef.Kind != nil && *status.AncestorRef.Kind != KindGateway {
+					continue
+				}
 				exist := false
 				for _, gwContext := range gateways {
 					gw := gwContext.Gateway

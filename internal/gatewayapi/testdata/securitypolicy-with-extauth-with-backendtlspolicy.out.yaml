@@ -19,7 +19,19 @@ backendTLSPolicies:
         name: ca-cmap
       hostname: http-backend
   status:
-    ancestors: []
+    ancestors:
+    - ancestorRef:
+        group: gateway.envoyproxy.io
+        kind: SecurityPolicy
+        name: policy-for-gateway
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: BackendTLSPolicy is Accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
@@ -39,7 +51,19 @@ backendTLSPolicies:
         name: ca-cmap
       hostname: grpc-backend
   status:
-    ancestors: []
+    ancestors:
+    - ancestorRef:
+        group: gateway.envoyproxy.io
+        kind: SecurityPolicy
+        name: policy-for-http-route
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: BackendTLSPolicy is Accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

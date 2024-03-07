@@ -832,6 +832,10 @@ func (t *Translator) processExtServiceDestination(
 	backendTLS = t.processBackendTLSPolicy(
 		*backendRef,
 		serviceNamespace,
+		// Gateway is not the appropriate parent reference here because the owner
+		// of the BackendRef is the security policy, and there is no hierarchy
+		// relationship between the security policy and a gateway.
+		// The owner security policy of the BackendRef is used as the parent reference here.
 		gwv1a2.ParentReference{
 			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
 			Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindSecurityPolicy)),
