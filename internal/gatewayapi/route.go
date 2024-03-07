@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a1 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -39,10 +39,10 @@ var (
 
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
-	ProcessGRPCRoutes(grpcRoutes []*gwapiv1a1.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
-	ProcessTLSRoutes(tlsRoutes []*gwapiv1a1.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
-	ProcessTCPRoutes(tcpRoutes []*gwapiv1a1.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
-	ProcessUDPRoutes(udpRoutes []*gwapiv1a1.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
+	ProcessGRPCRoutes(grpcRoutes []*gwapiv1a2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
+	ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
+	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
+	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
 }
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext {
@@ -73,7 +73,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 	return relevantHTTPRoutes
 }
 
-func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1a1.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext {
+func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1a2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext {
 	var relevantGRPCRoutes []*GRPCRouteContext
 
 	for _, g := range grpcRoutes {
@@ -204,7 +204,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			parentRef.SetCondition(httpRoute,
 				gwapiv1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
-				gwapiv1a1.RouteReasonResolvedRefs,
+				gwapiv1a2.RouteReasonResolvedRefs,
 				"Mixed endpointslice address type between backendRefs is not supported")
 		}
 
@@ -512,7 +512,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	return routeRoutes, nil
 }
 
-func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1a1.GRPCRouteRule) ([]*ir.HTTPRoute, error) {
+func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1a2.GRPCRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every gRPC request.
@@ -552,10 +552,10 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 
 		if match.Method != nil {
 			// GRPC's path is in the form of "/<service>/<method>"
-			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, gwapiv1a1.GRPCMethodMatchExact) {
-			case gwapiv1a1.GRPCMethodMatchExact:
+			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, gwapiv1a2.GRPCMethodMatchExact) {
+			case gwapiv1a2.GRPCMethodMatchExact:
 				t.processGRPCRouteMethodExact(match.Method, irRoute)
-			case gwapiv1a1.GRPCMethodMatchRegularExpression:
+			case gwapiv1a2.GRPCMethodMatchRegularExpression:
 				if match.Method.Service != nil {
 					if err := regex.Validate(*match.Method.Service); err != nil {
 						return nil, err
@@ -576,7 +576,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	return ruleRoutes, nil
 }
 
-func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1a1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
+func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1a2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
@@ -595,7 +595,7 @@ func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1a1.GRPCMethodMat
 	}
 }
 
-func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1a1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
+func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1a2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
@@ -685,7 +685,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a1.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext {
+func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext {
 	var relevantTLSRoutes []*TLSRouteContext
 
 	for _, tls := range tlsRoutes {
@@ -806,7 +806,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a1.UDPRoute, gateways []*GatewayContext, resources *Resources,
+func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *Resources,
 	xdsIR XdsIRMap) []*UDPRouteContext {
 	var relevantUDPRoutes []*UDPRouteContext
 
@@ -937,7 +937,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a1.TCPRoute, gateways []*GatewayContext, resources *Resources,
+func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *Resources,
 	xdsIR XdsIRMap) []*TCPRouteContext {
 	var relevantTCPRoutes []*TCPRouteContext
 
@@ -1148,7 +1148,18 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				uint32(*backendRef.Port))
 			endpoints = append(endpoints, ep)
 		}
-		backendTLS = t.processBackendTLSPolicy(*backendRef, backendNamespace, parentRef, resources)
+		backendTLS = t.processBackendTLSPolicy(
+			backendRef.BackendObjectReference,
+			backendNamespace,
+			gwapiv1a2.ParentReference{
+				Group:       parentRef.Group,
+				Kind:        parentRef.Kind,
+				Namespace:   parentRef.Namespace,
+				Name:        parentRef.Name,
+				SectionName: parentRef.SectionName,
+				Port:        parentRef.Port,
+			},
+			resources)
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
@@ -1156,7 +1167,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		parentRef.SetCondition(route,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
-			gwapiv1a1.RouteReasonResolvedRefs,
+			gwapiv1a2.RouteReasonResolvedRefs,
 			"Mixed endpointslice address type for the same backendRef is not supported")
 	}
 
@@ -1320,10 +1331,10 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	return endpoints
 }
 
-func GetTargetBackendReference(backendRef gwapiv1a1.BackendRef, namespace string) gwapiv1a1.PolicyTargetReferenceWithSectionName {
-	ref := gwapiv1a1.PolicyTargetReferenceWithSectionName{
-		PolicyTargetReference: gwapiv1a1.PolicyTargetReference{
-			Group: func() gwapiv1a1.Group {
+func GetTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, namespace string) gwapiv1a2.PolicyTargetReferenceWithSectionName {
+	ref := gwapiv1a2.PolicyTargetReferenceWithSectionName{
+		PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+			Group: func() gwapiv1a2.Group {
 				if backendRef.Group == nil {
 					return ""
 				}
@@ -1348,7 +1359,7 @@ func GetTargetBackendReference(backendRef gwapiv1a1.BackendRef, namespace string
 	return ref
 }
 
-func backendTLSTargetMatched(policy gwapiv1a1.BackendTLSPolicy, target gwapiv1a1.PolicyTargetReferenceWithSectionName) bool {
+func backendTLSTargetMatched(policy gwapiv1a2.BackendTLSPolicy, target gwapiv1a2.PolicyTargetReferenceWithSectionName) bool {
 
 	policyTarget := policy.Spec.TargetRef
 
@@ -1364,7 +1375,7 @@ func backendTLSTargetMatched(policy gwapiv1a1.BackendTLSPolicy, target gwapiv1a1
 	return false
 }
 
-func getBackendTLSPolicy(policies []*gwapiv1a1.BackendTLSPolicy, backendRef gwapiv1a1.BackendRef, backendNamespace string) *gwapiv1a1.BackendTLSPolicy {
+func getBackendTLSPolicy(policies []*gwapiv1a2.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a2.BackendTLSPolicy {
 	target := GetTargetBackendReference(backendRef, backendNamespace)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(*policy, target) {
@@ -1374,7 +1385,7 @@ func getBackendTLSPolicy(policies []*gwapiv1a1.BackendTLSPolicy, backendRef gwap
 	return nil
 }
 
-func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a1.BackendRef, backendNamespace string) (*ir.TLSUpstreamConfig, error) {
+func getBackendTLSBundle(policies []*gwapiv1a2.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) (*ir.TLSUpstreamConfig, error) {
 
 	backendTLSPolicy := getBackendTLSPolicy(policies, backendRef, backendNamespace)
 
@@ -1418,29 +1429,23 @@ func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*c
 	return tlsBundle, nil
 }
 
-func (t *Translator) processBackendTLSPolicy(backendRef gwapiv1.BackendRef, backendNamespace string, parentRef *RouteParentContext, resources *Resources) *ir.TLSUpstreamConfig {
+// TODO zhaohuabing Do we need to check the cross namespace reference from BackendTLSPolicy to Service?
+func (t *Translator) processBackendTLSPolicy(backendRef gwapiv1.BackendObjectReference, backendNamespace string, parent gwapiv1a2.ParentReference, resources *Resources) *ir.TLSUpstreamConfig {
 	tlsBundle, err := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, backendRef, backendNamespace)
 	if err == nil && tlsBundle == nil {
 		return nil
 	}
 	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
-	ancestor := gwapiv1a1.PolicyAncestorStatus{
-		AncestorRef: gwapiv1a1.ParentReference{
-			Group:       parentRef.Group,
-			Kind:        parentRef.Kind,
-			Namespace:   parentRef.Namespace,
-			Name:        parentRef.Name,
-			SectionName: parentRef.SectionName,
-			Port:        parentRef.Port,
-		},
+	ancestor := gwapiv1a2.PolicyAncestorStatus{
+		AncestorRef:    parent,
 		ControllerName: gwapiv1.GatewayController(t.GatewayControllerName),
 	}
 	if err != nil {
 		messeg := status.Error2ConditionMsg(err)
-		status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1a1.PolicyReasonInvalid, messeg)
+		status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1a2.PolicyReasonInvalid, messeg)
 		return nil
 	} else {
-		status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1a1.PolicyReasonAccepted, "BackendTLSPolicy is Accepted")
+		status.SetBackendTLSPolicyCondition(policy, ancestor, gwapiv1a2.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1a2.PolicyReasonAccepted, "BackendTLSPolicy is Accepted")
 		return tlsBundle
 	}
 }
