@@ -33,7 +33,7 @@ spec:
     name: "gateway-conformance-infra/same-namespace/http"
     operation:
       op: add
-      path: "/filter_chains/0/filters/0/typed_config/local_reply_config"
+      path: "/default_filter_chain/filters/0/typed_config/local_reply_config"
       value:
         mappers:
         - filter:
