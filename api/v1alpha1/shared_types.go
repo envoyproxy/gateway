@@ -344,6 +344,8 @@ const (
 )
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
+// When HPA is enabled, it is recommended that the value in `KubernetesDeploymentSpec.replicas` be removed, otherwise
+// Envoy Gateway will revert back to this value every time reconciliation occurs.
 // See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 //
 // +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
