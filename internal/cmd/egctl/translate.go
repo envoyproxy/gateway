@@ -46,11 +46,14 @@ import (
 const (
 	gatewayAPIType = "gateway-api"
 	xdsType        = "xds"
+	irType         = "ir"
 )
 
 type TranslationResult struct {
 	gatewayapi.Resources
-	Xds map[string]interface{} `json:"xds,omitempty"`
+	XdsIR   gatewayapi.XdsIRMap    `json:"xdsIR,omitempty" yaml:"xdsIR,omitempty"`
+	InfraIR gatewayapi.InfraIRMap  `json:"infraIR,omitempty" yaml:"infraIR,omitempty"`
+	Xds     map[string]interface{} `json:"xds,omitempty"`
 }
 
 func newTranslateCommand() *cobra.Command {
@@ -94,6 +97,9 @@ func newTranslateCommand() *cobra.Command {
   # Translate Gateway API Resources into All xDS Resources in YAML output,
   # also print the Gateway API Resources with updated status in the same output.
   egctl experimental translate --from gateway-api --to gateway-api,xds --type all --output yaml --file <input file>
+
+  # Translate Gateway API Resources into IR in YAML output,
+  egctl experimental translate --from gateway-api --to ir --output yaml --file <input file>
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, dnsDomain)
@@ -131,7 +137,7 @@ func getValidInputTypesStr() string {
 }
 
 func validOutputTypes() []string {
-	return []string{xdsType, gatewayAPIType}
+	return []string{xdsType, gatewayAPIType, irType}
 }
 
 func findInvalidOutputType(outTypes []string) string {
@@ -244,6 +250,15 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				}
 				result.Xds = res
 			}
+			if outType == irType {
+				res, err := translateGatewayAPIToIR(resources)
+				if err != nil {
+					return err
+				}
+				result.Resources = res.Resources
+				result.XdsIR = res.XdsIR
+				result.InfraIR = res.InfraIR
+			}
 		}
 		// Print
 		if err = printOutput(w, result, output); err != nil {
@@ -253,6 +268,32 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		return nil
 	}
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
+}
+
+func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.TranslateResult, error) {
+	if resources.GatewayClass == nil {
+		return nil, fmt.Errorf("the GatewayClass resource is required")
+	}
+
+	t := &gatewayapi.Translator{
+		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
+		EnvoyPatchPolicyEnabled: true,
+	}
+
+	// Fix the services in the resources section so that they have an IP address - this prevents nasty
+	// errors in the translation.
+	for _, svc := range resources.Services {
+		if svc.Spec.ClusterIP == "" {
+			svc.Spec.ClusterIP = "10.96.1.2"
+		}
+	}
+
+	result := t.Translate(resources)
+
+	return result, nil
 }
 
 func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
