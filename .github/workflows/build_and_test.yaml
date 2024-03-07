@@ -12,7 +12,6 @@ on:
     - "release/v*"
     paths-ignore:
     - "**/*.png"
-    - 'site/**'
 
 permissions:
   contents: read
