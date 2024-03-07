@@ -55,6 +55,31 @@ k:
   l: l
 `,
 		},
+		{
+			yaml1: `a: a
+`,
+			yaml2: `b:
+- b2
+`,
+			want: `a: a
+b:
+- b2
+`,
+		},
+		{
+			yaml1: `a: a
+b:
+- b1
+`,
+			yaml2: `b:
+- b2
+`,
+			want: `a: a
+b:
+- b1
+- b2
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

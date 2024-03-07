@@ -53,6 +53,14 @@ func mergeMaps(map1, map2 map[string]interface{}) map[string]interface{} {
 		}
 		value := reflect.ValueOf(v)
 		if value.Kind() == reflect.Array || value.Kind() == reflect.Slice {
+			if out[k] == nil {
+				out[k] = v
+				continue
+			}
+
+			if v == nil {
+				continue
+			}
 			out[k] = append(out[k].([]interface{}), v.([]interface{})...)
 		} else {
 			out[k] = v
