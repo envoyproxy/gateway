@@ -88,7 +88,7 @@ staticResources:
     dnsLookupFamily: V4_ONLY
     dnsRefreshRate: 30s
     loadAssignment:
-      clusterName: zipkin
+      clusterName: metrics_cluster
       endpoints:
       - lbEndpoints:
         - endpoint:
@@ -99,6 +99,14 @@ staticResources:
     name: metrics_cluster
     respectDnsTtl: true
     type: STRICT_DNS
+    typedExtensionProtocolOptions:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicitHttpConfig:
+          http2ProtocolOptions:
+            connectionKeepalive:
+              interval: 30s
+              timeout: 5s
   listeners:
   - address:
       socketAddress:

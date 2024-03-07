@@ -11,8 +11,17 @@ static_resources:
     - connect_timeout: 1s
       dns_lookup_family: V4_ONLY
       dns_refresh_rate: 30s
+      lb_policy: ROUND_ROBIN
+      typed_extension_protocol_options:
+        "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
+          "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+          explicit_http_config:
+            http2_protocol_options:
+              connection_keepalive:
+                interval: 30s
+                timeout: 5s
       load_assignment:
-        cluster_name: zipkin
+        cluster_name: metrics_cluster
         endpoints:
           - lb_endpoints:
               - endpoint:
