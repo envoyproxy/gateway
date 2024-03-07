@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -849,21 +850,19 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			if provided, found := providedServiceMap[key]; !found {
 				resources.Services = append(resources.Services, service)
 			} else {
-				providedPorts := map[string]bool{}
+				providedPorts := sets.NewString()
 				for _, port := range provided.Spec.Ports {
-					providedPorts[fmt.Sprintf("%s-%d", port.Protocol, port.Port)] = true
+					portKey := fmt.Sprintf("%s-%d", port.Protocol, port.Port)
+					providedPorts.Insert(portKey)
 				}
 
 				for _, port := range service.Spec.Ports {
-					protocol := port.Protocol
-					port := port.Port
-					name := fmt.Sprintf("%s-%d", protocol, port)
-
-					if _, found := providedPorts[name]; !found {
+					name := fmt.Sprintf("%s-%d", port.Protocol, port.Port)
+					if !providedPorts.Has(name) {
 						servicePort := v1.ServicePort{
 							Name:     name,
-							Protocol: protocol,
-							Port:     port,
+							Protocol: port.Protocol,
+							Port:     port.Port,
 						}
 						provided.Spec.Ports = append(provided.Spec.Ports, servicePort)
 					}
