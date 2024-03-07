@@ -1395,7 +1395,7 @@ func getBackendTLSBundle(policies []*gwapiv1a2.BackendTLSPolicy, configmaps []*c
 
 	tlsBundle := &ir.TLSUpstreamConfig{
 		SNI:                 string(backendTLSPolicy.Spec.TLS.Hostname),
-		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.TLS.WellKnownCACerts, "") == gwapiv1a1.WellKnownCACertSystem,
+		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.TLS.WellKnownCACerts, "") == gwapiv1a2.WellKnownCACertSystem,
 	}
 	if tlsBundle.UseSystemTrustStore {
 		return tlsBundle, nil
