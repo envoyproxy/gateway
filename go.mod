@@ -21,7 +21,7 @@ require (
 	github.com/prometheus/common v0.49.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tsaarni/certyaml v0.9.3
 	go.opentelemetry.io/otel v1.24.0
