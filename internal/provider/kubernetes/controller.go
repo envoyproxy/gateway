@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -51,7 +52,7 @@ type gatewayAPIReconciler struct {
 	namespace       string
 	namespaceLabel  *metav1.LabelSelector
 	envoyGateway    *egv1a1.EnvoyGateway
-	mergeGateways   map[string]bool
+	mergeGateways   sets.Set[string]
 	resources       *message.ProviderResources
 	extGVKs         []schema.GroupVersionKind
 }
@@ -87,7 +88,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		extGVKs:         extGVKs,
 		store:           newProviderStore(),
 		envoyGateway:    cfg.EnvoyGateway,
-		mergeGateways:   map[string]bool{},
+		mergeGateways:   sets.New[string](),
 	}
 
 	if byNamespaceSelector {
@@ -240,7 +241,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if gwcResource.EnvoyProxy != nil && gwcResource.EnvoyProxy.Spec.MergeGateways != nil {
-			r.mergeGateways[managedGC.Name] = *gwcResource.EnvoyProxy.Spec.MergeGateways
+			if *gwcResource.EnvoyProxy.Spec.MergeGateways {
+				r.mergeGateways.Insert(managedGC.Name)
+			} else {
+				r.mergeGateways.Delete(managedGC.Name)
+			}
 		}
 
 		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
