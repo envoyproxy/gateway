@@ -331,6 +331,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
+| `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
 
 
 
@@ -373,6 +374,20 @@ CompressorType defines the types of compressor library supported by Envoy Gatewa
 _Appears in:_
 - [Compression](#compression)
 
+
+
+#### Connection
+
+
+
+Connection allows users to configure connection-level settings
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | ConnectionBufferLimit provides configuration for the maximum buffer size for incoming connections. |
 
 
 #### ConsistentHash

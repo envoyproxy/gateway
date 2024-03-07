@@ -100,7 +100,7 @@ type Connection struct {
 	// ConnectionBufferLimit provides configuration for the maximum buffer size for incoming connections.
 	//
 	// +optional
-	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"
+	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
 
 // HeaderSettings providess configuration options for headers on the listener.

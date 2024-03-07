@@ -91,6 +91,18 @@ spec:
                 x-kubernetes-validations:
                 - message: customHeader cannot be used in conjunction with xForwardedFor
                   rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
+              connection:
+                description: Connection includes client connection settings.
+                properties:
+                  bufferLimit:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: ConnectionBufferLimit provides configuration for
+                      the maximum buffer size for incoming connections.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                type: object
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header
                   and adds the Client Address into the X-Forwarded-For header. Note
