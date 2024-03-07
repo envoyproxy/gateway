@@ -1,6 +1,7 @@
 ---
 title: "Quickstart"
 weight: 1
+description: Get started with Envoy Gateway in a few simple steps.
 ---
 
 This guide will help you get started with Envoy Gateway in a few simple steps.
