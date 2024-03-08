@@ -9,12 +9,11 @@
 package tests
 
 import (
-	"net/http"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
+	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
@@ -35,11 +34,11 @@ var ExtAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			securityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 			// Wait for the keycloak pod to be configured with the test user and client
-			waitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -71,11 +70,11 @@ var ExtAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			securityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 			// Wait for the keycloak pod to be configured with the test user and client
-			waitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -104,11 +103,11 @@ var ExtAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			securityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 			// Wait for the keycloak pod to be configured with the test user and client
-			waitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -140,30 +139,30 @@ var ExtAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			securityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 			// Wait for the keycloak pod to be configured with the test user and client
-			waitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
 					Path: "/public",
 				},
-				Response: gwhttp.Response{
+				Response: http.Response{
 					StatusCode: 200,
 				},
 				Namespace: ns,
 			}
 
-			req := gwhttp.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := gwhttp.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})

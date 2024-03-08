@@ -25,9 +25,9 @@ import (
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
-// waitForPods waits for the pods in the given namespace and with the given selector
+// WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
-func waitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
+func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
 	t.Logf("waiting for %s/[%s] to be %v...", namespace, selectors, phase)
 
 	require.Eventually(t, func() bool {
@@ -65,8 +65,8 @@ func waitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 	}, defaultServiceStartupTimeout, 2*time.Second)
 }
 
-// securityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
-func securityPolicyMustBeAccepted(
+// SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
+func SecurityPolicyMustBeAccepted(
 	t *testing.T,
 	client client.Client,
 	securityPolicyName types.NamespacedName) {
@@ -90,8 +90,8 @@ func securityPolicyMustBeAccepted(
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
-// backendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-func backendTrafficPolicyMustBeAccepted(
+// BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
+func BackendTrafficPolicyMustBeAccepted(
 	t *testing.T,
 	client client.Client,
 	policyName types.NamespacedName) {
