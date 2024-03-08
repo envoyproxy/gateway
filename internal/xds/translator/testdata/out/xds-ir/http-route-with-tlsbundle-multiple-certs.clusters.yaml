@@ -16,8 +16,8 @@
   perConnectionBufferLimitBytes: 32768
   transportSocketMatches:
   - match:
-      matcher-index: tls-0
-    name: destination-tls-config-0
+      name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
+    name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -30,8 +30,8 @@
               resourceApiVersion: V3
         sni: bar.example.com
   - match:
-      matcher-index: tls-1
-    name: destination-tls-config-1
+      name: httproute/envoy-gateway/httproute-btls/rule/0/tls/1
+    name: httproute/envoy-gateway/httproute-btls/rule/0/tls/1
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

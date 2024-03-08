@@ -96,8 +96,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 	for i, ds := range args.settings {
 		if ds.TLS != nil {
-			// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
-			// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
 			if err != nil {
 				// TODO: Log something here
@@ -106,11 +104,12 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			if args.proxyProtocol != nil {
 				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
 			}
+			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
 			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
-				Name: fmt.Sprintf("destination-tls-config-%d", i),
+				Name: matchName,
 				Match: &structpb.Struct{
 					Fields: map[string]*structpb.Value{
-						"matcher-index": structpb.NewStringValue(fmt.Sprintf("tls-%d", i)),
+						"name": structpb.NewStringValue(matchName),
 					},
 				},
 				TransportSocket: socket,
@@ -367,7 +366,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 				FilterMetadata: map[string]*structpb.Struct{
 					"envoy.transport_socket_match": {
 						Fields: map[string]*structpb.Value{
-							"matcher-index": structpb.NewStringValue(fmt.Sprintf("tls-%d", i)),
+							"name": structpb.NewStringValue(fmt.Sprintf("%s/tls/%d", clusterName, i)),
 						},
 					},
 				},
