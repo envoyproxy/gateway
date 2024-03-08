@@ -5,7 +5,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+  - name: ha-gateway
   rules:
   - matches:
     - path:
