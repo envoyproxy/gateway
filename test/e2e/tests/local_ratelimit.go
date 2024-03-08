@@ -33,7 +33,7 @@ var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-ratelimit-specific-user", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns})
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns})
 
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -111,7 +111,7 @@ var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-ratelimit-all-traffic", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns})
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns})
 
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
