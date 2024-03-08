@@ -651,9 +651,9 @@ metadata:
 spec:
   gatewayClassName: upgrade
   listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http1
-      port: 80
-      protocol: HTTP
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    name: http1
+    port: 80
+    protocol: HTTP

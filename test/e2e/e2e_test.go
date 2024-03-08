@@ -10,15 +10,16 @@ package e2e
 
 import (
 	"flag"
-	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
+	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
