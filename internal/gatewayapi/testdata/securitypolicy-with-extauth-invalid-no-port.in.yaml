@@ -33,6 +33,15 @@ httpRoutes:
           backendRefs:
             - name: service-1
               port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: http-backend
+    spec:
+      ports:
+        - port: 8080
 securityPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
@@ -50,7 +59,6 @@ securityPolicies:
           backendRef:
             name: http-backend
             namespace: default
-            port: 80
           headersToBackend:
             - header1
             - header2
