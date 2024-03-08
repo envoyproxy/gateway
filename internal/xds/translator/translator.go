@@ -354,7 +354,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			name:         tcpListener.Destination.Name,
 			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: EndpointTypeStatic,
+			endpointType: buildEndpointType(tcpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -402,7 +402,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: EndpointTypeStatic,
+			endpointType: buildEndpointType(udpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -495,17 +495,6 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
-	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
-	// since there's no Mixed AddressType among all the DestinationSettings.
-	addrTypeState := httpRoute.Destination.Settings[0].AddressType
-
-	var endpointType EndpointType
-	if addrTypeState != nil && *addrTypeState == ir.FQDN {
-		endpointType = EndpointTypeDNS
-	} else {
-		endpointType = EndpointTypeStatic
-	}
-
 	var tSocket *corev3.TransportSocket
 
 	if httpRoute.Destination.Settings[0].TLS != nil {
@@ -528,7 +517,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
 		tSocket:        tSocket,
-		endpointType:   endpointType,
+		endpointType:   buildEndpointType(httpRoute.Destination.Settings),
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
 		circuitBreaker: httpRoute.CircuitBreaker,
