@@ -58,30 +58,38 @@ func TestE2E(t *testing.T) {
 	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
 	cSuite.Run(t, tests.ConformanceTests)
 
-	// E2E tests for other GatewayClasses.
-	NewE2ETestForGatewayClass(t, "MergeGateways E2E", "merge-gateways", client, tests.MergeGatewaysTests)
+	// E2E tests for all the other GatewayClasses.
+	// Mainly for Multiple GatewayClass per controller and MergeGateways related features.
+	RunE2ETestForGatewayClass(t, "MergeGateways E2E", "merge-gateways", c, tests.MergeGatewaysTests)
 }
 
-// NewE2ETestForGatewayClass creates a new e2e test for gateway class based on the base e2e resources.
-func NewE2ETestForGatewayClass(t *testing.T, testName, gatewayClassName string, client client.Client, testSet []suite.ConformanceTest) {
+// RunE2ETestForGatewayClass creates a new e2e test for gatewayclass based on the base e2e resources.
+func RunE2ETestForGatewayClass(t *testing.T, testName, gatewayClassName string, c client.Client, testSet []suite.ConformanceTest) {
 	t.Run(testName, func(t *testing.T) {
 		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t\n supported features: [%v]\n exempt features: [%v]",
 			gatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.SupportedFeatures, *flags.ExemptFeatures)
 
-		newSuite := suite.New(suite.Options{
-			Client:           client,
-			GatewayClassName: gatewayClassName,
-			Debug:            *flags.ShowDebug,
-		})
-
-		// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
-		// since this test suite reuse the base resources of previous test suite.
-		newSuite.Applier.FS = Manifests
-		newSuite.Applier.GatewayClass = gatewayClassName
-		newSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t,
-			newSuite.Client, newSuite.TimeoutConfig, newSuite.GatewayClassName)
+		newSuite := newE2ETestSuiteForGatewayClass(t, gatewayClassName, c)
 
 		t.Logf("Running %d E2E tests for GatewayClass: %s", len(testSet), gatewayClassName)
 		newSuite.Run(t, testSet)
 	})
+}
+
+// newE2ETestSuiteForGatewayClass returns a new e2e test suite for gatewayclass based on the base e2e resources.
+func newE2ETestSuiteForGatewayClass(t *testing.T, gatewayClassName string, c client.Client) *suite.ConformanceTestSuite {
+	newSuite := suite.New(suite.Options{
+		Client:           c,
+		GatewayClassName: gatewayClassName,
+		Debug:            *flags.ShowDebug,
+	})
+
+	// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
+	// since this test suite reuse the base resources of previous test suite.
+	newSuite.Applier.FS = Manifests
+	newSuite.Applier.GatewayClass = gatewayClassName
+	newSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t,
+		newSuite.Client, newSuite.TimeoutConfig, newSuite.GatewayClassName)
+
+	return newSuite
 }
