@@ -27,7 +27,7 @@ func init() {
 var ExtAuthTest = suite.ConformanceTest{
 	ShortName:   "ExtAuth",
 	Description: "Test ExtAuth authentication",
-	Manifests:   []string{"testdata/ext-auth-http-service.yaml", "testdata/ext-auth-securitypolicy.yaml"},
+	Manifests:   []string{"testdata/ext-auth-http-service.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with ext auth authentication", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
@@ -37,7 +37,7 @@ var ExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the keycloak pod to be configured with the test user and client
+			// Wait for the http ext auth service pod to be ready
 			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
@@ -45,7 +45,18 @@ var ExtAuthTest = suite.ConformanceTest{
 					Host: "www.example.com",
 					Path: "/myapp",
 					Headers: map[string]string{
-						"Authorization": "dG9rZW4x", // token1 (base64 encoded)
+						"Authorization": "Bearer token1",
+					},
+				},
+				// Verify that the http headers returned by the ext auth service
+				// are added to the original request before sending it to the backend
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"x-current-user": "user1",
+						},
 					},
 				},
 				Response: http.Response{
@@ -73,7 +84,7 @@ var ExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the keycloak pod to be configured with the test user and client
+			// Wait for the http ext auth service pod to be ready
 			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
@@ -82,7 +93,7 @@ var ExtAuthTest = suite.ConformanceTest{
 					Path: "/myapp",
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCode: 403,
 				},
 				Namespace: ns,
 			}
@@ -106,7 +117,7 @@ var ExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the keycloak pod to be configured with the test user and client
+			// Wait for the http ext auth service pod to be ready
 			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
@@ -114,11 +125,11 @@ var ExtAuthTest = suite.ConformanceTest{
 					Host: "www.example.com",
 					Path: "/myapp",
 					Headers: map[string]string{
-						"Authorization": "dG9rZW40", // token4 (base64 encoded)
+						"Authorization": "Bearer invalid-token",
 					},
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCode: 403,
 				},
 				Namespace: ns,
 			}
@@ -142,7 +153,7 @@ var ExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the keycloak pod to be configured with the test user and client
+			// Wait for the http ext auth service pod to be ready
 			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{

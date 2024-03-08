@@ -50,4 +50,5 @@ spec:
       backendRef:
         name: http-ext-auth
         namespace: gateway-conformance-infra
-        port: 80
+        port: 9002
+      headersToBackend: ["x-current-user"]
