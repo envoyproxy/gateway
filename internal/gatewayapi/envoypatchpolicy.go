@@ -45,17 +45,6 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
-			// This status condition will not get updated in the resource because
-			// the IR is missing, but it has been kept here in case we publish
-			// the status from this layer instead of the xds layer.
-			message := fmt.Sprintf("%s:%s not found.", targetKind, policy.Spec.TargetRef.Name)
-
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonTargetNotFound,
-				message,
-			)
 			continue
 		}
 
