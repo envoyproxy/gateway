@@ -12,7 +12,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
-* Lets define a Service and EndpointSlice that represents http://httpbin.org
+* Lets define a Service and EndpointSlice that represents https://httpbin.org
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -64,6 +64,7 @@ kubectl patch gateway eg --type=json --patch '[{
 ```
 
 * Lets add a [TLSRoute][] that can route incoming traffic to the above backend that we created
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -89,8 +90,9 @@ export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].
 
 
 Lets send a request and view the response
+
 ```shell
-curl -v -HHost:httpbin.org https://${GATEWAY_HOST}:443
+curl -I -HHost:httpbin.org --resolve "httpbin.org:443:${GATEWAY_HOST}" https://httpbin.org:443
 ```
 
 [EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
