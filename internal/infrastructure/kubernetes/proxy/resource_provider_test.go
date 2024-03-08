@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"sort"
@@ -27,6 +28,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+var (
+	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 const (
@@ -116,7 +121,6 @@ func TestDeployment(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: ptr.To[int64](1000),
 					},
-					HostNetwork: true,
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Image: ptr.To("envoyproxy/envoy:v1.2.3"),
@@ -333,11 +337,13 @@ func TestDeployment(t *testing.T) {
 			bootstrap: `test bootstrap config`,
 		},
 		{
-			caseName: "enable-prometheus",
+			caseName: "disable-prometheus",
 			infra:    newTestInfra(),
 			telemetry: &egv1a1.ProxyTelemetry{
 				Metrics: &egv1a1.ProxyMetrics{
-					Prometheus: &egv1a1.ProxyPrometheusProvider{},
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
 				},
 			},
 		},
@@ -509,14 +515,6 @@ func TestDeployment(t *testing.T) {
 
 			if tc.telemetry != nil {
 				tc.infra.Proxy.Config.Spec.Telemetry = tc.telemetry
-			} else {
-				tc.infra.Proxy.Config.Spec.Telemetry = &egv1a1.ProxyTelemetry{
-					Metrics: &egv1a1.ProxyMetrics{
-						Prometheus: &egv1a1.ProxyPrometheusProvider{
-							Disable: true,
-						},
-					},
-				}
 			}
 
 			if len(tc.proxyLogging) > 0 {
@@ -548,6 +546,15 @@ func TestDeployment(t *testing.T) {
 				sort.Slice(env, func(i, j int) bool {
 					return env[i].Name > env[j].Name
 				})
+			}
+
+			if *overrideTestData {
+				deploymentYAML, err := yaml.Marshal(dp)
+				require.NoError(t, err)
+				// nolint: gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0644)
+				require.NoError(t, err)
+				return
 			}
 
 			sortEnv(dp.Spec.Template.Spec.Containers[0].Env)
@@ -621,6 +628,18 @@ func TestService(t *testing.T) {
 			}),
 			service: &egv1a1.KubernetesServiceSpec{
 				Type: &svcType,
+			},
+		},
+		{
+			caseName: "patch-service",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}}"),
+					},
+				},
 			},
 		},
 	}

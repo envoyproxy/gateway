@@ -126,10 +126,6 @@ type KubernetesPodSpec struct {
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
-	// HostNetwork, If this is set to true, the pod will use host's network namespace.
-	// +optional
-	HostNetwork bool `json:"hostNetwork,omitempty"`
-
 	// ImagePullSecrets is an optional list of references to secrets
 	// in the same namespace to use for pulling any of the images used by this PodSpec.
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
@@ -268,6 +264,11 @@ type KubernetesServiceSpec struct {
 	// +kubebuilder:default:="Local"
 	// +optional
 	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
+
+	// Patch defines how to perform the patch operation to the service
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 

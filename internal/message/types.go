@@ -21,7 +21,7 @@ import (
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *gatewayapi.GatewayClassResources]
+	GatewayAPIResources watchable.Map[string, *gatewayapi.ControllerResources]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -31,13 +31,25 @@ type ProviderResources struct {
 	PolicyStatuses
 }
 
-func (p *ProviderResources) GetResources() *gatewayapi.GatewayClassResources {
+func (p *ProviderResources) GetResources() []*gatewayapi.Resources {
 	if p.GatewayAPIResources.Len() == 0 {
 		return nil
 	}
+
 	for _, v := range p.GatewayAPIResources.LoadAll() {
-		return v
+		return *v
 	}
+
+	return nil
+}
+
+func (p *ProviderResources) GetResourcesByGatewayClass(name string) *gatewayapi.Resources {
+	for _, r := range p.GetResources() {
+		if r != nil && r.GatewayClass != nil && r.GatewayClass.Name == name {
+			return r
+		}
+	}
+
 	return nil
 }
 
@@ -82,12 +94,14 @@ type PolicyStatuses struct {
 	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *egv1a1.BackendTrafficPolicyStatus]
 	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]
 	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *egv1a1.SecurityPolicyStatus]
+	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 }
 
 func (p *PolicyStatuses) Close() {
 	p.ClientTrafficPolicyStatuses.Close()
 	p.SecurityPolicyStatuses.Close()
 	p.EnvoyPatchPolicyStatuses.Close()
+	p.BackendTLSPolicyStatuses.Close()
 }
 
 // XdsIR message

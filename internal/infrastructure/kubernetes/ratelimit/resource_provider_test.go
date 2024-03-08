@@ -6,6 +6,7 @@
 package ratelimit
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -24,6 +25,10 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+)
+
+var (
+	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 const (
@@ -152,6 +157,47 @@ func loadService() (*corev1.Service, error) {
 	return svc, nil
 }
 
+func TestConfigmap(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
+		Backend: egv1a1.RateLimitDatabaseBackend{
+			Type: egv1a1.RedisBackendType,
+			Redis: &egv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
+	}
+	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+	cm, err := r.ConfigMap()
+	require.NoError(t, err)
+
+	if *overrideTestData {
+		cmYAML, err := yaml.Marshal(cm)
+		require.NoError(t, err)
+		// nolint:gosec
+		err = os.WriteFile("testdata/envoy-ratelimit-configmap.yaml", cmYAML, 0644)
+		require.NoError(t, err)
+		return
+	}
+
+	expected, err := loadConfigmap()
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, cm)
+}
+
+func loadConfigmap() (*corev1.ConfigMap, error) {
+	configmapYAML, err := os.ReadFile("testdata/envoy-ratelimit-configmap.yaml")
+	if err != nil {
+		return nil, err
+	}
+	cm := &corev1.ConfigMap{}
+	_ = yaml.Unmarshal(configmapYAML, cm)
+	return cm, nil
+}
+
 func TestDeployment(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
@@ -172,6 +218,25 @@ func TestDeployment(t *testing.T) {
 			caseName:  "default",
 			rateLimit: rateLimit,
 			deploy:    cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		},
+		{
+			caseName: "disable-prometheus",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Metrics: &egv1a1.RateLimitMetrics{
+						Prometheus: &egv1a1.RateLimitMetricsPrometheusProvider{
+							Disable: true,
+						},
+					},
+				},
+			},
+			deploy: cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 		},
 		{
 			caseName:  "patch-deployment",
@@ -198,7 +263,6 @@ func TestDeployment(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: ptr.To[int64](1000),
 					},
-					HostNetwork: true,
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Image: ptr.To("custom-image"),
@@ -565,6 +629,15 @@ func TestDeployment(t *testing.T) {
 			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
+
+			if *overrideTestData {
+				deploymentYAML, err := yaml.Marshal(dp)
+				require.NoError(t, err)
+				// nolint:gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0644)
+				require.NoError(t, err)
+				return
+			}
 
 			expected, err := loadDeployment(tc.caseName)
 			require.NoError(t, err)

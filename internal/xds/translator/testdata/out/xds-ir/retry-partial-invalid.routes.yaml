@@ -11,6 +11,7 @@
       route:
         cluster: first-route-dest
         retryPolicy:
+          hostSelectionRetryMaxAttempts: "5"
           numRetries: 5
           perTryTimeout: 0.250s
           retriableStatusCodes:
@@ -19,7 +20,11 @@
           retryBackOff:
             baseInterval: 0.100s
             maxInterval: 10s
-          retryOn: connect-failure,retriable-status-codes
+          retryHostPredicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
+          retryOn: reset,connect-failure,retriable-status-codes
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
@@ -32,9 +37,14 @@
       route:
         cluster: first-route-dest
         retryPolicy:
+          hostSelectionRetryMaxAttempts: "5"
           numRetries: 2
           retriableStatusCodes:
           - 503
+          retryHostPredicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
           retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
         upgradeConfigs:
         - upgradeType: websocket

@@ -193,6 +193,13 @@ func TestTranslate(t *testing.T) {
 			extraArgs: []string{"--add-missing-resources"},
 		},
 		{
+			name:   "quickstart",
+			from:   "gateway-api",
+			to:     "ir",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
 			name:         "quickstart",
 			from:         "gateway-api",
 			to:           "xds",

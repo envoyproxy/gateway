@@ -229,6 +229,7 @@ _Appears in:_
 | `maxConnections` | _integer_ |  false  | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
 | `maxPendingRequests` | _integer_ |  false  | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
 | `maxParallelRequests` | _integer_ |  false  | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
+| `maxParallelRetries` | _integer_ |  false  | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule. Default: unlimited. |
 
 
@@ -1454,6 +1455,7 @@ KubernetesPatchSpec defines how to perform the patch operation
 
 _Appears in:_
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
+- [KubernetesServiceSpec](#kubernetesservicespec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1478,7 +1480,6 @@ _Appears in:_
 | `affinity` | _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ |  false  | If specified, the pod's scheduling constraints. |
 | `tolerations` | _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ |  false  | If specified, the pod's tolerations. |
 | `volumes` | _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volume-v1-core) array_ |  false  | Volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes |
-| `hostNetwork` | _boolean_ |  false  | HostNetwork, If this is set to true, the pod will use host's network namespace. |
 | `imagePullSecrets` | _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#localobjectreference-v1-core) array_ |  false  | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
 | `nodeSelector` | _object (keys:string, values:string)_ |  false  | NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ |
 | `topologySpreadConstraints` | _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#topologyspreadconstraint-v1-core) array_ |  false  | TopologySpreadConstraints describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints. All topologySpreadConstraints are ANDed. |
@@ -1501,6 +1502,7 @@ _Appears in:_
 | `allocateLoadBalancerNodePorts` | _boolean_ |  false  | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` | _string_ |  false  | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
 | `externalTrafficPolicy` | _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ |  false  | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to the service |
 
 
 #### KubernetesWatchMode
@@ -2004,6 +2006,7 @@ _Appears in:_
 | `backend` | _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ |  true  | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  | FailClosed is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailClosed is false, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailClosed is False. |
+| `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  | Telemetry defines telemetry configuration for RateLimit. |
 
 
 #### RateLimitDatabaseBackend
@@ -2030,6 +2033,34 @@ RateLimitDatabaseBackendType specifies the types of database backend to be used 
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
 
+
+
+#### RateLimitMetrics
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `prometheus` | _[RateLimitMetricsPrometheusProvider](#ratelimitmetricsprometheusprovider)_ |  true  | Prometheus defines the configuration for prometheus endpoint. |
+
+
+#### RateLimitMetricsPrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [RateLimitMetrics](#ratelimitmetrics)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
 
 
 #### RateLimitRedisSettings
@@ -2092,6 +2123,20 @@ _Appears in:_
 | `type` | _[RateLimitType](#ratelimittype)_ |  true  | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global" or "Local". |
 | `global` | _[GlobalRateLimit](#globalratelimit)_ |  false  | Global defines global rate limit configuration. |
 | `local` | _[LocalRateLimit](#localratelimit)_ |  false  | Local defines local rate limit configuration. |
+
+
+#### RateLimitTelemetry
+
+
+
+
+
+_Appears in:_
+- [RateLimit](#ratelimit)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
 
 
 #### RateLimitType

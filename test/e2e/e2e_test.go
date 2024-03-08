@@ -31,22 +31,27 @@ func TestE2E(t *testing.T) {
 	cfg, err := config.GetConfig()
 	require.NoError(t, err)
 
-	client, err := client.New(cfg, client.Options{})
+	c, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)
+	require.NoError(t, gwapiv1a2.AddToScheme(c.Scheme()))
+	require.NoError(t, gwapiv1.AddToScheme(c.Scheme()))
+	require.NoError(t, egv1a1.AddToScheme(c.Scheme()))
 
-	require.NoError(t, gwapiv1a2.AddToScheme(client.Scheme()))
-	require.NoError(t, gwapiv1.AddToScheme(client.Scheme()))
-	require.NoError(t, egv1a1.AddToScheme(client.Scheme()))
-
-	t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t\n supported features: [%v]\n exempt features: [%v]",
-		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.SupportedFeatures, *flags.ExemptFeatures)
+	if flags.RunTest != nil && *flags.RunTest != "" {
+		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
+			*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+	} else {
+		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
+			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+	}
 
 	cSuite := suite.New(suite.Options{
-		Client:               client,
+		Client:               c,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &Manifests,
+		RunTest:              *flags.RunTest,
 	})
 
 	cSuite.Setup(t)

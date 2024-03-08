@@ -3282,10 +3282,6 @@ spec:
                                   should be appended to the pods. By default, no pod
                                   annotations are appended.
                                 type: object
-                              hostNetwork:
-                                description: HostNetwork, If this is set to true,
-                                  the pod will use host's network namespace.
-                                type: boolean
                               imagePullSecrets:
                                 description: 'ImagePullSecrets is an optional list
                                   of references to secrets in the same namespace to
@@ -6597,6 +6593,22 @@ spec:
                             x-kubernetes-validations:
                             - message: loadBalancerIP must be a valid IPv4 address
                               rule: self.matches(r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+                          patch:
+                            description: Patch defines how to perform the patch operation
+                              to the service
+                            properties:
+                              type:
+                                description: "Type is the type of merge operation
+                                  to perform \n By default, StrategicMerge is used
+                                  as the patch type."
+                                type: string
+                              value:
+                                description: Object contains the raw configuration
+                                  for merged object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - value
+                            type: object
                           type:
                             default: LoadBalancer
                             description: Type determines how the Service is exposed.

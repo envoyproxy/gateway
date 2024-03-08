@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 
@@ -66,7 +65,7 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMOAuth2Filter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
@@ -99,7 +98,7 @@ func oauth2FilterName(route *ir.HTTPRoute) string {
 }
 
 func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
-	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
+	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +214,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			err     error
 		)
 
-		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
+		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -231,13 +230,6 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		// TODO huabing: add support for custom CA and client certificate.
-		tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
-		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-
 		ds = &ir.DestinationSetting{
 			Weight: ptr.To[uint32](1),
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(
@@ -246,12 +238,22 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			},
 		}
 
-		if err = addXdsCluster(tCtx, &xdsClusterArgs{
+		clusterArgs := &xdsClusterArgs{
 			name:         cluster.name,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      tSocket,
 			endpointType: cluster.endpointType,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		}
+		if cluster.tls {
+			tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
+			if err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			clusterArgs.tSocket = tSocket
+		}
+
+		if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -276,11 +278,7 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 			errs = errors.Join(errs, err)
 		}
 
-		hmacSecret, err := buildOAuth2HMACSecret(route)
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
-		if err := addXdsSecret(tCtx, hmacSecret); err != nil {
+		if err := addXdsSecret(tCtx, buildOAuth2HMACSecret(route)); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -305,25 +303,21 @@ func buildOAuth2ClientSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 	return clientSecret
 }
 
-func buildOAuth2HMACSecret(route *ir.HTTPRoute) (*tlsv3.Secret, error) {
-	hmac, err := generateHMACSecretKey()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate hmack secret key: %w", err)
-	}
+func buildOAuth2HMACSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 	hmacSecret := &tlsv3.Secret{
 		Name: oauth2HMACSecretName(route),
 		Type: &tlsv3.Secret_GenericSecret{
 			GenericSecret: &tlsv3.GenericSecret{
 				Secret: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{
-						InlineBytes: hmac,
+						InlineBytes: route.OIDC.HMACSecret,
 					},
 				},
 			},
 		},
 	}
 
-	return hmacSecret, nil
+	return hmacSecret
 }
 
 func oauth2ClientSecretName(route *ir.HTTPRoute) string {
@@ -332,22 +326,6 @@ func oauth2ClientSecretName(route *ir.HTTPRoute) string {
 
 func oauth2HMACSecretName(route *ir.HTTPRoute) string {
 	return fmt.Sprintf("%s/oauth2/hmac_secret", route.Name)
-}
-
-func generateHMACSecretKey() ([]byte, error) {
-	// Set the desired length of the secret key in bytes
-	keyLength := 32
-
-	// Create a byte slice to hold the random bytes
-	key := make([]byte, keyLength)
-
-	// Read random bytes from the cryptographically secure random number generator
-	_, err := rand.Read(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return key, nil
 }
 
 // patchRoute patches the provided route with the oauth2 config if applicable.
