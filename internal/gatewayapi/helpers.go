@@ -424,26 +424,20 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alph
 // ShareEnvoyFilterChain returns a list of the names of all other HTTP listeners
 // that would share the same filter chain as the provided listener when translated
 // to XDS
-func ShareEnvoyFilterChain(xdsIR XdsIRMap, mergeGateways bool, listener *ir.HTTPListener) []string {
+func ShareEnvoyFilterChain(xdsIR *ir.Xds, listener *ir.HTTPListener) []string {
 	// if TLS is enabled, the listener would have its own filterChain in Envoy, so
 	// no conflicts are possible
 	if listener.TLS != nil {
 		return nil
 	}
-	gatewayName := listener.Name[0:strings.LastIndex(listener.Name, "/")]
 	res := []string{}
-	for gwName, ir := range xdsIR {
-		if !mergeGateways && gwName != gatewayName {
+	for _, http := range xdsIR.HTTP {
+		if http == listener {
 			continue
 		}
-		for _, http := range ir.HTTP {
-			if http == listener {
-				continue
-			}
-			// Non-TLS listeners can be distinguished by their ports
-			if http.Port == listener.Port {
-				res = append(res, http.Name)
-			}
+		// Non-TLS listeners can be distinguished by their ports
+		if http.Port == listener.Port {
+			res = append(res, http.Name)
 		}
 	}
 	return res

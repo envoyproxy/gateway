@@ -291,7 +291,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 	// IR must exist since we're past validation
 	if httpIR != nil {
-		if sameListeners := ShareEnvoyFilterChain(xdsIR, t.MergeGateways, httpIR); len(sameListeners) != 0 {
+		if sameListeners := ShareEnvoyFilterChain(gwXdsIR, httpIR); len(sameListeners) != 0 {
 			return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
 		}
 

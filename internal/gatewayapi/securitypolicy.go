@@ -337,7 +337,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
 					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
-					if sameListeners := ShareEnvoyFilterChain(xdsIR, t.MergeGateways, http); len(sameListeners) == 0 {
+					if sameListeners := ShareEnvoyFilterChain(ir, http); len(sameListeners) == 0 {
 						r.CORS = cors
 						r.JWT = jwt
 						r.OIDC = oidc
