@@ -495,28 +495,10 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
-	var tSocket *corev3.TransportSocket
-
-	if httpRoute.Destination.Settings[0].TLS != nil {
-		CaSecret := buildXdsUpstreamTLSCASecret(httpRoute.Destination.Settings[0].TLS)
-		if CaSecret != nil {
-			if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
-				return err
-			}
-		}
-		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
-		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
-		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.Destination.Settings[0].TLS)
-		if err != nil {
-			return err
-		}
-		tSocket = temp
-	}
-
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
-		tSocket:        tSocket,
+		tSocket:        nil,
 		endpointType:   buildEndpointType(httpRoute.Destination.Settings),
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
@@ -568,6 +550,14 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 
 	xdsCluster := buildXdsCluster(args)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	for _, ds := range args.settings {
+		if ds.TLS != nil {
+			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+				return err
+			}
+		}
+	}
 	// Use EDS for static endpoints
 	if args.endpointType == EndpointTypeStatic {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
