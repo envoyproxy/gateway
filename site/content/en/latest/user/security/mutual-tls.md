@@ -2,7 +2,7 @@
 title: "Mutual TLS: External Clients to the Gateway"
 ---
 
-This guide demonstates how mutual TLS can be achieved between external clients and the Gateway. The guide uses a self-signed CA, so it should be used for
+This guide demonstrates how mutual TLS can be achieved between external clients and the Gateway. The guide uses a self-signed CA, so it should be used for
 testing and demonstration purposes only.
 
 ## Prerequisites
