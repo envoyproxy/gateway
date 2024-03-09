@@ -11,9 +11,12 @@ package tests
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 
 	"fortio.org/fortio/periodic"
 
@@ -22,7 +25,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -50,7 +53,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: name, Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
-
+			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
 			dp, err := getDeploymentForGateway(ns, name, suite.Client)
 			if err != nil {
 				t.Errorf("Failed to get proxy deployment")
@@ -65,16 +68,14 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			// Run load async and continue to restart deployment
 			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
 
-			t.Log("Deleting proxy pod")
-			// the deleting pod will gracefully close connections, and the load generator is expected
-			// to reconnect to the other replicas
-			err = deleteDeploymentPodAndWaitForTermination(t, suite.TimeoutConfig, suite.Client, dp)
+			t.Log("Rolling out proxy deployment")
+			err = restartProxyAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, epNN, dp)
 
 			t.Log("Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
 
 			if err != nil {
-				t.Errorf("Failed to delete proxy pods")
+				t.Errorf("Failed to rollout proxy deployment")
 			}
 
 			// Wait for the goroutine to finish
@@ -112,41 +113,55 @@ func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.D
 	return &ret, nil
 }
 
-// deletes a single pod belonging to a deployment and wait for it to be removed from the cluster
-func deleteDeploymentPodAndWaitForTermination(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
+// sets the "gateway.envoyproxy.io/restartedAt" annotation in the EnvoyProxy resource's deployment patch spec
+// leading to EG triggering a rollout restart of the deployment
+func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, epNN types.NamespacedName, dp *appsv1.Deployment) error {
 	t.Helper()
-
+	const egRestartAnnotation = "gateway.envoyproxy.io/restartedAt"
+	restartTime := time.Now().Format(time.RFC3339)
 	ctx := context.Background()
-
-	podList := &corev1.PodList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(dp.Namespace),
-		client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(dp.Spec.Selector.MatchLabels)},
-	}
-
-	err := c.List(ctx, podList, listOpts...)
-	if err != nil {
+	ep := v1alpha1.EnvoyProxy{}
+	if err := c.Get(context.Background(), epNN, &ep); err != nil {
 		return err
 	}
 
-	if len(podList.Items) < 2 {
-		return errors.New("insufficient amount of pods for graceful termination test")
+	jsonData := fmt.Sprintf("{\"metadata\": {\"annotations\": {\"gateway.envoyproxy.io/restartedAt\": \"%s\"}}, \"spec\": {\"template\": {\"metadata\": {\"annotations\": {\"gateway.envoyproxy.io/restartedAt\": \"%s\"}}}}}", restartTime, restartTime)
+
+	ep.Spec.Provider.Kubernetes.EnvoyDeployment.Patch = &v1alpha1.KubernetesPatchSpec{
+		Value: v1.JSON{
+			Raw: []byte(jsonData),
+		},
 	}
 
-	// delete the first pods
-	pod := podList.Items[0]
-	if err = c.Delete(ctx, &pod); err != nil {
+	if err := c.Update(ctx, &ep); err != nil {
 		return err
 	}
 
-	// wait for pod to be removed
 	return wait.PollUntilContextTimeout(ctx, 1*time.Second, timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-		if err := c.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, &corev1.Pod{}); err != nil {
-			if kerrors.IsNotFound(err) {
-				return true, nil
-			}
+		// wait for replicaset with the same annotation to reach ready status
+		podList := &corev1.PodList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(dp.Namespace),
+			client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(dp.Spec.Selector.MatchLabels)},
+		}
+
+		err := c.List(ctx, podList, listOpts...)
+		if err != nil {
 			return false, err
 		}
+
+		rolled := int32(0)
+		for _, rs := range podList.Items {
+			if rs.Annotations[egRestartAnnotation] == restartTime {
+				rolled++
+			}
+		}
+
+		// all pods are rolled
+		if rolled == int32(len(podList.Items)) && rolled >= *dp.Spec.Replicas {
+			return true, nil
+		}
+
 		return false, nil
 	})
 }

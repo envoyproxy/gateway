@@ -81,6 +81,8 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
+  shutdown:
+    drainTimeout: 15s
   provider:
     type: Kubernetes
     kubernetes:
