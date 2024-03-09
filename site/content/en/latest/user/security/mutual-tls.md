@@ -149,3 +149,5 @@ Dont specify the client key and certificate in the above command, and ensure tha
 curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
 --cacert example.com.crt https://www.example.com/get
 ```
+
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
