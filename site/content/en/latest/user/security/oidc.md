@@ -16,42 +16,13 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
+OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../secure-gateways) guide
+to generate the TLS certificates and update the Gateway configuration to add an HTTPS listener.
+
 Verify the Gateway status:
 
 ```shell
-kubectl get gateway/eg -o yaml
-```
-
-OIDC can be configured at the Gateway level to authenticate all the HTTPRoutes that are associated with the Gateway with
-the same OIDC configuration, or at the HTTPRoute level to authenticate HTTPRoutes with different OIDC configurations.
-
-Let's create an HTTPRoute that represents an application protected by OIDC.
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: myapp
-spec:
-  parentRefs:
-  - name: eg
-  hostnames: ["www.example.com"]
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /myapp
-    backendRefs:
-    - name: backend
-      port: 3000
-EOF
-```
-
-Verify the HTTPRoute status:
-
-```shell
-kubectl get httproute/myapp -o yaml
+kubectl get gateway/teg -o yaml
 ```
 
 ## Configuration
@@ -62,8 +33,12 @@ providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA,
 ### Register an OIDC application
 
 Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please make sure the
-redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. In this example,
-the redirect URL is `http://www.example.com:8080/oauth2/myapp/callback`.
+redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. If you don't
+specify a redirect URL in the SecurityPolicy, the default redirect URL is `https://${GATEWAY_HOST}/oauth2/callback`.
+Please notice that the `redirectURL` and `logoutPath` must be caught by the target HTTPRoute. For example, if the
+HTTPRoute is configured to match the host `www.example.com` and the path `/foo`, the `redirectURL` must
+be prefixed with `https://www.example.com/foo`, and `logoutPath` must be prefixed with`/foo`, for example,
+`https://www.example.com/foo/oauth2/callback` and `/foo/logout`, otherwise the OIDC authentication will fail.
 
 After registering the application, you should have the following information:
 * Client ID: The client ID of the OIDC application.
@@ -83,13 +58,7 @@ secret "my-app-client-secret" created
 
 ### Create a SecurityPolicy
 
-Please notice that the `redirectURL` and `logoutPath` must match the target HTTPRoute. In this example, the target
-HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed 
-with `https://www.example.com/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication 
-will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed 
-by the OAuth2 filter on that HTTPRoute.
-
-Note: please replace the ${CLIENT_ID} in the below yaml snippet with the actual Client ID that you got from the OIDC provider.
+Note: please replace the ${CLIENT_ID} with the actual Client ID that you got from the previous step.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -101,15 +70,15 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: myapp
+    name: backend
   oidc:
     provider:
       issuer: "https://accounts.google.com"
-    clientID: "${CLIENT_ID}"
+    clientID: "${CLIENT_ID}.apps.googleusercontent.com"
     clientSecret:
       name: "my-app-client-secret"
-    redirectURL: "http://www.example.com:8080/oauth2/myapp/callback"
-    logoutPath: "/myapp/logout"
+    redirectURI: "https://www.example.com/oauth2/callback"
+    logoutPath: "/logout"
 EOF
 ```
 
@@ -121,34 +90,33 @@ kubectl get securitypolicy/oidc-example -o yaml
 
 ## Testing
 
-Port forward gateway port to localhost:
+Port forward gateway 443 port to localhost:
 
 ```shell
 export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
 
-kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8080:80
+sudo kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 443:443
 ```
 
-Put www.example.com in the /etc/hosts file in your test machine, so we can use this host name to access the gateway from a browser:
+Put www.example.com in the /etc/hosts file in your test machine, so we can use this host name to access the demo from a browser:
 
 ```shell
 ...
 127.0.0.1 www.example.com
 ```
 
-Open a browser and navigate to the `http://www.example.com:8080/myapp` address. You should be redirected to the Google 
-login page. After you successfully login, you should see the response from the backend service.
+Open a browser and navigate to the `https://www.example.com` address. You should be redirected to the Google login page. After you
+successfully login, you should see the response from the backend service.
 
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
-Delete the SecurityPolicy, the secret, and the HTTPRoute:
+Delete the SecurityPolicy and the secret:
 
 ```shell
 kubectl delete securitypolicy/oidc-example
 kubectl delete secret/my-app-client-secret
-kubectl delete httproute/myapp
 ```
 
 ## Next Steps
