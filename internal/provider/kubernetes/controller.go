@@ -839,9 +839,8 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 
 	for _, policy := range securityPolicies.Items {
 		policy := policy
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.SecurityPolicyStatus{}
+		// The status of BackendTLSPolicies can't be discarded because the status
+		// can be modified by multiple controllers.
 		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
 	}
 
