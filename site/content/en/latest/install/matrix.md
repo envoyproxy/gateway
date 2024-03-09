@@ -13,4 +13,4 @@ Envoy Gateway relies on the Envoy Proxy and the Gateway API, and runs within a K
 | v0.4.0                | **v1.26-latest**            | **542a6047**       | **v0.6.2**          | v1.25, v1.26, v1.27        |
 | v0.3.0                | **v1.25-latest**            | **f28024e3**       | **v0.6.1**          | v1.24, v1.25, v1.26        |
 | v0.2.0                | **v1.23-latest**            |                    | **v0.5.1**          | v1.24                      |
-| latest                | **dev-latest**              | **master**         | **v1.0.0**          | v1.26, v1.27, v1.28        |
+| latest                | **dev-latest**              | **master**         | **v1.0.0**          | v1.26, v1.27, v1.28, v1.29 |
