@@ -38,10 +38,10 @@ const (
 	validFor = 365 * 24 * time.Hour
 )
 
-// MustCreateSelfSignedCAConfigmapAndCertSecret creates a self-signed CA certficiate and stores it a configma
+// MustCreateSelfSignedCAConfigmapAndCertSecret creates a self-signed CA certificate and stores it a configmap
 // it also creates an SSL certificate and stores it in a secret
 func MustCreateSelfSignedCAConfigmapAndCertSecret(t *testing.T, namespace, secretName string, hosts []string) (*corev1.Secret, *corev1.ConfigMap) {
-	require.Greater(t, len(hosts), 0, "require a non-empty hosts for Subject Alternate Name values")
+	require.NotEmpty(t, hosts, "require a non-empty hosts for Subject Alternate Name values")
 
 	var caCert, serverKey, serverCert bytes.Buffer
 
