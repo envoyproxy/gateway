@@ -2,7 +2,9 @@ module local
 
 go 1.22
 
-require github.com/elastic/crd-ref-docs v0.0.11
+replace github.com/elastic/crd-ref-docs => github.com/zirain/crd-ref-docs v0.0.0-20240309155703-d2ceeababb50
+
+require github.com/elastic/crd-ref-docs v0.0.10
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
