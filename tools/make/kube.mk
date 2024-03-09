@@ -117,7 +117,7 @@ install-ratelimit:
 .PHONY: run-e2e
 run-e2e: install-e2e-telemetry
 	@$(LOG_TARGET)
-	#kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(E2E_RUN_TEST),)
