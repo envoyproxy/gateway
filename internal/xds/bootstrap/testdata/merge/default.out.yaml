@@ -1,0 +1,127 @@
+admin:
+  accessLog:
+  - name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: /dev/null
+  address:
+    socketAddress:
+      address: 127.0.0.1
+      portValue: 20000
+dynamicResources:
+  adsConfig:
+    apiType: DELTA_GRPC
+    grpcServices:
+    - envoyGrpc:
+        clusterName: xds_cluster
+    setNodeOnFirstMessageOnly: true
+    transportApiVersion: V3
+  cdsConfig:
+    ads: {}
+    resourceApiVersion: V3
+  ldsConfig:
+    ads: {}
+    resourceApiVersion: V3
+layeredRuntime:
+  layers:
+  - name: global_config
+    staticLayer:
+      envoy.restart_features.use_eds_cache_for_ads: true
+      re2.max_program_size.error_level: 4294967295
+      re2.max_program_size.warn_level: 1000
+  - name: runtime-0
+    rtdsLayer:
+      name: runtime-0
+      rtdsConfig:
+        ads: {}
+        resourceApiVersion: V3
+staticResources:
+  clusters:
+  - connectTimeout: 0.250s
+    loadAssignment:
+      clusterName: prometheus_stats
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                address: 127.0.0.1
+                portValue: 19000
+    name: prometheus_stats
+    type: STATIC
+  - connectTimeout: 10s
+    loadAssignment:
+      clusterName: xds_cluster
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                address: envoy-gateway
+                portValue: 18000
+          loadBalancingWeight: 1
+        loadBalancingWeight: 1
+    name: xds_cluster
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: xds_certificate
+            sdsConfig:
+              pathConfigSource:
+                path: /sds/xds-certificate.json
+              resourceApiVersion: V3
+          tlsParams:
+            tlsMaximumProtocolVersion: TLSv1_3
+          validationContextSdsSecretConfig:
+            name: xds_trusted_ca
+            sdsConfig:
+              pathConfigSource:
+                path: /sds/xds-trusted-ca.json
+              resourceApiVersion: V3
+    type: STRICT_DNS
+    typedExtensionProtocolOptions:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicitHttpConfig:
+          http2ProtocolOptions:
+            connectionKeepalive:
+              interval: 30s
+              timeout: 5s
+  listeners:
+  - address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 19001
+    filterChains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          httpFilters:
+          - name: envoy.filters.http.health_check
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+              headers:
+              - name: :path
+                stringMatch:
+                  exact: /ready
+              passThroughMode: false
+          - name: envoy.filters.http.router
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+          routeConfig:
+            name: local_route
+            virtualHosts:
+            - domains:
+              - '*'
+              name: prometheus_stats
+              routes:
+              - match:
+                  prefix: /stats/prometheus
+                route:
+                  cluster: prometheus_stats
+          statPrefix: eg-ready-http
+    name: envoy-gateway-proxy-ready-0.0.0.0-19001

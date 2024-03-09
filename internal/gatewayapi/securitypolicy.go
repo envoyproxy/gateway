@@ -182,10 +182,10 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf(
 			"Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetSecurityPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -204,14 +204,6 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// Gateway not found
 	if !ok {
-		message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
-
-		status.SetSecurityPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -246,10 +238,10 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf(
 			"Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetSecurityPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -269,17 +261,6 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Route not found
 	if !ok {
-		message := fmt.Sprintf(
-			"%s/%s/%s not found.",
-			policy.Spec.TargetRef.Kind,
-			string(*targetNs), policy.Spec.TargetRef.Name)
-
-		status.SetSecurityPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -752,7 +733,7 @@ func (t *Translator) buildExtAuth(
 
 	if ds, err = t.processExtServiceDestination(
 		backendRef,
-		policy.Namespace,
+		policy,
 		protocol,
 		resources); err != nil {
 		return nil, err
@@ -785,16 +766,17 @@ func (t *Translator) buildExtAuth(
 // TODO: zhaohuabing combine this function with the one in the route translator
 func (t *Translator) processExtServiceDestination(
 	backendRef *gwapiv1.BackendObjectReference,
-	ownerNamespace string,
+	policy *egv1a1.SecurityPolicy,
 	protocol ir.AppProtocol,
 	resources *Resources) (*ir.DestinationSetting, error) {
 	var (
 		endpoints   []*ir.DestinationEndpoint
 		addrType    *ir.DestinationAddressType
 		servicePort v1.ServicePort
+		backendTLS  *ir.TLSUpstreamConfig
 	)
 
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 	for _, port := range service.Spec.Ports {
 		if port.Port == int32(*backendRef.Port) {
@@ -828,11 +810,27 @@ func (t *Translator) processExtServiceDestination(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
 
+	backendTLS = t.processBackendTLSPolicy(
+		*backendRef,
+		serviceNamespace,
+		// Gateway is not the appropriate parent reference here because the owner
+		// of the BackendRef is the security policy, and there is no hierarchy
+		// relationship between the security policy and a gateway.
+		// The owner security policy of the BackendRef is used as the parent reference here.
+		gwv1a2.ParentReference{
+			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
+			Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindSecurityPolicy)),
+			Namespace: ptr.To(gwapiv1.Namespace(policy.Namespace)),
+			Name:      gwapiv1.ObjectName(policy.Name),
+		},
+		resources)
+
 	return &ir.DestinationSetting{
 		Weight:      ptr.To(uint32(1)),
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
+		TLS:         backendTLS,
 	}, nil
 }
 

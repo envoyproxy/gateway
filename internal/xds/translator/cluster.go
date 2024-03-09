@@ -57,6 +57,22 @@ const (
 	EndpointTypeStatic
 )
 
+func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
+	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
+	// since there's no Mixed AddressType among all the DestinationSettings.
+	if settings == nil {
+		return EndpointTypeStatic
+	}
+
+	addrType := settings[0].AddressType
+
+	if addrType != nil && *addrType == ir.FQDN {
+		return EndpointTypeDNS
+	}
+
+	return EndpointTypeStatic
+}
+
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,

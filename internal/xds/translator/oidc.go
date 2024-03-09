@@ -65,7 +65,7 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMOAuth2Filter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
