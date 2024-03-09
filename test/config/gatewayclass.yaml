@@ -16,9 +16,6 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
-  extraArgs:
-    - "--drain-time-s 10" # let's shorten the drain time to 10 seconds
-    - "--drain-strategy immediate"
   telemetry:
     metrics:
       prometheus: {}
@@ -63,5 +60,5 @@ spec:
             name: ENVOY_GATEWAY_NAMESPACE
             defaultValue: "envoy-gateway-system"
   shutdown:
-    drainTimeout: 15s
-
+    drainTimeout: 5s
+    minDrainDuration: 1s
