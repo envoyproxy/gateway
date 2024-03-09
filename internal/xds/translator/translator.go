@@ -495,22 +495,16 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
-	var tSocket *corev3.TransportSocket
+	var (
+		tSocket *corev3.TransportSocket
+		err     error
+	)
 
 	if httpRoute.Destination.Settings[0].TLS != nil {
-		CaSecret := buildXdsUpstreamTLSCASecret(httpRoute.Destination.Settings[0].TLS)
-		if CaSecret != nil {
-			if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
-				return err
-			}
-		}
-		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
-		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
-		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.Destination.Settings[0].TLS)
+		tSocket, err = processTLSSocket(httpRoute.Destination.Settings[0].TLS, tCtx)
 		if err != nil {
 			return err
 		}
-		tSocket = temp
 	}
 
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
@@ -530,6 +524,27 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 	}
 
 	return nil
+}
+
+// processTLSSocket generates a xDS TransportSocket for a given TLS config.
+// It also adds the necessary secrets to the resource version table.
+func processTLSSocket(tlsConfig *ir.TLSUpstreamConfig, tCtx *types.ResourceVersionTable) (*corev3.TransportSocket, error) {
+	if tlsConfig == nil {
+		return nil, nil
+	}
+	CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
+	if CaSecret != nil {
+		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
+			return nil, err
+		}
+	}
+	// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
+	// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
+	tlsSocket, err := buildXdsUpstreamTLSSocketWthCert(tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	return tlsSocket, nil
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
