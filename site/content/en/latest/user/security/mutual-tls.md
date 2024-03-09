@@ -37,7 +37,14 @@ Store the cert/key in a Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt --certificate-authority=example.com.crt
 ```
 
+Store the CA Cert in another Secret:
+
+```shell
+kubectl create secret generic example-ca-cert --from-file=ca.crt=example.com.crt
+```
+
 Create a certificate and a private key for the client `client.example.com`:
+
 ```shell
 openssl req -out client.example.com.csr -newkey rsa:2048 -nodes -keyout client.example.com.key -subj "/CN=client.example.com/O=example organization"
 openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in client.example.com.csr -out client.example.com.crt
@@ -92,7 +99,7 @@ spec:
       caCertificateRefs:
       - kind: "Secret"
         group: ""
-        name: "example-cert"
+        name: "example-ca-cert"
 EOF
 ```
 
@@ -133,5 +140,12 @@ Query the example app through the Gateway:
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
 --cert client.example.com.crt --key client.example.com.key \
+--cacert example.com.crt https://www.example.com/get
+```
+
+Dont specify the client key and certificate in the above command, and ensure that the connection fails
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
 --cacert example.com.crt https://www.example.com/get
 ```
