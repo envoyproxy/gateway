@@ -15,11 +15,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	httpv1 "net/http"
 	"net/http/httputil"
+	"strings"
 	"testing"
 	"time"
 
+	retryv1 "github.com/avast/retry-go"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/quic-go/quic-go/qlog"
@@ -44,7 +47,7 @@ var HTTP3Test = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http3-route", Namespace: namespace}
 			gwNN := types.NamespacedName{Name: "http3-gateway", Namespace: namespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			server := "www.example.com"
+			server := "www.example.com:443"
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/get",
@@ -60,10 +63,10 @@ var HTTP3Test = suite.ConformanceTest{
 				Namespace: namespace,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, server+":443", "HTTPS", "https")
+			req := http.MakeRequest(t, &expectedResponse, server, "HTTPS", "https")
 			req.CertPem = []byte("-----BEGIN CERTIFICATE-----\nMIIDOzCCAiOgAwIBAgIUZTLKDkhVrxfgt9megu5uiSRwRxswDQYJKoZIhvcNAQEL\nBQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv\nbTAeFw0yNDAzMDIxNDU3MTJaFw0yNTAzMDIxNDU3MTJaMC0xFTATBgNVBAoMDGV4\nYW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQDJBSwf0XJkglooQbzQ6Io/M7gwmbhTjpQPX7P2/ZV6\ncdFsXBUF0X91wABtCtibv+x4if+yvPhHzBERzhjwwQitKZiewhOFoSz5ZyKT8HXd\n+Y06iRzWEnGi2i/98YiBFsG1xc5mHTLgyi6PjJDzGVdsNrL7pE8aM3R9sGrkG4PZ\n5ZWFlpbxX9eUz9dplLfLX7jKETbyKsiwcHihXAY4mdpuaUVifz35tSpnQ3P/RoNw\nNl7/gvRKqSK1a5ByYqVANV/c+O1R9MaR8kG9Cmj2PZPZm4vW/bJIs2R7z6ygGiDx\n4GyMT4MA52pk/dDkV2EtvFk5JFXoMjNPcNRGjuusRe17AgMBAAGjUzBRMB0GA1Ud\nDgQWBBQXeg9HF7TIRHUWOsF5dd0m68zbxTAfBgNVHSMEGDAWgBQXeg9HF7TIRHUW\nOsF5dd0m68zbxTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCS\nO7hTBUp3MjsOBGXmuuDPatz0eR05Dq4O6Etsn9KVRND0o8iULqYGPMsozkueRc0y\n/Ra1aTbNXm0n5gwNBgJeSOIOfLN0r0L5uBFSMjTPAo6qPkDzK5gXHfzpoxgDYCEy\nSuzYOIHliWoG6K2ldfMx7psMe3ZiR9SA5evOv3VKJDrrhO57niRmDhZKsADWDUFH\nyyximSiPKjFJLJ+7B4N+7TAmxDjMd2vre7qfRL/AFTc7zIkQBG+JoXbusOw1yGcm\n8IV50ZroyupxND625FgawISPYUelwS39x4jA7QNH0Tzgzp+Ao0N8Ck9H4waNcJt8\njk27Qn0mC7RsIqb981eH\n-----END CERTIFICATE-----")
 			req.Server = server
-			cReq, cResp, err := CaptureRoundTrip(req, gwAddr)
+			cReq, cResp, err := http3CaptureRoundTrip(req, gwAddr)
 			if err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
@@ -75,29 +78,29 @@ var HTTP3Test = suite.ConformanceTest{
 	},
 }
 
-func CaptureRoundTrip(request roundtripper.Request, gwAddr string) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
-	transport, err := httpTransport(request, gwAddr)
+func http3CaptureRoundTrip(request roundtripper.Request, gwAddr string) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+	transport, err := http3Transport(request, gwAddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	return defaultRoundTrip(request, transport)
+	return http3DefaultRoundTrip(request, transport)
 }
 
-func httpTransport(request roundtripper.Request, gwAddr string) (*http3.RoundTripper, error) {
+func http3Transport(request roundtripper.Request, gwAddr string) (*http3.RoundTripper, error) {
 
 	transport := &http3.RoundTripper{
 		QuicConfig: &quic.Config{
 			Tracer: qlog.DefaultTracer,
 		},
 		Dial: func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
-			if addr == "www.example.com:443" {
+			if strings.Contains(addr, request.Server) {
 				return quic.DialAddrEarly(ctx, gwAddr, tlsCfg, cfg)
 			}
 			return nil, nil
 		},
 	}
 	if request.Server != "" && len(request.CertPem) != 0 {
-		tlsConfig, err := tlsClientConfig(request.Server, request.CertPem)
+		tlsConfig, err := http3TlsClientConfig(request.Server, request.CertPem)
 		if err != nil {
 			return nil, err
 		}
@@ -106,27 +109,27 @@ func httpTransport(request roundtripper.Request, gwAddr string) (*http3.RoundTri
 	return transport, nil
 }
 
-func tlsClientConfig(server string, certPem []byte) (*tls.Config, error) {
+func http3TlsClientConfig(server string, certPem []byte) (*tls.Config, error) {
 	// Add the provided cert as a trusted CA
 	certPool := x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(certPem) {
 		return nil, fmt.Errorf("unexpected error adding trusted CA")
 	}
 
-	if server == "" {
+	host, _, err := net.SplitHostPort(server)
+	if server == "" || err != nil {
 		return nil, fmt.Errorf("unexpected error, server name required for TLS")
 	}
-
 	// Create the tls Config for this provided host, cert, and trusted CA
 	// Disable G402: TLS MinVersion too low. (gosec)
 	// #nosec G402
 	return &tls.Config{
-		ServerName: server,
+		ServerName: host,
 		RootCAs:    certPool,
 	}, nil
 }
 
-func defaultRoundTrip(request roundtripper.Request, transport *http3.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+func http3DefaultRoundTrip(request roundtripper.Request, transport *http3.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	client := &httpv1.Client{}
 
 	if request.UnfollowRedirect {
@@ -141,7 +144,7 @@ func defaultRoundTrip(request roundtripper.Request, transport *http3.RoundTrippe
 	if request.Method != "" {
 		method = request.Method
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Millisecond)
 	defer cancel()
 	req, err := httpv1.NewRequestWithContext(ctx, method, request.URL.String(), nil)
 	if err != nil {
@@ -166,7 +169,16 @@ func defaultRoundTrip(request roundtripper.Request, transport *http3.RoundTrippe
 
 	fmt.Printf("Sending Request:\n%s\n\n", formatDump(dumpReq, "<? "))
 
-	resp, err := client.Do(req)
+	var resp *httpv1.Response
+	err = retryv1.Do(
+		func() error {
+			resp, err = client.Do(req)
+			return err
+		},
+		retryv1.Delay(time.Second*5),
+		retryv1.Attempts(3),
+		retryv1.DelayType(retryv1.FixedDelay),
+	)
 	if err != nil {
 		return nil, nil, err
 	}

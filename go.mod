@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	fortio.org/fortio v1.63.3
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.12.0
