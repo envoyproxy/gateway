@@ -12,12 +12,17 @@ backendTrafficPolicies:
       name: httproute-1
       namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -31,13 +36,18 @@ backendTrafficPolicies:
       name: httproute-1
       namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Unable to target HTTPRoute, another BackendTrafficPolicy has already
-        attached to it
-      reason: Conflicted
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Unable to target HTTPRoute, another BackendTrafficPolicy has already
+          attached to it
+        reason: Conflicted
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -51,12 +61,17 @@ backendTrafficPolicies:
       name: grpcroute-1
       namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        name: gateway-2
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -70,18 +85,24 @@ backendTrafficPolicies:
       name: gateway-1
       namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-    - lastTransitionTime: null
-      message: 'This policy is being overridden by other backendTrafficPolicies for
-        these routes: [envoy-gateway/httproute-1]'
-      reason: Overridden
-      status: "True"
-      type: Overridden
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [envoy-gateway/httproute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -95,13 +116,19 @@ backendTrafficPolicies:
       name: gateway-1
       namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Unable to target Gateway, another BackendTrafficPolicy has already
-        attached to it
-      reason: Conflicted
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: Unable to target Gateway, another BackendTrafficPolicy has already
+          attached to it
+        reason: Conflicted
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway

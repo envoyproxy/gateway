@@ -169,8 +169,6 @@ _Appears in:_
 | `compression` | _[Compression](#compression) array_ |  false  | The compression config for the http streams. |
 
 
-
-
 #### BasicAuth
 
 

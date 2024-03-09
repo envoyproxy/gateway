@@ -12,9 +12,13 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func init() {
@@ -33,7 +37,14 @@ var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-ratelimit-specific-user", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns})
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -111,7 +122,14 @@ var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-ratelimit-all-traffic", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns})
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
