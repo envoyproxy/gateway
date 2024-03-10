@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, BackendUpgradeTest)
+	ConformanceTests = append(ConformanceTests, EGUpgradeTest)
 }
 
 var EGUpgradeTest = suite.ConformanceTest{
