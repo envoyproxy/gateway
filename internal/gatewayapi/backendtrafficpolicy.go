@@ -77,7 +77,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
-	// 2.. Finally, the policies targeting Gateways
+	// 2. Finally, the policies targeting Gateways
 
 	// Process the policies targeting xRoutes
 	for _, policy := range backendTrafficPolicies {
@@ -167,9 +167,9 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, gatewa
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, BackendTrafficPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -188,14 +188,6 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, gatewa
 
 	// Gateway not found
 	if !ok {
-		message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
-
-		status.SetBackendTrafficPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -228,9 +220,9 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, BackendTrafficPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetBackendTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -250,14 +242,6 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 
 	// Route not found
 	if !ok {
-		message := fmt.Sprintf("%s/%s/%s not found.", policy.Spec.TargetRef.Kind, string(*targetNs), policy.Spec.TargetRef.Name)
-
-		status.SetBackendTrafficPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -825,14 +809,15 @@ func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChec
 		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
 	}
 
-	var irStatuses []ir.HTTPStatus
 	// deduplicate http statuses
-	statusSet := make(map[egv1a1.HTTPStatus]bool, len(h.ExpectedStatuses))
+	statusSet := sets.NewInt()
 	for _, r := range h.ExpectedStatuses {
-		if _, ok := statusSet[r]; !ok {
-			statusSet[r] = true
-			irStatuses = append(irStatuses, ir.HTTPStatus(r))
-		}
+		statusSet.Insert(int(r))
+	}
+	irStatuses := make([]ir.HTTPStatus, 0, statusSet.Len())
+
+	for _, r := range statusSet.List() {
+		irStatuses = append(irStatuses, ir.HTTPStatus(r))
 	}
 	irHTTP.ExpectedStatuses = irStatuses
 
@@ -1158,27 +1143,27 @@ func (t *Translator) buildRetry(policy *egv1a1.BackendTrafficPolicy) *ir.Retry {
 }
 
 func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
-	var irStatuses []ir.HTTPStatus
-	// deduplicate http statuses
-	statusSet := make(map[egv1a1.HTTPStatus]bool, len(in))
+	statusSet := sets.NewInt()
 	for _, r := range in {
-		if _, ok := statusSet[r]; !ok {
-			statusSet[r] = true
-			irStatuses = append(irStatuses, ir.HTTPStatus(r))
-		}
+		statusSet.Insert(int(r))
+	}
+	irStatuses := make([]ir.HTTPStatus, 0, statusSet.Len())
+
+	for _, r := range statusSet.List() {
+		irStatuses = append(irStatuses, ir.HTTPStatus(r))
 	}
 	return irStatuses
 }
 
 func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
-	var irTriggers []ir.TriggerEnum
-	// deduplicate http statuses
-	triggerSet := make(map[egv1a1.TriggerEnum]bool, len(in))
+	triggerSet := sets.NewString()
 	for _, r := range in {
-		if _, ok := triggerSet[r]; !ok {
-			triggerSet[r] = true
-			irTriggers = append(irTriggers, ir.TriggerEnum(r))
-		}
+		triggerSet.Insert(string(r))
+	}
+	irTriggers := make([]ir.TriggerEnum, 0, triggerSet.Len())
+
+	for _, r := range triggerSet.List() {
+		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
 }

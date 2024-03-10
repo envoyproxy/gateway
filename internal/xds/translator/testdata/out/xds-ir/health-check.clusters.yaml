@@ -28,6 +28,9 @@
   name: first-route-dest
   outlierDetection:
     baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 2s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
@@ -60,6 +63,9 @@
   name: second-route-dest
   outlierDetection:
     baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 1s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
@@ -90,6 +96,9 @@
   name: third-route-dest
   outlierDetection:
     baseEjectionTime: 160s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 1s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
@@ -120,7 +129,11 @@
   name: fourth-route-dest
   outlierDetection:
     baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 1s
     maxEjectionPercent: 90
+    splitExternalLocalOriginErrors: true
   perConnectionBufferLimitBytes: 32768
   type: EDS
