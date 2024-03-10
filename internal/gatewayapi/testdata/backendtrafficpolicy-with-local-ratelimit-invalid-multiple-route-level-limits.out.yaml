@@ -45,12 +45,13 @@ backendTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate Local Rate Limit: Local rateLimit can not have
-          more than one rule without clientSelectors.'
+        message: 'RateLimit: local rateLimit can not have more than one rule without
+          clientSelectors'
         reason: Invalid
         status: "False"
         type: Accepted

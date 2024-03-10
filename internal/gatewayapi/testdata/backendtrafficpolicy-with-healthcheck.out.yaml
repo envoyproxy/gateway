@@ -188,8 +188,9 @@ backendTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.

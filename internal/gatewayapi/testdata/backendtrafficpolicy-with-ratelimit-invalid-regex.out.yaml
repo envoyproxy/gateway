@@ -29,13 +29,13 @@ backendTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate Global Rate Limit: Regex "*.illegal.regex" is
-          invalid: error parsing regexp: missing argument to repetition operator:
-          `*`'
+        message: 'RateLimit: regex "*.illegal.regex" is invalid: error parsing regexp:
+          missing argument to repetition operator: `*`'
         reason: Invalid
         status: "False"
         type: Accepted

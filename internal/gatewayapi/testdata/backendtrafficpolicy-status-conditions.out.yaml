@@ -135,8 +135,9 @@ backendTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -166,8 +167,9 @@ backendTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: Unable to target Gateway, another BackendTrafficPolicy has already
@@ -206,8 +208,9 @@ backendTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: not-same-namespace-gateway
+        namespace: another-namespace
       conditions:
       - lastTransitionTime: null
         message: Namespace:envoy-gateway TargetRef.Namespace:another-namespace, BackendTrafficPolicy

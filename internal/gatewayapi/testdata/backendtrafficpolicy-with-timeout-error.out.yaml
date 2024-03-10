@@ -21,12 +21,12 @@ backendTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate HTTP Timeout: Invalid MaxConnectionDuration
-          value 22mib.'
+        message: 'Timeout: invalid MaxConnectionDuration value 22mib'
         reason: Invalid
         status: "False"
         type: Accepted
