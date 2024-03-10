@@ -495,22 +495,10 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
-	var (
-		tSocket *corev3.TransportSocket
-		err     error
-	)
-
-	if httpRoute.Destination.Settings[0].TLS != nil {
-		tSocket, err = processTLSSocket(httpRoute.Destination.Settings[0].TLS, tCtx)
-		if err != nil {
-			return err
-		}
-	}
-
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
-		tSocket:        tSocket,
+		tSocket:        nil,
 		endpointType:   buildEndpointType(httpRoute.Destination.Settings),
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
@@ -583,6 +571,14 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 
 	xdsCluster := buildXdsCluster(args)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	for _, ds := range args.settings {
+		if ds.TLS != nil {
+			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+				return err
+			}
+		}
+	}
 	// Use EDS for static endpoints
 	if args.endpointType == EndpointTypeStatic {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
