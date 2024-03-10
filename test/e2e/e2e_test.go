@@ -56,13 +56,13 @@ func TestE2E(t *testing.T) {
 	})
 
 	cSuite.Setup(t)
-	egSetup(t, cSuite)
+	addAdditionalResourcesToSuite(t, cSuite)
 	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
 	cSuite.Run(t, tests.ConformanceTests)
 }
 
 // set up additional resources that are created and cleaned up programmatically like certificates
-func egSetup(t *testing.T, testSuite *suite.ConformanceTestSuite) {
+func addAdditionalResourcesToSuite(t *testing.T, testSuite *suite.ConformanceTestSuite) {
 	secret, configmap := certificate.MustCreateSelfSignedCAConfigmapAndCertSecret(t, "gateway-conformance-infra", "backend-tls-checks-certificate", []string{"example.com"})
 	testSuite.Applier.MustApplyObjectsWithCleanup(t, testSuite.Client, testSuite.TimeoutConfig, []client.Object{secret}, testSuite.Cleanup)
 	testSuite.Applier.MustApplyObjectsWithCleanup(t, testSuite.Client, testSuite.TimeoutConfig, []client.Object{configmap}, testSuite.Cleanup)
