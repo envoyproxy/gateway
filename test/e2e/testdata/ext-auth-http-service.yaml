@@ -66,6 +66,12 @@ spec:
         volumeMounts:
         - name: http-ext-auth
           mountPath: /usr/src/app
+        readinessProbe:
+          httpGet:
+            httpHeaders:
+            - name: authorization
+              value: "Bearer token1"
+            port: 9002
       volumes:
       - name: http-ext-auth
         configMap:
