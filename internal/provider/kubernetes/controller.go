@@ -875,7 +875,6 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		policy := policy
 		// The status of BackendTLSPolicies can't be discarded because the status
 		// can be modified by multiple controllers.
-		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
 	}
 
