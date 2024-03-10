@@ -19,16 +19,16 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, HTTPExtAuthTest)
+	ConformanceTests = append(ConformanceTests, GRPCExtAuthTest)
 }
 
-// HTTPExtAuthTest tests ExtAuth authentication for an http route with ExtAuth configured.
+// GRPCExtAuthTest tests ExtAuth authentication for an http route with ExtAuth configured.
 // The http route points to an application to verify that ExtAuth authentication works on application/http path level.
-// The ExtAuth service is an HTTP service.
-var HTTPExtAuthTest = suite.ConformanceTest{
-	ShortName:   "HTTPExtAuth",
-	Description: "Test ExtAuth authentication",
-	Manifests:   []string{"testdata/ext-auth-http-service.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
+// The ExtAuth service is a GRPC service.
+var GRPCExtAuthTest = suite.ConformanceTest{
+	ShortName:   "GRPCExtAuth",
+	Description: "Test ExtAuth authentication with GRPC auth service",
+	Manifests:   []string{"testdata/ext-auth-grpc-service.yaml", "testdata/ext-auth-grpc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with ext auth authentication", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
@@ -38,8 +38,8 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			// Wait for the grpc ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -47,17 +47,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 					Path: "/myapp",
 					Headers: map[string]string{
 						"Authorization": "Bearer token1",
-					},
-				},
-				// Verify that the http headers returned by the ext auth service
-				// are added to the original request before sending it to the backend
-				ExpectedRequest: &http.ExpectedRequest{
-					Request: http.Request{
-						Host: "www.example.com",
-						Path: "/myapp",
-						Headers: map[string]string{
-							"x-current-user": "user1",
-						},
 					},
 				},
 				Response: http.Response{
@@ -85,8 +74,8 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			// Wait for the grpc ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -118,8 +107,8 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			// Wait for the grpc ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -154,8 +143,8 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+			// Wait for the grpc ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
