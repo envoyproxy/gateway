@@ -98,6 +98,10 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "http-route-with-tlsbundle-multiple-certs",
+			requireSecrets: true,
+		},
+		{
 			name:           "simple-tls",
 			requireSecrets: true,
 		},
