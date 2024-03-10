@@ -122,15 +122,15 @@ httpRoutes:
     name: not-same-namespace-httproute
   spec:
     parentRefs:
-      - namespace: another-namespace
-        name: not-same-namespace-gateway
+    - namespace: another-namespace
+      name: not-same-namespace-gateway
     rules:
-      - matches:
-          - path:
-              value: "/"
-        backendRefs:
-          - name: service-1
-            port: 8080
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
 grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute
@@ -199,9 +199,9 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-      - name: http
-        protocol: HTTP
-        port: 80
-        allowedRoutes:
-          namespaces:
-            from: Same
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
