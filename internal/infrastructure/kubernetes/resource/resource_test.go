@@ -285,6 +285,48 @@ func TestCompareSvc(t *testing.T) {
 					Type: "ClusterIP",
 				},
 			},
+		}, {
+			// Finalizers field differs
+			ExpectRet: true,
+			NewSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "my-service",
+					Namespace:  "default",
+					Finalizers: []string{"service.k8s.aws/resources"},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+			OriginalSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
 		},
 	}
 
