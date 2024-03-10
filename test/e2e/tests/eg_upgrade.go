@@ -24,10 +24,6 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
-func init() {
-	ConformanceTests = append(ConformanceTests, EGUpgradeTest)
-}
-
 var EGUpgradeTest = suite.ConformanceTest{
 	ShortName:   "EGUpgrade",
 	Description: "Upgrading from the last eg version should not lead to failures",
@@ -63,7 +59,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
 			t.Log("Attempting to upgrade the last version of eg deployment")
-			err = helmUpgradeChartFromPath(relName, depNS, "../../charts/gateway-helm", t)
+			err = helmUpgradeChartFromPath(relName, depNS, "../../../charts/gateway-helm", t)
 			if err != nil {
 				t.Fatalf("Failed to upgrade the release: %s", err.Error())
 			}

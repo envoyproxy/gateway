@@ -11,3 +11,4 @@ package tests
 import "sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 var ConformanceTests []suite.ConformanceTest
+var EGUpgradeTests []suite.ConformanceTest
