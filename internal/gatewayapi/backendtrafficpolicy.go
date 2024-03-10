@@ -116,7 +116,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 					ancestorRefs = append(ancestorRefs, gwv1a2.ParentReference{
 						Group:       GroupPtr(gwv1.GroupName),
 						Kind:        KindPtr(KindGateway),
-						Namespace:   p.Namespace,
+						Namespace:   NamespacePtr(namespace),
 						Name:        p.Name,
 						SectionName: p.SectionName,
 					})
@@ -271,10 +271,15 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, controll
 	ancestorRefs := make([]gwv1a2.ParentReference, 0, len(parentRefs))
 	for _, p := range parentRefs {
 		if p.Kind == nil || *p.Kind == KindGateway {
+			namespace := p.Namespace
+			if namespace == nil {
+				namespace = targetNs
+			}
+
 			ancestorRefs = append(ancestorRefs, gwv1a2.ParentReference{
 				Group:       GroupPtr(gwv1.GroupName),
 				Kind:        KindPtr(KindGateway),
-				Namespace:   p.Namespace,
+				Namespace:   namespace,
 				Name:        p.Name,
 				SectionName: p.SectionName,
 			})
