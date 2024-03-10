@@ -30,7 +30,7 @@ func init() {
 
 var EGUpgradeTest = suite.ConformanceTest{
 	ShortName:   "EGUpgrade",
-	Description: "Upgrading from the lat eg version should not lead to failures",
+	Description: "Upgrading from the last eg version should not lead to failures",
 	Manifests:   []string{"testdata/eg-upgrade.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Upgrade from an older eg release should succeed", func(t *testing.T) {
