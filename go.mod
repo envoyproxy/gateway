@@ -37,6 +37,7 @@ require (
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
+	helm.sh/helm/v3 v3.14.2
 	k8s.io/api v0.29.2
 	k8s.io/apiextensions-apiserver v0.29.2
 	k8s.io/apimachinery v0.29.2
@@ -106,7 +107,6 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
-	helm.sh/helm/v3 v3.14.2 // indirect
 	k8s.io/apiserver v0.29.2 // indirect
 	oras.land/oras-go v1.2.4 // indirect
 )
