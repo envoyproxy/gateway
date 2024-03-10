@@ -339,19 +339,13 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		if lb, err = t.buildLoadBalancer(policy); err != nil {
-			return errors.Wrap(err, "LoadBalancer")
-		}
+		lb = t.buildLoadBalancer(policy)
 	}
 	if policy.Spec.ProxyProtocol != nil {
-		if pp, err = t.buildProxyProtocol(policy); err != nil {
-			return errors.Wrap(err, "ProxyProtocol")
-		}
+		pp = t.buildProxyProtocol(policy)
 	}
 	if policy.Spec.HealthCheck != nil {
-		if hc, err = t.buildHealthCheck(policy); err != nil {
-			return errors.Wrap(err, "HealthCheck")
-		}
+		hc = t.buildHealthCheck(policy)
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
@@ -360,9 +354,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 
 	if policy.Spec.FaultInjection != nil {
-		if fi, err = t.buildFaultInjection(policy); err != nil {
-			return errors.Wrap(err, "FaultInjection")
-		}
+		fi = t.buildFaultInjection(policy)
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
@@ -370,9 +362,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 	if policy.Spec.Retry != nil {
-		if rt, err = t.buildRetry(policy); err != nil {
-			return errors.Wrap(err, "Retry")
-		}
+		rt = t.buildRetry(policy)
 	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
@@ -426,19 +416,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		if lb, err = t.buildLoadBalancer(policy); err != nil {
-			return errors.Wrap(err, "LoadBalancer")
-		}
+		lb = t.buildLoadBalancer(policy)
 	}
 	if policy.Spec.ProxyProtocol != nil {
-		if pp, err = t.buildProxyProtocol(policy); err != nil {
-			return errors.Wrap(err, "ProxyProtocol")
-		}
+		pp = t.buildProxyProtocol(policy)
 	}
 	if policy.Spec.HealthCheck != nil {
-		if hc, err = t.buildHealthCheck(policy); err != nil {
-			return errors.Wrap(err, "HealthCheck")
-		}
+		hc = t.buildHealthCheck(policy)
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
@@ -446,9 +430,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 	if policy.Spec.FaultInjection != nil {
-		if fi, err = t.buildFaultInjection(policy); err != nil {
-			return errors.Wrap(err, "FaultInjection")
-		}
+		fi = t.buildFaultInjection(policy)
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
@@ -456,9 +438,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 	if policy.Spec.Retry != nil {
-		if rt, err = t.buildRetry(policy); err != nil {
-			return errors.Wrap(err, "Retry")
-		}
+		rt = t.buildRetry(policy)
 	}
 
 	// Apply IR to all the routes within the specific Gateway
@@ -710,7 +690,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	return irRule, nil
 }
 
-func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir.LoadBalancer, error) {
+func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.LoadBalancer {
 	var lb *ir.LoadBalancer
 	switch policy.Spec.LoadBalancer.Type {
 	case egv1a1.ConsistentHashLoadBalancerType:
@@ -753,10 +733,10 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir
 		}
 	}
 
-	return lb, nil
+	return lb
 }
 
-func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) (*ir.ProxyProtocol, error) {
+func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {
 	var pp *ir.ProxyProtocol
 	switch policy.Spec.ProxyProtocol.Version {
 	case egv1a1.ProxyProtocolVersionV1:
@@ -769,39 +749,29 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) (*i
 		}
 	}
 
-	return pp, nil
+	return pp
 }
 
-func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) (*ir.HealthCheck, error) {
+func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
 	if policy.Spec.HealthCheck == nil {
-		return nil, nil
+		return nil
 	}
 
 	irhc := &ir.HealthCheck{}
 	if policy.Spec.HealthCheck.Passive != nil {
-		phc, err := t.buildPassiveHealthCheck(policy)
-		if err != nil {
-			return nil, err
-		}
-
-		irhc.Passive = phc
+		irhc.Passive = t.buildPassiveHealthCheck(policy)
 	}
 
 	if policy.Spec.HealthCheck.Active != nil {
-		ahc, err := t.buildActiveHealthCheck(policy)
-		if err != nil {
-			return nil, err
-		}
-
-		irhc.Active = ahc
+		irhc.Active = t.buildActiveHealthCheck(policy)
 	}
 
-	return irhc, nil
+	return irhc
 }
 
-func (t *Translator) buildPassiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) (*ir.OutlierDetection, error) {
+func (t *Translator) buildPassiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.OutlierDetection {
 	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Passive == nil {
-		return nil, nil
+		return nil
 	}
 
 	hc := policy.Spec.HealthCheck.Passive
@@ -814,15 +784,14 @@ func (t *Translator) buildPassiveHealthCheck(policy *egv1a1.BackendTrafficPolicy
 		BaseEjectionTime:               hc.BaseEjectionTime,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
 	}
-	return irOD, nil
+	return irOD
 }
 
-func (t *Translator) buildActiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) (*ir.ActiveHealthCheck, error) {
+func (t *Translator) buildActiveHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.ActiveHealthCheck {
 	if policy.Spec.HealthCheck == nil || policy.Spec.HealthCheck.Active == nil {
-		return nil, nil
+		return nil
 	}
 
-	var err error
 	hc := policy.Spec.HealthCheck.Active
 	irHC := &ir.ActiveHealthCheck{
 		Timeout:            hc.Timeout,
@@ -832,17 +801,17 @@ func (t *Translator) buildActiveHealthCheck(policy *egv1a1.BackendTrafficPolicy)
 	}
 	switch hc.Type {
 	case egv1a1.ActiveHealthCheckerTypeHTTP:
-		irHC.HTTP, err = t.buildHTTPActiveHealthChecker(hc.HTTP)
+		irHC.HTTP = t.buildHTTPActiveHealthChecker(hc.HTTP)
 	case egv1a1.ActiveHealthCheckerTypeTCP:
-		irHC.TCP, err = t.buildTCPActiveHealthChecker(hc.TCP)
+		irHC.TCP = t.buildTCPActiveHealthChecker(hc.TCP)
 	}
 
-	return irHC, err
+	return irHC
 }
 
-func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) (*ir.HTTPHealthChecker, error) {
+func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHealthChecker {
 	if h == nil {
-		return nil, nil
+		return nil
 	}
 
 	irHTTP := &ir.HTTPHealthChecker{
@@ -866,19 +835,19 @@ func (t *Translator) buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChec
 	irHTTP.ExpectedStatuses = irStatuses
 
 	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
-	return irHTTP, nil
+	return irHTTP
 }
 
-func (t *Translator) buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) (*ir.TCPHealthChecker, error) {
+func (t *Translator) buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealthChecker {
 	if h == nil {
-		return nil, nil
+		return nil
 	}
 
 	irTCP := &ir.TCPHealthChecker{
 		Send:    translateActiveHealthCheckPayload(h.Send),
 		Receive: translateActiveHealthCheckPayload(h.Receive),
 	}
-	return irTCP, nil
+	return irTCP
 }
 
 func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {
@@ -1042,7 +1011,7 @@ func int64ToUint32(in int64) (uint32, bool) {
 	return 0, false
 }
 
-func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) (*ir.FaultInjection, error) {
+func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {
 	var fi *ir.FaultInjection
 	if policy.Spec.FaultInjection != nil {
 		fi = &ir.FaultInjection{}
@@ -1066,7 +1035,7 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) (*
 			}
 		}
 	}
-	return fi, nil
+	return fi
 }
 
 func (t *Translator) buildTCPKeepAlive(policy *egv1a1.BackendTrafficPolicy) (*ir.TCPKeepalive, error) {
@@ -1099,7 +1068,7 @@ func (t *Translator) buildTCPKeepAlive(policy *egv1a1.BackendTrafficPolicy) (*ir
 	return ka, nil
 }
 
-func (t *Translator) buildRetry(policy *egv1a1.BackendTrafficPolicy) (*ir.Retry, error) {
+func (t *Translator) buildRetry(policy *egv1a1.BackendTrafficPolicy) *ir.Retry {
 	var rt *ir.Retry
 	if policy.Spec.Retry != nil {
 		prt := policy.Spec.Retry
@@ -1157,7 +1126,7 @@ func (t *Translator) buildRetry(policy *egv1a1.BackendTrafficPolicy) (*ir.Retry,
 		}
 	}
 
-	return rt, nil
+	return rt
 }
 
 func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
