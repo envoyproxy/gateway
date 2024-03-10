@@ -354,7 +354,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			name:         tcpListener.Destination.Name,
 			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: EndpointTypeStatic,
+			endpointType: buildEndpointType(tcpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -402,7 +402,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: EndpointTypeStatic,
+			endpointType: buildEndpointType(udpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -495,40 +495,11 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
-	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
-	// since there's no Mixed AddressType among all the DestinationSettings.
-	addrTypeState := httpRoute.Destination.Settings[0].AddressType
-
-	var endpointType EndpointType
-	if addrTypeState != nil && *addrTypeState == ir.FQDN {
-		endpointType = EndpointTypeDNS
-	} else {
-		endpointType = EndpointTypeStatic
-	}
-
-	var tSocket *corev3.TransportSocket
-
-	if httpRoute.Destination.Settings[0].TLS != nil {
-		CaSecret := buildXdsUpstreamTLSCASecret(httpRoute.Destination.Settings[0].TLS)
-		if CaSecret != nil {
-			if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
-				return err
-			}
-		}
-		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
-		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
-		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.Destination.Settings[0].TLS)
-		if err != nil {
-			return err
-		}
-		tSocket = temp
-	}
-
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
-		tSocket:        tSocket,
-		endpointType:   endpointType,
+		tSocket:        nil,
+		endpointType:   buildEndpointType(httpRoute.Destination.Settings),
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
 		circuitBreaker: httpRoute.CircuitBreaker,
@@ -541,6 +512,27 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 	}
 
 	return nil
+}
+
+// processTLSSocket generates a xDS TransportSocket for a given TLS config.
+// It also adds the necessary secrets to the resource version table.
+func processTLSSocket(tlsConfig *ir.TLSUpstreamConfig, tCtx *types.ResourceVersionTable) (*corev3.TransportSocket, error) {
+	if tlsConfig == nil {
+		return nil, nil
+	}
+	CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
+	if CaSecret != nil {
+		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
+			return nil, err
+		}
+	}
+	// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
+	// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
+	tlsSocket, err := buildXdsUpstreamTLSSocketWthCert(tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	return tlsSocket, nil
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -579,6 +571,14 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 
 	xdsCluster := buildXdsCluster(args)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	for _, ds := range args.settings {
+		if ds.TLS != nil {
+			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+				return err
+			}
+		}
+	}
 	// Use EDS for static endpoints
 	if args.endpointType == EndpointTypeStatic {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {

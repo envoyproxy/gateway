@@ -10,6 +10,23 @@ title: "Use egctl"
 
 This subcommand allows users to translate from an input configuration type to an output configuration type.
 
+The `translate` subcommand can translate Kubernetes resources to:
+* Gateway API resources
+  This is useful in order to see how validation would occur if these resources were applied to Kubernetes. 
+  
+  Use the `--to gateway-api` parameter to translate to Gateway API resources.
+  
+* Envoy Gateway intermediate representation (IR)
+  This represents Envoy Gateway's translation of the Gateway API resources.
+  
+  Use the `--to ir` parameter to translate to Envoy Gateway intermediate representation.
+  
+* Envoy Proxy xDS
+  This is the xDS configuration provided to Envoy Proxy.
+  
+  Use the `--to xds` parameter to translate to Envoy Proxy xDS.
+  
+
 In the below example, we will translate the Kubernetes resources (including the Gateway API resources) into xDS
 resources.
 

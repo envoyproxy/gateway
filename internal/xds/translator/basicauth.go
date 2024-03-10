@@ -60,7 +60,7 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMBasicAuthFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
