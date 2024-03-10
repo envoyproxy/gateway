@@ -46,7 +46,7 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	return serviceSpec
 }
 
-// CompareSvc compare entire Svc.Spec and ignores a few field that may have been modified by other actors.
+// CompareSvc compare entire Svc.Spec and ignores specific fields that may have been modified by other actors.
 func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
 		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
