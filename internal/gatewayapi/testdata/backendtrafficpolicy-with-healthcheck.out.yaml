@@ -38,6 +38,8 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
@@ -85,6 +87,8 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
@@ -132,6 +136,8 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http

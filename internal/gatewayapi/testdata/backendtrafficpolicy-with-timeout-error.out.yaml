@@ -25,7 +25,7 @@ backendTrafficPolicies:
         name: envoy-gateway-class
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''HTTP Timeout'': Invalid MaxConnectionDuration
+        message: 'Unable to translate HTTP Timeout: Invalid MaxConnectionDuration
           value 22mib.'
         reason: Invalid
         status: "False"

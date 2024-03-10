@@ -46,7 +46,7 @@ backendTrafficPolicies:
         name: envoy-gateway-class
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''Local Rate Limit'': Local rateLimit rule limit
+        message: 'Unable to translate Local Rate Limit: Local rateLimit rule limit
           unit must be a multiple of the default limit unit.'
         reason: Invalid
         status: "False"

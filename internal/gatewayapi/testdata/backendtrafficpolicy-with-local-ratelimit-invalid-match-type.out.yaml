@@ -43,8 +43,8 @@ backendTrafficPolicies:
         name: envoy-gateway-class
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''Local Rate Limit'': Local rateLimit does not
-          support distinct HeaderMatch.'
+        message: 'Unable to translate Local Rate Limit: Local rateLimit does not support
+          distinct HeaderMatch.'
         reason: Invalid
         status: "False"
         type: Accepted

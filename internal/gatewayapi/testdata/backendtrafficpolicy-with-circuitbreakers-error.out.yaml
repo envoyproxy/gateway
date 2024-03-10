@@ -16,12 +16,14 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''Circuit Breaker'': Invalid MaxRequestsPerConnection
+        message: 'Unable to translate Circuit Breaker: Invalid MaxRequestsPerConnection
           value -1.'
         reason: Invalid
         status: "False"
@@ -44,12 +46,14 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''Circuit Breaker'': Invalid MaxParallelRetries
+        message: 'Unable to translate Circuit Breaker: Invalid MaxParallelRetries
           value -1.'
         reason: Invalid
         status: "False"
@@ -77,8 +81,8 @@ backendTrafficPolicies:
         name: envoy-gateway-class
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''Circuit Breaker'': Invalid MaxConnections
-          value -1.'
+        message: 'Unable to translate Circuit Breaker: Invalid MaxConnections value
+          -1.'
         reason: Invalid
         status: "False"
         type: Accepted

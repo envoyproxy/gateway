@@ -44,7 +44,7 @@ var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -129,7 +129,7 @@ var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-			backendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{

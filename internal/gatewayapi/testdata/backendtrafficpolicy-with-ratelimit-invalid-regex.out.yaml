@@ -33,8 +33,8 @@ backendTrafficPolicies:
         name: envoy-gateway-class
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''Global Rate Limit'': Regex "*.illegal.regex"
-          is invalid: error parsing regexp: missing argument to repetition operator:
+        message: 'Unable to translate Global Rate Limit: Regex "*.illegal.regex" is
+          invalid: error parsing regexp: missing argument to repetition operator:
           `*`'
         reason: Invalid
         status: "False"

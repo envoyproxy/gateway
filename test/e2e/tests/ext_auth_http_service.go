@@ -11,6 +11,7 @@ package tests
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -18,26 +19,44 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, BasicAuthTest)
+	ConformanceTests = append(ConformanceTests, ExtAuthTest)
 }
 
-var BasicAuthTest = suite.ConformanceTest{
-	ShortName:   "BasicAuth",
-	Description: "Resource with BasicAuth enabled",
-	Manifests:   []string{"testdata/basic-auth.yaml"},
+// ExtAuthTest tests ExtAuth authentication for an http route with ExtAuth configured.
+// The http route points to an application to verify that ExtAuth authentication works on application/http path level.
+var ExtAuthTest = suite.ConformanceTest{
+	ShortName:   "ExtAuth",
+	Description: "Test ExtAuth authentication",
+	Manifests:   []string{"testdata/ext-auth-http-service.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("valid username password", func(t *testing.T) {
+		t.Run("http route with ext auth authentication", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
-			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+
+			// Wait for the http ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/basic-auth-1",
+					Host: "www.example.com",
+					Path: "/myapp",
 					Headers: map[string]string{
-						"Authorization": "Basic dXNlcjE6dGVzdDE=", // user1:test1
+						"Authorization": "Bearer token1",
+					},
+				},
+				// Verify that the http headers returned by the ext auth service
+				// are added to the original request before sending it to the backend
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"x-current-user": "user1",
+						},
 					},
 				},
 				Response: http.Response{
@@ -59,17 +78,22 @@ var BasicAuthTest = suite.ConformanceTest{
 
 		t.Run("without Authorization header", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
-			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+
+			// Wait for the http ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/basic-auth-1",
+					Host: "www.example.com",
+					Path: "/myapp",
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCode: 403,
 				},
 				Namespace: ns,
 			}
@@ -85,22 +109,27 @@ var BasicAuthTest = suite.ConformanceTest{
 			}
 		})
 
-		t.Run("invalid username password", func(t *testing.T) {
+		t.Run("invalid credential", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
-			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+
+			// Wait for the http ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/basic-auth-1",
+					Host: "www.example.com",
+					Path: "/myapp",
 					Headers: map[string]string{
-						"Authorization": "Basic dXNlcjE6dGVzdDI=", // user1:test2
+						"Authorization": "Bearer invalid-token",
 					},
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCode: 403,
 				},
 				Namespace: ns,
 			}
@@ -116,51 +145,24 @@ var BasicAuthTest = suite.ConformanceTest{
 			}
 		})
 
-		t.Run("per route configuration second route", func(t *testing.T) {
+		t.Run("http route without ext auth authentication", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth-2", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-2", Namespace: ns})
-			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns})
+			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+
+			// Wait for the http ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
+
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/basic-auth-2",
-					Headers: map[string]string{
-						"Authorization": "Basic dXNlcjQ6dGVzdDQ=", // user4:test4
-					},
+					Host: "www.example.com",
+					Path: "/public",
 				},
 				Response: http.Response{
 					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
-
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
-		})
-
-		// https://github.com/envoyproxy/gateway/issues/2507
-		t.Run("request without matching routes ", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
-			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/not-matching-route",
-				},
-				Response: http.Response{
-					StatusCode: 404,
 				},
 				Namespace: ns,
 			}

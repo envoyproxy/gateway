@@ -112,7 +112,14 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 						gatewayRouteMap[gw] = make(sets.Set[string])
 					}
 					gatewayRouteMap[gw].Insert(utils.NamespacedName(route).String())
-					ancestorRefs = append(ancestorRefs, p)
+
+					ancestorRefs = append(ancestorRefs, gwv1a2.ParentReference{
+						Group:       GroupPtr(gwv1.GroupName),
+						Kind:        KindPtr(KindGateway),
+						Namespace:   p.Namespace,
+						Name:        p.Name,
+						SectionName: p.SectionName,
+					})
 				}
 			}
 
@@ -260,28 +267,34 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, controll
 	}
 
 	// Find its parent Gateways as the ancestor references.
-	ancestorRefs := GetParentReferences(route.RouteContext)
+	parentRefs := GetParentReferences(route.RouteContext)
+	ancestorRefs := make([]gwv1a2.ParentReference, 0, len(parentRefs))
+	for _, p := range parentRefs {
+		if p.Kind == nil || *p.Kind == KindGateway {
+			ancestorRefs = append(ancestorRefs, gwv1a2.ParentReference{
+				Group:       GroupPtr(gwv1.GroupName),
+				Kind:        KindPtr(KindGateway),
+				Namespace:   p.Namespace,
+				Name:        p.Name,
+				SectionName: p.SectionName,
+			})
+		}
+	}
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, BackendTrafficPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
 
-		for _, ancestorRef := range ancestorRefs {
-			if ancestorRef.Kind != nil && *ancestorRef.Kind != KindGateway {
-				continue
-			}
-
-			status.SetConditionForPolicyAncestor(&policy.Status,
-				ancestorRef,
-				controllerName,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				message,
-				policy.Generation,
-			)
-		}
+		status.SetConditionForPolicyAncestors(&policy.Status,
+			ancestorRefs,
+			controllerName,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwv1a2.PolicyReasonInvalid,
+			message,
+			policy.Generation,
+		)
 		return nil
 	}
 
@@ -290,21 +303,15 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, controll
 		message := fmt.Sprintf("Unable to target %s, another BackendTrafficPolicy has already attached to it",
 			string(policy.Spec.TargetRef.Kind))
 
-		for _, ancestorRef := range ancestorRefs {
-			if ancestorRef.Kind != nil && *ancestorRef.Kind != KindGateway {
-				continue
-			}
-
-			status.SetConditionForPolicyAncestor(&policy.Status,
-				ancestorRef,
-				controllerName,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonConflicted,
-				message,
-				policy.Generation,
-			)
-		}
+		status.SetConditionForPolicyAncestors(&policy.Status,
+			ancestorRefs,
+			controllerName,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwv1a2.PolicyReasonConflicted,
+			message,
+			policy.Generation,
+		)
 		return nil
 	}
 

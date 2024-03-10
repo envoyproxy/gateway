@@ -14,6 +14,8 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
       conditions:
@@ -38,6 +40,8 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
       conditions:
@@ -63,6 +67,8 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
       conditions:

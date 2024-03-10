@@ -19,13 +19,14 @@ backendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate ''TCP Timeout'': Invalid ConnectTimeout value
-          20kib.'
+        message: 'Unable to translate TCP Timeout: Invalid ConnectTimeout value 20kib.'
         reason: Invalid
         status: "False"
         type: Accepted
