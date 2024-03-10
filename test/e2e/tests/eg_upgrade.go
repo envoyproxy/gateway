@@ -44,13 +44,13 @@ var EGUpgradeTest = suite.ConformanceTest{
 			// Uninstall the current version of EG
 			err := helmUninstall(relName, depNS, t)
 			if err != nil {
-				t.Fatalf("unable to uninstall the current deployed release")
+				t.Fatalf("Failed to upgrade the release: %s", err.Error())
 			}
 
 			t.Log("Install the last version tag")
 			err = helmInstall(relName, depNS, lastVersionTag, t)
 			if err != nil {
-				t.Fatalf("Failed to install the  release")
+				t.Fatalf("Failed to upgrade the release: %s", err.Error())
 			}
 
 			namespaces := []string{depNS}
@@ -62,14 +62,10 @@ var EGUpgradeTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
-			t.Log("reqURL:", reqURL.String())
-
-			t.Log("Attempting to upgrade the last version of EG deployment")
-
-			// upgrade to current EG release in path
-			err = helmUpgradeChartFromPath(relName, depNS, "charts/gateway-helm", t)
+			t.Log("Attempting to upgrade the last version of eg deployment")
+			err = helmUpgradeChartFromPath(relName, depNS, "../../charts/gateway-helm", t)
 			if err != nil {
-				t.Fatalf("Failed to install the  release")
+				t.Fatalf("Failed to upgrade the release: %s", err.Error())
 			}
 
 			// wait for everything to startup
@@ -77,7 +73,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			loadSuccess := make(chan bool)
 			// can be used to abort the test after deployment restart is complete or failed
 			aborter := periodic.NewAborter()
-			t.Log("Starting load generation")
+			t.Log("Starting load generation", "reqURL:", reqURL.String())
 
 			// Run load async and continue to restart deployment
 			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
@@ -153,7 +149,7 @@ func helmInstall(relName, relNamespace string, tag string, t *testing.T) error {
 		return err
 	}
 	// Run the installation.
-	_, err = install.Run(chart, nil) // nil can be replaced with any values you wish to override
+	_, err = install.Run(chart, nil)
 	if err != nil {
 		return err
 	}
@@ -165,11 +161,7 @@ func helmUninstall(relName, relNamespace string, t *testing.T) error {
 	if err := actionConfig.Init(cli.New().RESTClientGetter(), relNamespace, "secret", t.Logf); err != nil {
 		return err
 	}
-
-	// Set installation options.
 	uninstall := action.NewUninstall(actionConfig)
-
-	// Run the installation.
 	_, err := uninstall.Run(relName) // nil can be replaced with any values you wish to override
 	if err != nil {
 		return err
