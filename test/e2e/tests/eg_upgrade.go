@@ -48,7 +48,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			}
 
 			t.Log("Install the last version tag")
-			err = helmInstall(relName, depNS, "v0.0.0-latest", t)
+			err = helmInstall(relName, depNS, lastVersionTag, t)
 			if err != nil {
 				t.Fatalf("Failed to install the  release")
 			}
