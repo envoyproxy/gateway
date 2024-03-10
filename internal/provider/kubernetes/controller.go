@@ -116,8 +116,6 @@ type resourceMappings struct {
 	allAssociatedNamespaces map[string]struct{}
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
 	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
-	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs, ConfigMapRefs.
-	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1b1.ReferenceGrant
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name of the filter and the value is the
 	// unstructured form of the resource.
@@ -128,7 +126,6 @@ func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
 		allAssociatedNamespaces:  map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
-		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1b1.ReferenceGrant{},
 		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
 	}
 }
@@ -206,12 +203,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// the collected BackendRefs to the resourceTree.
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
 		r.processBackendRefs(ctx, gwcResource, resourceMappings)
-
-		// Add all ReferenceGrants to the resourceTree
-		// TODO: zhaohuabing remove allAssociatedRefGrants from resourceMappings and directly add to gwcResource
-		for _, referenceGrant := range resourceMappings.allAssociatedRefGrants {
-			gwcResource.ReferenceGrants = append(gwcResource.ReferenceGrants, referenceGrant)
-		}
 
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
@@ -459,7 +450,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 				default:
-					resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+					resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 					r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 						"name", refGrant.Name)
 				}
@@ -540,7 +531,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 				from.kind, from.namespace, to.kind, to.namespace)
 		default:
 			// RefGrant found
-			resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+			resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 				"name", refGrant.Name)
 		}
@@ -641,7 +632,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 				from.kind, from.namespace, to.kind, to.namespace)
 		default:
 			// RefGrant found
-			resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+			resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 				"name", refGrant.Name)
 		}
