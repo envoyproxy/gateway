@@ -126,6 +126,8 @@ ifeq ($(E2E_RUN_TEST),)
 else
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
+	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
 endif
 
 .PHONY: install-e2e-telemetry

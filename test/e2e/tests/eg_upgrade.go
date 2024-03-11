@@ -43,20 +43,26 @@ var EGUpgradeTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
-
+			namespaces := []string{depNS}
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 			t.Log("Confirm routing works before starting to validate the eg upgrade flow")
-
 			aborter := periodic.NewAborter()
 			loadSuccess := make(chan bool)
 
+			t.Log("Starting load generation", "reqURL:", reqURL.String())
 			// Run load async
 			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+
+			// allow load test to run for at least 3secs.
+			time.Sleep(time.Second * 3)
+
 			t.Log("Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
+
 			// Wait for the goroutine to finish
 			result := <-loadSuccess
 			if !result {
-				t.Errorf("Load test failed")
+				t.Fatalf("Load test failed")
 			}
 
 			// Uninstall the current version of EG
@@ -71,11 +77,16 @@ var EGUpgradeTest = suite.ConformanceTest{
 				t.Fatalf("Failed to upgrade the release: %s", err.Error())
 			}
 
-			namespaces := []string{depNS}
 			// wait for everything to startup
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 
-			t.Log("Attempting to upgrade the last version of eg deployment")
+			t.Log("Starting load generation", "reqURL:", reqURL.String())
+			// Run load
+			aborter = periodic.NewAborter()
+			loadSuccess = make(chan bool)
+			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+
+			t.Log("Attempting to upgrade to current version of eg deployment")
 			err = helmUpgradeChartFromPath(relName, depNS, "../../../charts/gateway-helm", suite.TimeoutConfig.NamespacesMustBeReady, t)
 			if err != nil {
 				t.Fatalf("Failed to upgrade the release: %s", err.Error())
@@ -83,19 +94,13 @@ var EGUpgradeTest = suite.ConformanceTest{
 
 			// wait for everything to startup
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, namespaces)
-			loadSuccess = make(chan bool)
 			// can be used to abort the test after deployment restart is complete or failed
-			aborter = periodic.NewAborter()
-			t.Log("Starting load generation", "reqURL:", reqURL.String())
-
-			// Run load
-			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
 			t.Log("Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
 			// Wait for the goroutine to finish
 			result = <-loadSuccess
 			if !result {
-				t.Errorf("Load test failed")
+				t.Fatalf("Load test failed")
 			}
 		})
 	},
