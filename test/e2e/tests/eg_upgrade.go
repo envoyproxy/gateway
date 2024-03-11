@@ -34,7 +34,28 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v0.0.0-latest" // Default version tag if not specified
+				lastVersionTag = "v0.6.0" // Default version tag if not specified
+			}
+
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
+
+			t.Log("Confirm routing works before starting to validate the eg upgrade flow")
+
+			aborter := periodic.NewAborter()
+			loadSuccess := make(chan bool)
+
+			// Run load async
+			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+			t.Log("Stopping load generation and collecting results")
+			aborter.Abort(false) // abort the load either way
+			// Wait for the goroutine to finish
+			result := <-loadSuccess
+			if !result {
+				t.Errorf("Load test failed")
 			}
 
 			// Uninstall the current version of EG
@@ -53,11 +74,6 @@ var EGUpgradeTest = suite.ConformanceTest{
 			// wait for everything to startup
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
 			t.Log("Attempting to upgrade the last version of eg deployment")
 			err = helmUpgradeChartFromPath(relName, depNS, "../../../charts/gateway-helm", t)
 			if err != nil {
@@ -66,17 +82,17 @@ var EGUpgradeTest = suite.ConformanceTest{
 
 			// wait for everything to startup
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, namespaces)
-			loadSuccess := make(chan bool)
+			loadSuccess = make(chan bool)
 			// can be used to abort the test after deployment restart is complete or failed
-			aborter := periodic.NewAborter()
+			aborter = periodic.NewAborter()
 			t.Log("Starting load generation", "reqURL:", reqURL.String())
 
-			// Run load async and continue to restart deployment
+			// Run load
 			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
 			t.Log("Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
 			// Wait for the goroutine to finish
-			result := <-loadSuccess
+			result = <-loadSuccess
 			if !result {
 				t.Errorf("Load test failed")
 			}
@@ -135,6 +151,7 @@ func helmInstall(relName, relNamespace string, tag string, t *testing.T) error {
 		return err
 	}
 	install.SetRegistryClient(registryClient)
+	// todo we need to explicitly reinstall the CRDs
 	chartPath, err := install.LocateChart("oci://docker.io/envoyproxy/gateway-helm", cli.New())
 	if err != nil {
 		return err
