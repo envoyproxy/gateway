@@ -21,6 +21,7 @@ Verify the Gateway status:
 ```shell
 kubectl get gateway/eg -o yaml
 ```
+
 ## HTTP External Authorization Service
 
 ### Installation
