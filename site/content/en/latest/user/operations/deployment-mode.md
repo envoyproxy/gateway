@@ -1,14 +1,27 @@
 ---
 title: "Deployment Mode"
 ---
+## Deployment modes
 
+### One GatewayClass per Envoy Gateway Controller
+* An Envoy Gateway is associated with a single [GatewayClass][] resource under one controller.
+This is the simplest deployment mode and is suitable for scenarios where each Gateway needs to have its own dedicated set of resources and configurations.
 
-### One GatewayClass per Envoy Gateway
+### Multiple GatewayClasses per Envoy Gateway Controller
+* An Envoy Gateway is associated with multiple [GatewayClass][] resources under one controller.
+* Support for accepting multiple GatewayClasses was added [here][issue1231].
 
-* Envoy Gateway can accept a single [GatewayClass][]
-resource. If you've instantiated multiple GatewayClasses, we recommend running multiple Envoy Gateway controllers
-in different namespaces, linking a GatewayClass to each of them. 
-* Support for accepting multiple GatewayClass is being tracked [here][issue1231].
+### Separate Envoy Gateway Controllers
+If you've instantiated multiple GatewayClasses, you can also run separate Envoy Gateway controllers in different namespaces,
+linking a GatewayClass to each of them for multi-tenancy.
+Please follow the example [Multi-tenancy](#multi-tenancy).
+
+### Merged Gateways onto a Single EnvoyProxy Fleet
+By default, each Gateway has its own dedicated set of Envoy Proxy and its configurations.
+However, for some deployments, it may be more convenient to merge listeners across multiple Gateways and deploy a single Envoy Proxy fleet.
+This can help to efficiently utilize the infra resources in the cluster and manage them in a centralized manner, or have a single IP address for all of the listeners.
+Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayClass will result in merging all Gateway listeners.
+* The tuple of port, protocol, and hostname must be unique across all Listeners.
 
 ### Supported Modes
 
@@ -140,7 +153,7 @@ spec:
             type: PathPrefix
             value: /
 EOF
-```            
+```
 
 Lets port forward to the generated envoy proxy service in the `marketing` namespace and send a request to it.
 
@@ -338,7 +351,7 @@ curl --verbose --header "Host: www.product.example.com" http://localhost:8889/ge
 > Host: www.product.example.com
 > User-Agent: curl/7.86.0
 > Accept: */*
-> 
+>
 Handling connection for 8889
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
@@ -348,7 +361,7 @@ Handling connection for 8889
 < content-length: 517
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 {
  "path": "/get",
  "host": "www.product.example.com",

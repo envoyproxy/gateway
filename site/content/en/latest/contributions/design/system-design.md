@@ -126,9 +126,8 @@ The Infra Manager consumes the Infra IR as input to manage the data plane infras
 
 ## Design Decisions
 
-* Envoy Gateway consumes one [GatewayClass][gc] by comparing its configured controller name with
-  `spec.controllerName` of a GatewayClass. If multiple GatewayClasses exist with the same `spec.controllerName`, Envoy
-  Gateway follows Gateway API [guidelines][gwapi_conflicts] to resolve the conflict.
+* Envoy Gateway can consume multiple [GatewayClass][gc] by comparing its configured controller name with
+  `spec.controllerName` of a GatewayClass.
   `gatewayclass.spec.parametersRef` refers to the `EnvoyProxy` custom resource for configuring the managed proxy
   infrastructure. If unspecified, default configuration parameters are used for the managed proxy infrastructure.
 * Envoy Gateway manages [Gateways][gw] that reference its GatewayClass.
