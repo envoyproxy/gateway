@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	fortio.org/fortio v1.63.3
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.12.0
@@ -19,6 +20,7 @@ require (
 	github.com/miekg/dns v1.1.58
 	github.com/prometheus/client_golang v1.19.0
 	github.com/prometheus/common v0.49.0
+	github.com/quic-go/quic-go v0.41.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
@@ -56,6 +58,16 @@ require (
 	fortio.org/sets v1.0.3 // indirect
 	fortio.org/struct2env v0.4.0 // indirect
 	fortio.org/version v1.0.3 // indirect
+)
+
+require (
+	github.com/francoispqt/gojay v1.2.13 // indirect
+	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
+	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
+	github.com/onsi/ginkgo/v2 v2.14.0 // indirect
+	github.com/quic-go/qpack v0.4.0 // indirect
+	go.uber.org/mock v0.3.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
 )
 
 require (
