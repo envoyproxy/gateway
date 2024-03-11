@@ -26,6 +26,8 @@ API group.
 - [EnvoyProxy](#envoyproxy)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
+- [WasmExtensionPolicy](#wasmextensionpolicy)
+- [WasmExtensionPolicyList](#wasmextensionpolicylist)
 
 
 
@@ -2609,6 +2611,87 @@ TriggerEnum specifies the conditions that trigger retries.
 _Appears in:_
 - [RetryOn](#retryon)
 
+
+
+#### WasmCodeSource
+
+
+
+WasmCodeSource defines the source of the wasm code.
+
+_Appears in:_
+- [WasmExtension](#wasmextension)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `configMapRef` | _[LocalObjectReference](#localobjectreference)_ |  true  | ConfigMapRef is a reference to a ConfigMap containing the wasm code. The key in the ConfigMap should be the name of the WasmExtension. For example, if the WasmExtension is named "my-wasm-extension", the ConfigMap should have a key named "my-wasm-extension" and the value should be the wasm code. |
+| `http` | _string_ |  true  | HTTP is the HTTP URL containing the wasm code. |
+
+
+#### WasmExtension
+
+
+
+WasmExtension defines an wasm extension.
+
+_Appears in:_
+- [WasmExtensionPolicySpec](#wasmextensionpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  true  | Name is a unique name for this Wasm extension. It is used to identify the Wasm extension if multiple extensions are handled by the same vm_id and root_id. It's also used for logging/debugging. |
+| `vmID` | _string_ |  true  | VmID is an ID that will be used along with a hash of the wasm code to determine which VM will be used to load the Wasm extension. All extensions that have the same vm_id and code will use the same VM. <br /><br /> Note that sharing a VM between plugins can reduce memory utilization and make sharing of data easier, but it may have security implications. |
+| `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog). If left blank, all extensions with a blank root_id with the same vm_id will share Context(s). |
+| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
+| `config` | _string_ |  true  | Configuration for the wasm code. |
+
+
+#### WasmExtensionPolicy
+
+
+
+WasmExtensionPolicy allows the user to configure wasm extensions for a Gateway.
+
+_Appears in:_
+- [WasmExtensionPolicyList](#wasmextensionpolicylist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`WasmExtensionPolicy`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[WasmExtensionPolicySpec](#wasmextensionpolicyspec)_ |  true  | Spec defines the desired state of WasmExtensionPolicy. |
+
+
+#### WasmExtensionPolicyList
+
+
+
+WasmExtensionPolicyList contains a list of WasmExtensionPolicy resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`WasmExtensionPolicyList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[WasmExtensionPolicy](#wasmextensionpolicy) array_ |  true  |  |
+
+
+#### WasmExtensionPolicySpec
+
+
+
+WasmExtensionPolicySpec defines the desired state of WasmExtensionPolicy.
+
+_Appears in:_
+- [WasmExtensionPolicy](#wasmextensionpolicy)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
+| `extensions` | _[WasmExtension](#wasmextension) array_ |  true  | Extensions is a list of Wasm extensions to be loaded by the Gateway. Order matters, as the extensions will be loaded in the order they are defined in this list. |
 
 
 #### XDSTranslatorHook
