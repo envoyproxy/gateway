@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.21
 
 require (
-	fortio.org/fortio v1.63.3
+	fortio.org/fortio v1.63.4
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.12.0
@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.6.0
 	github.com/grafana/tempo v1.5.0
 	github.com/miekg/dns v1.1.58
