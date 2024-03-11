@@ -248,7 +248,7 @@ securityPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Affects additional listeners: default/gateway-1/http'
+      message: 'Affects multiple listeners: default/mfqjpuycbgjrtdww/http, default/gateway-1/http'
       reason: Invalid
       status: "False"
       type: Accepted

@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -89,10 +90,18 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 			policyMap[key].Insert(section)
 
 			// Translate for listener matching section name
+
 			var err error
 			for _, l := range gateway.listeners {
+				// Find IR
+				irKey := t.getIRKey(l.gateway)
+				// It must exist since we've already finished processing the gateways
+				gwXdsIR := xdsIR[irKey]
 				if string(l.Name) == section {
-					err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
+					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR)
+					if err == nil {
+						err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
+					}
 					break
 				}
 			}
@@ -171,22 +180,30 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 			policyMap[key].Insert(AllSections)
 
 			// Translate sections that have not yet been targeted
-			var err error
+			var errs error
 			for _, l := range gateway.listeners {
 				// Skip if section has already been targeted
 				if s != nil && s.Has(string(l.Name)) {
 					continue
 				}
 
-				err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
+				// Find IR
+				irKey := t.getIRKey(l.gateway)
+				// It must exist since we've already finished processing the gateways
+				gwXdsIR := xdsIR[irKey]
+				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR); err != nil {
+					errs = errors.Join(errs, err)
+				} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 
-			if err != nil {
+			if errs != nil {
 				status.SetClientTrafficPolicyCondition(policy,
 					gwv1a2.PolicyConditionAccepted,
 					metav1.ConditionFalse,
 					gwv1a2.PolicyReasonInvalid,
-					status.Error2ConditionMsg(err),
+					status.Error2ConditionMsg(errs),
 				)
 			} else {
 				// Set Accepted=True
@@ -269,6 +286,29 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 	return gateway
 }
 
+func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds) error {
+	// Find Listener IR
+	// TODO: Support TLSRoute and TCPRoute once
+	// https://github.com/envoyproxy/gateway/issues/1635 is completed
+
+	irListenerName := irHTTPListenerName(l)
+	var httpIR *ir.HTTPListener
+	for _, http := range xds.HTTP {
+		if http.Name == irListenerName {
+			httpIR = http
+			break
+		}
+	}
+
+	// IR must exist since we're past validation
+	if httpIR != nil {
+		if sameListeners := listenersWithSameHTTPPort(xds, httpIR); len(sameListeners) != 0 {
+			return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
+		}
+	}
+	return nil
+}
+
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) error {
 	// Find IR
@@ -291,10 +331,6 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 	// IR must exist since we're past validation
 	if httpIR != nil {
-		if sameListeners := ShareEnvoyFilterChain(gwXdsIR, httpIR); len(sameListeners) != 0 {
-			return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
-		}
-
 		// Translate TCPKeepalive
 		translateListenerTCPKeepalive(policy.Spec.TCPKeepalive, httpIR)
 

@@ -421,10 +421,10 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alph
 	}
 }
 
-// ShareEnvoyFilterChain returns a list of the names of all other HTTP listeners
+// listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
 // that would share the same filter chain as the provided listener when translated
 // to XDS
-func ShareEnvoyFilterChain(xdsIR *ir.Xds, listener *ir.HTTPListener) []string {
+func listenersWithSameHTTPPort(xdsIR *ir.Xds, listener *ir.HTTPListener) []string {
 	// if TLS is enabled, the listener would have its own filterChain in Envoy, so
 	// no conflicts are possible
 	if listener.TLS != nil {

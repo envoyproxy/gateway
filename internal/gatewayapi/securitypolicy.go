@@ -109,7 +109,10 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				}
 			}
 
-			err := t.translateSecurityPolicyForRoute(policy, route, resources, xdsIR)
+			err := validatePortOverlapForSecurityPolicyRoute(xdsIR, route)
+			if err == nil {
+				err = t.translateSecurityPolicyForRoute(policy, route, resources, xdsIR)
+			}
 			if err != nil {
 				status.SetSecurityPolicyCondition(policy,
 					gwv1a2.PolicyConditionAccepted,
@@ -135,7 +138,13 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			err := t.translateSecurityPolicyForGateway(policy, gateway, resources, xdsIR)
+			irKey := t.getIRKey(gateway.Gateway)
+			// Should exist since we've validated this
+			xds := xdsIR[irKey]
+			err := validatePortOverlapForSecurityPolicyGateway(xds)
+			if err == nil {
+				err = t.translateSecurityPolicyForGateway(policy, gateway, resources, xdsIR)
+			}
 			if err != nil {
 				status.SetSecurityPolicyCondition(policy,
 					gwv1a2.PolicyConditionAccepted,
@@ -337,14 +346,27 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
 					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
-					if sameListeners := ShareEnvoyFilterChain(ir, http); len(sameListeners) == 0 {
-						r.CORS = cors
-						r.JWT = jwt
-						r.OIDC = oidc
-						r.BasicAuth = basicAuth
-						r.ExtAuth = extAuth
-					} else {
-						errs = errors.Join(errs, fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", ")))
+					r.CORS = cors
+					r.JWT = jwt
+					r.OIDC = oidc
+					r.BasicAuth = basicAuth
+					r.ExtAuth = extAuth
+				}
+			}
+		}
+	}
+	return errs
+}
+
+func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext) error {
+	var errs error
+	prefix := irRoutePrefix(route)
+	for _, ir := range xds {
+		for _, http := range ir.HTTP {
+			for _, r := range http.Routes {
+				if strings.HasPrefix(r.Name, prefix) {
+					if sameListeners := listenersWithSameHTTPPort(ir, http); len(sameListeners) != 0 {
+						errs = errors.Join(errs, fmt.Errorf("affects multiple listeners: %s", strings.Join(sameListeners, ", ")))
 					}
 				}
 			}
@@ -415,37 +437,47 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
-			if sameListeners := ShareEnvoyFilterChain(xdsIR, t.MergeGateways, http); len(sameListeners) == 0 {
-				// If any of the features are already set, it means that a more specific
-				// policy(targeting xRoute) has already set it, so we skip it.
-				if r.CORS != nil ||
-					r.JWT != nil ||
-					r.OIDC != nil ||
-					r.BasicAuth != nil ||
-					r.ExtAuth != nil {
-					continue
-				}
-				if r.CORS == nil {
-					r.CORS = cors
-				}
-				if r.JWT == nil {
-					r.JWT = jwt
-				}
-				if r.OIDC == nil {
-					r.OIDC = oidc
-				}
-				if r.BasicAuth == nil {
-					r.BasicAuth = basicAuth
-				}
-				if r.ExtAuth == nil {
-					r.ExtAuth = extAuth
-				}
-			} else {
-				errs = errors.Join(errs, fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", ")))
+			// If any of the features are already set, it means that a more specific
+			// policy(targeting xRoute) has already set it, so we skip it.
+			if r.CORS != nil ||
+				r.JWT != nil ||
+				r.OIDC != nil ||
+				r.BasicAuth != nil ||
+				r.ExtAuth != nil {
+				continue
+			}
+			if r.CORS == nil {
+				r.CORS = cors
+			}
+			if r.JWT == nil {
+				r.JWT = jwt
+			}
+			if r.OIDC == nil {
+				r.OIDC = oidc
+			}
+			if r.BasicAuth == nil {
+				r.BasicAuth = basicAuth
+			}
+			if r.ExtAuth == nil {
+				r.ExtAuth = extAuth
 			}
 		}
 	}
 	return errs
+}
+
+func validatePortOverlapForSecurityPolicyGateway(xds *ir.Xds) error {
+	affectedListeners := []string{}
+	for _, http := range xds.HTTP {
+		if sameListeners := listenersWithSameHTTPPort(xds, http); len(sameListeners) != 0 {
+			affectedListeners = append(affectedListeners, sameListeners...)
+		}
+	}
+
+	if len(affectedListeners) > 0 {
+		return fmt.Errorf("affects multiple listeners: %s", strings.Join(affectedListeners, ", "))
+	}
+	return nil
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
