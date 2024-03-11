@@ -9,25 +9,29 @@ import (
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	egv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
-	KindEnvoyProxy     = "EnvoyProxy"
-	KindGateway        = "Gateway"
-	KindGatewayClass   = "GatewayClass"
-	KindGRPCRoute      = "GRPCRoute"
-	KindHTTPRoute      = "HTTPRoute"
-	KindNamespace      = "Namespace"
-	KindTLSRoute       = "TLSRoute"
-	KindTCPRoute       = "TCPRoute"
-	KindUDPRoute       = "UDPRoute"
-	KindService        = "Service"
-	KindServiceImport  = "ServiceImport"
-	KindSecret         = "Secret"
-	KindSecurityPolicy = "SecurityPolicy"
+	KindConfigMap           = "ConfigMap"
+	KindClientTrafficPolicy = "ClientTrafficPolicy"
+	KindBackendTLSPolicy    = "BackendTLSPolicy"
+	KindEnvoyProxy          = "EnvoyProxy"
+	KindGateway             = "Gateway"
+	KindGatewayClass        = "GatewayClass"
+	KindGRPCRoute           = "GRPCRoute"
+	KindHTTPRoute           = "HTTPRoute"
+	KindNamespace           = "Namespace"
+	KindTLSRoute            = "TLSRoute"
+	KindTCPRoute            = "TCPRoute"
+	KindUDPRoute            = "UDPRoute"
+	KindService             = "Service"
+	KindServiceImport       = "ServiceImport"
+	KindSecret              = "Secret"
+	KindSecurityPolicy      = "SecurityPolicy"
 
 	GroupMultiClusterService = "multicluster.x-k8s.io"
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
@@ -81,10 +85,17 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// EnvoyPatchPolicyEnabled when the EnvoyPatchPolicy
+	// feature is enabled.
+	EnvoyPatchPolicyEnabled bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
+
+	// Namespace is the namespace that Envoy Gateway runs in.
+	Namespace string
 }
 
 type TranslateResult struct {
@@ -102,6 +113,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
+	backendTLSPolicies []*egv1a2.BackendTLSPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -130,6 +142,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
 	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
 	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
+	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
 
 	return translateResult
 }
@@ -148,7 +161,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR, infraIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
@@ -194,12 +207,15 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, gateways, routes, resources, xdsIR)
 
+	backendTLSPolicies := t.ProcessBackendTLSPoliciesAncestorRef(
+		resources.BackendTLSPolicies, gateways)
+
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
-		securityPolicies, xdsIR, infraIR)
+		securityPolicies, backendTLSPolicies, xdsIR, infraIR)
 
 }
 

@@ -32,6 +32,8 @@ xds:
           - name: global_config
             staticLayer:
               envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         staticResources:
           clusters:
           - connectTimeout: 0.250s
@@ -142,6 +144,9 @@ xds:
       dynamicActiveClusters:
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -158,6 +163,9 @@ xds:
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -189,6 +197,7 @@ xds:
                 validationContext:
                   trustedCa:
                     filename: /etc/ssl/certs/ca-certificates.crt
+              sni: raw.githubusercontent.com
           type: STRICT_DNS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
@@ -244,7 +253,7 @@ xds:
                             cacheDuration: 300s
                             httpUri:
                               cluster: raw_githubusercontent_com_443
-                              timeout: 5s
+                              timeout: 10s
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                             retryPolicy: {}
                       requirementMap:
@@ -253,6 +262,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -261,10 +271,10 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: envoy-gateway-system/eg/http
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
-                  upgradeConfigs:
-                  - upgradeType: websocket
                   useRemoteAddress: true
+            drainType: MODIFY_ONLY
             name: envoy-gateway-system/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
@@ -283,6 +293,8 @@ xds:
               name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
               route:
                 cluster: httproute/envoy-gateway-system/backend/rule/0
+                upgradeConfigs:
+                - upgradeType: websocket
               typedPerFilterConfig:
                 envoy.filters.http.jwt_authn:
                   '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig

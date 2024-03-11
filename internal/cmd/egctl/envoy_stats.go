@@ -7,13 +7,13 @@ package egctl
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/tetratelabs/multierror"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
@@ -74,7 +74,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyServerStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
 						if err != nil {
-							errs = multierror.Append(errs, err)
+							errs = errors.Join(errs, err)
 						}
 						wg.Done()
 					}(pod)
@@ -87,7 +87,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyClusterStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
 						if err != nil {
-							errs = multierror.Append(errs, err)
+							errs = errors.Join(errs, err)
 						}
 						wg.Done()
 					}(pod)
@@ -146,7 +146,7 @@ func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNa
 		path += "/prometheus"
 	}
 
-	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
+	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, adminPort)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}
@@ -169,7 +169,7 @@ func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podN
 		// for yaml output we will convert the json to yaml when printed
 		path += "?format=json"
 	}
-	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
+	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, adminPort)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %w", podNamespace, podName, err)
 	}

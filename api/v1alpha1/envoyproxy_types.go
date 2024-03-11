@@ -15,7 +15,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=eproxy
+// +kubebuilder:resource:categories=envoy-gateway,shortName=eproxy
 // +kubebuilder:subresource:status
 
 // EnvoyProxy is the schema for the envoyproxies API.
@@ -67,6 +67,13 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
+	// ExtraArgs defines additional command line options that are provided to Envoy.
+	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
+	// Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here.
+	//
+	// +optional
+	ExtraArgs []string `json:"extraArgs,omitempty"`
+
 	// MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
 	// Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
 	// This means that the port, protocol and hostname tuple must be unique for every listener.
@@ -74,6 +81,11 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
+
+	// Shutdown defines configuration for graceful envoy shutdown process.
+	//
+	// +optional
+	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 }
 
 type ProxyTelemetry struct {
@@ -108,6 +120,20 @@ type EnvoyProxyProvider struct {
 	Kubernetes *EnvoyProxyKubernetesProvider `json:"kubernetes,omitempty"`
 }
 
+// ShutdownConfig defines configuration for graceful envoy shutdown process.
+type ShutdownConfig struct {
+	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
+	// If unspecified, defaults to 600 seconds.
+	//
+	// +optional
+	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
+	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
+	// If unspecified, defaults to 5 seconds.
+	//
+	// +optional
+	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
+}
+
 // EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource
 // provider.
 type EnvoyProxyKubernetesProvider struct {
@@ -123,19 +149,12 @@ type EnvoyProxyKubernetesProvider struct {
 	// are applied.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
-	// +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
-	// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
-	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="!has(self.loadBalancerIP) || self.loadBalancerIP.matches(r\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4})\")"
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 
 	// EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
 	// Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="minReplicas must be greater than 0",rule="!has(self.minReplicas) || self.minReplicas > 0"
-	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="!has(self.maxReplicas) || self.maxReplicas > 0"
-	// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
 }
 

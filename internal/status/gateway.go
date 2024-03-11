@@ -28,10 +28,12 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 		// If the addresses is explicitly set in the Gateway spec by the user, use it
 		// to populate the Status
 		if len(gw.Spec.Addresses) > 0 {
-			// Make sure the addresses have been populated into ExternalIPs
+			// Make sure the addresses have been populated into ExternalIPs/ClusterIPs
 			// and use that value
 			if len(svc.Spec.ExternalIPs) > 0 {
 				addresses = append(addresses, svc.Spec.ExternalIPs...)
+			} else if len(svc.Spec.ClusterIPs) > 0 {
+				addresses = append(addresses, svc.Spec.ClusterIPs...)
 			}
 		} else {
 			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {

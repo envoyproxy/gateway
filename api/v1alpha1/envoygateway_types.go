@@ -200,9 +200,9 @@ const (
 	// KubernetesWatchModeTypeNamespaces indicates that the namespace watch mode is used.
 	KubernetesWatchModeTypeNamespaces = "Namespaces"
 
-	// KubernetesWatchModeTypeNamespaceSelectors indicates that namespaceSelectors watch
+	// KubernetesWatchModeTypeNamespaceSelector indicates that namespaceSelector watch
 	// mode is used.
-	KubernetesWatchModeTypeNamespaceSelectors = "NamespaceSelectors"
+	KubernetesWatchModeTypeNamespaceSelector = "NamespaceSelector"
 )
 
 // KubernetesWatchModeType defines the type of KubernetesWatchMode
@@ -211,7 +211,7 @@ type KubernetesWatchModeType string
 // KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
 type KubernetesWatchMode struct {
 	// Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and
-	// KubernetesWatchModeTypeNamespaceSelectors are currently supported
+	// KubernetesWatchModeTypeNamespaceSelector are currently supported
 	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
 	// from all namespaces.
 	Type KubernetesWatchModeType `json:"type,omitempty"`
@@ -219,14 +219,13 @@ type KubernetesWatchMode struct {
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
 	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
-	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set.
+	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set.
 	Namespaces []string `json:"namespaces,omitempty"`
 
-	// NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched.
-	// Note this doesn't set the informer to watch the namespaces with the given labels. Informer still
-	// watches all namespaces. But the events for objects whose namespace do not match given labels
-	// will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set.
-	NamespaceSelectors []string `json:"namespaceSelectors,omitempty"`
+	// NamespaceSelector holds the label selector used to dynamically select namespaces.
+	// Envoy Gateway will watch for namespaces matching the specified label selector.
+	// Precisely one of Namespaces and NamespaceSelector must be set.
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
@@ -327,6 +326,25 @@ type RateLimit struct {
 	// otherwise, don't let the traffic pass and return 500.
 	// If not set, FailClosed is False.
 	FailClosed bool `json:"failClosed"`
+
+	// Telemetry defines telemetry configuration for RateLimit.
+	// +optional
+	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+}
+
+type RateLimitTelemetry struct {
+	// Metrics defines metrics configuration for RateLimit.
+	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+}
+
+type RateLimitMetrics struct {
+	// Prometheus defines the configuration for prometheus endpoint.
+	Prometheus *RateLimitMetricsPrometheusProvider `json:"prometheus,omitempty"`
+}
+
+type RateLimitMetricsPrometheusProvider struct {
+	// Disable the Prometheus endpoint.
+	Disable bool `json:"disable,omitempty"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

@@ -29,6 +29,7 @@ Namespaced
 apiGroups:
 - ""
 resources:
+- configmaps
 - secrets
 - services
 verbs:
@@ -71,8 +72,6 @@ resources:
 verbs:
 - get
 - list
-- patch
-- update
 - watch
 {{- end }}
 
@@ -99,11 +98,10 @@ resources:
 - tcproutes
 - tlsroutes
 - udproutes
+- backendtlspolicies
 verbs:
 - get
 - list
-- patch
-- update
 - watch
 {{- end }}
 
@@ -117,6 +115,7 @@ resources:
 - tcproutes/status
 - tlsroutes/status
 - udproutes/status
+- backendtlspolicies/status
 verbs:
 - update
 {{- end }}

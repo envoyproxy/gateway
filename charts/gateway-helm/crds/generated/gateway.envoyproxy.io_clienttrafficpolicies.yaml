@@ -8,6 +8,8 @@ metadata:
 spec:
   group: gateway.envoyproxy.io
   names:
+    categories:
+    - envoy-gateway
     kind: ClientTrafficPolicy
     listKind: ClientTrafficPolicyList
     plural: clienttrafficpolicies
@@ -44,12 +46,90 @@ spec:
           spec:
             description: Spec defines the desired state of ClientTrafficPolicy.
             properties:
+              clientIPDetection:
+                description: ClientIPDetectionSettings provides configuration for
+                  determining the original client IP address for requests.
+                properties:
+                  customHeader:
+                    description: CustomHeader provides configuration for determining
+                      the client IP address for a request based on a trusted custom
+                      HTTP header. This uses the the custom_header original IP detection
+                      extension. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
+                      for more details.
+                    properties:
+                      failClosed:
+                        description: FailClosed is a switch used to control the flow
+                          of traffic when client IP detection fails. If set to true,
+                          the listener will respond with 403 Forbidden when the client
+                          IP address cannot be determined.
+                        type: boolean
+                      name:
+                        description: Name of the header containing the original downstream
+                          remote address, if present.
+                        maxLength: 255
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9-]+$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  xForwardedFor:
+                    description: XForwardedForSettings provides configuration for
+                      using X-Forwarded-For headers for determining the client IP
+                      address.
+                    properties:
+                      numTrustedHops:
+                        description: NumTrustedHops controls the number of additional
+                          ingress proxy hops from the right side of XFF HTTP headers
+                          to trust when determining the origin client's IP address.
+                          Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+                          for more details.
+                        format: int32
+                        type: integer
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: customHeader cannot be used in conjunction with xForwardedFor
+                  rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header
                   and adds the Client Address into the X-Forwarded-For header. Note
                   Proxy Protocol must be present when this field is set, else the
                   connection is closed.
                 type: boolean
+              headers:
+                description: HeaderSettings provides configuration for header management.
+                properties:
+                  enableEnvoyHeaders:
+                    description: EnableEnvoyHeaders configures Envoy Proxy to add
+                      the "X-Envoy-" headers to requests and responses.
+                    type: boolean
+                type: object
+              http1:
+                description: HTTP1 provides HTTP/1 configuration on the listener.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  http10:
+                    description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
+                      requests.
+                    properties:
+                      useDefaultHost:
+                        description: UseDefaultHost defines if the HTTP/1.0 request
+                          is missing the Host header, then the hostname associated
+                          with the listener should be injected into the request. If
+                          this is not set and an HTTP/1.0 request arrives without
+                          a host, then it will be rejected.
+                        type: boolean
+                    type: object
+                  preserveHeaderCase:
+                    description: PreserveHeaderCase defines if Envoy should preserve
+                      the letter case of headers. By default, Envoy will lowercase
+                      all the headers.
+                    type: boolean
+                type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
                 type: object
@@ -74,11 +154,6 @@ spec:
                     - UnescapeAndRedirect
                     type: string
                 type: object
-              suppressEnvoyHeaders:
-                description: SuppressEnvoyHeaders configures the Envoy Router filter
-                  to suppress the "x-envoy-' headers from both requests and responses.
-                  By default these headers are added to both requests and responses.
-                type: boolean
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy
                   is being attached to. This Policy and the TargetRef MUST be in the
@@ -157,6 +232,21 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              timeout:
+                description: Timeout settings for the client connections.
+                properties:
+                  http:
+                    description: Timeout settings for HTTP.
+                    properties:
+                      requestReceivedTimeout:
+                        description: The duration envoy waits for the complete request
+                          reception. This timer starts upon request initiation and
+                          stops when either the last byte of the request is sent upstream
+                          or when the response begins.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                type: object
               tls:
                 description: TLS settings configure TLS termination settings with
                   the downstream client.
@@ -187,6 +277,68 @@ spec:
                     items:
                       type: string
                     type: array
+                  clientValidation:
+                    description: ClientValidation specifies the configuration to validate
+                      the client initiating the TLS connection to the Gateway listener.
+                    properties:
+                      caCertificateRefs:
+                        description: "CACertificateRefs contains one or more references
+                          to Kubernetes objects that contain TLS certificates of the
+                          Certificate Authorities that can be used as a trust anchor
+                          to validate the certificates presented by the client. \n
+                          A single reference to a Kubernetes ConfigMap or a Kubernetes
+                          Secret, with the CA certificate in a key named `ca.crt`
+                          is currently supported. \n References to a resource in different
+                          namespace are invalid UNLESS there is a ReferenceGrant in
+                          the target namespace that allows the certificate to be attached."
+                        items:
+                          description: "SecretObjectReference identifies an API object
+                            including its namespace, defaulting to Secret. \n The
+                            API object must be valid in the cluster; the Group and
+                            Kind must be registered in the cluster for this reference
+                            to be valid. \n References to objects with invalid Group
+                            and Kind are not valid, and must be rejected by the implementation,
+                            with appropriate Conditions set on the containing object."
+                          properties:
+                            group:
+                              default: ""
+                              description: Group is the group of the referent. For
+                                example, "gateway.networking.k8s.io". When unspecified
+                                or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            kind:
+                              default: Secret
+                              description: Kind is kind of the referent. For example
+                                "Secret".
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: "Namespace is the namespace of the referenced
+                                object. When unspecified, the local namespace is inferred.
+                                \n Note that when a namespace different than the local
+                                namespace is specified, a ReferenceGrant object is
+                                required in the referent namespace to allow that namespace's
+                                owner to accept the reference. See the ReferenceGrant
+                                documentation for details. \n Support: Core"
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        maxItems: 8
+                        type: array
+                    type: object
                   ecdhCurves:
                     description: 'ECDHCurves specifies the set of supported ECDH curves.
                       In non-FIPS Envoy Proxy builds the default curves are: - X25519

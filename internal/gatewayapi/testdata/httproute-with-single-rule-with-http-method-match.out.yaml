@@ -122,4 +122,5 @@ xdsIR:
           exact: POST
           name: :method
         hostname: '*'
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/*

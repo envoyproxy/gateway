@@ -135,7 +135,6 @@ func TestDecode(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
-								Replicas: v1alpha1.DefaultKubernetesDeploymentReplicas(),
 								Strategy: v1alpha1.DefaultKubernetesDeploymentStrategy(),
 								Container: &v1alpha1.KubernetesContainerSpec{
 									Env: []corev1.EnvVar{
@@ -271,9 +270,21 @@ func TestDecode(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							Watch: &v1alpha1.KubernetesWatchMode{
-								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
-								NamespaceSelectors: []string{
-									"label-a",
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{"label-a": "foo"},
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      "tier",
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{"cache"},
+										},
+										{
+											Key:      "environment",
+											Operator: metav1.LabelSelectorOpNotIn,
+											Values:   []string{"dev"},
+										},
+									},
 								},
 							},
 						},

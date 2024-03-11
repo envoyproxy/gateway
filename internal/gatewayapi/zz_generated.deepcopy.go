@@ -160,6 +160,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.ConfigMaps != nil {
+		in, out := &in.ConfigMaps, &out.ConfigMaps
+		*out = make([]*corev1.ConfigMap, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(corev1.ConfigMap)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.EnvoyProxy != nil {
 		in, out := &in.EnvoyProxy, &out.EnvoyProxy
 		*out = new(apiv1alpha1.EnvoyProxy)
@@ -212,6 +223,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(apiv1alpha1.SecurityPolicy)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.BackendTLSPolicies != nil {
+		in, out := &in.BackendTLSPolicies, &out.BackendTLSPolicies
+		*out = make([]*v1alpha2.BackendTLSPolicy, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha2.BackendTLSPolicy)
 				(*in).DeepCopyInto(*out)
 			}
 		}

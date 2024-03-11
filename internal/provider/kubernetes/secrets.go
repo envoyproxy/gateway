@@ -14,10 +14,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/crypto"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 var (
@@ -26,7 +26,10 @@ var (
 
 // caCertificateKey is the key name for accessing TLS CA certificate bundles
 // in Kubernetes Secrets.
-const caCertificateKey = "ca.crt"
+const (
+	caCertificateKey = "ca.crt"
+	hmacSecretKey    = "hmac-secret"
+)
 
 func newSecret(secretType corev1.SecretType, name string, namespace string, data map[string][]byte) corev1.Secret {
 	return corev1.Secret{
@@ -76,20 +79,28 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 				corev1.TLSCertKey:       certs.EnvoyRateLimitCertificate,
 				corev1.TLSPrivateKeyKey: certs.EnvoyRateLimitPrivateKey,
 			}),
+		newSecret(
+			corev1.SecretTypeOpaque,
+			"envoy-oidc-hmac",
+			namespace,
+			map[string][]byte{
+				hmacSecretKey: certs.OIDCHMACSecret,
+			}),
 	}
 }
 
 // CreateOrUpdateSecrets creates the provided secrets if they don't exist or updates
 // them if they do.
 func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []corev1.Secret, update bool) ([]corev1.Secret, error) {
-	var tidySecrets []corev1.Secret
+	var (
+		tidySecrets     []corev1.Secret
+		existingSecrets []string
+	)
+
 	for i := range secrets {
 		secret := secrets[i]
 		current := new(corev1.Secret)
-		key := types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}
+		key := utils.NamespacedName(&secret)
 		if err := client.Get(ctx, key, current); err != nil {
 			// Create if not found.
 			if kerrors.IsNotFound(err) {
@@ -102,10 +113,10 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 			// Update if current value is different and update arg is set.
 		} else {
 			if !update {
-				return nil, fmt.Errorf("%s/%s: %w;"+
-					"Either update it manually or set overwriteControlPlaneCerts "+
-					"in the EnvoyGateway config", secret.Namespace, secret.Name, ErrSecretExists)
+				existingSecrets = append(existingSecrets, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name))
+				continue
 			}
+			fmt.Println()
 
 			if !reflect.DeepEqual(secret.Data, current.Data) {
 				if err := client.Update(ctx, &secret); err != nil {
@@ -114,6 +125,12 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 			}
 		}
 		tidySecrets = append(tidySecrets, secret)
+	}
+
+	if len(existingSecrets) > 0 {
+		return tidySecrets, fmt.Errorf("%v: %w;"+
+			"Either update the secrets manually or set overwriteControlPlaneCerts "+
+			"in the EnvoyGateway config", existingSecrets, ErrSecretExists)
 	}
 
 	return tidySecrets, nil

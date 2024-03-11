@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -18,21 +19,26 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/tetratelabs/multierror"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
 	defaultRedirectURL  = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	defaultRedirectPath = "/oauth2/callback"
 	defaultLogoutPath   = "/logout"
+
+	// nolint: gosec
+	oidcHMACSecretName = "envoy-oidc-hmac"
+	oidcHMACSecretKey  = "hmac-secret"
 )
 
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
@@ -60,12 +66,12 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	}
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
-		key := types.NamespacedName{
-			Name:      gw.GetName(),
-			Namespace: gw.GetNamespace(),
-		}
+		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
+
+	// Map of Gateway to the routes attached to it
+	gatewayRouteMap := make(map[string]sets.Set[string])
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
@@ -81,6 +87,26 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			route := resolveSecurityPolicyRouteTargetRef(policy, routeMap)
 			if route == nil {
 				continue
+			}
+
+			// Find the Gateway that the route belongs to and add it to the
+			// gatewayRouteMap, which will be used to check policy overrides
+			for _, p := range GetParentReferences(route) {
+				if p.Kind == nil || *p.Kind == KindGateway {
+					namespace := route.GetNamespace()
+					if p.Namespace != nil {
+						namespace = string(*p.Namespace)
+					}
+					gw := types.NamespacedName{
+						Namespace: namespace,
+						Name:      string(p.Name),
+					}.String()
+
+					if _, ok := gatewayRouteMap[gw]; !ok {
+						gatewayRouteMap[gw] = make(sets.Set[string])
+					}
+					gatewayRouteMap[gw].Insert(utils.NamespacedName(route).String())
+				}
 			}
 
 			err := t.translateSecurityPolicyForRoute(policy, route, resources, xdsIR)
@@ -121,6 +147,24 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				message := "SecurityPolicy has been accepted."
 				status.SetSecurityPolicyAccepted(&policy.Status, message)
 			}
+
+			// Check if this policy is overridden by other policies targeting
+			// at route level
+			gw := utils.NamespacedName(gateway).String()
+			if r, ok := gatewayRouteMap[gw]; ok {
+				// Maintain order here to ensure status/string does not change with the same data
+				routes := r.UnsortedList()
+				sort.Strings(routes)
+				message := fmt.Sprintf(
+					"This policy is being overridden by other securityPolicies for these routes: %v",
+					routes)
+				status.SetSecurityPolicyCondition(policy,
+					egv1a1.PolicyConditionOverridden,
+					metav1.ConditionTrue,
+					egv1a1.PolicyReasonOverridden,
+					message,
+				)
+			}
 		}
 	}
 
@@ -138,10 +182,10 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf(
 			"Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetSecurityPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -160,14 +204,6 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// Gateway not found
 	if !ok {
-		message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
-
-		status.SetSecurityPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -202,10 +238,10 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Ensure Policy and target are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf(
 			"Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetSecurityPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -225,17 +261,6 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Route not found
 	if !ok {
-		message := fmt.Sprintf(
-			"%s/%s/%s not found.",
-			policy.Spec.TargetRef.Kind,
-			string(*targetNs), policy.Spec.TargetRef.Name)
-
-		status.SetSecurityPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -270,6 +295,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
+		extAuth   *ir.ExtAuth
 		err, errs error
 	)
 
@@ -283,13 +309,19 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.ExtAuth != nil {
+		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -308,6 +340,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					r.JWT = jwt
 					r.OIDC = oidc
 					r.BasicAuth = basicAuth
+					r.ExtAuth = extAuth
 				}
 			}
 		}
@@ -324,6 +357,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		jwt       *ir.JWT
 		oidc      *ir.OIDC
 		basicAuth *ir.BasicAuth
+		extAuth   *ir.ExtAuth
 		err, errs error
 	)
 
@@ -337,17 +371,24 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
-	// Apply IR to all the routes within the specific Gateway
+	if policy.Spec.ExtAuth != nil {
+		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	// Apply IR to all the routes within the specific Gateway that originated
+	// from the gateway to which this security policy was attached.
 	// If the feature is already set, then skip it, since it must have be
 	// set by a policy attaching to the route
 	//
@@ -357,7 +398,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
+	policyTarget := irStringKey(
+		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
+		string(policy.Spec.TargetRef.Name),
+	)
 	for _, http := range ir.HTTP {
+		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
 		for _, r := range http.Routes {
 			// Apply if not already set
 			if r.CORS == nil {
@@ -371,6 +420,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			if r.BasicAuth == nil {
 				r.BasicAuth = basicAuth
+			}
+			if r.ExtAuth == nil {
+				r.ExtAuth = extAuth
 			}
 		}
 	}
@@ -471,7 +523,26 @@ func (t *Translator) buildOIDC(
 		}
 		redirectURL = *oidc.RedirectURL
 		redirectPath = path
+	}
+	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
+	}
+
+	// Generate a unique cookie suffix for oauth filters
+	suffix := utils.Digest32(string(policy.UID))
+
+	// Get the HMAC secret
+	// HMAC secret is generated by the CertGen job and stored in a secret
+	// We need to rotate the HMAC secret in the future, probably the same
+	// way we rotate the certs generated by the CertGen job.
+	hmacSecret := resources.GetSecret(t.Namespace, oidcHMACSecretName)
+	if hmacSecret == nil {
+		return nil, fmt.Errorf("HMAC secret %s/%s not found", t.Namespace, oidcHMACSecretName)
+	}
+	hmacData, ok := hmacSecret.Data[oidcHMACSecretKey]
+	if !ok || len(hmacData) == 0 {
+		return nil, fmt.Errorf(
+			"HMAC secret not found in secret %s/%s", t.Namespace, oidcHMACSecretName)
 	}
 
 	return &ir.OIDC{
@@ -482,6 +553,8 @@ func (t *Translator) buildOIDC(
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,
+		CookieSuffix: suffix,
+		HMACSecret:   hmacData,
 	}, nil
 }
 
@@ -574,10 +647,6 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		return fmt.Errorf("error parsing token endpoint URL: %w", err)
 	}
 
-	if parsedURL.Scheme != "https" {
-		return fmt.Errorf("token endpoint URL scheme must be https: %s", tokenEndpoint)
-	}
-
 	if ip, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
 		if ip.Unmap().Is4() {
 			return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
@@ -619,9 +688,157 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
-	if err != nil {
-		return nil, err
+	return &ir.BasicAuth{Users: usersSecretBytes}, nil
+}
+
+func (t *Translator) buildExtAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *Resources) (*ir.ExtAuth, error) {
+	var (
+		http       = policy.Spec.ExtAuth.HTTP
+		grpc       = policy.Spec.ExtAuth.GRPC
+		backendRef *gwapiv1.BackendObjectReference
+		protocol   ir.AppProtocol
+		ds         *ir.DestinationSetting
+		authority  string
+		err        error
+	)
+
+	switch {
+	// These are sanity checks, they should never happen because the API server
+	// should have caught them
+	case http == nil && grpc == nil:
+		return nil, errors.New("one of grpc or http must be specified")
+	case http != nil && grpc != nil:
+		return nil, errors.New("only one of grpc or http can be specified")
+	case http != nil:
+		backendRef = &http.BackendRef
+		protocol = ir.HTTP
+	case grpc != nil:
+		backendRef = &grpc.BackendRef
+		protocol = ir.GRPC
 	}
 
-	return &ir.BasicAuth{Users: usersSecretBytes}, nil
+	if err = t.validateExtServiceBackendReference(
+		backendRef,
+		policy.Namespace,
+		resources); err != nil {
+		return nil, err
+	}
+	authority = fmt.Sprintf(
+		"%s.%s:%d",
+		backendRef.Name,
+		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
+		*backendRef.Port)
+
+	if ds, err = t.processExtServiceDestination(
+		backendRef,
+		policy,
+		protocol,
+		resources); err != nil {
+		return nil, err
+	}
+	rd := ir.RouteDestination{
+		Name:     irExtServiceDestinationName(policy, string(backendRef.Name)),
+		Settings: []*ir.DestinationSetting{ds},
+	}
+
+	extAuth := &ir.ExtAuth{
+		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
+	}
+
+	if http != nil {
+		extAuth.HTTP = &ir.HTTPExtAuthService{
+			Destination:      rd,
+			Authority:        authority,
+			Path:             ptr.Deref(http.Path, ""),
+			HeadersToBackend: http.HeadersToBackend,
+		}
+	} else {
+		extAuth.GRPC = &ir.GRPCExtAuthService{
+			Destination: rd,
+			Authority:   authority,
+		}
+	}
+	return extAuth, nil
+}
+
+// TODO: zhaohuabing combine this function with the one in the route translator
+func (t *Translator) processExtServiceDestination(
+	backendRef *gwapiv1.BackendObjectReference,
+	policy *egv1a1.SecurityPolicy,
+	protocol ir.AppProtocol,
+	resources *Resources) (*ir.DestinationSetting, error) {
+	var (
+		endpoints   []*ir.DestinationEndpoint
+		addrType    *ir.DestinationAddressType
+		servicePort v1.ServicePort
+		backendTLS  *ir.TLSUpstreamConfig
+	)
+
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	if servicePort.AppProtocol != nil &&
+		*servicePort.AppProtocol == "kubernetes.io/h2c" {
+		protocol = ir.HTTP2
+	}
+
+	// Route to endpoints by default
+	if !t.EndpointRoutingDisabled {
+		endpointSlices := resources.GetEndpointSlicesForBackend(
+			serviceNamespace, string(backendRef.Name), KindService)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(
+			endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		ep := ir.NewDestEndpoint(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port))
+		endpoints = append(endpoints, ep)
+	}
+
+	// TODO: support mixed endpointslice address type for the same backendRef
+	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
+		return nil, errors.New(
+			"mixed endpointslice address type for the same backendRef is not supported")
+	}
+
+	backendTLS = t.processBackendTLSPolicy(
+		*backendRef,
+		serviceNamespace,
+		// Gateway is not the appropriate parent reference here because the owner
+		// of the BackendRef is the security policy, and there is no hierarchy
+		// relationship between the security policy and a gateway.
+		// The owner security policy of the BackendRef is used as the parent reference here.
+		gwv1a2.ParentReference{
+			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
+			Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindSecurityPolicy)),
+			Namespace: ptr.To(gwapiv1.Namespace(policy.Namespace)),
+			Name:      gwapiv1.ObjectName(policy.Name),
+		},
+		resources)
+
+	return &ir.DestinationSetting{
+		Weight:      ptr.To(uint32(1)),
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+		TLS:         backendTLS,
+	}, nil
+}
+
+func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, service string) string {
+	return strings.ToLower(fmt.Sprintf(
+		"%s/%s/%s/%s",
+		KindSecurityPolicy,
+		policy.GetNamespace(),
+		policy.GetName(),
+		service))
 }

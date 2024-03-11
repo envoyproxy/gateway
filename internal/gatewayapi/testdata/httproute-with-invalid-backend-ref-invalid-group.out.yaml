@@ -71,7 +71,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: Group is invalid, only the core API group (specified by omitting
           the group field or setting it to an empty string) and multicluster.x-k8s.io
-          is supported
+          are supported
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs
@@ -117,6 +117,7 @@ xdsIR:
         directResponse:
           statusCode: 500
         hostname: '*'
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

@@ -13,10 +13,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -25,6 +27,8 @@ const (
 
 	L4Protocol = "L4"
 	L7Protocol = "L7"
+
+	caCertKey = "ca.crt"
 )
 
 type protocolPort struct {
@@ -66,34 +70,12 @@ func ObjectNamePtr(val string) *v1alpha2.ObjectName {
 	return &objectName
 }
 
-func PathMatchTypeDerefOr(matchType *gwapiv1.PathMatchType, defaultType gwapiv1.PathMatchType) gwapiv1.PathMatchType {
-	if matchType != nil {
-		return *matchType
-	}
-	return defaultType
-}
-
-func GRPCMethodMatchTypeDerefOr(matchType *v1alpha2.GRPCMethodMatchType, defaultType v1alpha2.GRPCMethodMatchType) v1alpha2.GRPCMethodMatchType {
-	if matchType != nil {
-		return *matchType
-	}
-	return defaultType
-}
-
-func HeaderMatchTypeDerefOr(matchType *gwapiv1.HeaderMatchType, defaultType gwapiv1.HeaderMatchType) gwapiv1.HeaderMatchType {
-	if matchType != nil {
-		return *matchType
-	}
-	return defaultType
-}
-
-func QueryParamMatchTypeDerefOr(matchType *gwapiv1.QueryParamMatchType,
-	defaultType gwapiv1.QueryParamMatchType) gwapiv1.QueryParamMatchType {
-	if matchType != nil {
-		return *matchType
-	}
-	return defaultType
-}
+var (
+	PathMatchTypeDerefOr       = ptr.Deref[gwapiv1.PathMatchType]
+	GRPCMethodMatchTypeDerefOr = ptr.Deref[v1alpha2.GRPCMethodMatchType]
+	HeaderMatchTypeDerefOr     = ptr.Deref[gwapiv1.HeaderMatchType]
+	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
+)
 
 func NamespaceDerefOr(namespace *gwapiv1.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
@@ -145,7 +127,7 @@ func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*Gatew
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if !IsRefToGateway(parentRef, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}) {
+		if !IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
 			continue
 		}
 
@@ -410,7 +392,11 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
 }
 
 func irTLSListenerConfigName(secret *v1.Secret) string {
-	return fmt.Sprintf("%s-%s", secret.Namespace, secret.Name)
+	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+}
+
+func irTLSCACertName(namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
 func isMergeGatewaysEnabled(resources *Resources) bool {

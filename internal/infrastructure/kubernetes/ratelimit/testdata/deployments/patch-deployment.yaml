@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: ratelimit
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy-ratelimit
+  name: envoy-ratelimit
+  namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-gateway
+    uid: test-owner-reference-uid-for-deployment
+spec:
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ratelimit
+      app.kubernetes.io/managed-by: envoy-gateway
+      app.kubernetes.io/name: envoy-ratelimit
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "19001"
+        prometheus.io/scrape: "true"
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: ratelimit
+        app.kubernetes.io/managed-by: envoy-gateway
+        app.kubernetes.io/name: envoy-ratelimit
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - /bin/ratelimit
+        env:
+        - name: REDIS_SOCKET_TYPE
+          value: tcp
+        - name: REDIS_URL
+          value: redis.redis.svc:6379
+        - name: RUNTIME_ROOT
+          value: /data
+        - name: RUNTIME_SUBDIRECTORY
+          value: ratelimit
+        - name: RUNTIME_IGNOREDOTFILES
+          value: "true"
+        - name: RUNTIME_WATCH_ROOT
+          value: "false"
+        - name: LOG_LEVEL
+          value: info
+        - name: USE_STATSD
+          value: "false"
+        - name: CONFIG_TYPE
+          value: GRPC_XDS_SOTW
+        - name: CONFIG_GRPC_XDS_SERVER_URL
+          value: envoy-gateway:18001
+        - name: CONFIG_GRPC_XDS_NODE_ID
+          value: envoy-ratelimit
+        - name: GRPC_SERVER_USE_TLS
+          value: "true"
+        - name: GRPC_SERVER_TLS_CERT
+          value: /certs/tls.crt
+        - name: GRPC_SERVER_TLS_KEY
+          value: /certs/tls.key
+        - name: GRPC_SERVER_TLS_CA_CERT
+          value: /certs/ca.crt
+        - name: CONFIG_GRPC_XDS_SERVER_USE_TLS
+          value: "true"
+        - name: CONFIG_GRPC_XDS_CLIENT_TLS_CERT
+          value: /certs/tls.crt
+        - name: CONFIG_GRPC_XDS_CLIENT_TLS_KEY
+          value: /certs/tls.key
+        - name: CONFIG_GRPC_XDS_SERVER_TLS_CACERT
+          value: /certs/ca.crt
+        - name: FORCE_START_WITHOUT_INITIAL_CONFIG
+          value: "true"
+        image: envoyproxy/ratelimit:master
+        imagePullPolicy: IfNotPresent
+        name: envoy-ratelimit
+        ports:
+        - containerPort: 8081
+          name: grpc
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /certs
+          name: certs
+          readOnly: true
+      - command:
+        - /bin/statsd_exporter
+        - --web.listen-address=:19001
+        - --statsd.mapping-config=/etc/statsd-exporter/conf.yaml
+        image: prom/statsd-exporter:v0.18.0
+        imagePullPolicy: IfNotPresent
+        name: prom-statsd-exporter
+        ports:
+        - containerPort: 9125
+          name: statsd
+          protocol: TCP
+        - containerPort: 19001
+          name: metrics
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/statsd-exporter
+          name: statsd-exporter-config
+          readOnly: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccountName: envoy-ratelimit
+      terminationGracePeriodSeconds: 300
+      volumes:
+      - name: certs
+        secret:
+          defaultMode: 420
+          secretName: envoy-rate-limit
+      - configMap:
+          defaultMode: 420
+          name: statsd-exporter-config
+          optional: true
+        name: statsd-exporter-config
+status: {}

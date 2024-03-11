@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	defaultHTTPSPort uint64 = 443
-	defaultHTTPPort  uint64 = 80
+	defaultHTTPSPort                uint64 = 443
+	defaultHTTPPort                 uint64 = 80
+	defaultExtServiceRequestTimeout        = 10 // 10 seconds
 )
 
 // urlCluster is a cluster that is created from a URL.
@@ -34,17 +35,13 @@ type urlCluster struct {
 }
 
 // url2Cluster returns a urlCluster from the provided url.
-func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
+func url2Cluster(strURL string) (*urlCluster, error) {
 	epType := EndpointTypeDNS
 
 	// The URL should have already been validated in the gateway API translator.
 	u, err := url.Parse(strURL)
 	if err != nil {
 		return nil, err
-	}
-
-	if secure && u.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 
 	var port uint64
@@ -61,7 +58,7 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 		}
 	}
 
-	name := fmt.Sprintf("%s_%d", strings.ReplaceAll(u.Hostname(), ".", "_"), port)
+	name := clusterName(u.Hostname(), uint32(port))
 
 	if ip, err := netip.ParseAddr(u.Hostname()); err == nil {
 		if ip.Unmap().Is4() {
@@ -76,6 +73,10 @@ func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
 		endpointType: epType,
 		tls:          u.Scheme == "https",
 	}, nil
+}
+
+func clusterName(host string, port uint32) string {
+	return fmt.Sprintf("%s_%d", strings.ReplaceAll(host, ".", "_"), port)
 }
 
 // enableFilterOnRoute enables a filterType on the provided route.

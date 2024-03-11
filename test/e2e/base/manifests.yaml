@@ -115,8 +115,8 @@ spec:
     spec:
       containers:
       - name: infra-backend-v1
-        # From https://github.com/kubernetes-sigs/ingress-controller-conformance/tree/master/images/echoserver
-        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         env:
         - name: POD_NAME
           valueFrom:
@@ -126,6 +126,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: infra-backend-v1
         resources:
           requests:
             cpu: 10m
@@ -162,7 +164,7 @@ spec:
     spec:
       containers:
       - name: infra-backend-v2
-        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         env:
         - name: POD_NAME
           valueFrom:
@@ -172,6 +174,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: infra-backend-v2
         resources:
           requests:
             cpu: 10m
@@ -208,7 +212,7 @@ spec:
     spec:
       containers:
       - name: infra-backend-v3
-        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         env:
         - name: POD_NAME
           valueFrom:
@@ -218,6 +222,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: infra-backend-v3
         resources:
           requests:
             cpu: 10m
@@ -254,7 +260,7 @@ spec:
     spec:
       containers:
       - name: tls-backend
-        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         volumeMounts:
         - name: secret-volume
           mountPath: /etc/secret-volume
@@ -267,6 +273,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: tls-backend
         - name: TLS_SERVER_CERT
           value: /etc/secret-volume/crt
         - name: TLS_SERVER_PRIVKEY
@@ -323,7 +331,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v1
-        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         env:
         - name: POD_NAME
           valueFrom:
@@ -333,6 +341,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: app-backend-v1
         resources:
           requests:
             cpu: 10m
@@ -369,7 +379,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v2
-        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         env:
         - name: POD_NAME
           valueFrom:
@@ -379,6 +389,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: app-backend-v2
         resources:
           requests:
             cpu: 10m
@@ -422,7 +434,7 @@ spec:
     spec:
       containers:
       - name: web-backend
-        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
         env:
         - name: POD_NAME
           valueFrom:
@@ -432,6 +444,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: web-backend
         resources:
           requests:
             cpu: 10m
@@ -521,3 +535,110 @@ spec:
     allowedRoutes:
       kinds:
       - kind: UDPRoute
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-preserve-case-backend
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: go-server
+  namespace: gateway-preserve-case-backend
+data:
+  go.mod: |
+         module srvr
+         go 1.21.3
+         require (
+         	github.com/andybalholm/brotli v1.0.5 // indirect
+         	github.com/klauspost/compress v1.17.0 // indirect
+         	github.com/valyala/bytebufferpool v1.0.0 // indirect
+         	github.com/valyala/fasthttp v1.51.0 // indirect
+         )
+  go.sum: |
+         github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=
+         github.com/andybalholm/brotli v1.0.5/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
+         github.com/klauspost/compress v1.17.0 h1:Rnbp4K9EjcDuVuHtd0dgA4qNuv9yKDYKK1ulpJwgrqM=
+         github.com/klauspost/compress v1.17.0/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
+         github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
+         github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
+         github.com/valyala/fasthttp v1.51.0 h1:8b30A5JlZ6C7AS81RsWjYMQmrZG6feChmgAolCl1SqA=
+         github.com/valyala/fasthttp v1.51.0/go.mod h1:oI2XroL+lI7vdXyYoQk03bXBThfFl2cVdIA3Xl7cH8g=
+  main.go: |
+         package main
+         import (
+         	"encoding/json"
+         	"fmt"
+         	"log"
+         	"github.com/valyala/fasthttp"
+         )
+         func HandleFastHTTP(ctx *fasthttp.RequestCtx) {
+         	ctx.QueryArgs().VisitAll(func(key, value []byte) {
+         		if string(key) == "headers" {
+         			ctx.Response.Header.Add(string(value), "PrEsEnT")
+         		}
+         	})
+         	headers := map[string][]string{}
+         	ctx.Request.Header.VisitAll(func(key, value []byte) {
+         		headers[string(key)] = append(headers[string(key)], string(value))
+         	})
+         	if d, err := json.MarshalIndent(headers, "", "  "); err != nil {
+         		ctx.Error(fmt.Sprintf("%s", err), fasthttp.StatusBadRequest)
+         	} else {
+         		fmt.Fprintf(ctx, string(d)+"\n")
+         	}
+         }
+         func main() {
+         	s := fasthttp.Server{
+         		Handler:                       HandleFastHTTP,
+         		DisableHeaderNamesNormalizing: true,
+         	}
+            log.Printf("Starting on port 8000")
+         	log.Fatal(s.ListenAndServe(":8000"))
+         }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: golang-app-deployment
+  namespace: gateway-preserve-case-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: golang-app
+  template:
+    metadata:
+      labels:
+        app: golang-app
+    spec:
+      containers:
+      - name: golang-app-container
+        command:
+        - sh
+        - "-c"
+        - "cp -a /app /app-live && cd /app-live && go  run . "
+        image: golang:1.21.3-alpine
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: go-server
+          mountPath: /app
+      volumes:
+      - name: go-server
+        configMap:
+          name: go-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fasthttp-backend
+  namespace: gateway-preserve-case-backend
+spec:
+  selector:
+    app: golang-app
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000

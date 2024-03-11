@@ -211,6 +211,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("1.2.3.4."),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerIP must be a valid IPv4 address"},
+		},
+		{
+			desc: "ServiceTypeLoadBalancer-with-invalid-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: ptr.To("a.b.c.d"),
 							},
 						},

@@ -32,6 +32,8 @@ xds:
           - name: global_config
             staticLayer:
               envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         staticResources:
           clusters:
           - connectTimeout: 0.250s
@@ -198,6 +200,9 @@ xds:
       dynamicActiveClusters:
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -214,6 +219,9 @@ xds:
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -235,6 +243,9 @@ xds:
                 http2ProtocolOptions: {}
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -251,6 +262,9 @@ xds:
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -267,6 +281,9 @@ xds:
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -327,6 +344,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -335,10 +353,10 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
-                  upgradeConfigs:
-                  - upgradeType: websocket
                   useRemoteAddress: true
+            drainType: MODIFY_ONLY
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -393,6 +411,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -401,8 +420,10 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/grpc
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
+            drainType: MODIFY_ONLY
             name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -425,6 +446,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 8443
+            drainType: MODIFY_ONLY
             filterChains:
             - filterChainMatch:
                 serverNames:
@@ -470,6 +492,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 1234
+            drainType: MODIFY_ONLY
             filterChains:
             - filters:
               - name: envoy.filters.network.tcp_proxy
@@ -547,6 +570,8 @@ xds:
               name: httproute/default/backend/rule/0/match/0/www_example_com
               route:
                 cluster: httproute/default/backend/rule/0
+                upgradeConfigs:
+                - upgradeType: websocket
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true

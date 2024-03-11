@@ -91,7 +91,22 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-dns-cluster",
 		},
 		{
+			name: "http-route-with-tls-system-truststore",
+		},
+		{
+			name:           "http-route-with-tlsbundle",
+			requireSecrets: true,
+		},
+		{
+			name:           "http-route-with-tlsbundle-multiple-certs",
+			requireSecrets: true,
+		},
+		{
 			name:           "simple-tls",
+			requireSecrets: true,
+		},
+		{
+			name:           "mutual-tls",
 			requireSecrets: true,
 		},
 		{
@@ -167,6 +182,7 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
+			requireSecrets:            true,
 		},
 		{
 			name:                      "jsonpatch-missing-resource",
@@ -174,6 +190,14 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name:                      "jsonpatch-invalid-patch",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-add-op-without-value",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-move-op-with-value",
 			requireEnvoyPatchPolicies: true,
 		},
 		{
@@ -235,6 +259,33 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "path-settings",
+		},
+		{
+			name: "client-ip-detection",
+		},
+		{
+			name: "http1-trailers",
+		},
+		{
+			name: "http1-preserve-case",
+		},
+		{
+			name: "timeout",
+		},
+		{
+			name: "ext-auth",
+		},
+		{
+			name: "http10",
+		},
+		{
+			name: "upstream-tcpkeepalive",
+		},
+		{
+			name: "client-timeout",
+		},
+		{
+			name: "retry-partial-invalid",
 		},
 	}
 

@@ -7,20 +7,29 @@ backendTrafficPolicies:
     namespace: default
   spec:
     healthCheck:
-      healthyThreshold: 3
-      http:
-        expectedResponse:
-          text: pong
-          type: Text
-        expectedStatuses:
-        - 200
-        - 201
-        method: GET
-        path: /healthz
-      interval: 5s
-      timeout: 1s
-      type: HTTP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 3
+        http:
+          expectedResponse:
+            text: pong
+            type: Text
+          expectedStatuses:
+          - 200
+          - 201
+          method: GET
+          path: /healthz
+        interval: 5s
+        timeout: 1s
+        type: HTTP
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 2m30s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 1s
+        maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -41,18 +50,27 @@ backendTrafficPolicies:
     namespace: default
   spec:
     healthCheck:
-      healthyThreshold: 3
-      interval: 5s
-      tcp:
-        receive:
-          text: pong
-          type: Text
-        send:
-          text: ping
-          type: Text
-      timeout: 1s
-      type: TCP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 3
+        interval: 5s
+        tcp:
+          receive:
+            text: pong
+            type: Text
+          send:
+            text: ping
+            type: Text
+        timeout: 1s
+        type: TCP
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 10s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 10s
+        maxEjectionPercent: 10
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -73,18 +91,27 @@ backendTrafficPolicies:
     namespace: default
   spec:
     healthCheck:
-      healthyThreshold: 1
-      interval: 3s
-      tcp:
-        receive:
-          binary: RXZlcnl0aGluZyBPSw==
-          type: Binary
-        send:
-          binary: cGluZw==
-          type: Binary
-      timeout: 1s
-      type: TCP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 1
+        interval: 3s
+        tcp:
+          receive:
+            binary: RXZlcnl0aGluZyBPSw==
+            type: Binary
+          send:
+            binary: cGluZw==
+            type: Binary
+        timeout: 1s
+        type: TCP
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 8ms
+        maxEjectionPercent: 11
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -105,20 +132,29 @@ backendTrafficPolicies:
     namespace: envoy-gateway
   spec:
     healthCheck:
-      healthyThreshold: 1
-      http:
-        expectedResponse:
-          binary: RXZlcnl0aGluZyBPSw==
-          type: Binary
-        expectedStatuses:
-        - 200
-        - 300
-        method: GET
-        path: /healthz
-      interval: 3s
-      timeout: 500ms
-      type: HTTP
-      unhealthyThreshold: 3
+      active:
+        healthyThreshold: 1
+        http:
+          expectedResponse:
+            binary: RXZlcnl0aGluZyBPSw==
+            type: Binary
+          expectedStatuses:
+          - 200
+          - 300
+          method: GET
+          path: /healthz
+        interval: 3s
+        timeout: 500ms
+        type: HTTP
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 2s
+        maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -421,19 +457,29 @@ xdsIR:
             protocol: GRPC
             weight: 1
         healthCheck:
-          healthyThreshold: 1
-          http:
-            expectedResponse:
-              binary: RXZlcnl0aGluZyBPSw==
-            expectedStatuses:
-            - 200
-            - 300
-            method: GET
-            path: /healthz
-          interval: 3s
-          timeout: 500ms
-          unhealthyThreshold: 3
+          active:
+            healthyThreshold: 1
+            http:
+              expectedResponse:
+                binary: RXZlcnl0aGluZyBPSw==
+              expectedStatuses:
+              - 200
+              - 300
+              method: GET
+              path: /healthz
+            interval: 3s
+            timeout: 500ms
+            unhealthyThreshold: 3
+          passive:
+            baseEjectionTime: 2m40s
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            interval: 2s
+            maxEjectionPercent: 100
+            splitExternalLocalOriginErrors: false
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
   envoy-gateway/gateway-2:
     accessLog:
@@ -463,16 +509,26 @@ xdsIR:
             protocol: HTTP
             weight: 1
         healthCheck:
-          healthyThreshold: 3
-          interval: 5s
-          tcp:
-            receive:
-              text: pong
-            send:
-              text: ping
-          timeout: 1s
-          unhealthyThreshold: 3
+          active:
+            healthyThreshold: 3
+            interval: 5s
+            tcp:
+              receive:
+                text: pong
+              send:
+                text: ping
+            timeout: 1s
+            unhealthyThreshold: 3
+          passive:
+            baseEjectionTime: 10s
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            interval: 10s
+            maxEjectionPercent: 10
+            splitExternalLocalOriginErrors: false
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -491,16 +547,26 @@ xdsIR:
             protocol: HTTP
             weight: 1
         healthCheck:
-          healthyThreshold: 1
-          interval: 3s
-          tcp:
-            receive:
-              binary: RXZlcnl0aGluZyBPSw==
-            send:
-              binary: cGluZw==
-          timeout: 1s
-          unhealthyThreshold: 3
+          active:
+            healthyThreshold: 1
+            interval: 3s
+            tcp:
+              receive:
+                binary: RXZlcnl0aGluZyBPSw==
+              send:
+                binary: cGluZw==
+            timeout: 1s
+            unhealthyThreshold: 3
+          passive:
+            baseEjectionTime: 2m40s
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            interval: 8ms
+            maxEjectionPercent: 11
+            splitExternalLocalOriginErrors: false
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -519,19 +585,29 @@ xdsIR:
             protocol: HTTP
             weight: 1
         healthCheck:
-          healthyThreshold: 3
-          http:
-            expectedResponse:
-              text: pong
-            expectedStatuses:
-            - 200
-            - 201
-            method: GET
-            path: /healthz
-          interval: 5s
-          timeout: 1s
-          unhealthyThreshold: 3
+          active:
+            healthyThreshold: 3
+            http:
+              expectedResponse:
+                text: pong
+              expectedStatuses:
+              - 200
+              - 201
+              method: GET
+              path: /healthz
+            interval: 5s
+            timeout: 1s
+            unhealthyThreshold: 3
+          passive:
+            baseEjectionTime: 2m30s
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            interval: 1s
+            maxEjectionPercent: 100
+            splitExternalLocalOriginErrors: false
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

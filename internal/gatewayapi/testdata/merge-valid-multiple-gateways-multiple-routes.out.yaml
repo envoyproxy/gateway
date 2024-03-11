@@ -246,6 +246,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -283,6 +284,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: example.com
+        isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/example_com
         pathMatch:
           distinct: false

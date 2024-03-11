@@ -9,7 +9,9 @@ backendTrafficPolicies:
     circuitBreaker:
       maxConnections: 42
       maxParallelRequests: 42
+      maxParallelRetries: 24
       maxPendingRequests: 42
+      maxRequestsPerConnection: 42
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -32,7 +34,9 @@ backendTrafficPolicies:
     circuitBreaker:
       maxConnections: 2048
       maxParallelRequests: 4294967295
+      maxParallelRetries: 1024
       maxPendingRequests: 1
+      maxRequestsPerConnection: 1
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -252,7 +256,9 @@ xdsIR:
         circuitBreaker:
           maxConnections: 2048
           maxParallelRequests: 4294967295
+          maxParallelRetries: 1024
           maxPendingRequests: 1
+          maxRequestsPerConnection: 1
         destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
@@ -263,6 +269,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
   envoy-gateway/gateway-2:
     accessLog:
@@ -285,7 +292,9 @@ xdsIR:
         circuitBreaker:
           maxConnections: 42
           maxParallelRequests: 42
+          maxParallelRetries: 24
           maxPendingRequests: 42
+          maxRequestsPerConnection: 42
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -296,6 +305,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

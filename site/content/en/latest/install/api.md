@@ -25,6 +25,7 @@ The Helm chart for Envoy Gateway
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | certgen.job.annotations | object | `{}` |  |
+| certgen.job.resources | object | `{}` |  |
 | certgen.job.ttlSecondsAfterFinished | int | `0` |  |
 | certgen.rbac.annotations | object | `{}` |  |
 | certgen.rbac.labels | object | `{}` |  |
@@ -50,9 +51,6 @@ The Helm chart for Envoy Gateway
 | deployment.ports[1].port | int | `18001` |  |
 | deployment.ports[1].targetPort | int | `18001` |  |
 | deployment.replicas | int | `1` |  |
-| envoyGatewayMetricsService.ports[0].name | string | `"http"` |  |
-| envoyGatewayMetricsService.ports[0].port | int | `19001` |  |
-| envoyGatewayMetricsService.ports[0].protocol | string | `"TCP"` |  |
-| envoyGatewayMetricsService.ports[0].targetPort | int | `19001` |  |
+| envoyGatewayMetricsService.port | int | `19001` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 

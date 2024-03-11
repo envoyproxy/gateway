@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 
@@ -17,7 +16,6 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
@@ -26,8 +24,7 @@ import (
 )
 
 const (
-	oauth2Filter                = "envoy.filters.http.oauth2"
-	defaultTokenEndpointTimeout = 10
+	oauth2Filter = "envoy.filters.http.oauth2"
 )
 
 func init() {
@@ -42,6 +39,7 @@ var _ httpFilter = &oidc{}
 // patchHCM builds and appends the oauth2 Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
 // Note: this method creates an oauth2 filter for each route that contains an OIDC config.
+// the filter is disabled by default. It is enabled on the route level.
 func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 
@@ -60,21 +58,14 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 
 		filter, err := buildHCMOAuth2Filter(route)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
-		}
-
-		// skip if the filter already exists
-		for _, existingFilter := range mgr.HttpFilters {
-			if filter.Name == existingFilter.Name {
-				continue
-			}
 		}
 
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMOAuth2Filter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
@@ -94,7 +85,8 @@ func buildHCMOAuth2Filter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: oauth2FilterName(route),
+		Name:     oauth2FilterName(route),
+		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: OAuth2Any,
 		},
@@ -106,7 +98,7 @@ func oauth2FilterName(route *ir.HTTPRoute) string {
 }
 
 func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
-	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
+	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +116,7 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 					Cluster: cluster.name,
 				},
 				Timeout: &duration.Duration{
-					Seconds: defaultTokenEndpointTimeout,
+					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
 			AuthorizationEndpoint: route.OIDC.Provider.AuthorizationEndpoint,
@@ -159,6 +151,13 @@ func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
 						Name:      oauth2HMACSecretName(route),
 						SdsConfig: makeConfigSource(),
 					},
+				},
+				CookieNames: &oauth2v3.OAuth2Credentials_CookieNames{
+					BearerToken:  fmt.Sprintf("BearerToken-%s", route.OIDC.CookieSuffix),
+					OauthHmac:    fmt.Sprintf("OauthHMAC-%s", route.OIDC.CookieSuffix),
+					OauthExpires: fmt.Sprintf("OauthExpires-%s", route.OIDC.CookieSuffix),
+					IdToken:      fmt.Sprintf("IdToken-%s", route.OIDC.CookieSuffix),
+					RefreshToken: fmt.Sprintf("RefreshToken-%s", route.OIDC.CookieSuffix),
 				},
 			},
 			// every OIDC provider supports basic auth
@@ -215,9 +214,9 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			err     error
 		)
 
-		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint, true)
+		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 
@@ -225,26 +224,10 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 		// This validation could be removed since it's already validated in the
 		// Gateway API translator.
 		if cluster.endpointType == EndpointTypeStatic {
-			errs = multierror.Append(errs, fmt.Errorf(
+			errs = errors.Join(errs, fmt.Errorf(
 				"static IP cluster is not allowed: %s",
 				route.OIDC.Provider.TokenEndpoint))
 			continue
-		}
-
-		tlsContext := &tlsv3.UpstreamTlsContext{
-			Sni: cluster.hostname,
-		}
-
-		tlsContextAny, err := anypb.New(tlsContext)
-		if err != nil {
-			errs = multierror.Append(errs, err)
-			continue
-		}
-		tSocket = &corev3.TransportSocket{
-			Name: "envoy.transport_sockets.tls",
-			ConfigType: &corev3.TransportSocket_TypedConfig{
-				TypedConfig: tlsContextAny,
-			},
 		}
 
 		ds = &ir.DestinationSetting{
@@ -255,13 +238,23 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			},
 		}
 
-		if err = addXdsCluster(tCtx, &xdsClusterArgs{
+		clusterArgs := &xdsClusterArgs{
 			name:         cluster.name,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      tSocket,
 			endpointType: cluster.endpointType,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			errs = multierror.Append(errs, err)
+		}
+		if cluster.tls {
+			tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
+			if err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			clusterArgs.tSocket = tSocket
+		}
+
+		if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -282,15 +275,11 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 		// oauth2 client ID and secret.
 		clientSecret := buildOAuth2ClientSecret(route)
 		if err := addXdsSecret(tCtx, clientSecret); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
-		hmacSecret, err := buildOAuth2HMACSecret(route)
-		if err != nil {
-			errs = multierror.Append(errs, err)
-		}
-		if err := addXdsSecret(tCtx, hmacSecret); err != nil {
-			errs = multierror.Append(errs, err)
+		if err := addXdsSecret(tCtx, buildOAuth2HMACSecret(route)); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -314,25 +303,21 @@ func buildOAuth2ClientSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 	return clientSecret
 }
 
-func buildOAuth2HMACSecret(route *ir.HTTPRoute) (*tlsv3.Secret, error) {
-	hmac, err := generateHMACSecretKey()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate hmack secret key: %w", err)
-	}
+func buildOAuth2HMACSecret(route *ir.HTTPRoute) *tlsv3.Secret {
 	hmacSecret := &tlsv3.Secret{
 		Name: oauth2HMACSecretName(route),
 		Type: &tlsv3.Secret_GenericSecret{
 			GenericSecret: &tlsv3.GenericSecret{
 				Secret: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{
-						InlineBytes: hmac,
+						InlineBytes: route.OIDC.HMACSecret,
 					},
 				},
 			},
 		},
 	}
 
-	return hmacSecret, nil
+	return hmacSecret
 }
 
 func oauth2ClientSecretName(route *ir.HTTPRoute) string {
@@ -341,68 +326,6 @@ func oauth2ClientSecretName(route *ir.HTTPRoute) string {
 
 func oauth2HMACSecretName(route *ir.HTTPRoute) string {
 	return fmt.Sprintf("%s/oauth2/hmac_secret", route.Name)
-}
-
-func generateHMACSecretKey() ([]byte, error) {
-	// Set the desired length of the secret key in bytes
-	keyLength := 32
-
-	// Create a byte slice to hold the random bytes
-	key := make([]byte, keyLength)
-
-	// Read random bytes from the cryptographically secure random number generator
-	_, err := rand.Read(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return key, nil
-}
-
-// patchRouteCfg patches the provided route configuration with the oauth2 filter
-// if applicable.
-// Note: this method disables all the oauth2 filters by default. The filter will
-// be enabled per-route in the typePerFilterConfig of the route.
-func (*oidc) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
-	if routeCfg == nil {
-		return errors.New("route configuration is nil")
-	}
-	if irListener == nil {
-		return errors.New("ir listener is nil")
-	}
-
-	var errs error
-	for _, route := range irListener.Routes {
-		if !routeContainsOIDC(route) {
-			continue
-		}
-
-		filterName := oauth2FilterName(route)
-		filterCfg := routeCfg.TypedPerFilterConfig
-
-		if _, ok := filterCfg[filterName]; ok {
-			// This should not happen since this is the only place where the oauth2
-			// filter is added in a route.
-			errs = multierror.Append(errs, fmt.Errorf(
-				"route config already contains oauth2 config: %+v", route))
-			continue
-		}
-
-		// Disable all the filters by default. The filter will be enabled
-		// per-route in the typePerFilterConfig of the route.
-		routeCfgAny, err := anypb.New(&routev3.FilterConfig{Disabled: true})
-		if err != nil {
-			errs = multierror.Append(errs, err)
-			continue
-		}
-
-		if filterCfg == nil {
-			routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
-		}
-
-		routeCfg.TypedPerFilterConfig[filterName] = routeCfgAny
-	}
-	return errs
 }
 
 // patchRoute patches the provided route with the oauth2 config if applicable.

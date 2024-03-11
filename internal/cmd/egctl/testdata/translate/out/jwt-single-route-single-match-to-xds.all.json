@@ -49,7 +49,9 @@
                 {
                   "name": "global_config",
                   "staticLayer": {
-                    "envoy.restart_features.use_eds_cache_for_ads": true
+                    "envoy.restart_features.use_eds_cache_for_ads": true,
+                    "re2.max_program_size.error_level": 4294967295,
+                    "re2.max_program_size.warn_level": 1000
                   }
                 }
               ]
@@ -260,6 +262,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -282,6 +291,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -327,7 +343,8 @@
                           "filename": "/etc/ssl/certs/ca-certificates.crt"
                         }
                       }
-                    }
+                    },
+                    "sni": "raw.githubusercontent.com"
                   }
                 },
                 "type": "STRICT_DNS"
@@ -410,7 +427,7 @@
                                       "cacheDuration": "300s",
                                       "httpUri": {
                                         "cluster": "raw_githubusercontent_com_443",
-                                        "timeout": "5s",
+                                        "timeout": "10s",
                                         "uri": "https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json"
                                       },
                                       "retryPolicy": {}
@@ -427,7 +444,8 @@
                             {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+                                "suppressEnvoyHeaders": true
                               }
                             }
                           ],
@@ -441,17 +459,14 @@
                             },
                             "routeConfigName": "envoy-gateway-system/eg/http"
                           },
+                          "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
-                          "upgradeConfigs": [
-                            {
-                              "upgradeType": "websocket"
-                            }
-                          ],
                           "useRemoteAddress": true
                         }
                       }
                     ]
                   },
+                  "drainType": "MODIFY_ONLY",
                   "name": "envoy-gateway-system/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -480,7 +495,12 @@
                         },
                         "name": "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com",
                         "route": {
-                          "cluster": "httproute/envoy-gateway-system/backend/rule/0"
+                          "cluster": "httproute/envoy-gateway-system/backend/rule/0",
+                          "upgradeConfigs": [
+                            {
+                              "upgradeType": "websocket"
+                            }
+                          ]
                         },
                         "typedPerFilterConfig": {
                           "envoy.filters.http.jwt_authn": {

@@ -18,7 +18,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -194,6 +193,13 @@ func TestTranslate(t *testing.T) {
 			extraArgs: []string{"--add-missing-resources"},
 		},
 		{
+			name:   "quickstart",
+			from:   "gateway-api",
+			to:     "ir",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
 			name:         "quickstart",
 			from:         "gateway-api",
 			to:           "xds",
@@ -285,7 +291,7 @@ func TestTranslate(t *testing.T) {
 
 		t.Run(tc.name+"|"+tc.resourceType, func(t *testing.T) {
 			b := bytes.NewBufferString("")
-			root := NewTranslateCommand()
+			root := newTranslateCommand()
 			root.SetOut(b)
 			root.SetErr(b)
 			args := []string{
@@ -320,7 +326,7 @@ func TestTranslate(t *testing.T) {
 			if tc.expect {
 				require.NoError(t, root.ExecuteContext(context.Background()))
 			} else {
-				assert.Error(t, root.ExecuteContext(context.Background()))
+				require.Error(t, root.ExecuteContext(context.Background()))
 				return
 			}
 

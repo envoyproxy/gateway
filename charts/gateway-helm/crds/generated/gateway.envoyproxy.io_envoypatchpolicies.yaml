@@ -8,6 +8,8 @@ metadata:
 spec:
   group: gateway.envoyproxy.io
   names:
+    categories:
+    - envoy-gateway
     kind: EnvoyPatchPolicy
     listKind: EnvoyPatchPolicyList
     plural: envoypatchpolicies
@@ -56,6 +58,12 @@ spec:
                     operation:
                       description: Patch defines the JSON Patch Operation
                       properties:
+                        from:
+                          description: From is the source location of the value to
+                            be copied or moved. Only valid for move or copy operations
+                            Refer to https://datatracker.ietf.org/doc/html/rfc6901
+                            for more details.
+                          type: string
                         op:
                           description: Op is the type of operation to perform
                           enum:
@@ -73,11 +81,11 @@ spec:
                           type: string
                         value:
                           description: Value is the new value of the path location.
+                            The value is only used by the `add` and `replace` operations.
                           x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
                       - path
-                      - value
                       type: object
                     type:
                       description: Type is the typed URL of the Envoy xDS Resource
@@ -86,6 +94,7 @@ spec:
                       - type.googleapis.com/envoy.config.route.v3.RouteConfiguration
                       - type.googleapis.com/envoy.config.cluster.v3.Cluster
                       - type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+                      - type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
                       type: string
                   required:
                   - name

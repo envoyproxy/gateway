@@ -15,7 +15,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
@@ -110,7 +109,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		for i := range route.JWT.Providers {
 			irProvider := route.JWT.Providers[i]
 			// Create the cluster for the remote jwks, if it doesn't exist.
-			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI, false)
+			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI)
 			if err != nil {
 				return nil, err
 			}
@@ -122,7 +121,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
 							Cluster: jwksCluster.name,
 						},
-						Timeout: &durationpb.Duration{Seconds: 5},
+						Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
 					},
 					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
@@ -144,6 +143,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				PayloadInMetadata:   irProvider.Issuer,
 				ClaimToHeaders:      claimToHeaders,
 				Forward:             true,
+			}
+
+			if irProvider.RecomputeRoute != nil {
+				jwtProvider.ClearRouteCache = *irProvider.RecomputeRoute
 			}
 
 			if irProvider.ExtractFrom != nil {
@@ -182,8 +185,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
 // as the CA to authenticate server certificates.
-func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
+// TODO huabing: add support for custom CA and client certificate.
+func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 	tlsCtxProto := &tlsv3.UpstreamTlsContext{
+		Sni: sni,
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
@@ -265,9 +270,9 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 			)
 
 			provider := route.JWT.Providers[i]
-			jwks, err = url2Cluster(provider.RemoteJWKS.URI, false)
+			jwks, err = url2Cluster(provider.RemoteJWKS.URI)
 			if err != nil {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 				continue
 			}
 
@@ -282,16 +287,16 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 				endpointType: jwks.endpointType,
 			}
 			if jwks.tls {
-				tSocket, err = buildXdsUpstreamTLSSocket()
+				tSocket, err = buildXdsUpstreamTLSSocket(jwks.hostname)
 				if err != nil {
-					errs = multierror.Append(errs, err)
+					errs = errors.Join(errs, err)
 					continue
 				}
 				clusterArgs.tSocket = tSocket
 			}
 
 			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-				errs = multierror.Append(errs, err)
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
@@ -330,10 +335,6 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 	}
 
 	return false
-}
-
-func (*jwt) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
-	return nil
 }
 
 // buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct
