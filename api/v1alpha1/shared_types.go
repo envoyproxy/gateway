@@ -239,6 +239,14 @@ type KubernetesServiceSpec struct {
 	// +optional
 	AllocateLoadBalancerNodePorts *bool `json:"allocateLoadBalancerNodePorts,omitempty"`
 
+	// LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
+	// firewall rules on the platform providers load balancer. This is not guaranteed to be working as
+	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
+	// This field may only be set for services with type LoadBalancer and will be cleared if the type
+	// is changed to any other type.
+	// +optional
+	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
+
 	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
 	// may be ignored if the load balancer provider does not support this feature.
 	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud

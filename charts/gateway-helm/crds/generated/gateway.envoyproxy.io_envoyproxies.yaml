@@ -6566,6 +6566,18 @@ spec:
                               but it is still used for setting the IP Address in some
                               cloud providers such as GCP.
                             type: string
+                          loadBalancerSourceRanges:
+                            description: LoadBalancerSourceRanges defines a list of
+                              allowed IP addresses which will be configured as firewall
+                              rules on the platform providers load balancer. This
+                              is not guaranteed to be working as it happens outside
+                              of kubernetes and has to be supported and handled by
+                              the platform provider. This field may only be set for
+                              services with type LoadBalancer and will be cleared
+                              if the type is changed to any other type.
+                            items:
+                              type: string
+                            type: array
                           type:
                             default: LoadBalancer
                             description: Type determines how the Service is exposed.
@@ -6586,6 +6598,10 @@ spec:
                         - message: allocateLoadBalancerNodePorts can only be set for
                             LoadBalancer type
                           rule: '!has(self.allocateLoadBalancerNodePorts) || self.type
+                            == ''LoadBalancer'''
+                        - message: loadBalancerSourceRanges can only be set for LoadBalancer
+                            type
+                          rule: '!has(self.loadBalancerSourceRanges) || self.type
                             == ''LoadBalancer'''
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
