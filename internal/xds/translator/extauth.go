@@ -64,7 +64,7 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
@@ -93,7 +93,10 @@ func extAuthFilterName(route *ir.HTTPRoute) string {
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
-	config := &extauthv3.ExtAuthz{}
+	config := &extauthv3.ExtAuthz{
+		TransportApiVersion: corev3.ApiVersion_V3,
+		FailureModeAllow:    false,
+	}
 
 	var headersToExtAuth []*matcherv3.StringMatcher
 	for _, header := range extAuth.HeadersToExtAuth {
@@ -134,6 +137,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	var (
 		uri              string
 		headersToBackend []*matcherv3.StringMatcher
+		service          = new(extauthv3.HttpService)
 	)
 
 	u := url.URL{
@@ -146,6 +150,16 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	}
 	uri = u.String()
 
+	service.ServerUri = &corev3.HttpUri{
+		Uri: uri,
+		HttpUpstreamType: &corev3.HttpUri_Cluster{
+			Cluster: http.Destination.Name,
+		},
+		Timeout: &duration.Duration{
+			Seconds: defaultExtServiceRequestTimeout,
+		},
+	}
+
 	for _, header := range http.HeadersToBackend {
 		headersToBackend = append(headersToBackend, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
@@ -154,22 +168,15 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		})
 	}
 
-	return &extauthv3.HttpService{
-		ServerUri: &corev3.HttpUri{
-			Uri: uri,
-			HttpUpstreamType: &corev3.HttpUri_Cluster{
-				Cluster: http.Destination.Name,
-			},
-			Timeout: &duration.Duration{
-				Seconds: defaultExtServiceRequestTimeout,
-			},
-		},
-		AuthorizationResponse: &extauthv3.AuthorizationResponse{
+	if len(headersToBackend) > 0 {
+		service.AuthorizationResponse = &extauthv3.AuthorizationResponse{
 			AllowedUpstreamHeaders: &matcherv3.ListStringMatcher{
 				Patterns: headersToBackend,
 			},
-		},
+		}
 	}
+
+	return service
 }
 
 func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
@@ -224,20 +231,32 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 }
 
 func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
+	var (
+		endpointType EndpointType
+		tSocket      *corev3.TransportSocket
+		err          error
+	)
+
 	// Get the address type from the first setting.
 	// This is safe because no mixed address types in the settings.
 	addrTypeState := rd.Settings[0].AddressType
-
-	var endpointType EndpointType
 	if addrTypeState != nil && *addrTypeState == ir.FQDN {
 		endpointType = EndpointTypeDNS
 	} else {
 		endpointType = EndpointTypeStatic
 	}
-	if err := addXdsCluster(tCtx, &xdsClusterArgs{
+
+	if rd.Settings[0].TLS != nil {
+		tSocket, err = processTLSSocket(rd.Settings[0].TLS, tCtx)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         rd.Name,
 		settings:     rd.Settings,
-		tSocket:      nil,
+		tSocket:      tSocket,
 		endpointType: endpointType,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err

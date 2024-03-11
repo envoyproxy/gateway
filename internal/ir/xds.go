@@ -16,6 +16,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/yaml"
 
@@ -179,6 +180,7 @@ func (x Xds) Printable() *Xds {
 			// Omit field
 			if route.OIDC != nil {
 				route.OIDC.ClientSecret = redacted
+				route.OIDC.HMACSecret = redacted
 			}
 			if route.BasicAuth != nil {
 				route.BasicAuth.Users = redacted
@@ -308,7 +310,7 @@ type TLSCertificate struct {
 // +k8s:deepcopy-gen=true
 type TLSCACertificate struct {
 	// Name of the Secret object.
-	Name string `json:"name" yaml:"name"`
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
@@ -526,8 +528,10 @@ type OIDC struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key "client-secret".
-
 	ClientSecret []byte `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
+
+	// HMACSecret is the secret used to sign the HMAC of the OAuth2 filter cookies.
+	HMACSecret []byte `json:"hmacSecret,omitempty" yaml:"hmacSecret,omitempty"`
 
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -711,53 +715,49 @@ func (h HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddRequestHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.AddRequestHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if !occurred[header.Name] {
-				occurred[header.Name] = true
-			} else {
+			if occurred.Has(header.Name) {
 				errs = errors.Join(errs, ErrAddHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header.Name)
 		}
 	}
 	if len(h.RemoveRequestHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.RemoveRequestHeaders {
-			if !occurred[header] {
-				occurred[header] = true
-			} else {
+			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header)
 		}
 	}
 	if len(h.AddResponseHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.AddResponseHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if !occurred[header.Name] {
-				occurred[header.Name] = true
-			} else {
+			if occurred.Has(header.Name) {
 				errs = errors.Join(errs, ErrAddHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header.Name)
 		}
 	}
 	if len(h.RemoveResponseHeaders) > 0 {
-		occurred := map[string]bool{}
+		occurred := sets.NewString()
 		for _, header := range h.RemoveResponseHeaders {
-			if !occurred[header] {
-				occurred[header] = true
-			} else {
+			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
 				break
 			}
+			occurred.Insert(header)
 		}
 	}
 	if h.LoadBalancer != nil {
@@ -825,6 +825,8 @@ type DestinationSetting struct {
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
+
+	TLS *TLSUpstreamConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1444,6 +1446,9 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel requests that Envoy will make.
 	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
+
+	// The maximum number of parallel retries that Envoy will make.
+	MaxParallelRetries *uint32 `json:"maxParallelRetries,omitempty" yaml:"maxParallelRetries,omitempty"`
 }
 
 // HealthCheck defines health check settings
@@ -1697,7 +1702,7 @@ type TriggerEnum egv1a1.TriggerEnum
 const (
 	Error5XX             = TriggerEnum(egv1a1.Error5XX)
 	GatewayError         = TriggerEnum(egv1a1.GatewayError)
-	DisconnectRest       = TriggerEnum(egv1a1.DisconnectRest)
+	Reset                = TriggerEnum(egv1a1.Reset)
 	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
 	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
 	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)
@@ -1732,4 +1737,12 @@ type BackOffPolicy struct {
 	BaseInterval *metav1.Duration `json:"baseInterval,omitempty"`
 	// MaxInterval is the maximum interval between retries.
 	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
+}
+
+// TLSUpstreamConfig contains sni and ca file in []byte format.
+// +k8s:deepcopy-gen=true
+type TLSUpstreamConfig struct {
+	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
+	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
+	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 }

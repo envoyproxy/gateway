@@ -199,6 +199,12 @@ securityPolicies:
       reason: Accepted
       status: "True"
       type: Accepted
+    - lastTransitionTime: null
+      message: 'This policy is being overridden by other securityPolicies for these
+        routes: [default/httproute-1]'
+      reason: Overridden
+      status: "True"
+      type: Overridden
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -234,6 +240,7 @@ xdsIR:
           clientID: client2.oauth.foo.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
           cookieSuffix: 5f93c2e4
+          hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
           logoutPath: /foo/logout
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
@@ -267,6 +274,7 @@ xdsIR:
           clientID: client1.apps.googleusercontent.com
           clientSecret: Y2xpZW50MTpzZWNyZXQK
           cookieSuffix: b0a1b740
+          hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
           logoutPath: /bar/logout
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth

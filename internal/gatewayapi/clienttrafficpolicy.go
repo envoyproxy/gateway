@@ -147,7 +147,6 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				)
 
 				continue
-
 			}
 
 			// Check if another policy targeting the same Gateway exists
@@ -227,9 +226,9 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 
 	// Ensure Policy and target Gateway are in the same namespace
 	if policy.Namespace != string(*targetNs) {
-
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, ClientTrafficPolicy can only target a Gateway in the same namespace.",
 			policy.Namespace, *targetNs)
+
 		status.SetClientTrafficPolicyCondition(policy,
 			gwv1a2.PolicyConditionAccepted,
 			metav1.ConditionFalse,
@@ -250,14 +249,6 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 
 	// Gateway not found
 	if gateway == nil {
-		message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
-
-		status.SetClientTrafficPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonTargetNotFound,
-			message,
-		)
 		return nil
 	}
 
@@ -271,13 +262,6 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Ga
 			}
 		}
 		if !found {
-			message := fmt.Sprintf("SectionName(Listener):%s not found.", *(policy.Spec.TargetRef.SectionName))
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonTargetNotFound,
-				message,
-			)
 			return nil
 		}
 	}
@@ -559,6 +543,10 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 						"caCertificateRef not found in secret %s", caCertRef.Name)
 				}
 
+				if err := validateCertificate(secretBytes); err != nil {
+					return fmt.Errorf("invalid certificate in secret %s: %w", caCertRef.Name, err)
+				}
+
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
 
 			} else if string(*caCertRef.Kind) == KindConfigMap {
@@ -571,6 +559,10 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 				if !ok || len(configMapBytes) == 0 {
 					return fmt.Errorf(
 						"caCertificateRef not found in configMap %s", caCertRef.Name)
+				}
+
+				if err := validateCertificate([]byte(configMapBytes)); err != nil {
+					return fmt.Errorf("invalid certificate in configmap %s: %w", caCertRef.Name, err)
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)

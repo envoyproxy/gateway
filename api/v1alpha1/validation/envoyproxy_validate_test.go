@@ -449,7 +449,30 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: true,
 		}, {
-			name: "should invalid when patch type is empty",
+			name: "should be invalid when service patch type is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: v1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		}, {
+			name: "should be invalid when deployment patch type is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -576,8 +599,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
-	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, egv1a1.DefaultKubernetesDeploymentReplicas())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egv1a1.DefaultKubernetesPod())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container)

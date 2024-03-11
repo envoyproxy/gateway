@@ -23,6 +23,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
@@ -57,6 +58,22 @@ const (
 	EndpointTypeStatic
 )
 
+func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
+	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
+	// since there's no Mixed AddressType among all the DestinationSettings.
+	if settings == nil {
+		return EndpointTypeStatic
+	}
+
+	addrType := settings[0].AddressType
+
+	if addrType != nil && *addrType == ir.FQDN {
+		return EndpointTypeDNS
+	}
+
+	return EndpointTypeStatic
+}
+
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
@@ -75,6 +92,29 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
 	} else if args.tSocket != nil {
 		cluster.TransportSocket = args.tSocket
+	}
+
+	for i, ds := range args.settings {
+		if ds.TLS != nil {
+			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
+			if err != nil {
+				// TODO: Log something here
+				return nil
+			}
+			if args.proxyProtocol != nil {
+				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
+			}
+			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
+			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
+				Name: matchName,
+				Match: &structpb.Struct{
+					Fields: map[string]*structpb.Value{
+						"name": structpb.NewStringValue(matchName),
+					},
+				},
+				TransportSocket: socket,
+			})
+		}
 	}
 
 	if args.endpointType == EndpointTypeStatic {
@@ -144,9 +184,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 
 	}
-	if args.circuitBreaker != nil {
-		cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
-	}
+
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
 	}
@@ -272,25 +312,38 @@ func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_
 }
 
 func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
+	// Always allow the same amount of retries as regular requests to handle surges in retries
+	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
 		Priority: corev3.RoutingPriority_DEFAULT,
+		MaxRetries: &wrapperspb.UInt32Value{
+			Value: uint32(1024),
+		},
 	}
 
-	if circuitBreaker.MaxConnections != nil {
-		cbt.MaxConnections = &wrapperspb.UInt32Value{
-			Value: *circuitBreaker.MaxConnections,
+	if circuitBreaker != nil {
+		if circuitBreaker.MaxConnections != nil {
+			cbt.MaxConnections = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxConnections,
+			}
 		}
-	}
 
-	if circuitBreaker.MaxPendingRequests != nil {
-		cbt.MaxPendingRequests = &wrapperspb.UInt32Value{
-			Value: *circuitBreaker.MaxPendingRequests,
+		if circuitBreaker.MaxPendingRequests != nil {
+			cbt.MaxPendingRequests = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxPendingRequests,
+			}
 		}
-	}
 
-	if circuitBreaker.MaxParallelRequests != nil {
-		cbt.MaxRequests = &wrapperspb.UInt32Value{
-			Value: *circuitBreaker.MaxParallelRequests,
+		if circuitBreaker.MaxParallelRequests != nil {
+			cbt.MaxRequests = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxParallelRequests,
+			}
+		}
+
+		if circuitBreaker.MaxParallelRetries != nil {
+			cbt.MaxRetries = &wrapperspb.UInt32Value{
+				Value: *circuitBreaker.MaxParallelRetries,
+			}
 		}
 	}
 
@@ -307,8 +360,22 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 
 		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
 
+		var metadata *corev3.Metadata
+		if ds.TLS != nil {
+			metadata = &corev3.Metadata{
+				FilterMetadata: map[string]*structpb.Struct{
+					"envoy.transport_socket_match": {
+						Fields: map[string]*structpb.Value{
+							"name": structpb.NewStringValue(fmt.Sprintf("%s/tls/%d", clusterName, i)),
+						},
+					},
+				},
+			}
+		}
+
 		for _, irEp := range ds.Endpoints {
 			lbEndpoint := &endpointv3.LbEndpoint{
+				Metadata: metadata,
 				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 					Endpoint: &endpointv3.Endpoint{
 						Address: &corev3.Address{

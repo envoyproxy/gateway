@@ -91,6 +91,17 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-dns-cluster",
 		},
 		{
+			name: "http-route-with-tls-system-truststore",
+		},
+		{
+			name:           "http-route-with-tlsbundle",
+			requireSecrets: true,
+		},
+		{
+			name:           "http-route-with-tlsbundle-multiple-certs",
+			requireSecrets: true,
+		},
+		{
 			name:           "simple-tls",
 			requireSecrets: true,
 		},

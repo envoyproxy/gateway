@@ -55,10 +55,7 @@ httpRoutes:
       namespace: envoy-gateway
       sectionName: http
     rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
+    - filters:
       - requestRedirect:
           path:
             replaceFullPath: /redirected
