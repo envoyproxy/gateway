@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"testing"
+	"time"
 
 	"fortio.org/fortio/periodic"
 	"helm.sh/helm/v3/pkg/action"
@@ -65,7 +66,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			}
 
 			t.Log("Install the last version tag")
-			err = helmInstall(relName, depNS, lastVersionTag, t)
+			err = helmInstall(relName, depNS, lastVersionTag, suite.TimeoutConfig.NamespacesMustBeReady, t)
 			if err != nil {
 				t.Fatalf("Failed to upgrade the release: %s", err.Error())
 			}
@@ -75,7 +76,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 
 			t.Log("Attempting to upgrade the last version of eg deployment")
-			err = helmUpgradeChartFromPath(relName, depNS, "../../../charts/gateway-helm", t)
+			err = helmUpgradeChartFromPath(relName, depNS, "../../../charts/gateway-helm", suite.TimeoutConfig.NamespacesMustBeReady, t)
 			if err != nil {
 				t.Fatalf("Failed to upgrade the release: %s", err.Error())
 			}
@@ -100,7 +101,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 	},
 }
 
-func helmUpgradeChartFromPath(relName, relNamespace, chartPath string, t *testing.T) error {
+func helmUpgradeChartFromPath(relName, relNamespace, chartPath string, timeout time.Duration, t *testing.T) error {
 	actionConfig := new(action.Configuration)
 	if err := actionConfig.Init(cli.New().RESTClientGetter(), relNamespace, "secret", t.Logf); err != nil {
 		return err
@@ -110,6 +111,7 @@ func helmUpgradeChartFromPath(relName, relNamespace, chartPath string, t *testin
 	upgrade := action.NewUpgrade(actionConfig)
 	upgrade.Namespace = relNamespace
 	upgrade.WaitForJobs = true
+	upgrade.Timeout = timeout
 
 	// Load the chart from a local directory.
 	chart, err := loader.Load(chartPath)
@@ -132,7 +134,7 @@ func helmUpgradeChartFromPath(relName, relNamespace, chartPath string, t *testin
 	return nil
 }
 
-func helmInstall(relName, relNamespace string, tag string, t *testing.T) error {
+func helmInstall(relName, relNamespace string, tag string, timeout time.Duration, t *testing.T) error {
 	actionConfig := new(action.Configuration)
 	if err := actionConfig.Init(cli.New().RESTClientGetter(), relNamespace, "secret", t.Logf); err != nil {
 		return err
@@ -145,6 +147,7 @@ func helmInstall(relName, relNamespace string, tag string, t *testing.T) error {
 	install.CreateNamespace = true
 	install.Version = tag
 	install.WaitForJobs = true
+	install.Timeout = timeout
 
 	registryClient, err := registry.NewClient()
 	if err != nil {
