@@ -125,6 +125,6 @@ Checkout the [Developer Guide](../../../contributions/develop/) to get involved 
 
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
-[SecurityPolicy]: ../../../design/security-policy/
+[SecurityPolicy]: ../../contributions/design/security-policy/
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
