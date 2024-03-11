@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -88,7 +87,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 
 			// Negative statuses have already been assigned so its safe to skip
 			route, resolveErr := resolveBTPolicyRouteTargetRef(policy, routeMap)
-			if route == nil && resolveErr == nil {
+			if route == nil {
 				continue
 			}
 
@@ -103,23 +102,19 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 					if p.Namespace != nil {
 						namespace = string(*p.Namespace)
 					}
-					gw := types.NamespacedName{
+					gwNN := types.NamespacedName{
 						Namespace: namespace,
 						Name:      string(p.Name),
-					}.String()
-
-					if _, ok := gatewayRouteMap[gw]; !ok {
-						gatewayRouteMap[gw] = make(sets.Set[string])
 					}
-					gatewayRouteMap[gw].Insert(utils.NamespacedName(route).String())
 
-					ancestorRefs = append(ancestorRefs, gwv1a2.ParentReference{
-						Group:       GroupPtr(gwv1.GroupName),
-						Kind:        KindPtr(KindGateway),
-						Namespace:   NamespacePtr(namespace),
-						Name:        p.Name,
-						SectionName: p.SectionName,
-					})
+					key := gwNN.String()
+					if _, ok := gatewayRouteMap[key]; !ok {
+						gatewayRouteMap[key] = make(sets.Set[string])
+					}
+					gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
+
+					// Do need a section name since the policy is targeting to a route
+					ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
 				}
 			}
 
@@ -158,19 +153,15 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 
 			// Negative statuses have already been assigned so its safe to skip
 			gateway, resolveErr := resolveBTPolicyGatewayTargetRef(policy, gatewayMap)
-			if gateway == nil && resolveErr == nil {
+			if gateway == nil {
 				continue
 			}
 
 			// Find its ancestor reference by resolved gateway, even with resolve error
 			gatewayNN := utils.NamespacedName(gateway)
 			ancestorRefs := []gwv1a2.ParentReference{
-				{
-					Group:     GroupPtr(gwv1.GroupName),
-					Kind:      KindPtr(KindGateway),
-					Namespace: NamespacePtr(gatewayNN.Namespace),
-					Name:      gwv1.ObjectName(gatewayNN.Name),
-				},
+				// Don't need a section name since the policy is targeting to a gateway
+				getAncestorRefForPolicy(gatewayNN, nil),
 			}
 
 			// Set conditions for resolve error, then skip current gateway
