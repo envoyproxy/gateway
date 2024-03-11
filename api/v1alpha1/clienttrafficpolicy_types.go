@@ -34,7 +34,6 @@ type ClientTrafficPolicy struct {
 	Status ClientTrafficPolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="has(self.http3) && has(self.tls) && has(self.tls.alpnProtocols) ? self.tls.alpnProtocols.size() == 0 : true",message="alpn protocols can't be set if HTTP/3 is enabled"
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
