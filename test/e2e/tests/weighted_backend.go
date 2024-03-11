@@ -23,6 +23,8 @@ func init() {
 	ConformanceTests = append(ConformanceTests, WeightEqualTest, WeightBlueGreenTest, WeightCompleteRolloutTest)
 }
 
+const sendRequest = 50
+
 var WeightEqualTest = suite.ConformanceTest{
 	ShortName:   "WeightEqualBackend",
 	Description: "Resource with Weight Backend enabled, and use the all backend weight is equal",
@@ -47,8 +49,14 @@ var WeightEqualTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
+			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
+			// So here we use fixed weight values
+			expected := map[string]int{
+				"infra-backend-v1": sendRequest * .5,
+				"infra-backend-v2": sendRequest * .5,
+			}
 			weightMap := make(map[string]int)
-			for i := 0; i < 10; i++ {
+			for i := 0; i < sendRequest; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)
@@ -70,12 +78,11 @@ var WeightEqualTest = suite.ConformanceTest{
 				}
 			}
 
-			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
-			// So here we use fixed weight values
-			v1Weight := 1
-			v2Weight := 1
-			if !CalculateWeight(v1Weight, v2Weight, weightMap) {
-				t.Errorf("The actual traffic weights are not consistent with the expected routing weights")
+			for prefix, actual := range weightMap {
+				expect := expected[prefix]
+				if !AlmostEquals(actual, expect, 3) {
+					t.Errorf("The actual traffic weights are not consistent with the expected routing weights")
+				}
 			}
 		})
 	},
@@ -105,8 +112,14 @@ var WeightBlueGreenTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
+			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
+			// So here we use fixed weight values
+			expected := map[string]int{
+				"infra-backend-v1": sendRequest * .9,
+				"infra-backend-v2": sendRequest * .1,
+			}
 			weightMap := make(map[string]int)
-			for i := 0; i < 10; i++ {
+			for i := 0; i < sendRequest; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)
@@ -128,13 +141,11 @@ var WeightBlueGreenTest = suite.ConformanceTest{
 				}
 			}
 
-			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
-			// So here we use fixed weight values
-			v1Weight := 9
-			v2Weight := 1
-
-			if !CalculateWeight(v1Weight, v2Weight, weightMap) {
-				t.Errorf("The actual traffic weights are not consistent with the expected routing weights")
+			for prefix, actual := range weightMap {
+				expect := expected[prefix]
+				if !AlmostEquals(actual, expect, 3) {
+					t.Errorf("The actual traffic weights are not consistent with the expected routing weights")
+				}
 			}
 		})
 	},
@@ -164,8 +175,14 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
+			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
+			// So here we use fixed weight values
+			expected := map[string]int{
+				"infra-backend-v1": sendRequest * 1,
+				"infra-backend-v2": sendRequest * 0,
+			}
 			weightMap := make(map[string]int)
-			for i := 0; i < 10; i++ {
+			for i := 0; i < sendRequest; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)
@@ -187,28 +204,14 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 				}
 			}
 
-			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
-			// So here we use fixed weight values
-			v1Weight := 10
-			v2Weight := 0
-			if !CalculateWeight(v1Weight, v2Weight, weightMap) {
-				t.Errorf("The actual traffic weights are not consistent with the expected routing weights")
+			for prefix, actual := range weightMap {
+				expect := expected[prefix]
+				if !AlmostEquals(actual, expect, 3) {
+					t.Errorf("The actual traffic weights are not consistent with the expected routing weights")
+				}
 			}
 		})
 	},
-}
-
-// CalculateWeight Calculate whether the expected weight is equal to the weight of the expected traffic
-func CalculateWeight(weight1, weight2 int, actualMap map[string]int) bool {
-
-	var count int
-	for _, v := range actualMap {
-		count += v
-	}
-	expectedV1 := float64(weight1) / float64(weight1+weight2) * float64(count)
-	expectedV2 := float64(weight2) / float64(weight1+weight2) * float64(count)
-
-	return int(expectedV1) == actualMap["infra-backend-v1"] && int(expectedV2) == actualMap["infra-backend-v2"]
 }
 
 // ExtractPodNamePrefix Extract the Pod Name prefix
