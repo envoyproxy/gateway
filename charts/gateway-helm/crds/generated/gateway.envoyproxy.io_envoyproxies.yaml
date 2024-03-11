@@ -6642,6 +6642,10 @@ spec:
                             LoadBalancer type
                           rule: '!has(self.allocateLoadBalancerNodePorts) || self.type
                             == ''LoadBalancer'''
+                        - message: loadBalancerSourceRanges can only be set for LoadBalancer
+                            type
+                          rule: '!has(self.loadBalancerSourceRanges) || self.type
+                            == ''LoadBalancer'''
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
