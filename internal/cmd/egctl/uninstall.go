@@ -9,12 +9,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
+	"github.com/envoyproxy/gateway/internal/utils/helm"
 )
 
 func newUnInstallCommand() *cobra.Command {
 
-	htFlags := &HelmOptions{}
-	ht := NewHelmTool()
+	packageFlags := &helm.PackageOptions{}
+	pt := helm.NewPackageTool()
 
 	uninstallCmd := &cobra.Command{
 		Use:   "uninstall",
@@ -30,15 +31,15 @@ func newUnInstallCommand() *cobra.Command {
   egctl uninstall --release-name eg
 `,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			return ht.setup()
+			return pt.Setup()
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return ht.runUninstall(htFlags)
+			return pt.RunUninstall(packageFlags)
 		},
 	}
 	options.AddKubeConfigFlags(uninstallCmd.Flags())
-	ht.setUninstallEnvSetting(uninstallCmd, htFlags)
-	ht.setPrinter(uninstallCmd)
+	pt.SetUninstallEnvSetting(uninstallCmd, packageFlags)
+	pt.SetPrinter(uninstallCmd)
 
 	return uninstallCmd
 }

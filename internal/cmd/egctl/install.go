@@ -9,12 +9,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
+	"github.com/envoyproxy/gateway/internal/utils/helm"
 )
 
 func newInstallCommand() *cobra.Command {
 
-	htFlags := &HelmOptions{}
-	ht := NewHelmTool()
+	packageFlags := &helm.PackageOptions{}
+	pt := helm.NewPackageTool()
 
 	installCmd := &cobra.Command{
 		Use:   "install",
@@ -33,15 +34,15 @@ func newInstallCommand() *cobra.Command {
   egctl install --set config.envoyGateway.logging.level.default=info --only-crd
 `,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			return ht.setup()
+			return pt.Setup()
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return ht.runInstall(htFlags)
+			return pt.RunInstall(packageFlags)
 		},
 	}
 	options.AddKubeConfigFlags(installCmd.Flags())
-	ht.setInstallEnvSettings(installCmd, htFlags)
-	ht.setPrinter(installCmd)
+	pt.SetInstallEnvSettings(installCmd, packageFlags)
+	pt.SetPrinter(installCmd)
 
 	return installCmd
 }

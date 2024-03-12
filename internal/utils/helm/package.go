@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package egctl
+package helm
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ const (
 	egReleaseName      = "envoy-gateway"
 )
 
-type HelmOptions struct {
+type PackageOptions struct {
 	DryRun      bool
 	SkipCRD     bool
 	Wait        bool
@@ -50,7 +50,7 @@ type HelmOptions struct {
 	WithCRD     bool
 }
 
-type HelmTool struct {
+type PackageTool struct {
 	chartName string
 
 	// Helm dependency objects
@@ -63,8 +63,8 @@ type HelmTool struct {
 	logger Printer
 }
 
-func NewHelmTool() *HelmTool {
-	return &HelmTool{
+func NewPackageTool() *PackageTool {
+	return &PackageTool{
 		envSettings:  cli.New(),
 		actionConfig: &action.Configuration{},
 		chartName:    "oci://docker.io/envoyproxy/gateway-helm",
@@ -72,8 +72,8 @@ func NewHelmTool() *HelmTool {
 	}
 }
 
-// setup Configuration required to initialize helm action.
-func (ht *HelmTool) setup() error {
+// Setup Configuration required to initialize helm action.
+func (ht *PackageTool) Setup() error {
 
 	// Since envoy-gateway uses docker's oci to store charts,
 	// we need to create a registry client to make sure we can retrieve envoy-gateway chart
@@ -107,8 +107,8 @@ func (ht *HelmTool) setup() error {
 	return nil
 }
 
-// setInstallEnvSettings set the installation flags we are interested in
-func (ht *HelmTool) setInstallEnvSettings(installCmd *cobra.Command, opts *HelmOptions) {
+// SetInstallEnvSettings set the installation flags we are interested in
+func (ht *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *PackageOptions) {
 
 	// add helm flags
 	// we use a temporary flag to be set by helm env flags,
@@ -137,8 +137,8 @@ func (ht *HelmTool) setInstallEnvSettings(installCmd *cobra.Command, opts *HelmO
 
 }
 
-// setUninstallEnvSetting set the uninstallation flags we are interested in
-func (ht *HelmTool) setUninstallEnvSetting(uninstallCmd *cobra.Command, opts *HelmOptions) {
+// SetUninstallEnvSetting set the uninstallation flags we are interested in
+func (ht *PackageTool) SetUninstallEnvSetting(uninstallCmd *cobra.Command, opts *PackageOptions) {
 
 	uninstallCmd.Flags().DurationVar(&opts.Timeout, "timeout", helmOperateTimeout, "time to wait for any individual Kubernetes operation")
 	uninstallCmd.Flags().BoolVar(&opts.Wait, "wait", false, "if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment, StatefulSet, or ReplicaSet are in a ready state before marking the release as successful. It will wait for as long as --timeout")
@@ -150,7 +150,7 @@ func (ht *HelmTool) setUninstallEnvSetting(uninstallCmd *cobra.Command, opts *He
 }
 
 // loadChart Load the chart instance according to the chart name and version
-func (ht *HelmTool) loadChart(opts *HelmOptions) (*chart.Chart, error) {
+func (ht *PackageTool) loadChart(opts *PackageOptions) (*chart.Chart, error) {
 
 	ht.actionInstall.Version = opts.Version
 	chartName, err := ht.actionInstall.LocateChart(ht.chartName, ht.envSettings)
@@ -175,7 +175,7 @@ func (ht *HelmTool) loadChart(opts *HelmOptions) (*chart.Chart, error) {
 }
 
 // extractCRDs Extract the CRDs part of the chart
-func (ht *HelmTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
+func (ht *PackageTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
 
 	crdResInfo := make([]*resource.Info, 0, len(ch.CRDObjects()))
 
@@ -190,14 +190,14 @@ func (ht *HelmTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
 	return crdResInfo, nil
 }
 
-// runInstall The default installation strategy we adopt is to first install Custom Resource Definitions (CRDs) separately,
+// RunInstall The default installation strategy we adopt is to first install Custom Resource Definitions (CRDs) separately,
 // not as part of the Helm release. Subsequently, we install the Helm release without including CRDs.
 // This approach ensures that when uninstalling with Helm or egctl later on, CRDs are not deleted.
 // We intend for cluster administrators who understand the consequences of uninstalling CRDs to be
 // responsible for their uninstallation.
 // This is done to avoid garbage collection on CRs in the cluster during uninstallation,
 // preventing the potential loss of crucial CR instances.
-func (ht *HelmTool) runInstall(opts *HelmOptions) error {
+func (ht *PackageTool) RunInstall(opts *PackageOptions) error {
 
 	if opts.Version == egChartVersion {
 		warningMarker := color.New(color.FgYellow).Add(color.Bold).Sprintf("WARNING")
@@ -270,8 +270,8 @@ func (ht *HelmTool) runInstall(opts *HelmOptions) error {
 	return nil
 }
 
-// runUninstall By default, we only uninstall instances of the Envoy Gateway resources.
-func (ht *HelmTool) runUninstall(opts *HelmOptions) error {
+// RunUninstall By default, we only uninstall instances of the Envoy Gateway resources.
+func (ht *PackageTool) RunUninstall(opts *PackageOptions) error {
 
 	ht.setUninstallOptions(opts)
 
@@ -308,7 +308,7 @@ func (ht *HelmTool) runUninstall(opts *HelmOptions) error {
 
 // setCommonValue Set the common values needed for the installation chart.
 // We are not currently considering allowing users to define the following values
-func (ht *HelmTool) setCommonValue() {
+func (ht *PackageTool) setCommonValue() {
 	ht.actionInstall.CreateNamespace = true
 	ht.actionInstall.GenerateName = false
 	ht.actionInstall.Description = "envoy gateway was installed using the egctl"
@@ -316,7 +316,7 @@ func (ht *HelmTool) setCommonValue() {
 }
 
 // setInstallOptions Sets the options required before install
-func (ht *HelmTool) setInstallOptions(opts *HelmOptions) {
+func (ht *PackageTool) setInstallOptions(opts *PackageOptions) {
 
 	if opts.DryRun {
 		// When dry-run is set up, we do not need to connect to k8s-api server.
@@ -343,7 +343,7 @@ func (ht *HelmTool) setInstallOptions(opts *HelmOptions) {
 }
 
 // setUninstallOptions Sets the options required before uninstall
-func (ht *HelmTool) setUninstallOptions(opts *HelmOptions) {
+func (ht *PackageTool) setUninstallOptions(opts *PackageOptions) {
 	ht.actionUninstall.DisableHooks = false
 	ht.actionUninstall.KeepHistory = false
 
@@ -357,8 +357,8 @@ func (ht *HelmTool) setUninstallOptions(opts *HelmOptions) {
 	}
 }
 
-// setPrinter We will build the logger before the HelmTool is set up
-func (ht *HelmTool) setPrinter(cmd *cobra.Command) {
+// SetPrinter We will build the logger before the PackageTool is set up
+func (ht *PackageTool) SetPrinter(cmd *cobra.Command) {
 	existPreRunE := cmd.PreRunE
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 
