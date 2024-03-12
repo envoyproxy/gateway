@@ -457,7 +457,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			if r.RateLimit != nil || r.LoadBalancer != nil ||
 				r.ProxyProtocol != nil || r.HealthCheck != nil ||
 				r.CircuitBreaker != nil || r.FaultInjection != nil ||
-				r.TCPKeepalive != nil || r.Retry != nil {
+				r.TCPKeepalive != nil || r.Retry != nil ||
+				r.Timeout != nil {
 				continue
 			}
 
