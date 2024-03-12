@@ -16,12 +16,13 @@ If you've instantiated multiple GatewayClasses, you can also run separate Envoy 
 linking a GatewayClass to each of them for multi-tenancy.
 Please follow the example [Multi-tenancy](#multi-tenancy).
 
-### Merged Gateways onto a Single EnvoyProxy Fleet
+### Merged Gateways onto a single EnvoyProxy fleet
 By default, each Gateway has its own dedicated set of Envoy Proxy and its configurations.
 However, for some deployments, it may be more convenient to merge listeners across multiple Gateways and deploy a single Envoy Proxy fleet.
 This can help to efficiently utilize the infra resources in the cluster and manage them in a centralized manner, or have a single IP address for all of the listeners.
-Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayClass will result in merging all Gateway listeners.
+Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayClass will result in merging all Gateway listeners under one GatewayClass resource.
 * The tuple of port, protocol, and hostname must be unique across all Listeners.
+Please follow the example [Merged gateways deployment](#Merged gateways deployment).
 
 ### Supported Modes
 
@@ -422,6 +423,41 @@ Handling connection for 8889
 * Connection #0 to host localhost left intact
 ```
 
+### Merged gateways deployment
+
+In this example, we will deploy GatewayClass
+```shell
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: merged-eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+```
+with a referenced [EnvoyProxy][] resource configured to enable merged Gateways deployment mode.
+```shell
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true
+```
+
+#### Deploy merged-gateways example
+
+Deploy resources from the example to your cluster.
+```shell
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/merged-gateways.yaml
+```
+
+[EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [Namespaced deployment mode]: ../../../api/extension_types#kuberneteswatchmode
 [issue1231]: https://github.com/envoyproxy/gateway/issues/1231
