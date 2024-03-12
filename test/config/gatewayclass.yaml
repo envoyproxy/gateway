@@ -16,6 +16,10 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  extraArgs:
+    # let's shorten the drain time when individual listeners are being modified or removed via LDS
+    - "--drain-time-s 45"
+    - "--drain-strategy immediate"
   telemetry:
     metrics:
       prometheus: {}
