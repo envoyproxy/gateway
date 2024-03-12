@@ -79,12 +79,12 @@ metadata:
 spec:
   gatewayClassName: merged-eg
   listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    name: http
-    port: 8080
-    protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8080
+      protocol: HTTP
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -94,12 +94,12 @@ metadata:
 spec:
   gatewayClassName: merged-eg
   listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    name: http
-    port: 8081
-    protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8081
+      protocol: HTTP
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -109,12 +109,12 @@ metadata:
 spec:
   gatewayClassName: merged-eg
   listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    name: http
-    port: 8082
-    protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8082
+      protocol: HTTP
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
