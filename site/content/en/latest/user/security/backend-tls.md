@@ -194,7 +194,7 @@ curl -v -HHost:www.example.com --resolve "www.example.com:80:127.0.0.1" \
 http://www.example.com:80/get
 ```
 
-Inspect the output and see that the respone contains the details of the TLS handshake between Envoy and the backend:
+Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
 
 ```shell
 < HTTP/1.1 200 OK
@@ -222,7 +222,7 @@ curl -v -HHost:www.example.com --resolve "www.example.com:80:${GATEWAY_HOST}" \
 http://www.example.com:80/get
 ```
 
-Inspect the output and see that the respone contains the details of the TLS handshake between Envoy and the backend:
+Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
 
 ```shell
 < HTTP/1.1 200 OK
