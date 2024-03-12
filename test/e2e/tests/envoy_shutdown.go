@@ -47,7 +47,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/envoy-shutdown.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("All requests must succeed", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
+			ns := "gateway-upgrade-infra"
 			name := "ha-gateway"
 			routeNN := types.NamespacedName{Name: "http-envoy-shutdown", Namespace: ns}
 			gwNN := types.NamespacedName{Name: name, Namespace: ns}
