@@ -39,13 +39,13 @@ var EGUpgradeTest = suite.ConformanceTest{
 
 			ns := "gateway-upgrade-infra"
 			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "ha-gateway", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
+			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/eg-upgrade"}
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/backend-upgrade",
+					Path: "/eg-upgrade",
 				},
 				Response: http.Response{
 					StatusCode: 200,

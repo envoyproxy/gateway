@@ -10,7 +10,7 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /backend-upgrade
+        value: /eg-upgrade
     backendRefs:
     - name: infra-backend
       port: 8080

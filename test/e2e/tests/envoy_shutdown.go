@@ -59,6 +59,18 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 				t.Errorf("Failed to get proxy deployment")
 			}
 
+			// wait for route to be programmed on envoy
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/envoy-shutdown",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
 			// can be used to abort the test after deployment restart is complete or failed
 			aborter := periodic.NewAborter()
 			// will contain indication on success or failure of load test
