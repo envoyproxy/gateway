@@ -410,3 +410,13 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 	}
 	return protocolStrings
 }
+
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alpha2.SectionName) v1alpha2.ParentReference {
+	return v1alpha2.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(KindGateway),
+		Namespace:   NamespacePtr(gatewayNN.Namespace),
+		Name:        gwapiv1.ObjectName(gatewayNN.Name),
+		SectionName: sectionName,
+	}
+}
