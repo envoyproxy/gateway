@@ -1,6 +1,7 @@
 http:
 - address: 0.0.0.0
-  http3: {}
+  http3:
+    quicPort: 443
   hostnames:
   - '*'
   isHTTP2: false

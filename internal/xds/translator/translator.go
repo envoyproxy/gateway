@@ -259,7 +259,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			if enabledHTTP3 {
-				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.Port))
+				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.HTTP3.QUICPort))
 				if xdsRoute.ResponseHeadersToAdd == nil {
 					xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 				}
