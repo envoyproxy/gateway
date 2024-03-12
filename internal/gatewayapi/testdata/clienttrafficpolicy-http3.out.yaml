@@ -106,7 +106,8 @@ infraIR:
     proxy:
       listeners:
       - address: null
-        http3: {}
+        http3:
+          quicPort: 443
         name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10443
@@ -127,7 +128,8 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
-      http3: {}
+      http3:
+        quicPort: 443
       isHTTP2: false
       name: envoy-gateway/gateway-1/tls
       path:
