@@ -122,7 +122,7 @@ run-e2e: install-e2e-telemetry
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 ifeq ($(E2E_RUN_TEST),)
 	kubectl apply -f test/config/gatewayclass.yaml
-	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 	kubectl delete -f test/config/gatewayclass.yaml
 	kubectl apply -f test/config/upgrade-gatewayclass.yaml
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
