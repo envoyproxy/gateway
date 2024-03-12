@@ -29,9 +29,15 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: /foo
+                value: /foo1
           backendRefs:
             - name: service-1
+              port: 8080
+        - matches:
+            - path:
+                value: /foo2
+          backendRefs:
+            - name: service-2
               port: 8080
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
@@ -50,7 +56,7 @@ httpRoutes:
             - path:
                 value: /bar
           backendRefs:
-            - name: service-1
+            - name: service-3
               port: 8080
 services:
   - apiVersion: v1

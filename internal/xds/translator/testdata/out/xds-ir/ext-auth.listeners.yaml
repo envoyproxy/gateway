@@ -30,7 +30,7 @@
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
         - disabled: true
-          name: envoy.filters.http.ext_authz_default/httproute-2
+          name: envoy.filters.http.ext_authz_default/gateway-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             allowedHeaders:

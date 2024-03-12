@@ -58,10 +58,8 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		// Only generates one OAuth2 Envoy filter for each unique name.
 		// For example, if there are two routes under the same gateway with the
 		// same OIDC config, only one OAuth2 filter will be generated.
-		for _, existingFilter := range mgr.HttpFilters {
-			if existingFilter.Name == extAuthFilterName(route.ExtAuth) {
-				continue
-			}
+		if hcmContainsFilter(mgr, extAuthFilterName(route.ExtAuth)) {
+			continue
 		}
 
 		filter, err := buildHCMExtAuthFilter(route.ExtAuth)
@@ -285,7 +283,8 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute.ExtAuth == nil {
 		return nil
 	}
-	if err := enableFilterOnRoute(extAuthFilter, route, irRoute.ExtAuth.Name); err != nil {
+	filterName := extAuthFilterName(irRoute.ExtAuth)
+	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}
 	return nil
