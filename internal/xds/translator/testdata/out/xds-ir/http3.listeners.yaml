@@ -42,6 +42,7 @@
             alpnProtocols:
             - h2
             - http/1.1
+            - h3
             tlsCertificateSdsSecretConfigs:
             - name: envoy-gateway-tls-secret-1
               sdsConfig:
