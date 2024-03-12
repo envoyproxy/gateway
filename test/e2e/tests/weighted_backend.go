@@ -78,6 +78,8 @@ var WeightEqualTest = suite.ConformanceTest{
 				}
 			}
 
+			// We iterate over the actual traffic Map with podNamePrefix as the key to get the actual traffic.
+			// Given an offset of 3, we expect the expected traffic to be within the actual traffic [actual-3,actual+3] interval.
 			for prefix, actual := range weightMap {
 				expect := expected[prefix]
 				if !AlmostEquals(actual, expect, 3) {
@@ -141,6 +143,8 @@ var WeightBlueGreenTest = suite.ConformanceTest{
 				}
 			}
 
+			// We iterate over the actual traffic Map with podNamePrefix as the key to get the actual traffic.
+			// Given an offset of 3, we expect the expected traffic to be within the actual traffic [actual-3,actual+3] interval.
 			for prefix, actual := range weightMap {
 				expect := expected[prefix]
 				if !AlmostEquals(actual, expect, 3) {
@@ -204,6 +208,8 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 				}
 			}
 
+			// We iterate over the actual traffic Map with podNamePrefix as the key to get the actual traffic.
+			// Given an offset of 3, we expect the expected traffic to be within the actual traffic [actual-3,actual+3] interval.
 			for prefix, actual := range weightMap {
 				expect := expected[prefix]
 				if !AlmostEquals(actual, expect, 3) {
