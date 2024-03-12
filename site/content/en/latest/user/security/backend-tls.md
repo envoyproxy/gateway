@@ -1,5 +1,5 @@
 ---
-title: "Mutual TLS: External Clients to the Gateway"
+title: "Backend TLS: Gateway to Backend"
 ---
 
 This guide demonstrates how TLS can be achieved between the Gateway and a backend. The guide uses a self-signed CA, so it should be used for
@@ -17,7 +17,7 @@ Follow the steps from the [Quickstart Guide](../../quickstart) to install Envoy 
 
 ## TLS Certificates
 
-Generate the certificates and keys used by the Gateway to terminate client TLS connections.
+Generate the certificates and keys used by the backend to terminate TLS connections from the Gateways. 
 
 Create a root certificate and private key to sign certificates:
 
