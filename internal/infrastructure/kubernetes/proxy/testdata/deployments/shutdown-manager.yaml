@@ -167,6 +167,7 @@ spec:
                         resource_api_version: V3
         - --log-level warn
         - --cpuset-threads
+        - --drain-time-s 30
         command:
         - envoy
         env:
