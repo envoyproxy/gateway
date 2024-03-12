@@ -341,7 +341,7 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return nil
 	}
 
-	if err := enableFilterOnRoute(oauth2Filter, route, irRoute); err != nil {
+	if err := enableFilterOnRoute(oauth2Filter, route, irRoute.Name); err != nil {
 		return err
 	}
 	return nil

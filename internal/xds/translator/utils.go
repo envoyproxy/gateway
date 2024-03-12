@@ -15,8 +15,6 @@ import (
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"google.golang.org/protobuf/types/known/anypb"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -80,15 +78,12 @@ func clusterName(host string, port uint32) string {
 }
 
 // enableFilterOnRoute enables a filterType on the provided route.
-func enableFilterOnRoute(filterType string, route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func enableFilterOnRoute(filterType string, route *routev3.Route, configName string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
-	if irRoute == nil {
-		return errors.New("ir route is nil")
-	}
 
-	filterName := perRouteFilterName(filterType, irRoute.Name)
+	filterName := perRouteFilterName(filterType, configName)
 	filterCfg := route.GetTypedPerFilterConfig()
 	if _, ok := filterCfg[filterName]; ok {
 		// This should not happen since this is the only place where the filter

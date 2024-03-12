@@ -13,7 +13,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz_httproute/default/httproute-1/rule/0/match/0/www_example_com:
+        envoy.filters.http.ext_authz_default/httproute-1:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
     - match:
@@ -24,6 +24,6 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz_httproute/default/httproute-2/rule/0/match/0/www_example_com:
+        envoy.filters.http.ext_authz_default/httproute-2:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

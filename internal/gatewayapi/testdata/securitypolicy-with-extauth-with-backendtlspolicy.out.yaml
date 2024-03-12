@@ -309,6 +309,7 @@ xdsIR:
           headersToExtAuth:
           - header1
           - header2
+          name: default/httproute-1
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -349,6 +350,7 @@ xdsIR:
             - header1
             - header2
             path: /auth
+          name: default/gateway-1
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com

@@ -320,7 +320,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.ExtAuth != nil {
-		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
+		if extAuth, err = t.buildExtAuth(
+			utils.NamespacedName(route).String(),
+			policy,
+			resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -382,7 +385,10 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.ExtAuth != nil {
-		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
+		if extAuth, err = t.buildExtAuth(
+			utils.NamespacedName(gateway).String(),
+			policy,
+			resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -702,6 +708,7 @@ func (t *Translator) buildBasicAuth(
 }
 
 func (t *Translator) buildExtAuth(
+	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.ExtAuth, error) {
 	var (
@@ -754,6 +761,7 @@ func (t *Translator) buildExtAuth(
 	}
 
 	extAuth := &ir.ExtAuth{
+		Name:             name,
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 	}
 

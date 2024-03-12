@@ -129,7 +129,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if irRoute.BasicAuth == nil {
 		return nil
 	}
-	if err := enableFilterOnRoute(basicAuthFilter, route, irRoute); err != nil {
+	if err := enableFilterOnRoute(basicAuthFilter, route, irRoute.Name); err != nil {
 		return err
 	}
 	return nil

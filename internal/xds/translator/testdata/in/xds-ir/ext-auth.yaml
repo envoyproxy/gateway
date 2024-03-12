@@ -19,6 +19,7 @@ http:
         - host: "10.0.0.1"
           port: 50000
     extAuth:
+      name: default/httproute-1
       http:
         authority: http-backend.envoy-gateway:80
         headersToBackend:
@@ -45,6 +46,7 @@ http:
         - host: "10.0.0.2"
           port: 60000
     extAuth:
+      name: default/httproute-2
       grpc:
         authority: grpc-backend.default:9000
         destination:

@@ -55,7 +55,16 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		filter, err := buildHCMExtAuthFilter(route)
+		// Only generates one OAuth2 Envoy filter for each unique name.
+		// For example, if there are two routes under the same gateway with the
+		// same OIDC config, only one OAuth2 filter will be generated.
+		for _, existingFilter := range mgr.HttpFilters {
+			if existingFilter.Name == extAuthFilterName(route.ExtAuth) {
+				continue
+			}
+		}
+
+		filter, err := buildHCMExtAuthFilter(route.ExtAuth)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -68,8 +77,8 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 }
 
 // buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
-func buildHCMExtAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
-	extAuthProto := extAuthConfig(route.ExtAuth)
+func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
+	extAuthProto := extAuthConfig(extAuth)
 	if err := extAuthProto.ValidateAll(); err != nil {
 		return nil, err
 	}
@@ -80,7 +89,7 @@ func buildHCMExtAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name:     extAuthFilterName(route),
+		Name:     extAuthFilterName(extAuth),
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: extAuthAny,
@@ -88,8 +97,8 @@ func buildHCMExtAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-func extAuthFilterName(route *ir.HTTPRoute) string {
-	return perRouteFilterName(extAuthFilter, route.Name)
+func extAuthFilterName(extAuth *ir.ExtAuth) string {
+	return perRouteFilterName(extAuthFilter, extAuth.Name)
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
@@ -276,7 +285,7 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute.ExtAuth == nil {
 		return nil
 	}
-	if err := enableFilterOnRoute(extAuthFilter, route, irRoute); err != nil {
+	if err := enableFilterOnRoute(extAuthFilter, route, irRoute.ExtAuth.Name); err != nil {
 		return err
 	}
 	return nil
