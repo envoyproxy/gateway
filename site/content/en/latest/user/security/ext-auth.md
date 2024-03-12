@@ -157,7 +157,7 @@ security in production environments.
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/ext-auth-grpc-service.yaml
 ```
 
-The HTTPRoute created in the previous section is still valid and can be used with the gRPC auth service, but if you have\
+The HTTPRoute created in the previous section is still valid and can be used with the gRPC auth service, but if you have
 not created the HTTPRoute, you can create it now.
 
 Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.
