@@ -426,6 +426,7 @@ Handling connection for 8889
 ### Merged gateways deployment
 
 In this example, we will deploy GatewayClass
+
 ```shell
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
@@ -439,7 +440,9 @@ spec:
     name: custom-proxy-config
     namespace: envoy-gateway-system
 ```
+
 with a referenced [EnvoyProxy][] resource configured to enable merged Gateways deployment mode.
+
 ```shell
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
@@ -453,6 +456,7 @@ spec:
 #### Deploy merged-gateways example
 
 Deploy resources from the example to your cluster.
+
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/merged-gateways.yaml
 ```
