@@ -420,3 +420,19 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alph
 		SectionName: sectionName,
 	}
 }
+
+type policyTargetRouteKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+type policyRouteTargetContext struct {
+	RouteContext
+	attached bool
+}
+
+type policyGatewayTargetContext struct {
+	*GatewayContext
+	attached bool
+}

@@ -28,22 +28,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
-type policyTargetRouteKey struct {
-	Kind      string
-	Namespace string
-	Name      string
-}
-
-type policyRouteTargetContext struct {
-	RouteContext
-	attached bool
-}
-
-type policyGatewayTargetContext struct {
-	*GatewayContext
-	attached bool
-}
-
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,

@@ -802,9 +802,8 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 
 	for _, policy := range clientTrafficPolicies.Items {
 		policy := policy
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		// The status of BackendTrafficPolicies can't be discarded because the status
+		// can be modified by multiple controllers.
 		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
 	}
 
