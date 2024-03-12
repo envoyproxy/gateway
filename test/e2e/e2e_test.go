@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -57,20 +56,4 @@ func TestE2E(t *testing.T) {
 	cSuite.Setup(t)
 	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
 	cSuite.Run(t, tests.ConformanceTests)
-
-	// The upgrade suite uses different base manifests that allow running in isolation
-	// TODO: when all issues related to multiple GWC, GC and Policy reuse are fixed, merge back with main suite
-	upgradeSuite := suite.New(suite.Options{
-		Client:               c,
-		GatewayClassName:     "upgrade",
-		BaseManifests:        "base/upgrade-manifests.yaml",
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		FS:                   &Manifests,
-		RunTest:              *flags.RunTest,
-	})
-
-	upgradeSuite.Setup(t)
-	t.Logf("Running %d upgrade tests", len(tests.UpgradeTests))
-	upgradeSuite.Run(t, tests.UpgradeTests)
 }

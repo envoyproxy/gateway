@@ -44,9 +44,12 @@ func TestEGUpgrade(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
+	// The upgrade suite uses different base manifests and gateway class that allow running in isolation
+	// TODO: when all issues related to multiple GWC, GC and Policy reuse are fixed, merge back with main suite
 	cSuite := suite.New(suite.Options{
 		Client:               c,
-		GatewayClassName:     *flags.GatewayClassName,
+		GatewayClassName:     "upgrade",
+		BaseManifests:        "base/upgrade-manifests.yaml",
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &e2e.Manifests,
@@ -54,5 +57,5 @@ func TestEGUpgrade(t *testing.T) {
 	})
 
 	cSuite.Setup(t)
-	cSuite.Run(t, []suite.ConformanceTest{tests.EGUpgradeTest})
+	cSuite.Run(t, []suite.ConformanceTest{tests.EnvoyShutdownTest, tests.EGUpgradeTest})
 }

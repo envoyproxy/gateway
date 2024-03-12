@@ -37,7 +37,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 				lastVersionTag = "v0.6.0" // Default version tag if not specified
 			}
 
-			ns := "gateway-conformance-infra"
+			ns := "gateway-upgrade-infra"
 			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
