@@ -407,8 +407,18 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
+		// A Policy targeting the most specific scope(xRoute) wins over a policy
+		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
-			// Apply if not already set
+			// If any of the features are already set, it means that a more specific
+			// policy(targeting xRoute) has already set it, so we skip it.
+			if r.CORS != nil ||
+				r.JWT != nil ||
+				r.OIDC != nil ||
+				r.BasicAuth != nil ||
+				r.ExtAuth != nil {
+				continue
+			}
 			if r.CORS == nil {
 				r.CORS = cors
 			}
