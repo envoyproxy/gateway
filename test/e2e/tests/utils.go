@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,10 +92,8 @@ func SecurityPolicyMustBeAccepted(
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-func BackendTrafficPolicyMustBeAccepted(
-	t *testing.T,
-	client client.Client,
-	policyName types.NamespacedName) {
+// TODO (sh2): make it generic for xPolicy
+func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -104,13 +103,18 @@ func BackendTrafficPolicyMustBeAccepted(
 			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
 		}
 
-		for _, condition := range policy.Status.Conditions {
-			if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
-				return true, nil
+		for _, ancestor := range policy.Status.Ancestors {
+			if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+				for _, condition := range ancestor.Conditions {
+					if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+						return true, nil
+					}
+				}
 			}
 		}
 		t.Logf("BackendTrafficPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
+
 	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be accepted")
 }

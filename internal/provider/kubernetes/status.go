@@ -276,7 +276,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		message.HandleSubscription(
 			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "backendtrafficpolicy-status"},
 			r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.BackendTrafficPolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
