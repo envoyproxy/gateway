@@ -118,3 +118,14 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 
 	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be accepted")
 }
+
+// AlmostEquals We use a solution similar to istio:
+// Given an offset, calculate whether the actual value is within the offset of the expected value
+func AlmostEquals(actual, expect, offset int) bool {
+	upper := actual + offset
+	lower := actual - offset
+	if expect < lower || expect > upper {
+		return false
+	}
+	return true
+}
