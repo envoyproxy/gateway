@@ -40,6 +40,8 @@
         downstreamTlsContext:
           commonTlsContext:
             alpnProtocols:
+            - h2
+            - http/1.1
             - h3
             tlsCertificateSdsSecretConfigs:
             - name: envoy-gateway-tls-secret-1
@@ -88,7 +90,8 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           alpnProtocols:
-          - h3
+          - h2
+          - http/1.1
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-tls-secret-1
             sdsConfig:

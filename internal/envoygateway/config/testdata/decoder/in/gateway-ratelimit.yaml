@@ -6,7 +6,6 @@ provider:
   type: Kubernetes
   kubernetes:
     rateLimitDeployment:
-      replicas: 1
       strategy:
         type: RollingUpdate
       container:

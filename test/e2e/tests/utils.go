@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,9 +26,9 @@ import (
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
-// waitForPods waits for the pods in the given namespace and with the given selector
+// WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
-func waitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
+func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
 	t.Logf("waiting for %s/[%s] to be %v...", namespace, selectors, phase)
 
 	require.Eventually(t, func() bool {
@@ -65,8 +66,8 @@ func waitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 	}, defaultServiceStartupTimeout, 2*time.Second)
 }
 
-// securityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
-func securityPolicyMustBeAccepted(
+// SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
+func SecurityPolicyMustBeAccepted(
 	t *testing.T,
 	client client.Client,
 	securityPolicyName types.NamespacedName) {
@@ -90,11 +91,9 @@ func securityPolicyMustBeAccepted(
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
-// backendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-func backendTrafficPolicyMustBeAccepted(
-	t *testing.T,
-	client client.Client,
-	policyName types.NamespacedName) {
+// BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
+// TODO (sh2): make it generic for xPolicy
+func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -104,13 +103,29 @@ func backendTrafficPolicyMustBeAccepted(
 			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
 		}
 
-		for _, condition := range policy.Status.Conditions {
-			if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
-				return true, nil
+		for _, ancestor := range policy.Status.Ancestors {
+			if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+				for _, condition := range ancestor.Conditions {
+					if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+						return true, nil
+					}
+				}
 			}
 		}
 		t.Logf("BackendTrafficPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
+
 	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be accepted")
+}
+
+// AlmostEquals We use a solution similar to istio:
+// Given an offset, calculate whether the actual value is within the offset of the expected value
+func AlmostEquals(actual, expect, offset int) bool {
+	upper := actual + offset
+	lower := actual - offset
+	if expect < lower || expect > upper {
+		return false
+	}
+	return true
 }

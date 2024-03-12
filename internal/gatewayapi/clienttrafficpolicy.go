@@ -318,7 +318,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil {
-			httpIR.HTTP3 = &ir.HTTP3Settings{}
+			http3 := &ir.HTTP3Settings{
+				QUICPort: int32(l.Port),
+			}
+			httpIR.HTTP3 = http3
 			var proxyListenerIR *ir.ProxyListener
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
 				if proxyListener.Name == irListenerName {
@@ -327,7 +330,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 				}
 			}
 			if proxyListenerIR != nil {
-				proxyListenerIR.HTTP3 = &ir.HTTP3Settings{}
+				proxyListenerIR.HTTP3 = http3
 			}
 		}
 
@@ -487,11 +490,8 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
 	httpIR.TLS.MinVersion = ptr.To(ir.TLSv12)
 	httpIR.TLS.MaxVersion = ptr.To(ir.TLSv13)
-	// If HTTP3 is enabled, the ALPN protocols array should be hardcoded
-	// for HTTP3
-	if httpIR.HTTP3 != nil {
-		httpIR.TLS.ALPNProtocols = []string{"h3"}
-	} else if tlsParams != nil && len(tlsParams.ALPNProtocols) > 0 {
+
+	if tlsParams != nil && len(tlsParams.ALPNProtocols) > 0 {
 		httpIR.TLS.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
 		for i := range tlsParams.ALPNProtocols {
 			httpIR.TLS.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
