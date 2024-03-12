@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -59,7 +59,45 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /
+          value: /foo
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /bar
   status:
     parents:
     - conditions:
@@ -231,4 +269,55 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /
+          prefix: /foo
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        cors:
+          allowHeaders:
+          - x-header-1
+          - x-header-2
+          allowMethods:
+          - GET
+          - POST
+          allowOrigins:
+          - distinct: false
+            name: ""
+            safeRegex: http://.*\.example\.com
+          - distinct: false
+            exact: http://foo.bar.com
+            name: ""
+          - distinct: false
+            name: ""
+            safeRegex: https://.*
+          exposeHeaders:
+          - x-header-3
+          - x-header-4
+          maxAge: 16m40s
+        destination:
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        jwt:
+          providers:
+          - audiences:
+            - one.foo.com
+            claimToHeaders:
+            - claim: claim1
+              header: one-route-example-key
+            issuer: https://one.example.com
+            name: example1
+            remoteJWKS:
+              uri: https://one.example.com/jwt/public-key/jwks.json
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
