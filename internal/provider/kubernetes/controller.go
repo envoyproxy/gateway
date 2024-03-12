@@ -868,9 +868,8 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 
 	for _, policy := range backendTLSPolicies.Items {
 		policy := policy
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		policy.Status = gwapiv1a2.PolicyStatus{} // todo ?
+		// The status of BackendTLSPolicies can't be discarded because the status
+		// can be modified by multiple controllers.
 		resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
 	}
 
