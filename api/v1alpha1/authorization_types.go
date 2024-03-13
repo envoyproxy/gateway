@@ -21,12 +21,11 @@ type Authorization struct {
 
 // Rule defines the single authorization rule.
 type Rule struct {
-	// ClientSelectors contains the client selector configuration.
+	// ClientSelector contains the client selector configuration.
 	// All selectors are AND'd together and only if all selector are valid
 	// the Action is performed.
 	//
-	// +kubebuilder:validation:MinItems=1
-	ClientSelectors []ClientSelector `json:"clientSelector,omitempty"`
+	ClientSelector ClientSelector `json:"clientSelector,omitempty"`
 
 	// Action defines the action to be taken if the rule matches.
 	Action RuleActionType `json:"action"`

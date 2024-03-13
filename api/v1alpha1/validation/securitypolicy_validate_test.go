@@ -478,10 +478,8 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Authorization: &egv1a1.Authorization{
 						Rules: []egv1a1.Rule{
 							{
-								ClientSelectors: []egv1a1.ClientSelector{
-									{
-										ClientCIDRs: []string{"192.168.1.0/24"},
-									},
+								ClientSelector: egv1a1.ClientSelector{
+									ClientCIDRs: []string{"192.168.1.0/24"},
 								},
 								Action: egv1a1.Allow,
 							},
@@ -506,10 +504,8 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Authorization: &egv1a1.Authorization{
 						Rules: []egv1a1.Rule{
 							{
-								ClientSelectors: []egv1a1.ClientSelector{
-									{
-										ClientCIDRs: []string{"2001:db8::/64"},
-									},
+								ClientSelector: egv1a1.ClientSelector{
+									ClientCIDRs: []string{"2001:db8::/64"},
 								},
 								Action: egv1a1.Allow,
 							},
@@ -534,10 +530,8 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Authorization: &egv1a1.Authorization{
 						Rules: []egv1a1.Rule{
 							{
-								ClientSelectors: []egv1a1.ClientSelector{
-									{
-										ClientCIDRs: []string{"192.168.1.001/24"},
-									},
+								ClientSelector: egv1a1.ClientSelector{
+									ClientCIDRs: []string{"192.168.1.001/24"},
 								},
 								Action: egv1a1.Allow,
 							},
@@ -562,10 +556,8 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Authorization: &egv1a1.Authorization{
 						Rules: []egv1a1.Rule{
 							{
-								ClientSelectors: []egv1a1.ClientSelector{
-									{
-										ClientCIDRs: []string{"2001:dffoob8::/64"},
-									},
+								ClientSelector: egv1a1.ClientSelector{
+									ClientCIDRs: []string{"2001:dffoob8::/64"},
 								},
 								Action: egv1a1.Allow,
 							},

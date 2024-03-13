@@ -76,12 +76,10 @@ func ValidateAuthorization(as *egv1a1.Authorization) error {
 	}
 
 	for _, rule := range as.Rules {
-		for _, selector := range rule.ClientSelectors {
-			for _, cidr := range selector.ClientCIDRs {
-				_, _, err := net.ParseCIDR(cidr)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("invalid CIDR: %s", cidr))
-				}
+		for _, cidr := range rule.ClientSelector.ClientCIDRs {
+			_, _, err := net.ParseCIDR(cidr)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid CIDR: %s", cidr))
 			}
 		}
 	}

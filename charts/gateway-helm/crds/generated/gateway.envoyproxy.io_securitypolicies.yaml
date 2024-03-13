@@ -66,22 +66,17 @@ spec:
                           - Log
                           type: string
                         clientSelector:
-                          description: ClientSelectors contains the client selector
+                          description: ClientSelector contains the client selector
                             configuration. All selectors are AND'd together and only
                             if all selector are valid the Action is performed.
-                          items:
-                            description: ClientSelector contains the client selector
-                              configuration.
-                            properties:
-                              clientCIDR:
-                                description: ClientCIDRs is a list of CIDRs. Valid
-                                  examples are "192.168.1.0/24" or "2001:db8::/64"
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          minItems: 1
-                          type: array
+                          properties:
+                            clientCIDR:
+                              description: ClientCIDRs is a list of CIDRs. Valid examples
+                                are "192.168.1.0/24" or "2001:db8::/64"
+                              items:
+                                type: string
+                              type: array
+                          type: object
                       required:
                       - action
                       type: object
