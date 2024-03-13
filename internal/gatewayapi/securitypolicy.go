@@ -138,9 +138,6 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			if err == nil {
 				err = t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
 			}
-			if err == nil {
-				err = t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
-			}
 
 			if err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
