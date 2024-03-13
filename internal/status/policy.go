@@ -34,6 +34,7 @@ func SetTranslationErrorForPolicyAncestors(policyStatus *gwv1a2.PolicyStatus, an
 	}
 }
 
+// SetAcceptedForPolicyAncestors sets accepted conditions for each ancestor reference if it is unset.
 func SetAcceptedForPolicyAncestors(policyStatus *gwv1a2.PolicyStatus, ancestorRefs []gwv1a2.ParentReference, controllerName string) {
 	for _, ancestorRef := range ancestorRefs {
 		setAcceptedForPolicyAncestor(policyStatus, ancestorRef, controllerName)

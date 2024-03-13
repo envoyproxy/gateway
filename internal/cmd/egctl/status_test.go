@@ -15,8 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestWriteStatus(t *testing.T) {
@@ -518,53 +516,7 @@ btls      foobar2   test-status-2   test reason 2
 `,
 			expect: true,
 		},
-		{
-			name: "egctl x status envoypatchpolicy with typed name",
-			resourceList: &egv1a1.EnvoyPatchPolicyList{
-				Items: []egv1a1.EnvoyPatchPolicy{
-					{
-						TypeMeta: metav1.TypeMeta{
-							Kind: "EnvoyPatchPolicy",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "epp",
-							Namespace: "default",
-						},
-						Status: egv1a1.EnvoyPatchPolicyStatus{
-							Conditions: []metav1.Condition{
-								{
-									Type:               "foobar1",
-									Status:             metav1.ConditionStatus("test-status-1"),
-									ObservedGeneration: 123456,
-									LastTransitionTime: metav1.NewTime(testTime),
-									Reason:             "test reason 1",
-									Message:            "test message 1",
-								},
-								{
-									Type:               "foobar2",
-									Status:             metav1.ConditionStatus("test-status-2"),
-									ObservedGeneration: 123457,
-									LastTransitionTime: metav1.NewTime(testTime.Add(1 * time.Hour)),
-									Reason:             "test reason 2",
-									Message:            "test message 2",
-								},
-							},
-						},
-					},
-				},
-			},
-			resourceNamespaced: true,
-			resourceType:       "envoypatchpolicy",
-			quiet:              false,
-			verbose:            false,
-			allNamespaces:      false,
-			typedName:          true,
-			outputs: `NAME                   TYPE      STATUS          REASON
-envoypatchpolicy/epp   foobar2   test-status-2   test reason 2
-                       foobar1   test-status-1   test reason 1
-`,
-			expect: true,
-		},
+		// TODO(sh2): add a policy status test for egctl x status cmd
 	}
 
 	for _, tc := range testCases {

@@ -1,5 +1,11 @@
 envoyPatchPolicies:
-- status: {}
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "foobar"
   name: "first-policy"
   namespace: "default"
   jsonPatches:

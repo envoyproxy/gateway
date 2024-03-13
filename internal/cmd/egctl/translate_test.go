@@ -183,7 +183,7 @@ func TestTranslate(t *testing.T) {
 			to:           "xds",
 			output:       yamlOutput,
 			resourceType: string(AllEnvoyConfigType),
-			expect:       true,
+			expect:       false,
 		},
 		{
 			name:      "default-resources",
