@@ -12,17 +12,19 @@ This is the simplest deployment mode and is suitable for scenarios where each Ga
 * Support for accepting multiple GatewayClasses was added [here][issue1231].
 
 ### Separate Envoy Gateway Controllers
-If you've instantiated multiple GatewayClasses, you can also run separate Envoy Gateway controllers in different namespaces,
-linking a GatewayClass to each of them for multi-tenancy.
+If you've instantiated multiple GatewayClasses, you can also run separate Envoy Gateway controllers in different namespaces, linking a GatewayClass to each of them for multi-tenancy.
 Please follow the example [Multi-tenancy](#multi-tenancy).
 
 ### Merged Gateways onto a single EnvoyProxy fleet
 By default, each Gateway has its own dedicated set of Envoy Proxy and its configurations.
 However, for some deployments, it may be more convenient to merge listeners across multiple Gateways and deploy a single Envoy Proxy fleet.
+
 This can help to efficiently utilize the infra resources in the cluster and manage them in a centralized manner, or have a single IP address for all of the listeners.
 Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayClass will result in merging all Gateway listeners under one GatewayClass resource.
+
 * The tuple of port, protocol, and hostname must be unique across all Listeners.
-Please follow the example [Merged gateways deployment](#Merged gateways deployment).
+
+Please follow the example [Merged gateways deployment](#merged-gateways-deployment).
 
 ### Supported Modes
 
@@ -795,7 +797,7 @@ curl --header "Host: www.merged3.com" http://$GATEWAY_HOST:8082/example3
 }
 ```
 
-[Quickstart]: quickstart.md
+[Quickstart]: ../quickstart.md
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [Namespaced deployment mode]: ../../../api/extension_types#kuberneteswatchmode
