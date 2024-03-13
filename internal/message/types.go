@@ -93,7 +93,7 @@ type PolicyStatuses struct {
 	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *egv1a1.SecurityPolicyStatus]
+	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 }
 
