@@ -421,6 +421,22 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alph
 	}
 }
 
+type policyTargetRouteKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+type policyRouteTargetContext struct {
+	RouteContext
+	attached bool
+}
+
+type policyGatewayTargetContext struct {
+	*GatewayContext
+	attached bool
+}
+
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
 // that would share the same filter chain as the provided listener when translated
 // to XDS

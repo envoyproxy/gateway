@@ -804,7 +804,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
 	}
 
