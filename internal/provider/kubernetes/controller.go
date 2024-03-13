@@ -804,7 +804,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
 	}
 
@@ -822,8 +822,9 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 
 	for _, policy := range backendTrafficPolicies.Items {
 		policy := policy
-		// The status of BackendTrafficPolicies can't be discarded because the status
-		// can be modified by multiple controllers.
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
 	}
 	return nil
@@ -863,8 +864,9 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 
 	for _, policy := range backendTLSPolicies.Items {
 		policy := policy
-		// The status of BackendTLSPolicies can't be discarded because the status
-		// can be modified by multiple controllers.
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
 	}
 
