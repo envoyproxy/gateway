@@ -331,8 +331,6 @@ _Appears in:_
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
 
 
-
-
 #### ClientValidationContext
 
 
