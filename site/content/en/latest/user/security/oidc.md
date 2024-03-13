@@ -65,7 +65,7 @@ providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA,
 
 Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please make sure the
 redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. In this example,
-the redirect URL is `http://www.example.com:8080/oauth2/myapp/callback`.
+the redirect URL is `http://www.example.com:8080/myapp/oauth2/callback`.
 
 After registering the application, you should have the following information:
 * Client ID: The client ID of the OIDC application.
@@ -87,7 +87,7 @@ secret "my-app-client-secret" created
 
 Please notice that the `redirectURL` and `logoutPath` must match the target HTTPRoute. In this example, the target
 HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed 
-with `https://www.example.com/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication 
+with `http://www.example.com:8080/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication 
 will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed 
 by the OAuth2 filter on that HTTPRoute.
 
@@ -110,7 +110,7 @@ spec:
     clientID: "${CLIENT_ID}"
     clientSecret:
       name: "my-app-client-secret"
-    redirectURL: "http://www.example.com:8080/oauth2/myapp/callback"
+    redirectURL: "http://www.example.com:8080/myapp/oauth2/callback"
     logoutPath: "/myapp/logout"
 EOF
 ```
