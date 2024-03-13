@@ -259,7 +259,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			if enabledHTTP3 {
-				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.Port))
+				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.HTTP3.QUICPort))
 				if xdsRoute.ResponseHeadersToAdd == nil {
 					xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 				}
@@ -354,7 +354,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			name:         tcpListener.Destination.Name,
 			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: EndpointTypeStatic,
+			endpointType: buildEndpointType(tcpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -402,7 +402,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: EndpointTypeStatic,
+			endpointType: buildEndpointType(udpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -495,38 +495,11 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
-	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
-	// since there's no Mixed AddressType among all the DestinationSettings.
-	addrTypeState := httpRoute.Destination.Settings[0].AddressType
-
-	var endpointType EndpointType
-	if addrTypeState != nil && *addrTypeState == ir.FQDN {
-		endpointType = EndpointTypeDNS
-	} else {
-		endpointType = EndpointTypeStatic
-	}
-
-	var tSocket *corev3.TransportSocket
-
-	if httpRoute.Destination.Settings[0].TLS != nil {
-		CaSecret := buildXdsUpstreamTLSCASecret(httpRoute.Destination.Settings[0].TLS)
-		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
-			return err
-		}
-		// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
-		// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
-		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.Destination.Settings[0].TLS)
-		if err != nil {
-			return err
-		}
-		tSocket = temp
-	}
-
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
-		tSocket:        tSocket,
-		endpointType:   endpointType,
+		tSocket:        nil,
+		endpointType:   buildEndpointType(httpRoute.Destination.Settings),
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
 		circuitBreaker: httpRoute.CircuitBreaker,
@@ -539,6 +512,27 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 	}
 
 	return nil
+}
+
+// processTLSSocket generates a xDS TransportSocket for a given TLS config.
+// It also adds the necessary secrets to the resource version table.
+func processTLSSocket(tlsConfig *ir.TLSUpstreamConfig, tCtx *types.ResourceVersionTable) (*corev3.TransportSocket, error) {
+	if tlsConfig == nil {
+		return nil, nil
+	}
+	CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
+	if CaSecret != nil {
+		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
+			return nil, err
+		}
+	}
+	// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
+	// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
+	tlsSocket, err := buildXdsUpstreamTLSSocketWthCert(tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	return tlsSocket, nil
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -577,6 +571,14 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 
 	xdsCluster := buildXdsCluster(args)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	for _, ds := range args.settings {
+		if ds.TLS != nil {
+			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+				return err
+			}
+		}
+	}
 	// Use EDS for static endpoints
 	if args.endpointType == EndpointTypeStatic {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
@@ -599,6 +601,9 @@ const (
 
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	// Build the tls secret
+	if tlsConfig.UseSystemTrustStore {
+		return nil
+	}
 	return &tlsv3.Secret{
 		Name: tlsConfig.CACertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
@@ -613,17 +618,42 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
 
-	tlsCtx := &tlsv3.UpstreamTlsContext{
-		CommonTlsContext: &tlsv3.CommonTlsContext{
-			TlsCertificateSdsSecretConfigs: nil,
-			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-					Name:      tlsConfig.CACertificate.Name,
-					SdsConfig: makeConfigSource(),
+	var tlsCtx *tlsv3.UpstreamTlsContext
+
+	if tlsConfig.UseSystemTrustStore {
+		tlsCtx = &tlsv3.UpstreamTlsContext{
+			CommonTlsContext: &tlsv3.CommonTlsContext{
+				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
+					ValidationContext: &tlsv3.CertificateValidationContext{
+						TrustedCa: &corev3.DataSource{
+							Specifier: &corev3.DataSource_Filename{
+								// This is the default location for the system trust store
+								// on Debian derivatives like the envoy-proxy image being used by the infrastructure
+								// controller.
+								// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
+								// TODO: allow customizing this value via EnvoyGateway so that if a non-standard
+								// envoy image is being used, this can be modified to match
+								Filename: "/etc/ssl/certs/ca-certificates.crt",
+							},
+						},
+					},
 				},
 			},
-		},
-		Sni: tlsConfig.SNI,
+			Sni: tlsConfig.SNI,
+		}
+	} else {
+		tlsCtx = &tlsv3.UpstreamTlsContext{
+			CommonTlsContext: &tlsv3.CommonTlsContext{
+				TlsCertificateSdsSecretConfigs: nil,
+				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+						Name:      tlsConfig.CACertificate.Name,
+						SdsConfig: makeConfigSource(),
+					},
+				},
+			},
+			Sni: tlsConfig.SNI,
+		}
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)

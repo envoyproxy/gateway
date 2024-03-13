@@ -12,7 +12,6 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   progressDeadlineSeconds: 600
-  replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -168,6 +167,7 @@ spec:
                         resource_api_version: V3
         - --log-level warn
         - --cpuset-threads
+        - --drain-time-s 30
         command:
         - envoy
         env:

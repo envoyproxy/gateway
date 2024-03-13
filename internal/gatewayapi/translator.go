@@ -207,15 +207,12 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, gateways, routes, resources, xdsIR)
 
-	backendTLSPolicies := t.ProcessBackendTLSPoliciesAncestorRef(
-		resources.BackendTLSPolicies, gateways)
-
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
-		securityPolicies, backendTLSPolicies, xdsIR, infraIR)
+		securityPolicies, resources.BackendTLSPolicies, xdsIR, infraIR)
 
 }
 

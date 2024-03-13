@@ -1,0 +1,71 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-ext-auth
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp              # This is the path that will be protected by ext auth
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-without-ext-auth
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /public            # This is the path that will be public
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-test
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-ext-auth
+  extAuth:
+    grpc:
+      backendRef:
+        name: grpc-ext-auth
+        namespace: gateway-conformance-infra
+        port: 9002
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: grpc-ext-auth-btls
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: ''
+    kind: Service
+    name: grpc-ext-auth
+    sectionName: "9002"
+  tls:
+    caCertRefs:
+    - name: grpc-ext-auth-ca
+      group: ''
+      kind: ConfigMap
+    hostname: grpc-ext-auth

@@ -242,8 +242,12 @@ func TestTranslate(t *testing.T) {
 			want := &TranslateResult{}
 			mustUnmarshal(t, output, want)
 
-			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-			require.Empty(t, cmp.Diff(want, got, opts))
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.EquateEmpty(),
+			}
+
+			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
 }
