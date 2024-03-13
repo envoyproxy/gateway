@@ -248,7 +248,7 @@ Or using `preferredDuringSchedulingIgnoredDuringExecution` for best effort sched
 
 ### Benchmark before enabling private key provider
 
-Ensure the cpu frequence governor set as `performance`.
+Ensure the cpu frequency governor set as `performance`.
 
 ```shell
 export NUM_CPUS=`lscpu | grep "^CPU(s):"|awk '{print $2}'`
