@@ -40,6 +40,15 @@ type ExtAuth struct {
 	// in HeadersToExtAuth or not.
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
+
+	// FailClosed is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
+	// If FailClosed is set to false, the system allows the traffic to pass through. Otherwise, if it is set to true or not set (defaulting to true),
+	// the system blocks the traffic and returns a HTTP 5xx error. This behavior signifies a secure-by-default approach,
+	// ensuring traffic is blocked when permissions cannot be confirmed by the External Authorization service.
+	//
+	// +optional
+	// +kubebuilder:default=true
+	FailClosed *bool `json:"failClosed,omitempty"`
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service
