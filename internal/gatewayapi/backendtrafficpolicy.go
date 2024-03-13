@@ -454,6 +454,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
+			// TODO: zhaohuabing group the features into a struct and check if all of them are set
 			if r.RateLimit != nil || r.LoadBalancer != nil ||
 				r.ProxyProtocol != nil || r.HealthCheck != nil ||
 				r.CircuitBreaker != nil || r.FaultInjection != nil ||

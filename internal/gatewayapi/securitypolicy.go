@@ -491,6 +491,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
+			// TODO: zhaohuabing group the features into a struct and check if all of them are set
 			if r.CORS != nil ||
 				r.JWT != nil ||
 				r.OIDC != nil ||
