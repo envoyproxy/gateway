@@ -36,6 +36,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/probs"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -54,7 +55,7 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, probs.NewXdsReadyHealthProb())
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1263,7 +1264,7 @@ func TestNamespacedProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, probs.NewXdsReadyHealthProb())
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1323,7 +1324,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, probs.NewXdsReadyHealthProb())
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
