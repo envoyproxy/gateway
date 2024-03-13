@@ -21,7 +21,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
-	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -48,26 +47,16 @@ func TestEGUpgrade(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	// The upgrade suite uses different base manifests and gateway class that allow running in isolation
-	// TODO: when all issues related to multiple GWC, GC and Policy reuse are fixed, merge back with main suite
 	cSuite := suite.New(suite.Options{
 		Client:               c,
-		GatewayClassName:     "upgrade",
-		BaseManifests:        "base/upgrade-manifests.yaml",
+		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &e2e.Manifests,
 		RunTest:              *flags.RunTest,
 	})
 
-	// make the minimal setup required, as we don't need to apply base conformance resources
-	cSuite.Applier.FS = cSuite.FS
-	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
-	cSuite.Applier.GatewayClass = cSuite.GatewayClassName
-
-	t.Logf("Test Setup: Applying base manifests")
-	cSuite.Applier.MustApplyWithCleanup(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.BaseManifests, cSuite.Cleanup)
-
+	cSuite.Setup(t)
 	t.Logf("Upgrade: Running tests")
 	cSuite.Run(t, []suite.ConformanceTest{tests.EnvoyShutdownTest, tests.EGUpgradeTest})
 }
