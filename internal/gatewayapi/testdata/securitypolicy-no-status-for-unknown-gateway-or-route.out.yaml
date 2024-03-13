@@ -12,7 +12,8 @@ securityPolicies:
       kind: HTTPRoute
       name: unknown-httproute
       namespace: envoy-gateway
-  status: {}
+  status:
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -25,5 +26,6 @@ securityPolicies:
       kind: Gateway
       name: unknown-gateway
       namespace: envoy-gateway
-  status: {}
+  status:
+    ancestors: null
 xdsIR: {}

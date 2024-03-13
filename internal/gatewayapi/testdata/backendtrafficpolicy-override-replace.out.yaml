@@ -1,3 +1,75 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-1
+    namespace: default
+  spec:
+    loadBalancer:
+      consistentHash:
+        type: SourceIP
+      type: ConsistentHash
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway-1
+    namespace: envoy-gateway
+  spec:
+    loadBalancer:
+      type: Random
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+    timeout:
+      http:
+        connectionIdleTimeout: 21s
+        maxConnectionDuration: 22s
+      tcp:
+        connectTimeout: 20s
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/httproute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -132,106 +204,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
-securityPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-route-1
-    namespace: default
-  spec:
-    cors:
-      allowHeaders:
-      - x-header-5
-      - x-header-6
-      allowMethods:
-      - GET
-      - POST
-      allowOrigins:
-      - https://*.test.com:8080
-      - https://www.test.org:8080
-      exposeHeaders:
-      - x-header-7
-      - x-header-8
-      maxAge: 33m20s
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-      namespace: default
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway-1
-    namespace: envoy-gateway
-  spec:
-    cors:
-      allowHeaders:
-      - x-header-1
-      - x-header-2
-      allowMethods:
-      - GET
-      - POST
-      allowOrigins:
-      - http://*.example.com
-      - http://foo.bar.com
-      - https://*
-      exposeHeaders:
-      - x-header-3
-      - x-header-4
-      maxAge: 16m40s
-    jwt:
-      providers:
-      - audiences:
-        - one.foo.com
-        claimToHeaders:
-        - claim: claim1
-          header: one-route-example-key
-        issuer: https://one.example.com
-        name: example1
-        remoteJWKS:
-          uri: https://one.example.com/jwt/public-key/jwks.json
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other securityPolicies for these
-          routes: [default/httproute-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -251,24 +223,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: https://.*\.test\.com:8080
-          - distinct: false
-            exact: https://www.test.org:8080
-            name: ""
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -280,6 +234,9 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        loadBalancer:
+          consistentHash:
+            sourceIP: true
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -288,27 +245,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-1
-          - x-header-2
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: http://.*\.example\.com
-          - distinct: false
-            exact: http://foo.bar.com
-            name: ""
-          - distinct: false
-            name: ""
-            safeRegex: https://.*
-          exposeHeaders:
-          - x-header-3
-          - x-header-4
-          maxAge: 16m40s
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -320,19 +256,16 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        jwt:
-          providers:
-          - audiences:
-            - one.foo.com
-            claimToHeaders:
-            - claim: claim1
-              header: one-route-example-key
-            issuer: https://one.example.com
-            name: example1
-            remoteJWKS:
-              uri: https://one.example.com/jwt/public-key/jwks.json
+        loadBalancer:
+          random: {}
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
+        timeout:
+          http:
+            connectionIdleTimeout: 21s
+            maxConnectionDuration: 22s
+          tcp:
+            connectTimeout: 20s

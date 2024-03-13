@@ -67,27 +67,24 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 }
 
 // SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
-func SecurityPolicyMustBeAccepted(
-	t *testing.T,
-	client client.Client,
-	securityPolicyName types.NamespacedName) {
+func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
-		securityPolicy := &egv1a1.SecurityPolicy{}
-		err := client.Get(ctx, securityPolicyName, securityPolicy)
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
 		if err != nil {
 			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
 		}
 
-		for _, condition := range securityPolicy.Status.Conditions {
-			if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
-				return true, nil
-			}
+		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			return true, nil
 		}
-		t.Logf("SecurityPolicy not yet accepted: %v", securityPolicy)
+
+		t.Logf("SecurityPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
+
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
@@ -103,15 +100,10 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
 		}
 
-		for _, ancestor := range policy.Status.Ancestors {
-			if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
-				for _, condition := range ancestor.Conditions {
-					if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
-						return true, nil
-					}
-				}
-			}
+		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			return true, nil
 		}
+
 		t.Logf("BackendTrafficPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
@@ -128,4 +120,17 @@ func AlmostEquals(actual, expect, offset int) bool {
 		return false
 	}
 	return true
+}
+
+func policyAcceptedByAncestor(ancestors []gwv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwv1a2.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
