@@ -140,7 +140,7 @@ changes:
       Fixed Use service port in alt-svc header if HTTP/3 is enabled
       Fixed Prevent policies targeting non-TLS listeners on the same port from conflicting
       Fixed Skip the ReasonTargetNotFound for all policies
-      Fixed Skip publishing empty status for all policies 
+      Fixed Skip publishing empty status for all policies
       Added Support for validating regex before sending to Envoy
       Added Support for setting spec.addresses.value into ClusterIP when Service Type is ClusterIP
       Added Unsupported status condition for filters within BackendRef
