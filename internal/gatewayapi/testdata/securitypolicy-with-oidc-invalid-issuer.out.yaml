@@ -77,13 +77,20 @@ securityPolicies:
       kind: Gateway
       name: gateway-1
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Error fetching endpoints from issuer: invalid character ''<'' looking
-        for beginning of value'
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: 'Error fetching endpoints from issuer: invalid character ''<'' looking
+          for beginning of value'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:
