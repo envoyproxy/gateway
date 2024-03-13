@@ -12,9 +12,13 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func init() {
@@ -31,7 +35,15 @@ var BasicAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+
 			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -62,7 +74,15 @@ var BasicAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+
 			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -90,7 +110,15 @@ var BasicAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+
 			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -121,7 +149,15 @@ var BasicAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-basic-auth-2", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-2", Namespace: ns})
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-2", Namespace: ns}, suite.ControllerName, ancestorRef)
+
 			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -153,7 +189,15 @@ var BasicAuthTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-with-basic-auth-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns})
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+
 			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
