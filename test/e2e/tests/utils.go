@@ -168,7 +168,7 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 		done <- true
 	}
 	done <- false
-}  
+}
 
 func policyAcceptedByAncestor(ancestors []gwv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwv1a2.ParentReference) bool {
 	for _, ancestor := range ancestors {

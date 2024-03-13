@@ -656,12 +656,12 @@ metadata:
 spec:
   gatewayClassName: upgrade
   listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http1
-      port: 80
-      protocol: HTTP
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    name: http1
+    port: 80
+    protocol: HTTP
 ---
 apiVersion: v1
 kind: Service
@@ -672,9 +672,9 @@ spec:
   selector:
     app: infra-backend
   ports:
-    - protocol: TCP
-      port: 8080
-      targetPort: 3000
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -694,20 +694,20 @@ spec:
         app: infra-backend
     spec:
       containers:
-        - name: infra-backend
-          # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: SERVICE_NAME
-              value: infra-backend
-          resources:
-            requests:
-              cpu: 10m
+      - name: infra-backend
+        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: infra-backend
+        resources:
+          requests:
+            cpu: 10m
