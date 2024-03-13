@@ -38,6 +38,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/probs"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
@@ -55,11 +56,12 @@ type gatewayAPIReconciler struct {
 	mergeGateways   sets.Set[string]
 	resources       *message.ProviderResources
 	extGVKs         []schema.GroupVersionKind
+	xdsReadyProb    probs.HealthProb
 }
 
 // newGatewayAPIController
 func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater,
-	resources *message.ProviderResources) error {
+	resources *message.ProviderResources, xdsReadyProb probs.HealthProb) error {
 	ctx := context.Background()
 
 	// Gather additional resources to watch from registered extensions
@@ -89,6 +91,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		store:           newProviderStore(),
 		envoyGateway:    cfg.EnvoyGateway,
 		mergeGateways:   sets.New[string](),
+		xdsReadyProb:    xdsReadyProb,
 	}
 
 	if byNamespaceSelector {
@@ -150,6 +153,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	if managedGCs == nil {
 		r.resources.GatewayAPIResources.Delete(string(r.classController))
 		r.log.Info("no accepted gatewayclass")
+		// assume xds has nothing to update
+		r.xdsReadyProb.SetIndicator(probs.NothingToReconcile)
 		return reconcile.Result{}, nil
 	}
 
@@ -900,6 +905,14 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1.Gat
 
 // watchResources watches gateway api resources.
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller) error {
+	if err := c.Watch(
+		// Trigger a complete reconciliation for empty or new clusters to initiate the XDS health prob,
+		// as without it, it's uncertain whether the initial reconciliation has been executed to commence.
+		// If leader election is disabled, this is invoked immediately.
+		NewWatchAndReconcileSource(mgr.Elected(), &gwapiv1.GatewayClass{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass)); err != nil {
+		return err
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),

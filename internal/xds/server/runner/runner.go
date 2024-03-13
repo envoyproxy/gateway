@@ -16,8 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"google.golang.org/grpc/keepalive"
-
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
@@ -28,10 +26,12 @@ import (
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/probs"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -53,9 +53,10 @@ const (
 
 type Config struct {
 	config.Server
-	Xds   *message.Xds
-	grpc  *grpc.Server
-	cache cache.SnapshotCacheWithCallbacks
+	Xds      *message.Xds
+	grpc     *grpc.Server
+	cache    cache.SnapshotCacheWithCallbacks
+	XdsReady probs.HealthProb
 }
 
 type Runner struct {
@@ -113,6 +114,7 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 		r.grpc.Stop()
 	}()
 
+	r.XdsReady.SetIndicator(probs.StartedXdsServer)
 	if err = r.grpc.Serve(l); err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds server")
 	}
@@ -155,6 +157,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				r.Logger.Error(err, "failed to generate a snapshot")
 				errChan <- err
 			}
+			// signal xds is ready, as we have a new snapshot.
+			r.XdsReady.SetIndicator(probs.GeneratedNewXdsSnapshot)
 		},
 	)
 
