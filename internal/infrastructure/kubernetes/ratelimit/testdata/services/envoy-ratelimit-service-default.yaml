@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: envoy-ratelimit
+    app.kubernetes.io/component: ratelimit
+    app.kubernetes.io/managed-by: envoy-gateway
+  name: envoy-ratelimit
+  namespace: envoy-gateway-system
+  ownerReferences:
+    - apiVersion: v1
+      kind: Service
+      name: envoy-gateway
+      uid: test-owner-reference-uid-for-service
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: http
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+    - name: metrics
+      port: 19001
+      protocol: TCP
+      targetPort: 19001
+  selector:
+    app.kubernetes.io/name: envoy-ratelimit
+    app.kubernetes.io/component: ratelimit
+    app.kubernetes.io/managed-by: envoy-gateway
