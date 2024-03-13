@@ -134,7 +134,14 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
+			err := validatePortOverlapForSecurityPolicyRoute(xdsIR, targetedRoute)
+			if err == nil {
+				err = t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
+			}
+			if err == nil {
+				err = t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
+			}
+
 			if err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
@@ -187,7 +194,15 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR); err != nil {
+			irKey := t.getIRKey(targetedGateway.Gateway)
+			// Should exist since we've validated this
+			xds := xdsIR[irKey]
+			err := validatePortOverlapForSecurityPolicyGateway(xds)
+			if err == nil {
+				err = t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR)
+			}
+
+			if err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
 					t.GatewayControllerName,
@@ -382,11 +397,29 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				// TODO zhaohuabing: extract a utils function to check if an HTTP
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
+					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
 					r.CORS = cors
 					r.JWT = jwt
 					r.OIDC = oidc
 					r.BasicAuth = basicAuth
 					r.ExtAuth = extAuth
+				}
+			}
+		}
+	}
+	return errs
+}
+
+func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext) error {
+	var errs error
+	prefix := irRoutePrefix(route)
+	for _, ir := range xds {
+		for _, http := range ir.HTTP {
+			for _, r := range http.Routes {
+				if strings.HasPrefix(r.Name, prefix) {
+					if sameListeners := listenersWithSameHTTPPort(ir, http); len(sameListeners) != 0 {
+						errs = errors.Join(errs, fmt.Errorf("affects multiple listeners: %s", strings.Join(sameListeners, ", ")))
+					}
 				}
 			}
 		}
@@ -483,6 +516,20 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 	return errs
+}
+
+func validatePortOverlapForSecurityPolicyGateway(xds *ir.Xds) error {
+	affectedListeners := []string{}
+	for _, http := range xds.HTTP {
+		if sameListeners := listenersWithSameHTTPPort(xds, http); len(sameListeners) != 0 {
+			affectedListeners = append(affectedListeners, sameListeners...)
+		}
+	}
+
+	if len(affectedListeners) > 0 {
+		return fmt.Errorf("affects multiple listeners: %s", strings.Join(affectedListeners, ", "))
+	}
+	return nil
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
