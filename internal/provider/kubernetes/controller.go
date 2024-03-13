@@ -847,7 +847,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.SecurityPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
 	}
 
