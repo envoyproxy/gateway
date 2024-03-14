@@ -98,7 +98,6 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-// TODO (sh2): make it generic for xPolicy
 func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
 	t.Helper()
 

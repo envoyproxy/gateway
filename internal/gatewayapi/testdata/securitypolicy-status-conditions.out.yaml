@@ -324,6 +324,20 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
+    name: target-unknown-httproute
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: unknown-httproute
+      namespace: envoy-gateway
+  status:
+    ancestors: null
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
@@ -379,6 +393,20 @@ securityPolicies:
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-unknown-gateway
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: unknown-gateway
+      namespace: envoy-gateway
+  status:
+    ancestors: null
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

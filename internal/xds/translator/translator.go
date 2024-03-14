@@ -98,6 +98,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	if err := processClusterForAccessLog(tCtx, ir.AccessLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
+
 	if err := processClusterForTracing(tCtx, ir.Tracing); err != nil {
 		errs = errors.Join(errs, err)
 	}
