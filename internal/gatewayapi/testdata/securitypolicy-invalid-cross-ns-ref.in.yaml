@@ -1,0 +1,42 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-gateway-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+    cors:
+      allowOrigins:
+      - "http://*.example.com"
+      - "http://foo.bar.com"
+      - "https://*"
+      allowMethods:
+      - GET
+      - POST
+      allowHeaders:
+      - "x-header-1"
+      - "x-header-2"
+      exposeHeaders:
+      - "x-header-3"
+      - "x-header-4"
+      maxAge: 1000s

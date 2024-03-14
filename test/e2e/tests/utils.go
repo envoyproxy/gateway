@@ -8,18 +8,27 @@ package tests
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"testing"
 	"time"
 
+	"fortio.org/fortio/fhttp"
+	"fortio.org/fortio/periodic"
+	flog "fortio.org/log"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -67,27 +76,24 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 }
 
 // SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
-func SecurityPolicyMustBeAccepted(
-	t *testing.T,
-	client client.Client,
-	securityPolicyName types.NamespacedName) {
+func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
-		securityPolicy := &egv1a1.SecurityPolicy{}
-		err := client.Get(ctx, securityPolicyName, securityPolicy)
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
 		if err != nil {
 			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
 		}
 
-		for _, condition := range securityPolicy.Status.Conditions {
-			if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
-				return true, nil
-			}
+		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			return true, nil
 		}
-		t.Logf("SecurityPolicy not yet accepted: %v", securityPolicy)
+
+		t.Logf("SecurityPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
+
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
@@ -103,15 +109,10 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
 		}
 
-		for _, ancestor := range policy.Status.Ancestors {
-			if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
-				for _, condition := range ancestor.Conditions {
-					if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
-						return true, nil
-					}
-				}
-			}
+		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			return true, nil
 		}
+
 		t.Logf("BackendTrafficPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
@@ -128,4 +129,56 @@ func AlmostEquals(actual, expect, offset int) bool {
 		return false
 	}
 	return true
+}
+
+// runs a load test with options described in opts
+// the done channel is used to notify caller of execution result
+// the execution may end due to an external abort or timeout
+func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
+	flog.SetLogLevel(flog.Error)
+	opts := fhttp.HTTPRunnerOptions{
+		RunnerOptions: periodic.RunnerOptions{
+			QPS: 5000,
+			// allow some overhead time for setting up workers and tearing down after restart
+			Duration:   timeoutConfig.CreateTimeout + timeoutConfig.CreateTimeout/2,
+			NumThreads: 50,
+			Stop:       aborter,
+			Out:        io.Discard,
+		},
+		HTTPOptions: fhttp.HTTPOptions{
+			URL: reqURL,
+		},
+	}
+
+	res, err := fhttp.RunHTTPTest(&opts)
+	if err != nil {
+		done <- false
+		t.Logf("failed to create load: %v", err)
+	}
+
+	// collect stats
+	okReq := res.RetCodes[200]
+	totalReq := res.DurationHistogram.Count
+	failedReq := totalReq - okReq
+	errorReq := res.ErrorsDurationHistogram.Count
+	timedOut := res.ActualDuration == opts.Duration
+	t.Logf("Load completed after %s with %d requests, %d success, %d failures and %d errors", res.ActualDuration, totalReq, okReq, failedReq, errorReq)
+
+	if okReq == totalReq && errorReq == 0 && !timedOut {
+		done <- true
+	}
+	done <- false
+}
+
+func policyAcceptedByAncestor(ancestors []gwv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwv1a2.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

@@ -10,11 +10,14 @@ package upgrade
 
 import (
 	"flag"
+
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
@@ -54,5 +57,6 @@ func TestEGUpgrade(t *testing.T) {
 	})
 
 	cSuite.Setup(t)
-	cSuite.Run(t, []suite.ConformanceTest{tests.EGUpgradeTest})
+	t.Logf("Upgrade: Running tests")
+	cSuite.Run(t, []suite.ConformanceTest{tests.EnvoyShutdownTest, tests.EGUpgradeTest})
 }
