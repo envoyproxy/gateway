@@ -30,7 +30,7 @@ type EnvoyExtensionPolicy struct {
 	Spec EnvoyExtensionPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyExtensionPolicy.
-	Status EnvoyExtensionPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.
@@ -60,17 +60,6 @@ type EnvoyExtensionPolicySpec struct {
 	//
 	// +optional
 	ExtProc *ExtProc `json:"extProc,omitempty"`
-}
-
-// EnvoyExtensionPolicyStatus defines the state of EnvoyExtensionPolicy
-type EnvoyExtensionPolicyStatus struct {
-	// Conditions describe the current conditions of the EnvoyExtensionPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -505,8 +505,6 @@ _Appears in:_
 | `extProc` | _[ExtProc](#extproc)_ |  false  | ExtProc defines the configuration for the external processor extension. |
 
 
-
-
 #### EnvoyFilterName
 
 _Underlying type:_ _string_

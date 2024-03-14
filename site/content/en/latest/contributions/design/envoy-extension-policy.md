@@ -120,7 +120,7 @@ Here is a list of features that can be included in this API
 * A user-defined extension that is added to the request processing flow can have a significant impact on security,
   resilience and performance of the proxy. Gateway Operators can restrict access to the extensibility policy using K8s RBAC. 
 * Extensibility will be disabled by default, and can be enabled using [Envoy Gateway][] API. 
-* Users may need to customize the order of extension and built-in filter. The [Envoy Proxy][] APIis extended to support user-defined ordering of filters by their type.
+* Users may need to customize the order of extension and built-in filters. This will be addressed in a separate issue.  
 * Gateway operators may need to include multiple extensions (e.g. WASM modules developed by different teams and distributed separately). 
   This API will support attachment of multiple policies. Extension will execute in an order defined by the priority field.
 * This API resource MUST be part of same namespace as the targetRef resource
