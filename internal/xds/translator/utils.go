@@ -111,7 +111,7 @@ func enableFilterOnRoute(route *routev3.Route, filterName string) error {
 
 // perRouteFilterName generates a unique filter name for the provided filterType and configName.
 func perRouteFilterName(filterType, configName string) string {
-	return fmt.Sprintf("%s_%s", filterType, configName)
+	return fmt.Sprintf("%s/%s", filterType, configName)
 }
 
 func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool {
