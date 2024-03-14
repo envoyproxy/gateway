@@ -1374,8 +1374,8 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.FailClosed != nil {
-		in, out := &in.FailClosed, &out.FailClosed
+	if in.FailOpen != nil {
+		in, out := &in.FailOpen, &out.FailOpen
 		*out = new(bool)
 		**out = **in
 	}
