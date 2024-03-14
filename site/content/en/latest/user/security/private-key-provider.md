@@ -10,7 +10,7 @@ Today, there are two private key providers implemented in Envoy as contrib exten
 
 Both of them are used to accelerate the TLS handshake through the hardware capabilities.
 
-This guide will walk you through the steps required to configure TLS Termination mode for TCP traffic while also using the Envoy Private Key Provider to accelerate the TLS handshake on Intel SPR/EMR Xeon server platforms.
+This guide will walk you through the steps required to configure TLS Termination mode for TCP traffic while also using the Envoy Private Key Provider to accelerate the TLS handshake by leveraging QAT and the HW accelerator available on Intel SPR/EMR Xeon server platforms.
 
 ## Prerequisites
 
