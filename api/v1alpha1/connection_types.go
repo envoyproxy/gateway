@@ -16,7 +16,7 @@ type Connection struct {
 }
 
 type ConnectionLimit struct {
-	// Value is the maximum concurrent connections limit.
+	// Value of the maximum concurrent connections limit.
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
 	// Default: unlimited.
 	//
@@ -25,7 +25,7 @@ type ConnectionLimit struct {
 	Value *int64 `json:"value,omitempty"`
 
 	// CloseDelay defines the delay to use before closing connections that are rejected
-	// because of of the Value limit.
+	// once the limit value is reached.
 	// Default: none.
 	//
 	// +optional
