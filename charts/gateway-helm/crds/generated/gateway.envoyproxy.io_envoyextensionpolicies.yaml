@@ -1,0 +1,405 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: envoyextensionpolicies.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    kind: EnvoyExtensionPolicy
+    listKind: EnvoyExtensionPolicyList
+    plural: envoyextensionpolicies
+    shortNames:
+    - eep
+    singular: envoyextensionpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: EnvoyExtensionPolicy allows the user to configure various envoy
+          extensibility options for the Gateway.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of EnvoyExtensionPolicy.
+            properties:
+              extProc:
+                description: ExtProc defines the configuration for the external processor
+                  extension.
+                properties:
+                  attributes:
+                    description: 'Attributes defines which envoy request and response
+                      attributes are provided as context to external processor Default:
+                      no attributes are sent'
+                    properties:
+                      request:
+                        description: defines attributes to send for Request processing
+                        items:
+                          type: string
+                        type: array
+                      response:
+                        description: defines attributes to send for Response processing
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  messageTimeout:
+                    description: 'The timeout for a response to be returned from the
+                      external processor Default: 200ms'
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  metadataOptions:
+                    description: 'MetadataOptions defines options related to the sending
+                      and receiving of dynamic metadata Default: no metadata context
+                      is sent or received'
+                    properties:
+                      forwardingNamespaces:
+                        description: metadata namespaces forwarded to external processor
+                        items:
+                          description: MetadataNamespaces defines metadata namespaces
+                            that can be used to forward or receive dynamic metadata
+                          properties:
+                            typed:
+                              description: Specifies a list of metadata namespaces
+                                whose values, if present, will be passed to the ext_proc
+                                service as a protobuf::Any.
+                              items:
+                                type: string
+                              type: array
+                            untyped:
+                              description: Specifies a list of metadata namespaces
+                                whose values, if present, will be passed to the ext_proc
+                                service as an opaque protobuf::Struct.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        type: array
+                      receivingNamespaces:
+                        description: metadata namespaces updatable by external processor
+                        items:
+                          description: MetadataNamespaces defines metadata namespaces
+                            that can be used to forward or receive dynamic metadata
+                          properties:
+                            typed:
+                              description: Specifies a list of metadata namespaces
+                                whose values, if present, will be passed to the ext_proc
+                                service as a protobuf::Any.
+                              items:
+                                type: string
+                              type: array
+                            untyped:
+                              description: Specifies a list of metadata namespaces
+                                whose values, if present, will be passed to the ext_proc
+                                service as an opaque protobuf::Struct.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        type: array
+                    type: object
+                  processingMode:
+                    description: 'ProcessingMode defines how request and response
+                      headers and body are processed Default: request and response
+                      headers are sent, bodies are not sent'
+                    properties:
+                      request:
+                        description: Defines header and body treatment for requests
+                        properties:
+                          body:
+                            default: None
+                            description: Defines body processing mode
+                            enum:
+                            - None
+                            - Streamed
+                            - Buffered
+                            - BufferedPartial
+                            type: string
+                          header:
+                            default: Send
+                            description: Defines header processing mode
+                            enum:
+                            - Default
+                            - Send
+                            - Skip
+                            type: string
+                        type: object
+                      response:
+                        description: Defines header and body treatment for responses
+                        properties:
+                          body:
+                            default: None
+                            description: Defines body processing mode
+                            enum:
+                            - None
+                            - Streamed
+                            - Buffered
+                            - BufferedPartial
+                            type: string
+                          header:
+                            default: Send
+                            description: Defines header processing mode
+                            enum:
+                            - Default
+                            - Send
+                            - Skip
+                            type: string
+                        type: object
+                    type: object
+                  service:
+                    description: Service defines the configuration of the external
+                      processing service
+                    properties:
+                      backendRef:
+                        description: BackendObjectReference references a Kubernetes
+                          object that represents the backend server to which the processing
+                          requests will be sent. Only service Kind is supported for
+                          now.
+                        properties:
+                          group:
+                            default: ""
+                            description: Group is the group of the referent. For example,
+                              "gateway.networking.k8s.io". When unspecified or empty
+                              string, core API group is inferred.
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            default: Service
+                            description: "Kind is the Kubernetes resource kind of
+                              the referent. For example \"Service\". \n Defaults to
+                              \"Service\" when not specified. \n ExternalName services
+                              can refer to CNAME DNS records that may live outside
+                              of the cluster and as such are difficult to reason about
+                              in terms of conformance. They also may not be safe to
+                              forward to (see CVE-2021-25740 for more information).
+                              Implementations SHOULD NOT support ExternalName Services.
+                              \n Support: Core (Services with a type other than ExternalName)
+                              \n Support: Implementation-specific (Services with type
+                              ExternalName)"
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            description: Name is the name of the referent.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            description: "Namespace is the namespace of the backend.
+                              When unspecified, the local namespace is inferred. \n
+                              Note that when a namespace different than the local
+                              namespace is specified, a ReferenceGrant object is required
+                              in the referent namespace to allow that namespace's
+                              owner to accept the reference. See the ReferenceGrant
+                              documentation for details. \n Support: Core"
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                          port:
+                            description: Port specifies the destination port number
+                              to use for this resource. Port is required when the
+                              referent is a Kubernetes Service. In this case, the
+                              port number is the service port number, not the target
+                              port. For other resources, destination port might be
+                              derived from the referent resource or this field.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        required:
+                        - name
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Must have port for Service reference
+                          rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                            ? has(self.port) : true'
+                    required:
+                    - backendRef
+                    type: object
+                required:
+                - service
+                type: object
+                x-kubernetes-validations:
+                - message: group is invalid, only the core API group (specified by
+                    omitting the group field or setting it to an empty string) is
+                    supported
+                  rule: 'has(self.service) ? (!has(self.service.backendRef.group)
+                    || self.service.backendRef.group == "") : true'
+                - message: kind is invalid, only Service (specified by omitting the
+                    kind field or setting it to 'Service') is supported
+                  rule: 'has(self.service) ? (!has(self.service.backendRef.kind) ||
+                    self.service.backendRef.kind == ''Service'') : true'
+              priority:
+                description: Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices
+                  are applied to the same TargetRef, extensions will execute in the
+                  ascending order of the priority i.e. int32.min has the highest priority
+                  and int32.max has the lowest priority. Defaults to 0.
+                format: int32
+                type: integer
+              targetRef:
+                description: TargetRef is the name of the Gateway resource this policy
+                  is being attached to. This Policy and the TargetRef MUST be in the
+                  same namespace for this Policy to have effect and be applied to
+                  the Gateway. TargetRef
+                properties:
+                  group:
+                    description: Group is the group of the target resource.
+                    maxLength: 253
+                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  kind:
+                    description: Kind is kind of the target resource.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                    type: string
+                  name:
+                    description: Name is the name of the target resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the referent. When
+                      unspecified, the local namespace is inferred. Even when policy
+                      targets a resource in a different namespace, it MUST only apply
+                      to traffic originating from the same namespace as the policy.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                  sectionName:
+                    description: "SectionName is the name of a section within the
+                      target resource. When unspecified, this targetRef targets the
+                      entire resource. In the following resources, SectionName is
+                      interpreted as the following: \n * Gateway: Listener Name *
+                      Service: Port Name \n If a SectionName is specified, but does
+                      not exist on the targeted object, the Policy must fail to attach,
+                      and the policy implementation should record a `ResolvedRefs`
+                      or similar Condition in the Policy's status."
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                required:
+                - group
+                - kind
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+                  rule: self.group == 'gateway.networking.k8s.io'
+                - message: this policy can only have a targetRef.kind of Gateway
+                  rule: self.kind in ['Gateway']
+                - message: this policy does not yet support the sectionName field
+                  rule: '!has(self.sectionName)'
+            required:
+            - targetRef
+            type: object
+          status:
+            description: Status defines the current status of EnvoyExtensionPolicy.
+            properties:
+              conditions:
+                description: Conditions describe the current conditions of the EnvoyExtensionPolicy.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
