@@ -22,16 +22,16 @@ func newInstallCommand() *cobra.Command {
 		Short: "install envoy gateway",
 		Long:  installDescription(),
 		Example: `  # Installed by default, this will install CRDs resources as well as envoy gateway instance resources
-  egctl install
+  egctl x install
 
   # Install envoy gateway instance resources only, skip installing CRDs
-  egctl install --skip-crd
+  egctl x install --skip-crd
 
   # Specify the envoy gateway version and enable debug logging
-  egctl install --version v0.6.0 --debug
+  egctl x install --version v0.6.0 --debug
 
   # Override the default values of the envoy gateway chart and install CRDs only
-  egctl install --set config.envoyGateway.logging.level.default=info --only-crd
+  egctl x install --set config.envoyGateway.logging.level.default=info --only-crd
 `,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return pt.Setup()

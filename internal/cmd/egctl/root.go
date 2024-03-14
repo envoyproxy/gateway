@@ -20,8 +20,6 @@ func GetRootCommand() *cobra.Command {
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newExperimentalCommand())
 	rootCmd.AddCommand(newConfigCommand())
-	rootCmd.AddCommand(newInstallCommand())
-	rootCmd.AddCommand(newUnInstallCommand())
 
 	return rootCmd
 }

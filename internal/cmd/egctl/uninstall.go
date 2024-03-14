@@ -22,13 +22,13 @@ func newUnInstallCommand() *cobra.Command {
 		Short: "uninstall envoy gateway",
 		Long:  uninstallDescription(),
 		Example: `  # Uninstall envoy gateway by default, this only offloads envoy gateway instance resources
-  egctl uninstall
+  egctl x uninstall
 
   # uninstall all envoy gateway resources, this includes CRDs
-  egctl uninstall --with-crd
+  egctl x uninstall --with-crd
 
   # Uninstall the envoy gateway with the specified release-name
-  egctl uninstall --release-name eg
+  egctl x uninstall --release-name eg
 `,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return pt.Setup()
