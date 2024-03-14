@@ -378,6 +378,9 @@ func TestTranslateXdsNegative(t *testing.T) {
 			name: "jsonpatch-invalid",
 		},
 		{
+			name: "jsonpatch-invalid-listener",
+		},
+		{
 			name: "accesslog-invalid",
 		},
 		{
