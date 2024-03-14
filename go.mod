@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	fortio.org/fortio v1.63.4
+	fortio.org/log v1.12.0
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.12.0
@@ -53,7 +54,6 @@ require (
 
 require (
 	fortio.org/dflag v1.7.0 // indirect
-	fortio.org/log v1.12.0 // indirect
 	fortio.org/sets v1.0.3 // indirect
 	fortio.org/struct2env v0.4.0 // indirect
 	fortio.org/version v1.0.3 // indirect
