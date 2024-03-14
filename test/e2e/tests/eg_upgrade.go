@@ -24,6 +24,10 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
+func init() {
+	UpgradeTests = append(UpgradeTests, EGUpgradeTest)
+}
+
 var EGUpgradeTest = suite.ConformanceTest{
 	ShortName:   "EGUpgrade",
 	Description: "Upgrading from the last eg version should not lead to failures",

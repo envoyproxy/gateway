@@ -21,10 +21,11 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/test/e2e"
 	"github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
-func TestE2E(t *testing.T) {
+func TestMergeGateways(t *testing.T) {
 	flag.Parse()
 
 	cfg, err := config.GetConfig()
@@ -49,11 +50,11 @@ func TestE2E(t *testing.T) {
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		FS:                   &Manifests,
+		FS:                   &e2e.Manifests,
 		RunTest:              *flags.RunTest,
 	})
 
 	cSuite.Setup(t)
-	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
-	cSuite.Run(t, tests.ConformanceTests)
+	t.Logf("Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
+	cSuite.Run(t, tests.MergeGatewaysTests)
 }
