@@ -146,4 +146,3 @@ Here is a list of features that can be included in this API
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Gateway API Route Filters]: https://gateway-api.sigs.k8s.io/api-types/httproute/#filters-optional
 [Envoy Gateway]: ../../api/extension_types/#envoygateway
-[Envoy Proxy]: ../../api/extension_types/#envoyproxy
