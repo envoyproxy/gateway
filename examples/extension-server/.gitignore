@@ -1,0 +1,21 @@
+# Binaries
+*.exe
+*.exe~
+*.so
+
+# output from `go test -c`
+*.test
+
+# Dependencies
+vendor/
+
+# build output
+bin/
+dist/
+
+# Temporary Dockerfile for buildx
+Dockerfile.cross
+
+# vscode and local test environment files
+.env
+.vscode

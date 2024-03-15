@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+before:
+  hooks:
+    - make generate
+
+builds:
+  - id: extension-service
+    main: ./cmd/extension-service
+    no_unique_dist_dir: true
+    binary: ./{{ .Os }}/{{ .Arch }}/extension-service
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -X "github.com/exampleorg/envoygateway-extension/internal/buildflags.version={{.Version}}"
+      - -X "github.com/exampleorg/envoygateway-extension/internal/buildflags.os={{.Os }}"
+      - -X "github.com/exampleorg/envoygateway-extension/internal/buildflags.arch={{.Arch}}"
+
+archives:
+  - format: binary
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incminor .Version }}-dev"
+
+# TODO: replace this with your github repo if you want goreleaser to create releases for you on the repo
+release:
+  github:
+    owner: exampleorg
+    name: envoygateway-extension
+  prerelease: auto # This makes it so that RC and dev tags are marked as pre-release
+  mode: append
+  skip_upload: true
