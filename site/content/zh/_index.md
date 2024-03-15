@@ -9,12 +9,12 @@ title: Envoy Gateway
 <a class="btn btn-lg btn-secondary me-3 mb-4" href="/v0.6.0/contributions">
   参与贡献 <i class="fa fa-heartbeat ms-2 "></i>
 </a>
-<p class="lead mt-5">将 Envoy 代理作为独立或基于 Kubernetes 的应用程序网关进行管理</p>
+<p class="lead mt-5">将 Envoy 代理作为独立或基于 Kubernetes 的 API 网关进行管理</p>
 {{< blocks/link-down color="white" >}}
 {{< /blocks/cover >}}
 
 {{% blocks/lead color="black" %}}
-将 **Envoy 代理**作为**独立**或**基于 Kubernetes 的**应用程序网关进行管理。
+将 **Envoy 代理**作为**独立**或**基于 Kubernetes 的** API 网关进行管理。
 
 **Gateway API** 用于**动态**提供和配置托管 Envoy 代理。
 {{% /blocks/lead %}}

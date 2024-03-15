@@ -9,7 +9,7 @@ type = "docs"
 
 {{% alert title="记录" color="primary" %}}
 
-该项目正在**积极**开发中。很多功能并不完整 我们希望您[参与其中](/zh/contributions/)！
+该项目正在**积极**开发中，很多功能尚待补充，我们希望您[参与其中](/zh/contributions/)！
 
 {{% /alert %}}
 
