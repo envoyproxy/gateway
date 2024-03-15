@@ -35,7 +35,7 @@ import (
 
 const (
 	helmOperateTimeout = time.Second * 300
-	egChartVersion     = "v0.0.0-latest"
+	egChartVersion     = "v1.0.0"
 	egReleaseName      = "envoy-gateway"
 )
 
@@ -199,7 +199,7 @@ func (ht *PackageTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
 // preventing the potential loss of crucial CR instances.
 func (ht *PackageTool) RunInstall(opts *PackageOptions) error {
 
-	if opts.Version == egChartVersion {
+	if opts.Version == "v0.0.0-latest" {
 		warningMarker := color.New(color.FgYellow).Add(color.Bold).Sprintf("WARNING")
 		ht.logger.Println(fmt.Sprintf("%s: Currently using the latest version of envoy gateway chart, it is recommended to use the fixed version",
 			warningMarker))
