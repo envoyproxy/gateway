@@ -444,6 +444,16 @@ type HTTPRoute struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+
+	BackendTrafficPolicy `json:",inline" yaml:",inline"`
+	SecurityPolicy       `json:",inline" yaml:",inline"`
+}
+
+// BackendTrafficPolicy holds the IR information associated with the Backend Traffic Policy.
+// +k8s:deepcopy-gen=true
+type BackendTrafficPolicy struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -455,8 +465,6 @@ type HTTPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Request and connection timeout settings
@@ -465,8 +473,54 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+}
 
-	SecurityPolicy `json:",inline" yaml:",inline"`
+// Any returns true if any of the features are already set.
+func (b *BackendTrafficPolicy) Any() bool {
+	return b.RateLimit != nil ||
+		b.LoadBalancer != nil ||
+		b.ProxyProtocol != nil ||
+		b.HealthCheck != nil ||
+		b.FaultInjection != nil ||
+		b.CircuitBreaker != nil ||
+		b.Timeout != nil ||
+		b.TCPKeepalive != nil ||
+		b.Retry != nil
+}
+
+// Set sets the features if they are unset.
+func (b *BackendTrafficPolicy) Set(btp *BackendTrafficPolicy) {
+	if btp == nil {
+		return
+	}
+
+	if b.RateLimit == nil {
+		b.RateLimit = btp.RateLimit
+	}
+	if b.LoadBalancer == nil {
+		b.LoadBalancer = btp.LoadBalancer
+	}
+	if b.ProxyProtocol == nil {
+		b.ProxyProtocol = btp.ProxyProtocol
+	}
+	if b.HealthCheck == nil {
+		b.HealthCheck = btp.HealthCheck
+	}
+	if b.CircuitBreaker == nil {
+		b.CircuitBreaker = btp.CircuitBreaker
+	}
+	if b.FaultInjection == nil {
+		b.FaultInjection = btp.FaultInjection
+	}
+	if b.TCPKeepalive == nil {
+		b.TCPKeepalive = btp.TCPKeepalive
+	}
+	if b.Retry == nil {
+		b.Retry = btp.Retry
+	}
+	if b.Timeout == nil {
+		b.Timeout = btp.Timeout
+	}
 }
 
 // SecurityPolicy holds the IR information associated with the Security Policy.
