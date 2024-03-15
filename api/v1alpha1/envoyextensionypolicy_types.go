@@ -55,11 +55,6 @@ type EnvoyExtensionPolicySpec struct {
 	//
 	// +optional
 	Priority int32 `json:"priority,omitempty"`
-
-	// ExtProc defines the configuration for the external processor extension.
-	//
-	// +optional
-	ExtProc *ExtProc `json:"extProc,omitempty"`
 }
 
 //+kubebuilder:object:root=true

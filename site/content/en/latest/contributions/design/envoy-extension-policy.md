@@ -75,7 +75,7 @@ metadata:
 spec:
   priority: 10
   extProc:
-    service:
+  - service:
       backendRef:
         group: ""
         kind: Service

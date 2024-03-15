@@ -81,27 +81,6 @@ spec:
                 items:
                   type: string
                 type: array
-              filterOrdering:
-                description: 'FilterOrdering defines the order of Envoy HTTP filter
-                  execution. If a partial filter list is provided, the default order
-                  will apply, and only the listed filters will be re-ordered amongst
-                  themselves. Default: CORS, External-Processing, WASM, External-Authorization,
-                  Basic-Authorization, OAuth2, JWT-Authentication, Fault-Injection,
-                  Local-Rate-Limit, Global-Rate-Limit'
-                items:
-                  description: EnvoyFilterName is the name of an Envoy HTTP filter
-                  enum:
-                  - CORS
-                  - External-Authorization
-                  - Basic-Authorization
-                  - OAuth2
-                  - JWT-Authentication
-                  - Fault-Injection
-                  - Fault-Injection
-                  - Local-Rate-Limit
-                  - Global-Rate-Limit
-                  type: string
-                type: array
               logging:
                 default:
                   level:

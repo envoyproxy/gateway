@@ -502,18 +502,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `priority` | _integer_ |  false  | Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices are applied to the same TargetRef, extensions will execute in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
-| `extProc` | _[ExtProc](#extproc)_ |  false  | ExtProc defines the configuration for the external processor extension. |
-
-
-#### EnvoyFilterName
-
-_Underlying type:_ _string_
-
-EnvoyFilterName is the name of an Envoy HTTP filter
-
-_Appears in:_
-- [EnvoyProxySpec](#envoyproxyspec)
-
 
 
 #### EnvoyGateway
@@ -939,7 +927,6 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrdering` | _[EnvoyFilterName](#envoyfiltername) array_ |  false  | FilterOrdering defines the order of Envoy HTTP filter execution. If a partial filter list is provided, the default order will apply, and only the listed filters will be re-ordered amongst themselves. Default: CORS, External-Processing, WASM, External-Authorization, Basic-Authorization, OAuth2, JWT-Authentication, Fault-Injection, Local-Rate-Limit, Global-Rate-Limit |
 
 
 
@@ -969,105 +956,6 @@ _Appears in:_
 | `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
-
-
-#### ExtProc
-
-
-
-ExtProc defines the configuration for External Processing.
-
-_Appears in:_
-- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `service` | _[ExtProcService](#extprocservice)_ |  true  | Service defines the configuration of the external processing service |
-| `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response headers and body are processed Default: request and response headers are sent, bodies are not sent |
-| `attributes` | _[ExtProcAttributes](#extprocattributes)_ |  false  | Attributes defines which envoy request and response attributes are provided as context to external processor Default: no attributes are sent |
-| `metadataOptions` | _[ExtProcMetadataOptions](#extprocmetadataoptions)_ |  false  | MetadataOptions defines options related to the sending and receiving of dynamic metadata Default: no metadata context is sent or received |
-| `messageTimeout` | _[Duration](#duration)_ |  false  | The timeout for a response to be returned from the external processor Default: 200ms |
-
-
-#### ExtProcAttributes
-
-
-
-ExtProcAttributes defines which attributes are
-
-_Appears in:_
-- [ExtProc](#extproc)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `request` | _string array_ |  false  | defines attributes to send for Request processing |
-| `response` | _string array_ |  false  | defines attributes to send for Response processing |
-
-
-#### ExtProcBodyProcessingMode
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [ProcessingModeOptions](#processingmodeoptions)
-
-
-
-#### ExtProcHeaderProcessingMode
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [ProcessingModeOptions](#processingmodeoptions)
-
-
-
-#### ExtProcMetadataOptions
-
-
-
-ExtProcMetadataOptions defines options related to the sending and receiving of dynamic metadata
-
-_Appears in:_
-- [ExtProc](#extproc)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `forwardingNamespaces` | _[MetadataNamespaces](#metadatanamespaces) array_ |  false  | metadata namespaces forwarded to external processor |
-| `receivingNamespaces` | _[MetadataNamespaces](#metadatanamespaces) array_ |  false  | metadata namespaces updatable by external processor |
-
-
-#### ExtProcProcessingMode
-
-
-
-ExtProcProcessingMode defines if and how headers and bodies are sent to the service. https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-processingmode
-
-_Appears in:_
-- [ExtProc](#extproc)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `request` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines header and body treatment for requests |
-| `response` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines header and body treatment for responses |
-
-
-#### ExtProcService
-
-
-
-ExtProcService defines the gRPC External Processing service using the envoy grpc client The processing request and response messages are defined in https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/ext_proc/v3/external_processor.proto
-
-_Appears in:_
-- [ExtProc](#extproc)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendObjectReference references a Kubernetes object that represents the backend server to which the processing requests will be sent. Only service Kind is supported for now. |
 
 
 #### ExtensionAPISettings
@@ -1760,21 +1648,6 @@ _Appears in:_
 
 
 
-#### MetadataNamespaces
-
-
-
-MetadataNamespaces defines metadata namespaces that can be used to forward or receive dynamic metadata
-
-_Appears in:_
-- [ExtProcMetadataOptions](#extprocmetadataoptions)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `untyped` | _string array_ |  false  | Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service as an opaque protobuf::Struct. |
-| `typed` | _string array_ |  false  | Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service as a protobuf::Any. |
-
-
 #### MetricSinkType
 
 _Underlying type:_ _string_
@@ -1909,21 +1782,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout is the timeout per retry attempt. |
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential back-off algorithm for retries. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
-
-
-#### ProcessingModeOptions
-
-
-
-
-
-_Appears in:_
-- [ExtProcProcessingMode](#extprocprocessingmode)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `header` | _[ExtProcHeaderProcessingMode](#extprocheaderprocessingmode)_ |  false  | Defines header processing mode |
-| `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
 
 
 #### ProviderType

@@ -14,24 +14,6 @@ const (
 	KindEnvoyProxy = "EnvoyProxy"
 )
 
-// +kubebuilder:validation:Enum=CORS;External-Authorization;Basic-Authorization;OAuth2;JWT-Authentication;Fault-Injection;Fault-Injection;Local-Rate-Limit;Global-Rate-Limit
-//
-// EnvoyFilterName is the name of an Envoy HTTP filter
-type EnvoyFilterName string
-
-const (
-	CORSFilterName            EnvoyFilterName = "CORS"
-	ExtAuthFilterName         EnvoyFilterName = "External-Authorization"
-	BasicAuthFilterName       EnvoyFilterName = "Basic-Authorization"
-	OAuth2FilterName          EnvoyFilterName = "OAuth2"
-	JWTAuthnOAuth2FilterName  EnvoyFilterName = "JWT-Authentication"
-	FaultInjectionFilterName  EnvoyFilterName = "Fault-Injection"
-	LocalRateLimitFilterName  EnvoyFilterName = "Local-Rate-Limit"
-	GlobalRateLimitFilterName EnvoyFilterName = "Global-Rate-Limit"
-	ExtProcFilterName         EnvoyFilterName = "External-Processing"
-	WASMFilterName            EnvoyFilterName = "WASM"
-)
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=eproxy
 // +kubebuilder:subresource:status
@@ -104,14 +86,6 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
-
-	// FilterOrdering defines the order of Envoy HTTP filter execution. If a partial filter list is provided, the default
-	// order will apply, and only the listed filters will be re-ordered amongst themselves.
-	// Default: CORS, External-Processing, WASM, External-Authorization, Basic-Authorization, OAuth2, JWT-Authentication,
-	// Fault-Injection, Local-Rate-Limit, Global-Rate-Limit
-	//
-	// +optional
-	FilterOrdering []EnvoyFilterName `json:"filterOrdering,omitempty"`
 }
 
 type ProxyTelemetry struct {
