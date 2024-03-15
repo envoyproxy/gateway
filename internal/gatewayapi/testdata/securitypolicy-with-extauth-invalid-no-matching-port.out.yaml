@@ -117,12 +117,19 @@ securityPolicies:
       name: gateway-1
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: TCP Port 80 not found on service default/http-backend
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: TCP Port 80 not found on service default/http-backend
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:

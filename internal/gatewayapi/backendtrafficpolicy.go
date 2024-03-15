@@ -28,22 +28,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
-type policyTargetRouteKey struct {
-	Kind      string
-	Namespace string
-	Name      string
-}
-
-type policyRouteTargetContext struct {
-	RouteContext
-	attached bool
-}
-
-type policyGatewayTargetContext struct {
-	*GatewayContext
-	attached bool
-}
-
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
@@ -448,7 +432,21 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
+
+		// A Policy targeting the most specific scope(xRoute) wins over a policy
+		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
+			// If any of the features are already set, it means that a more specific
+			// policy(targeting xRoute) has already set it, so we skip it.
+			// TODO: zhaohuabing group the features into a struct and check if all of them are set
+			if r.RateLimit != nil || r.LoadBalancer != nil ||
+				r.ProxyProtocol != nil || r.HealthCheck != nil ||
+				r.CircuitBreaker != nil || r.FaultInjection != nil ||
+				r.TCPKeepalive != nil || r.Retry != nil ||
+				r.Timeout != nil {
+				continue
+			}
+
 			// Apply if not already set
 			if r.RateLimit == nil {
 				r.RateLimit = rl

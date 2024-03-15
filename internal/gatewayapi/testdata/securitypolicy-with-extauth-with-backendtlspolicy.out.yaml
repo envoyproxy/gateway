@@ -220,12 +220,20 @@ securityPolicies:
       name: httproute-1
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -249,18 +257,25 @@ securityPolicies:
       name: gateway-1
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-    - lastTransitionTime: null
-      message: 'This policy is being overridden by other securityPolicies for these
-        routes: [default/httproute-1]'
-      reason: Overridden
-      status: "True"
-      type: Overridden
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [default/httproute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:
