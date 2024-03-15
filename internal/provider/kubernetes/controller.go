@@ -785,7 +785,7 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 
 		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 	}
