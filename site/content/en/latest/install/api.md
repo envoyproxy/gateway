@@ -50,7 +50,9 @@ The Helm chart for Envoy Gateway
 | deployment.ports[1].name | string | `"ratelimit"` |  |
 | deployment.ports[1].port | int | `18001` |  |
 | deployment.ports[1].targetPort | int | `18001` |  |
+| deployment.ports[2].name | string | `"metrics"` |  |
+| deployment.ports[2].port | int | `19001` |  |
+| deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
-| envoyGatewayMetricsService.port | int | `19001` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 
