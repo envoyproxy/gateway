@@ -59,13 +59,12 @@ id = "UA-00000000-0"
 
 [languages]
   [languages.en]
-    contentDir = "content/en"
-    languageName = "English"
+    languageName ="English"
     # Weight used for sorting.
     weight = 1
   [languages.en.params]
     title = "Envoy Gateway"
-    description = "Manages Envoy Proxy as a Standalone or Kubernetes-based Application Gateway"
+    description = "Manages Envoy Proxy as a Standalone or Kubernetes-based API Gateway"
 
   [languages.zh]
     contentDir = "content/zh"
@@ -74,7 +73,7 @@ id = "UA-00000000-0"
     weight = 2
   [languages.zh.params]
     title = "Envoy Gateway"
-    description = "将 Envoy 代理作为独立或基于 Kubernetes 的应用程序网关进行管理"
+    description = "将 Envoy 代理作为独立或基于 Kubernetes 的 API 网关进行管理"
 
 [markup]
   [markup.goldmark]
