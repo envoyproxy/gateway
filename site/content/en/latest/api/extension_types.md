@@ -800,8 +800,6 @@ _Appears in:_
 | `priority` | _integer_ |  true  | Priority of the EnvoyPatchPolicy. If multiple EnvoyPatchPolicies are applied to the same TargetRef, they will be applied in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
 
 
-
-
 #### EnvoyPatchType
 
 _Underlying type:_ _string_

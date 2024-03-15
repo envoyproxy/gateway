@@ -277,12 +277,12 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	if irListener.TLS != nil {
 		var tSocket *corev3.TransportSocket
 		if http3Listener {
-			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS, http3Listener)
+			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
 			if err != nil {
 				return err
 			}
 		} else {
-			tSocket, err = buildXdsDownstreamTLSSocket(irListener.TLS, http3Listener)
+			tSocket, err = buildXdsDownstreamTLSSocket(irListener.TLS)
 			if err != nil {
 				return err
 			}
@@ -388,7 +388,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 	}
 
 	if isTLSTerminate {
-		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS.Terminate, false)
+		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS.Terminate)
 		if err != nil {
 			return err
 		}
@@ -427,12 +427,12 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	return nil
 }
 
-func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig, http3Listener bool) (*corev3.TransportSocket, error) {
+func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &quicv3.QuicDownstreamTransport{
 		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
 				TlsParams:     buildTLSParams(tlsConfig),
-				AlpnProtocols: buildALPNProtocols(tlsConfig.ALPNProtocols, http3Listener),
+				AlpnProtocols: []string{"h3"},
 			},
 		},
 	}
@@ -468,11 +468,11 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig, http3Listener b
 	}, nil
 }
 
-func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig, http3Listener bool) (*corev3.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsParams:                      buildTLSParams(tlsConfig),
-			AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols, http3Listener),
+			AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols),
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
 	}
@@ -551,12 +551,9 @@ func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 	return tlsv3.TlsParameters_TLS_AUTO
 }
 
-func buildALPNProtocols(alpn []string, http3Listener bool) []string {
+func buildALPNProtocols(alpn []string) []string {
 	if len(alpn) == 0 {
 		out := []string{"h2", "http/1.1"}
-		if http3Listener {
-			out = append(out, "h3")
-		}
 		return out
 	}
 	return alpn
