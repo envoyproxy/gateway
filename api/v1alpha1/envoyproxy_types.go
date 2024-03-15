@@ -134,20 +134,6 @@ type ShutdownConfig struct {
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
 }
 
-// FilterOrdering defines the ordering of well-known.
-type FilterOrdering struct {
-	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
-	// If unspecified, defaults to 600 seconds.
-	//
-	// +optional
-	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
-	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
-	// If unspecified, defaults to 5 seconds.
-	//
-	// +optional
-	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
-}
-
 // EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource
 // provider.
 type EnvoyProxyKubernetesProvider struct {

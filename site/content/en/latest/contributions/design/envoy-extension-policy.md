@@ -7,6 +7,14 @@ title: "EnvoyExtensionPolicy "
 This design document introduces the `EnvoyExtensionPolicy` API allowing system administrators to configure traffic
 processing extensibility policies, based on existing Network and HTTP Envoy proxy [extension points][].
 
+Envoy Gateway already provides two methods of control plane extensibility that can be used to achieve this functionality:
+* [Envoy Patch Policy][] can be used to patch Listener filters and HTTP Connection Manager filters. 
+* [Envoy Extension Manager][] can be used to programmatically mutate Listener filters and HTTP Connection Manager filters.
+
+These approaches require a high level of Envoy and Envoy Gateway expertise and may create a significant operational 
+burden for users (see [Alternatives][] for more details). For this reason, this document proposes to support Envoy 
+data plane extensibility options as first class citizens of Envoy Gateway. 
+
 ## Goals
 * Add an API definition to hold settings for configuring extensibility rules on the traffic entering the gateway.
 
@@ -140,9 +148,18 @@ Here is a list of features that can be included in this API
 * The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
 * The project can implement support for HTTP traffic extensions using vendor-specific [Gateway API Route Filters][]
   instead of policies. However, this option will is less convenient for definition of gateway-level extensions.
-
+* Users can leverage the existing [Envoy Patch Policy][] to inject extension filters. However, Envoy Gateway strives 
+  to provide a simple abstraction for common use cases and easy operations. Envoy patches require a high level of 
+  end-user Envoy expertise, and knowledge of how Envoy Gateway generates XDS. Such patches may be too difficult 
+  and fragile for some users to maintain. 
+* Users can leverage the existing [Envoy Extension Manager][] to inject extension filters. However, this requires a
+  significant investment by users to build and operate an extension manager alongside Envoy Gateway.
+  
 [extension points]: https://www.envoyproxy.io/docs/envoy/latest/extending/extending
 [Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Gateway API Route Filters]: https://gateway-api.sigs.k8s.io/api-types/httproute/#filters-optional
 [Envoy Gateway]: ../../api/extension_types/#envoygateway
+[Envoy Patch Policy]: ../../api/extension_types/#envoypatchpolicy
+[Envoy Extension Manager]: ../extending-envoy-gateway.md
+[Alternatives]: #Alternatives

@@ -1125,8 +1125,6 @@ _Appears in:_
 | `path` | _string_ |  true  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
-
-
 #### GRPCExtAuthService
 
 
