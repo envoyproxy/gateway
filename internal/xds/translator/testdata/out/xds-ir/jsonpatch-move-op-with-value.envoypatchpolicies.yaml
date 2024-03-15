@@ -9,7 +9,7 @@
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: The value field can not be set for the remove operation
+        message: The value field can not be set for the remove operation.
         reason: Invalid
         status: "False"
         type: Programmed

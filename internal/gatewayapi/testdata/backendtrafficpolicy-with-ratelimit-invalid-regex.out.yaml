@@ -35,7 +35,7 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: 'RateLimit: regex "*.illegal.regex" is invalid: error parsing regexp:
-          missing argument to repetition operator: `*`'
+          missing argument to repetition operator: `*`.'
         reason: Invalid
         status: "False"
         type: Accepted

@@ -85,8 +85,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Error fetching endpoints from issuer: invalid character ''<'' looking
-          for beginning of value'
+        message: 'OIDC: error fetching endpoints from issuer: invalid character ''<''
+          looking for beginning of value.'
         reason: Invalid
         status: "False"
         type: Accepted

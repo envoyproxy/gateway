@@ -449,18 +449,8 @@ type HTTPRoute struct {
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
-	// CORS policy for the route.
-	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
-	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
-	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
-	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
-	// BasicAuth defines the schema for the HTTP Basic Authentication.
-	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
-	// ExtAuth defines the schema for the external authorization.
-	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
@@ -475,6 +465,55 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+
+	SecurityPolicy `json:",inline" yaml:",inline"`
+}
+
+// SecurityPolicy holds the IR information associated with the Security Policy.
+// +k8s:deepcopy-gen=true
+type SecurityPolicy struct {
+	// CORS policy for the route.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
+	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
+	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// BasicAuth defines the schema for the HTTP Basic Authentication.
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	// ExtAuth defines the schema for the external authorization.
+	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
+}
+
+// Any returns true if any of the features are already set.
+func (s *SecurityPolicy) Any() bool {
+	return s.CORS != nil ||
+		s.JWT != nil ||
+		s.OIDC != nil ||
+		s.BasicAuth != nil ||
+		s.ExtAuth != nil
+}
+
+// Set sets the features if they are unset.
+func (s *SecurityPolicy) Set(sp *SecurityPolicy) {
+	if sp == nil {
+		return
+	}
+
+	if s.CORS == nil {
+		s.CORS = sp.CORS
+	}
+	if s.JWT == nil {
+		s.JWT = sp.JWT
+	}
+	if s.OIDC == nil {
+		s.OIDC = sp.OIDC
+	}
+	if s.BasicAuth == nil {
+		s.BasicAuth = sp.BasicAuth
+	}
+	if s.ExtAuth == nil {
+		s.ExtAuth = sp.ExtAuth
+	}
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension

@@ -161,6 +161,12 @@ func Error2ConditionMsg(err error) string {
 		runes[0] = unicode.ToUpper(runes[0])
 	}
 
+	// Check if the last rune is a punctuation '.' and append it if is not
+	last := runes[len(runes)-1]
+	if !unicode.IsPunct(last) || last != '.' {
+		runes = append(runes, '.')
+	}
+
 	// Convert the rune slice back to a string
 	return string(runes)
 }

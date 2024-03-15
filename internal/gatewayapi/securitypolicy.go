@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	perr "github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -348,40 +349,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
-	var (
-		cors      *ir.CORS
-		jwt       *ir.JWT
-		oidc      *ir.OIDC
-		basicAuth *ir.BasicAuth
-		extAuth   *ir.ExtAuth
-		err, errs error
-	)
-
-	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
-	}
-
-	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
-	}
-
-	if policy.Spec.OIDC != nil {
-		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	if policy.Spec.BasicAuth != nil {
-		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	if policy.Spec.ExtAuth != nil {
-		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
+	spIR, err := t.translateSecurityPolicyToIR(policy, resources)
 
 	// Apply IR to all relevant routes
 	// Note: there are multiple features in a security policy, even if some of them
@@ -395,16 +363,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
 					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
-					r.CORS = cors
-					r.JWT = jwt
-					r.OIDC = oidc
-					r.BasicAuth = basicAuth
-					r.ExtAuth = extAuth
+					r.SecurityPolicy = *spIR
 				}
 			}
 		}
 	}
-	return errs
+	return err
 }
 
 func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext) error {
@@ -427,41 +391,7 @@ func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext)
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
 	resources *Resources, xdsIR XdsIRMap) error {
-	// Build IR
-	var (
-		cors      *ir.CORS
-		jwt       *ir.JWT
-		oidc      *ir.OIDC
-		basicAuth *ir.BasicAuth
-		extAuth   *ir.ExtAuth
-		err, errs error
-	)
-
-	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
-	}
-
-	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
-	}
-
-	if policy.Spec.OIDC != nil {
-		if oidc, err = t.buildOIDC(policy, resources); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	if policy.Spec.BasicAuth != nil {
-		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	if policy.Spec.ExtAuth != nil {
-		if extAuth, err = t.buildExtAuth(policy, resources); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
+	spIR, err := t.translateSecurityPolicyToIR(policy, resources)
 
 	// Apply IR to all the routes within the specific Gateway that originated
 	// from the gateway to which this security policy was attached.
@@ -488,32 +418,52 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			// TODO: zhaohuabing group the features into a struct and check if all of them are set
-			if r.CORS != nil ||
-				r.JWT != nil ||
-				r.OIDC != nil ||
-				r.BasicAuth != nil ||
-				r.ExtAuth != nil {
+			if r.SecurityPolicy.Any() {
 				continue
 			}
-			if r.CORS == nil {
-				r.CORS = cors
-			}
-			if r.JWT == nil {
-				r.JWT = jwt
-			}
-			if r.OIDC == nil {
-				r.OIDC = oidc
-			}
-			if r.BasicAuth == nil {
-				r.BasicAuth = basicAuth
-			}
-			if r.ExtAuth == nil {
-				r.ExtAuth = extAuth
-			}
+
+			r.SecurityPolicy.Set(spIR)
 		}
 	}
-	return errs
+	return err
+}
+
+func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, resources *Resources) (*ir.SecurityPolicy, error) {
+	var (
+		spIR      = new(ir.SecurityPolicy)
+		err, errs error
+	)
+
+	if policy.Spec.CORS != nil {
+		spIR.CORS = t.buildCORS(policy.Spec.CORS)
+	}
+
+	if policy.Spec.JWT != nil {
+		spIR.JWT = t.buildJWT(policy.Spec.JWT)
+	}
+
+	if policy.Spec.OIDC != nil {
+		if spIR.OIDC, err = t.buildOIDC(policy, resources); err != nil {
+			err = perr.WithMessage(err, "OIDC")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.BasicAuth != nil {
+		if spIR.BasicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
+			err = perr.WithMessage(err, "BasicAuth")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.ExtAuth != nil {
+		if spIR.ExtAuth, err = t.buildExtAuth(policy, resources); err != nil {
+			err = perr.WithMessage(err, "ExtAuth")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return spIR, errs
 }
 
 func validatePortOverlapForSecurityPolicyGateway(xds *ir.Xds) error {

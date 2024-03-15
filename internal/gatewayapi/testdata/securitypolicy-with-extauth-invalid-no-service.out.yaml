@@ -125,7 +125,7 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Service default/http-backend not found
+        message: 'ExtAuth: service default/http-backend not found.'
         reason: Invalid
         status: "False"
         type: Accepted
