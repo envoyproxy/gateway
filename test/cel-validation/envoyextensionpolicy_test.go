@@ -23,7 +23,7 @@ import (
 
 func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 	ctx := context.Background()
-	baseBTP := egv1a1.EnvoyExtensionPolicy{
+	baseeep := egv1a1.EnvoyExtensionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "eep",
 			Namespace: metav1.NamespaceDefault,
@@ -35,14 +35,14 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 
 	cases := []struct {
 		desc         string
-		mutate       func(btp *egv1a1.EnvoyExtensionPolicy)
-		mutateStatus func(btp *egv1a1.EnvoyExtensionPolicy)
+		mutate       func(eep *egv1a1.EnvoyExtensionPolicy)
+		mutateStatus func(eep *egv1a1.EnvoyExtensionPolicy)
 		wantErrors   []string
 	}{
 		{
 			desc: "valid gateway targetRef",
-			mutate: func(btp *egv1a1.EnvoyExtensionPolicy) {
-				btp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
@@ -56,8 +56,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "valid httproute targetRef",
-			mutate: func(btp *egv1a1.EnvoyExtensionPolicy) {
-				btp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
@@ -71,8 +71,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "no targetRef",
-			mutate: func(btp *egv1a1.EnvoyExtensionPolicy) {
-				btp.Spec = egv1a1.EnvoyExtensionPolicySpec{}
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{}
 			},
 			wantErrors: []string{
 				"spec.targetRef.kind: Invalid value: \"\": spec.targetRef.kind in body should be at least 1 chars long",
@@ -83,8 +83,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "targetRef unsupported kind",
-			mutate: func(btp *egv1a1.EnvoyExtensionPolicy) {
-				btp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
@@ -100,8 +100,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "targetRef unsupported group",
-			mutate: func(btp *egv1a1.EnvoyExtensionPolicy) {
-				btp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: gwapiv1a2.Group("foo"),
@@ -117,8 +117,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "targetRef unsupported group and kind",
-			mutate: func(btp *egv1a1.EnvoyExtensionPolicy) {
-				btp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: gwapiv1a2.Group("foo"),
@@ -135,8 +135,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "sectionName disabled until supported",
-			mutate: func(btp *egv1a1.EnvoyExtensionPolicy) {
-				btp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
@@ -155,17 +155,17 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			btp := baseBTP.DeepCopy()
-			btp.Name = fmt.Sprintf("btp-%v", time.Now().UnixNano())
+			eep := baseeep.DeepCopy()
+			eep.Name = fmt.Sprintf("eep-%v", time.Now().UnixNano())
 
 			if tc.mutate != nil {
-				tc.mutate(btp)
+				tc.mutate(eep)
 			}
-			err := c.Create(ctx, btp)
+			err := c.Create(ctx, eep)
 
 			if tc.mutateStatus != nil {
-				tc.mutateStatus(btp)
-				err = c.Status().Update(ctx, btp)
+				tc.mutateStatus(eep)
+				err = c.Status().Update(ctx, eep)
 			}
 
 			if (len(tc.wantErrors) != 0) != (err != nil) {
