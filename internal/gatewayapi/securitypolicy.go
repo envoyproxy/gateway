@@ -349,7 +349,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
-	spIR, err := t.translateSecurityPolicyToIR(policy, resources)
+	spIR, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(route).String())
 
 	// Apply IR to all relevant routes
 	// Note: there are multiple features in a security policy, even if some of them
@@ -391,7 +391,8 @@ func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext)
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
 	resources *Resources, xdsIR XdsIRMap) error {
-	spIR, err := t.translateSecurityPolicyToIR(policy, resources)
+	// Build IR
+	spIR, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(gateway).String())
 
 	// Apply IR to all the routes within the specific Gateway that originated
 	// from the gateway to which this security policy was attached.
@@ -428,7 +429,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	return err
 }
 
-func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, resources *Resources) (*ir.SecurityPolicy, error) {
+func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, resources *Resources, targetName string) (*ir.SecurityPolicy, error) {
 	var (
 		spIR      = new(ir.SecurityPolicy)
 		err, errs error
@@ -457,7 +458,7 @@ func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, 
 	}
 
 	if policy.Spec.ExtAuth != nil {
-		if spIR.ExtAuth, err = t.buildExtAuth(policy, resources); err != nil {
+		if spIR.ExtAuth, err = t.buildExtAuth(targetName, policy, resources); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
@@ -743,6 +744,7 @@ func (t *Translator) buildBasicAuth(
 }
 
 func (t *Translator) buildExtAuth(
+	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.ExtAuth, error) {
 	var (
@@ -795,6 +797,7 @@ func (t *Translator) buildExtAuth(
 	}
 
 	extAuth := &ir.ExtAuth{
+		Name:             name,
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 	}
 

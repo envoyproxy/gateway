@@ -13,7 +13,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.oauth2_first-route:
+        envoy.filters.http.oauth2/first-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
     - match:
@@ -24,6 +24,6 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.oauth2_second-route:
+        envoy.filters.http.oauth2/second-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

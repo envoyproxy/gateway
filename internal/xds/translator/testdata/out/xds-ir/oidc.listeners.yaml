@@ -15,7 +15,7 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.oauth2_first-route
+          name: envoy.filters.http.oauth2/first-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
@@ -56,7 +56,7 @@
                 timeout: 10s
                 uri: https://oauth.foo.com/token
         - disabled: true
-          name: envoy.filters.http.oauth2_second-route
+          name: envoy.filters.http.oauth2/second-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
