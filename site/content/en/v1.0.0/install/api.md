@@ -3,7 +3,7 @@ title = "gateway-helm"
 +++
 
 
-![Version: v0.0.0-latest](https://img.shields.io/badge/Version-v0.0.0--latest-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
+![Version: v1.0.0](https://img.shields.io/badge/Version-v1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
 
 The Helm chart for Envoy Gateway
 
@@ -53,4 +53,3 @@ The Helm chart for Envoy Gateway
 | deployment.replicas | int | `1` |  |
 | envoyGatewayMetricsService.port | int | `19001` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
-
