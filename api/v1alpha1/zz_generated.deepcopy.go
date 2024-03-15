@@ -1668,12 +1668,12 @@ func (in *FilterOrdering) DeepCopyInto(out *FilterOrdering) {
 	*out = *in
 	if in.DrainTimeout != nil {
 		in, out := &in.DrainTimeout, &out.DrainTimeout
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.MinDrainDuration != nil {
 		in, out := &in.MinDrainDuration, &out.MinDrainDuration
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 }
