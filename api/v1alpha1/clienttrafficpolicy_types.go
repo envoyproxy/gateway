@@ -87,6 +87,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Timeout *ClientTimeout `json:"timeout,omitempty"`
+	// Connection includes client connection settings.
+	//
+	// +optional
+	Connection *Connection `json:"connection,omitempty"`
 }
 
 // HeaderSettings providess configuration options for headers on the listener.
