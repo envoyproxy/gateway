@@ -71,18 +71,32 @@ func (c *luaScriptController) Reconcile(ctx context.Context, request reconcile.R
 	}
 
 	irLuaScript := luaScript.ToIR()
-	// TODO: there's really no reason for this example project to have any conditions other than ready,
-	// but you will likely want to introduce more complex resources that can either have config errors or reference
-	// other resources that may not exist, so in those cases, you will want to set the conditions to something else
-	luaScriptStatus := v1.GlobalLuaScriptStatus{
-		Conditions: []metav1.Condition{
+
+	// TODO: this example uses relatively simple conditions, but you might want to introduce a sub-reconcile func to
+	// validate your resource and determine what conditions to set
+	var conditions []metav1.Condition
+	if irLuaScript.Lua != "" {
+		conditions = []metav1.Condition{
 			{
 				Type:    string(v1.GlobalLuaScriptConditionReady),
-				Reason:  string(v1.GlobalLuaScriptConditionReady),
+				Reason:  string(v1.GlobalLuaScriptReasonGoodConfig),
 				Status:  metav1.ConditionTrue,
 				Message: "GlobalLuaScript is valid and ready",
 			},
-		},
+		}
+	} else {
+		conditions = []metav1.Condition{
+			{
+				Type:    string(v1.GlobalLuaScriptConditionReady),
+				Reason:  string(v1.GlobalLuaScriptReasonBadConfig),
+				Status:  metav1.ConditionFalse,
+				Message: "GlobalLuaScript.spec.lua should not be an empty string",
+			},
+		}
+	}
+
+	luaScriptStatus := v1.GlobalLuaScriptStatus{
+		Conditions: conditions,
 	}
 
 	if irLuaScript != nil {

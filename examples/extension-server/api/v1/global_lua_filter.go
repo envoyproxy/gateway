@@ -64,9 +64,10 @@ func (r GlobalLuaScriptConditionReason) String() string {
 }
 
 const (
-	// If you have other conditions/reasons like invalid configuration, etc. add them here
-	GlobalLuaScriptConditionReady GlobalLuaScriptConditionType   = "Ready"
-	GlobalLuaScriptReasonReady    GlobalLuaScriptConditionReason = "Ready"
+	// If you have other conditions/reasons, etc. add them here
+	GlobalLuaScriptConditionReady   GlobalLuaScriptConditionType   = "Ready"
+	GlobalLuaScriptReasonGoodConfig GlobalLuaScriptConditionReason = "ValidConfiguration"
+	GlobalLuaScriptReasonBadConfig  GlobalLuaScriptConditionReason = "InvalidConfiguration"
 )
 
 // Defines the lua code to be run against all requests
