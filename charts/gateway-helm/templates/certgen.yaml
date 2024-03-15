@@ -6,7 +6,7 @@ metadata:
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": pre-install
+    "helm.sh/hook": pre-install, pre-upgrade
   {{- if .Values.certgen.job.annotations }}
     {{- toYaml .Values.certgen.job.annotations | nindent 4 -}}
   {{- end }}
