@@ -329,6 +329,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
+| `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
 
 
 #### ClientValidationContext
@@ -369,6 +370,35 @@ CompressorType defines the types of compressor library supported by Envoy Gatewa
 _Appears in:_
 - [Compression](#compression)
 
+
+
+#### Connection
+
+
+
+Connection allows users to configure connection-level settings
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `limit` | _[ConnectionLimit](#connectionlimit)_ |  false  | Limit defines limits related to connections |
+
+
+#### ConnectionLimit
+
+
+
+
+
+_Appears in:_
+- [Connection](#connection)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `value` | _integer_ |  false  | Value of the maximum concurrent connections limit. When the limit is reached, incoming connections will be closed after the CloseDelay duration. Default: unlimited. |
+| `closeDelay` | _[Duration](#duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected once the limit value is reached. Default: none. |
 
 
 #### ConsistentHash
