@@ -15,7 +15,7 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.ext_authz_httproute/default/httproute-1/rule/0/match/0/www_example_com
+          name: envoy.filters.http.ext_authz/default/httproute-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             httpService:
@@ -30,7 +30,7 @@
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
         - disabled: true
-          name: envoy.filters.http.ext_authz_httproute/default/httproute-2/rule/0/match/0/www_example_com
+          name: envoy.filters.http.ext_authz/default/gateway-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             allowedHeaders:

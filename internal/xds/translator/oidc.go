@@ -94,7 +94,7 @@ func buildHCMOAuth2Filter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 }
 
 func oauth2FilterName(route *ir.HTTPRoute) string {
-	return fmt.Sprintf("%s_%s", oauth2Filter, route.Name)
+	return perRouteFilterName(oauth2Filter, route.Name)
 }
 
 func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
@@ -340,8 +340,8 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute.OIDC == nil {
 		return nil
 	}
-
-	if err := enableFilterOnRoute(oauth2Filter, route, irRoute); err != nil {
+	filterName := oauth2FilterName(irRoute)
+	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}
 	return nil
