@@ -451,7 +451,7 @@ type HTTPRoute struct {
 	SecurityPolicy       `json:",inline" yaml:",inline"`
 }
 
-// BackendTrafficPolicy holds the IR information associated with the Backend Traffic Policy.
+// BackendTrafficPolicy holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type BackendTrafficPolicy struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
@@ -523,7 +523,7 @@ func (b *BackendTrafficPolicy) Set(btp *BackendTrafficPolicy) {
 	}
 }
 
-// SecurityPolicy holds the IR information associated with the Security Policy.
+// SecurityPolicy holds the information associated with the Security Policy.
 // +k8s:deepcopy-gen=true
 type SecurityPolicy struct {
 	// CORS policy for the route.
