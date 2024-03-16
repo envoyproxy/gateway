@@ -230,6 +230,8 @@ type HTTPListener struct {
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
+	// Connection settings
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -1078,6 +1080,8 @@ type TCPListener struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// Connection is ...
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1750,4 +1754,14 @@ type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+}
+
+// Connection settings for downstream connections
+// +k8s:deepcopy-gen=true
+type Connection struct {
+	// Limit for number of connections
+	Limit *uint64 `json:"limit,omitempty" yaml:"limit,omitempty"`
+
+	// CloseDelay is time to wait before closing a connection rejected due to limit
+	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }
