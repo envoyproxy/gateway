@@ -18,6 +18,8 @@ API group.
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
 - [ClientTrafficPolicyList](#clienttrafficpolicylist)
+- [EnvoyExtensionPolicy](#envoyextensionpolicy)
+- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
 - [EnvoyGateway](#envoygateway)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
@@ -482,6 +484,54 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name defines the name of the environment variable which to extract the value from. |
 | `defaultValue` | _string_ |  false  | DefaultValue defines the default value to use if the environment variable is not set. |
+
+
+#### EnvoyExtensionPolicy
+
+
+
+EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
+
+_Appears in:_
+- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`EnvoyExtensionPolicy`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)_ |  true  | Spec defines the desired state of EnvoyExtensionPolicy. |
+
+
+#### EnvoyExtensionPolicyList
+
+
+
+EnvoyExtensionPolicyList contains a list of EnvoyExtensionPolicy resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`EnvoyExtensionPolicyList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[EnvoyExtensionPolicy](#envoyextensionpolicy) array_ |  true  |  |
+
+
+#### EnvoyExtensionPolicySpec
+
+
+
+EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.
+
+_Appears in:_
+- [EnvoyExtensionPolicy](#envoyextensionpolicy)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `priority` | _integer_ |  false  | Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices are applied to the same TargetRef, extensions will execute in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
 
 
 #### EnvoyGateway
@@ -952,6 +1002,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  | EnableEnvoyPatchPolicy enables Envoy Gateway to reconcile and implement the EnvoyPatchPolicy resources. |
+| `enableEnvoyExtensionPolicy` | _boolean_ |  true  | EnableEnvoyExtensionPolicy enables Envoy Gateway to reconcile and implement the EnvoyExtensionPolicy resources. |
 
 
 #### ExtensionHooks
