@@ -294,33 +294,6 @@ subjects:
   name: 'envoy-gateway'
   namespace: 'default'
 ---
-# Source: gateway-helm/templates/envoy-gateway-metrics-service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  annotations:
-    prometheus.io/scrape: 'true'
-    prometheus.io/port: '19001'
-  name: envoy-gateway-metrics-service
-  namespace: 'default'
-  labels:
-    control-plane: envoy-gateway
-    helm.sh/chart: gateway-helm-v0.0.0-latest
-    app.kubernetes.io/name: gateway-helm
-    app.kubernetes.io/instance: eg
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-spec:
-  selector:
-    control-plane: envoy-gateway
-    app.kubernetes.io/name: gateway-helm
-    app.kubernetes.io/instance: eg
-  ports:
-  - name: http
-    port: 19001
-    protocol: TCP
-    targetPort: http-metrics
----
 # Source: gateway-helm/templates/envoy-gateway-service.yaml
 apiVersion: v1
 kind: Service
@@ -334,6 +307,9 @@ metadata:
     app.kubernetes.io/instance: eg
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '19001'
 spec:
   selector:
     control-plane: envoy-gateway
@@ -346,6 +322,9 @@ spec:
   - name: ratelimit
     port: 18001
     targetPort: 18001
+  - name: metrics
+    port: 19001
+    targetPort: 19001
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
 apiVersion: apps/v1
@@ -401,7 +380,7 @@ spec:
         - containerPort: 18001
           name: ratelimit
         - containerPort: 19001
-          name: http-metrics
+          name: metrics
         readinessProbe:
           httpGet:
             path: /readyz
