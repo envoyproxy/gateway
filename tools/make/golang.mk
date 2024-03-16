@@ -106,7 +106,6 @@ format: go.mod.lint
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
 clean: go.clean
-	rm -rf tools/bin
 
 .PHONY: testdata
 testdata: ## Override the testdata with new configurations.
