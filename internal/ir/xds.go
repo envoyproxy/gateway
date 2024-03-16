@@ -518,6 +518,10 @@ type JWT struct {
 //
 // +k8s:deepcopy-gen=true
 type OIDC struct {
+	// Name is a unique name for an OIDC configuration.
+	// The xds translator only generates one OAuth2 filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// The OIDC Provider configuration.
 	Provider OIDCProvider `json:"provider" yaml:"provider"`
 
@@ -567,6 +571,10 @@ type OIDCProvider struct {
 //
 // +k8s:deepcopy-gen=true
 type BasicAuth struct {
+	// Name is a unique name for an BasicAuth configuration.
+	// The xds translator only generates one basic auth filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// The username-password pairs in htpasswd format.
 	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
 }

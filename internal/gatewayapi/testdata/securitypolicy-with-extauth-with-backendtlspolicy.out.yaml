@@ -308,7 +308,7 @@ xdsIR:
           grpc:
             authority: grpc-backend.default:9000
             destination:
-              name: securitypolicy/default/policy-for-http-route/grpc-backend
+              name: securitypolicy/default/policy-for-http-route/default/grpc-backend
               settings:
               - addressType: IP
                 endpoints:
@@ -324,7 +324,7 @@ xdsIR:
           headersToExtAuth:
           - header1
           - header2
-          name: default/httproute-1
+          name: securitypolicy/default/policy-for-http-route
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -348,7 +348,7 @@ xdsIR:
           http:
             authority: http-backend.envoy-gateway:80
             destination:
-              name: securitypolicy/default/policy-for-gateway/http-backend
+              name: securitypolicy/default/policy-for-gateway/envoy-gateway/http-backend
               settings:
               - addressType: IP
                 endpoints:
@@ -365,7 +365,7 @@ xdsIR:
             - header1
             - header2
             path: /auth
-          name: default/gateway-1
+          name: securitypolicy/default/policy-for-gateway
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com

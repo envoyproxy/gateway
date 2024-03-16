@@ -366,20 +366,24 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.OIDC != nil {
-		if oidc, err = t.buildOIDC(policy, resources); err != nil {
+		if oidc, err = t.buildOIDC(
+			irConfigName(policy),
+			policy,
+			resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
-		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
+		if basicAuth, err = t.buildBasicAuth(
+			policy,
+			resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.ExtAuth != nil {
 		if extAuth, err = t.buildExtAuth(
-			utils.NamespacedName(route).String(),
 			policy,
 			resources); err != nil {
 			errs = errors.Join(errs, err)
@@ -449,20 +453,24 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.OIDC != nil {
-		if oidc, err = t.buildOIDC(policy, resources); err != nil {
+		if oidc, err = t.buildOIDC(
+			irConfigName(policy),
+			policy,
+			resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
-		if basicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
+		if basicAuth, err = t.buildBasicAuth(
+			policy,
+			resources); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.ExtAuth != nil {
 		if extAuth, err = t.buildExtAuth(
-			utils.NamespacedName(gateway).String(),
 			policy,
 			resources); err != nil {
 			errs = errors.Join(errs, err)
@@ -580,6 +588,7 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 }
 
 func (t *Translator) buildOIDC(
+	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.OIDC, error) {
 	var (
@@ -653,6 +662,7 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
+		Name:         name,
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
@@ -795,11 +805,13 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
-	return &ir.BasicAuth{Users: usersSecretBytes}, nil
+	return &ir.BasicAuth{
+		Name:  irConfigName(policy),
+		Users: usersSecretBytes,
+	}, nil
 }
 
 func (t *Translator) buildExtAuth(
-	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.ExtAuth, error) {
 	var (
@@ -847,12 +859,12 @@ func (t *Translator) buildExtAuth(
 		return nil, err
 	}
 	rd := ir.RouteDestination{
-		Name:     irExtServiceDestinationName(policy, string(backendRef.Name)),
+		Name:     irExtServiceDestinationName(policy, backendRef),
 		Settings: []*ir.DestinationSetting{ds},
 	}
 
 	extAuth := &ir.ExtAuth{
-		Name:             name,
+		Name:             irConfigName(policy),
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 	}
 
@@ -943,11 +955,21 @@ func (t *Translator) processExtServiceDestination(
 	}, nil
 }
 
-func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, service string) string {
+func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwapiv1.BackendObjectReference) string {
+	nn := types.NamespacedName{
+		Name:      string(backendRef.Name),
+		Namespace: NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
+	}
+
 	return strings.ToLower(fmt.Sprintf(
-		"%s/%s/%s/%s",
-		KindSecurityPolicy,
-		policy.GetNamespace(),
-		policy.GetName(),
-		service))
+		"%s/%s",
+		irConfigName(policy),
+		nn.String()))
+}
+
+func irConfigName(policy *egv1a1.SecurityPolicy) string {
+	return fmt.Sprintf(
+		"%s/%s",
+		strings.ToLower(KindSecurityPolicy),
+		utils.NamespacedName(policy).String())
 }
