@@ -18,6 +18,8 @@ API group.
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
 - [ClientTrafficPolicyList](#clienttrafficpolicylist)
+- [EnvoyExtensionPolicy](#envoyextensionpolicy)
+- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
 - [EnvoyGateway](#envoygateway)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
@@ -329,6 +331,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
+| `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
 
 
 #### ClientValidationContext
@@ -369,6 +372,35 @@ CompressorType defines the types of compressor library supported by Envoy Gatewa
 _Appears in:_
 - [Compression](#compression)
 
+
+
+#### Connection
+
+
+
+Connection allows users to configure connection-level settings
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `limit` | _[ConnectionLimit](#connectionlimit)_ |  false  | Limit defines limits related to connections |
+
+
+#### ConnectionLimit
+
+
+
+
+
+_Appears in:_
+- [Connection](#connection)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `value` | _integer_ |  false  | Value of the maximum concurrent connections limit. When the limit is reached, incoming connections will be closed after the CloseDelay duration. Default: unlimited. |
+| `closeDelay` | _[Duration](#duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected once the limit value is reached. Default: none. |
 
 
 #### ConsistentHash
@@ -452,6 +484,54 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name defines the name of the environment variable which to extract the value from. |
 | `defaultValue` | _string_ |  false  | DefaultValue defines the default value to use if the environment variable is not set. |
+
+
+#### EnvoyExtensionPolicy
+
+
+
+EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
+
+_Appears in:_
+- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`EnvoyExtensionPolicy`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)_ |  true  | Spec defines the desired state of EnvoyExtensionPolicy. |
+
+
+#### EnvoyExtensionPolicyList
+
+
+
+EnvoyExtensionPolicyList contains a list of EnvoyExtensionPolicy resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`EnvoyExtensionPolicyList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[EnvoyExtensionPolicy](#envoyextensionpolicy) array_ |  true  |  |
+
+
+#### EnvoyExtensionPolicySpec
+
+
+
+EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.
+
+_Appears in:_
+- [EnvoyExtensionPolicy](#envoyextensionpolicy)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `priority` | _integer_ |  false  | Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices are applied to the same TargetRef, extensions will execute in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
 
 
 #### EnvoyGateway
@@ -906,6 +986,7 @@ _Appears in:_
 | `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
+| `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained. If FailOpen is set to true, the system allows the traffic to pass through. Otherwise, if it is set to false or not set (defaulting to false), the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach. This setting determines whether to prioritize accessibility over strict security in case of authorization service failure. |
 
 
 #### ExtensionAPISettings
@@ -921,6 +1002,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  | EnableEnvoyPatchPolicy enables Envoy Gateway to reconcile and implement the EnvoyPatchPolicy resources. |
+| `enableEnvoyExtensionPolicy` | _boolean_ |  true  | EnableEnvoyExtensionPolicy enables Envoy Gateway to reconcile and implement the EnvoyExtensionPolicy resources. |
 
 
 #### ExtensionHooks
