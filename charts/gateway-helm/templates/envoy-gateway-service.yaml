@@ -6,8 +6,6 @@ metadata:
   labels:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}
-  annotations:
-  {{- include "eg.metrics.annotation" . | nindent 4}}
 spec:
   selector:
     control-plane: envoy-gateway

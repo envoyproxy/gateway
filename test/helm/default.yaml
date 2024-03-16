@@ -307,9 +307,6 @@ metadata:
     app.kubernetes.io/instance: eg
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
-  annotations:
-    prometheus.io/scrape: 'true'
-    prometheus.io/port: '19001'
 spec:
   selector:
     control-plane: envoy-gateway
@@ -348,6 +345,9 @@ spec:
       app.kubernetes.io/instance: eg
   template:
     metadata:
+      annotations:
+        prometheus.io/port: "19001"
+        prometheus.io/scrape: "true"
       labels:
         control-plane: envoy-gateway
         app.kubernetes.io/name: gateway-helm

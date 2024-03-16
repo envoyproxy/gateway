@@ -60,11 +60,3 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
-
-{{/*
-eg metrics annotations
-*/}}
-{{- define "eg.metrics.annotation" -}}
-prometheus.io/scrape: 'true'
-prometheus.io/port: '19001'
-{{- end }}

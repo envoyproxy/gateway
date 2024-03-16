@@ -25,7 +25,9 @@ deployment:
   replicas: 1
   pod:
     affinity: {}
-    annotations: {}
+    annotations: 
+      prometheus.io/scrape: 'true'
+      prometheus.io/port: '19001'
     labels: {}
 
 config:
