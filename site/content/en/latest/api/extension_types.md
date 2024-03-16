@@ -329,6 +329,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
+| `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
 
 
 #### ClientValidationContext
@@ -369,6 +370,35 @@ CompressorType defines the types of compressor library supported by Envoy Gatewa
 _Appears in:_
 - [Compression](#compression)
 
+
+
+#### Connection
+
+
+
+Connection allows users to configure connection-level settings
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `limit` | _[ConnectionLimit](#connectionlimit)_ |  false  | Limit defines limits related to connections |
+
+
+#### ConnectionLimit
+
+
+
+
+
+_Appears in:_
+- [Connection](#connection)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `value` | _integer_ |  false  | Value of the maximum concurrent connections limit. When the limit is reached, incoming connections will be closed after the CloseDelay duration. Default: unlimited. |
+| `closeDelay` | _[Duration](#duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected once the limit value is reached. Default: none. |
 
 
 #### ConsistentHash
@@ -906,6 +936,7 @@ _Appears in:_
 | `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
+| `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained. If FailOpen is set to true, the system allows the traffic to pass through. Otherwise, if it is set to false or not set (defaulting to false), the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach. This setting determines whether to prioritize accessibility over strict security in case of authorization service failure. |
 
 
 #### ExtensionAPISettings
