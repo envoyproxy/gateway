@@ -110,6 +110,7 @@ securityPolicies:
         headersToBackend:
         - header1
         - header2
+      failOpen: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

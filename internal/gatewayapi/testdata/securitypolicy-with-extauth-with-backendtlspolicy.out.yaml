@@ -214,6 +214,7 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
+      failOpen: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -251,6 +252,7 @@ securityPolicies:
         - header1
         - header2
         path: /auth
+      failOpen: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -325,6 +327,7 @@ xdsIR:
           - header1
           - header2
           name: default/httproute-1
+          failOpen: true
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -366,6 +369,7 @@ xdsIR:
             - header2
             path: /auth
           name: default/gateway-1
+          failOpen: false
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com

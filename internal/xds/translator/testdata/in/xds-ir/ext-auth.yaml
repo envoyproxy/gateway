@@ -35,6 +35,7 @@ http:
               port: 80
             protocol: HTTP
             weight: 1
+      failOpen: false
   - name: httproute/default/httproute-1/rule/1/match/0/www_example_com
     hostname: "*"
     pathMatch:
@@ -62,6 +63,7 @@ http:
               port: 80
             protocol: HTTP
             weight: 1
+      failOpen: false
   - name: httproute/default/httproute-2/rule/0/match/0/www_example_com
     hostname: "*"
     pathMatch:
@@ -88,3 +90,4 @@ http:
       headersToExtAuth:
       - header1
       - header2
+      failOpen: true
