@@ -42,7 +42,7 @@ func newInstallCommand() *cobra.Command {
 	}
 	options.AddKubeConfigFlags(installCmd.Flags())
 	pt.SetInstallEnvSettings(installCmd, packageFlags)
-	pt.SetPrinter(installCmd)
+	pt.SetPreRun(installCmd)
 
 	return installCmd
 }

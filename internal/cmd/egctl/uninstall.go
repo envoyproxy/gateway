@@ -39,7 +39,7 @@ func newUnInstallCommand() *cobra.Command {
 	}
 	options.AddKubeConfigFlags(uninstallCmd.Flags())
 	pt.SetUninstallEnvSetting(uninstallCmd, packageFlags)
-	pt.SetPrinter(uninstallCmd)
+	pt.SetPreRun(uninstallCmd)
 
 	return uninstallCmd
 }

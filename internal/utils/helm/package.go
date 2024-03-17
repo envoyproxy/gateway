@@ -37,17 +37,19 @@ const (
 	helmOperateTimeout = time.Second * 300
 	egChartVersion     = "v1.0.0"
 	egReleaseName      = "envoy-gateway"
+	egReleaseNamespace = "envoy-gateway-system"
 )
 
 type PackageOptions struct {
-	DryRun      bool
-	SkipCRD     bool
-	Wait        bool
-	Version     string
-	Timeout     time.Duration
-	ReleaseName string
-	OnlyCRD     bool
-	WithCRD     bool
+	DryRun           bool
+	SkipCRD          bool
+	Wait             bool
+	Version          string
+	Timeout          time.Duration
+	ReleaseName      string
+	ReleaseNamespace string
+	OnlyCRD          bool
+	WithCRD          bool
 }
 
 type PackageTool struct {
@@ -73,7 +75,7 @@ func NewPackageTool() *PackageTool {
 }
 
 // Setup Configuration required to initialize helm action.
-func (ht *PackageTool) Setup() error {
+func (pt *PackageTool) Setup() error {
 
 	// Since envoy-gateway uses docker's oci to store charts,
 	// we need to create a registry client to make sure we can retrieve envoy-gateway chart
@@ -81,7 +83,7 @@ func (ht *PackageTool) Setup() error {
 	if err != nil {
 		return err
 	}
-	ht.actionConfig = &action.Configuration{
+	pt.actionConfig = &action.Configuration{
 		RegistryClient: registryCli,
 	}
 
@@ -91,30 +93,30 @@ func (ht *PackageTool) Setup() error {
 		return err
 	}
 
-	if err = ht.actionConfig.Init(
+	if err = pt.actionConfig.Init(
 		kubectlFactory,
 		ns,
 		os.Getenv("HELM_DRIVER"),
-		ht.logger.Printf,
+		pt.logger.Printf,
 	); err != nil {
 		return err
 	}
 
 	// Build the relevant helm command action
-	ht.actionInstall = action.NewInstall(ht.actionConfig)
-	ht.actionUninstall = action.NewUninstall(ht.actionConfig)
+	pt.actionInstall = action.NewInstall(pt.actionConfig)
+	pt.actionUninstall = action.NewUninstall(pt.actionConfig)
 
 	return nil
 }
 
 // SetInstallEnvSettings set the installation flags we are interested in
-func (ht *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *PackageOptions) {
+func (pt *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *PackageOptions) {
 
 	// add helm flags
 	// we use a temporary flag to be set by helm env flags,
 	// from which we can retrieve the flags we are interested
 	var tmpFlags pflag.FlagSet
-	ht.envSettings.AddFlags(&tmpFlags)
+	pt.envSettings.AddFlags(&tmpFlags)
 	tmpFlags.VisitAll(func(flag *pflag.Flag) {
 		// TODO: Add more flags as needed?
 		switch flag.Name {
@@ -127,33 +129,35 @@ func (ht *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *Pa
 	installCmd.Flags().DurationVar(&opts.Timeout, "timeout", helmOperateTimeout, "time to wait for any individual Kubernetes operation")
 	installCmd.Flags().StringVar(&opts.Version, "version", egChartVersion, "specify a version constraint for the envoy gateway version to use")
 	installCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the helm release to install")
+	installCmd.Flags().StringVarP(&opts.ReleaseNamespace, "namespace", "n", egReleaseNamespace, "if set, specify the namespace where envoy gateway is installed")
 	installCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "console output only, make no changes")
 	installCmd.Flags().BoolVar(&opts.SkipCRD, "skip-crd", false, "if set, no CRDs will be installed. By default, CRDs are installed if not already present")
 	installCmd.Flags().BoolVar(&opts.OnlyCRD, "only-crd", false, "if set, only install the crd")
 	installCmd.Flags().Bool("debug", false, "if set, the will output detailed execution logs")
 
-	installCmd.Flags().StringSliceVarP(&ht.valuesOpts.ValueFiles, "values", "f", []string{}, "Specify values in a YAML file or a URL (can specify multiple)")
-	installCmd.Flags().StringArrayVar(&ht.valuesOpts.Values, "set", []string{}, "Set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
+	installCmd.Flags().StringSliceVarP(&pt.valuesOpts.ValueFiles, "values", "f", []string{}, "Specify values in a YAML file or a URL (can specify multiple)")
+	installCmd.Flags().StringArrayVar(&pt.valuesOpts.Values, "set", []string{}, "Set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
 
 }
 
 // SetUninstallEnvSetting set the uninstallation flags we are interested in
-func (ht *PackageTool) SetUninstallEnvSetting(uninstallCmd *cobra.Command, opts *PackageOptions) {
+func (pt *PackageTool) SetUninstallEnvSetting(uninstallCmd *cobra.Command, opts *PackageOptions) {
 
 	uninstallCmd.Flags().DurationVar(&opts.Timeout, "timeout", helmOperateTimeout, "time to wait for any individual Kubernetes operation")
+	uninstallCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the helm release to uninstall")
+	uninstallCmd.Flags().StringVarP(&opts.ReleaseNamespace, "namespace", "n", "", "if set, specify the namespace where envoy gateway is uninstalled")
 	uninstallCmd.Flags().BoolVar(&opts.Wait, "wait", false, "if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment, StatefulSet, or ReplicaSet are in a ready state before marking the release as successful. It will wait for as long as --timeout")
 	uninstallCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "console output only, make no changes")
-	uninstallCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the helm release to uninstall")
 	uninstallCmd.Flags().BoolVar(&opts.WithCRD, "with-crd", false, "if set, the CRDs will also be removed")
 	uninstallCmd.Flags().Bool("debug", false, "if set, the will output detailed execution logs")
 
 }
 
 // loadChart Load the chart instance according to the chart name and version
-func (ht *PackageTool) loadChart(opts *PackageOptions) (*chart.Chart, error) {
+func (pt *PackageTool) loadChart(opts *PackageOptions) (*chart.Chart, error) {
 
-	ht.actionInstall.Version = opts.Version
-	chartName, err := ht.actionInstall.LocateChart(ht.chartName, ht.envSettings)
+	pt.actionInstall.Version = opts.Version
+	chartName, err := pt.actionInstall.LocateChart(pt.chartName, pt.envSettings)
 	if err != nil {
 		return nil, err
 	}
@@ -175,12 +179,12 @@ func (ht *PackageTool) loadChart(opts *PackageOptions) (*chart.Chart, error) {
 }
 
 // extractCRDs Extract the CRDs part of the chart
-func (ht *PackageTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
+func (pt *PackageTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
 
 	crdResInfo := make([]*resource.Info, 0, len(ch.CRDObjects()))
 
 	for _, crd := range ch.CRDObjects() {
-		resInfo, err := ht.actionConfig.KubeClient.Build(bytes.NewBufferString(string(crd.File.Data)), false)
+		resInfo, err := pt.actionConfig.KubeClient.Build(bytes.NewBufferString(string(crd.File.Data)), false)
 		if err != nil {
 			return nil, err
 		}
@@ -197,21 +201,21 @@ func (ht *PackageTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
 // responsible for their uninstallation.
 // This is done to avoid garbage collection on CRs in the cluster during uninstallation,
 // preventing the potential loss of crucial CR instances.
-func (ht *PackageTool) RunInstall(opts *PackageOptions) error {
+func (pt *PackageTool) RunInstall(opts *PackageOptions) error {
 
 	if opts.Version == "v0.0.0-latest" {
 		warningMarker := color.New(color.FgYellow).Add(color.Bold).Sprintf("WARNING")
-		ht.logger.Println(fmt.Sprintf("%s: Currently using the latest version of envoy gateway chart, it is recommended to use the fixed version",
+		pt.logger.Println(fmt.Sprintf("%s: Currently using the latest version of envoy gateway chart, it is recommended to use the fixed version",
 			warningMarker))
 	}
 
-	ht.setCommonValue()
+	pt.setCommonValue()
 
-	egChart, err := ht.loadChart(opts)
+	egChart, err := pt.loadChart(opts)
 	if err != nil {
 		return err
 	}
-	crdInfo, err := ht.extractCRDs(egChart)
+	crdInfo, err := pt.extractCRDs(egChart)
 	if err != nil {
 		return err
 	}
@@ -231,13 +235,13 @@ func (ht *PackageTool) RunInstall(opts *PackageOptions) error {
 			return err
 		}
 
-		if err := installCRDs(crdInfo, ht.actionConfig); err != nil {
+		if err := installCRDs(crdInfo, pt.actionConfig); err != nil {
 			return err
 		}
 
 		if exist, err := detectExistCRDs(crdInfo); exist == nil || !*exist {
 			if err != nil {
-				return fmt.Errorf("faile to install CRDs of envoy gateway")
+				return fmt.Errorf("failed to install CRDs of envoy gateway")
 			}
 			return err
 		}
@@ -248,50 +252,50 @@ func (ht *PackageTool) RunInstall(opts *PackageOptions) error {
 	}
 
 	// Merge all values flag
-	providers := getter.All(ht.envSettings)
-	egChartValues, err := ht.valuesOpts.MergeValues(providers)
+	providers := getter.All(pt.envSettings)
+	egChartValues, err := pt.valuesOpts.MergeValues(providers)
 	if err != nil {
 		return err
 	}
 
-	ht.setInstallOptions(opts)
-	release, err := ht.actionInstall.Run(egChart, egChartValues)
+	pt.setInstallOptions(opts)
+	release, err := pt.actionInstall.Run(egChart, egChartValues)
 	if err != nil {
 		return fmt.Errorf("failed to install envoy gateway resource: %w", err)
 	}
 
 	if opts.DryRun {
-		ht.logger.Println(release.Manifest)
+		pt.logger.Println(release.Manifest)
 		return nil
 	}
 
 	successMarker := color.New(color.FgGreen).Add(color.Bold).Sprintf("SUCCESS")
-	ht.logger.Println(fmt.Sprintf("%s: Envoy gateway installed", successMarker))
+	pt.logger.Println(fmt.Sprintf("%s: Envoy gateway installed", successMarker))
 	return nil
 }
 
 // RunUninstall By default, we only uninstall instances of the Envoy Gateway resources.
-func (ht *PackageTool) RunUninstall(opts *PackageOptions) error {
+func (pt *PackageTool) RunUninstall(opts *PackageOptions) error {
 
-	ht.setUninstallOptions(opts)
+	pt.setUninstallOptions(opts)
 
-	resp, err := ht.actionUninstall.Run(opts.ReleaseName)
+	resp, err := pt.actionUninstall.Run(opts.ReleaseName)
 	if err != nil {
 		return fmt.Errorf("failed to uninstall envoy gateway: %w", err)
 	}
 
 	if opts.DryRun {
-		ht.logger.Println(resp.Release.Manifest)
+		pt.logger.Println(resp.Release.Manifest)
 		return nil
 	}
 
 	if opts.WithCRD {
 
-		if crdInfo, err := ht.extractCRDs(resp.Release.Chart); err != nil {
+		if crdInfo, err := pt.extractCRDs(resp.Release.Chart); err != nil {
 			return err
 		} else if len(crdInfo) == 0 {
 			return fmt.Errorf("CRDs not found in the envoy gateway chart")
-		} else if _, errors := ht.actionConfig.KubeClient.Delete(crdInfo); len(errors) != 0 {
+		} else if _, errors := pt.actionConfig.KubeClient.Delete(crdInfo); len(errors) != 0 {
 			return fmt.Errorf("failed to delete CRDs error: %s", util.MultipleErrors("", errors))
 		}
 
@@ -302,75 +306,91 @@ func (ht *PackageTool) RunUninstall(opts *PackageOptions) error {
 	}
 
 	successMarker := color.New(color.FgGreen).Add(color.Bold).Sprintf("SUCCESS")
-	ht.logger.Println(fmt.Sprintf("%s: Envoy gateway uninstalled", successMarker))
+	pt.logger.Println(fmt.Sprintf("%s: Envoy gateway uninstalled", successMarker))
 	return nil
 }
 
 // setCommonValue Set the common values needed for the installation chart.
 // We are not currently considering allowing users to define the following values
-func (ht *PackageTool) setCommonValue() {
-	ht.actionInstall.CreateNamespace = true
-	ht.actionInstall.GenerateName = false
-	ht.actionInstall.Description = "envoy gateway was installed using the egctl"
-	ht.actionInstall.Namespace = "envoy-gateway-system"
+func (pt *PackageTool) setCommonValue() {
+	pt.actionInstall.CreateNamespace = true
+	pt.actionInstall.GenerateName = false
+	pt.actionInstall.Description = "envoy gateway was installed using the egctl"
 }
 
 // setInstallOptions Sets the options required before install
-func (ht *PackageTool) setInstallOptions(opts *PackageOptions) {
+func (pt *PackageTool) setInstallOptions(opts *PackageOptions) {
 
 	if opts.DryRun {
 		// When dry-run is set up, we do not need to connect to k8s-api server.
 		// Since the kubernetes version needs to be higher than the value in the Helm library
 		// for client component running, we set a fake K8s version.
-		ht.actionInstall.ClientOnly = true
-		ht.actionInstall.KubeVersion = createDummyK8sVersion()
+		pt.actionInstall.ClientOnly = true
+		pt.actionInstall.KubeVersion = createDummyK8sVersion()
 	}
 
 	// Since we already installed CRDs before installing the instance resources,
 	// we skip the installation of CRDs.
-	ht.actionInstall.SkipCRDs = true
+	pt.actionInstall.SkipCRDs = true
 
-	ht.actionInstall.DryRun = opts.DryRun
-	ht.actionInstall.Timeout = opts.Timeout
-	ht.actionInstall.ReleaseName = opts.ReleaseName
+	pt.actionInstall.DryRun = opts.DryRun
+	pt.actionInstall.Timeout = opts.Timeout
+	pt.actionInstall.ReleaseName = opts.ReleaseName
+	pt.actionInstall.Namespace = opts.ReleaseNamespace
 
 	// If '--atomic' is set, installed resources will be deleted if part of the installation fails.
 	// However, after setting '--atomic', the default setting is '--wait' to wait for
 	// resource installation in the foreground.
 	// For the correctness of installation, we do not provide '--wait' flags and
 	// always choose the foreground waiting strategy to install resources.
-	ht.actionInstall.Atomic = true
+	pt.actionInstall.Atomic = true
 }
 
 // setUninstallOptions Sets the options required before uninstall
-func (ht *PackageTool) setUninstallOptions(opts *PackageOptions) {
-	ht.actionUninstall.DisableHooks = false
-	ht.actionUninstall.KeepHistory = false
+func (pt *PackageTool) setUninstallOptions(opts *PackageOptions) {
+	pt.actionUninstall.DisableHooks = false
+	pt.actionUninstall.KeepHistory = false
 
-	ht.actionUninstall.DryRun = opts.DryRun
+	pt.actionUninstall.DryRun = opts.DryRun
 
 	if opts.Wait {
-		ht.actionUninstall.Wait = opts.Wait
-		ht.actionUninstall.DeletionPropagation = "foreground"
+		pt.actionUninstall.Wait = opts.Wait
+		pt.actionUninstall.DeletionPropagation = "foreground"
 	} else {
-		ht.actionUninstall.DeletionPropagation = "background"
+		pt.actionUninstall.DeletionPropagation = "background"
 	}
 }
 
-// SetPrinter We will build the logger before the PackageTool is set up
-func (ht *PackageTool) SetPrinter(cmd *cobra.Command) {
+// SetPreRun This will perform the necessary preparations before initializing the PackageTool
+func (pt *PackageTool) SetPreRun(cmd *cobra.Command) {
 	existPreRunE := cmd.PreRunE
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 
-		debug, err := cmd.Flags().GetBool("debug")
-		if err != nil {
-			debug = true
-		}
-		printer := NewPrinterForWriter(cmd.OutOrStdout(), debug)
-		ht.logger = printer
+		pt.setPrinter(cmd)
+		pt.setNamespace(cmd)
 
 		return existPreRunE(cmd, args)
 	}
+}
+
+// setNamespace We will set the namespace to EnvSettings before the PackageTool is set up
+// This is to ensure that the namespace is correctly populated before we build the install/uninstall action cmd
+func (pt *PackageTool) setNamespace(cmd *cobra.Command) {
+	ns, err := cmd.Flags().GetString("namespace")
+	if err != nil {
+		ns = egReleaseNamespace
+	}
+	pt.envSettings.SetNamespace(ns)
+}
+
+// SetPrinter We will build the logger before the PackageTool is set up
+func (pt *PackageTool) setPrinter(cmd *cobra.Command) {
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		debug = true
+	}
+	printer := NewPrinterForWriter(cmd.OutOrStdout(), debug)
+	pt.logger = printer
 }
 
 // installableChart Make sure the chart can be installed
