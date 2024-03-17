@@ -27,7 +27,7 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: BackendTLSPolicy is Accepted
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
@@ -59,7 +59,7 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: BackendTLSPolicy is Accepted
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
