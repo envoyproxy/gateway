@@ -128,7 +128,7 @@ func (pt *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *Pa
 
 	installCmd.Flags().DurationVar(&opts.Timeout, "timeout", helmOperateTimeout, "time to wait for any individual Kubernetes operation")
 	installCmd.Flags().StringVar(&opts.Version, "version", egChartVersion, "specify a version constraint for the envoy gateway version to use")
-	installCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the helm release to install")
+	installCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the envoy-gateway release to install")
 	installCmd.Flags().StringVarP(&opts.ReleaseNamespace, "namespace", "n", egReleaseNamespace, "if set, specify the namespace where envoy gateway is installed")
 	installCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "console output only, make no changes")
 	installCmd.Flags().BoolVar(&opts.SkipCRD, "skip-crd", false, "if set, no CRDs will be installed. By default, CRDs are installed if not already present")
@@ -144,7 +144,7 @@ func (pt *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *Pa
 func (pt *PackageTool) SetUninstallEnvSetting(uninstallCmd *cobra.Command, opts *PackageOptions) {
 
 	uninstallCmd.Flags().DurationVar(&opts.Timeout, "timeout", helmOperateTimeout, "time to wait for any individual Kubernetes operation")
-	uninstallCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the helm release to uninstall")
+	uninstallCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the envoy-gateway release to uninstall")
 	uninstallCmd.Flags().StringVarP(&opts.ReleaseNamespace, "namespace", "n", "", "if set, specify the namespace where envoy gateway is uninstalled")
 	uninstallCmd.Flags().BoolVar(&opts.Wait, "wait", false, "if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment, StatefulSet, or ReplicaSet are in a ready state before marking the release as successful. It will wait for as long as --timeout")
 	uninstallCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "console output only, make no changes")
