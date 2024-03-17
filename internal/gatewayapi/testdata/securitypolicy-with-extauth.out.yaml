@@ -147,6 +147,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: true
       grpc:
         backendRef:
           name: grpc-backend
@@ -154,7 +155,6 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
-      failOpen: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -183,6 +183,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: false
       http:
         backendRef:
           name: http-backend
@@ -192,7 +193,6 @@ securityPolicies:
         - header1
         - header2
         path: /auth
-      failOpen: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -247,6 +247,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: true
           grpc:
             authority: grpc-backend.default:9000
             destination:
@@ -262,7 +263,6 @@ xdsIR:
           - header1
           - header2
           name: default/httproute-1
-          failOpen: true
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -283,6 +283,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: true
           grpc:
             authority: grpc-backend.default:9000
             destination:
@@ -298,7 +299,6 @@ xdsIR:
           - header1
           - header2
           name: default/httproute-1
-          failOpen: true
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
@@ -319,6 +319,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: false
           http:
             authority: http-backend.envoy-gateway:80
             destination:
@@ -335,7 +336,6 @@ xdsIR:
             - header2
             path: /auth
           name: default/gateway-1
-          failOpen: false
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
