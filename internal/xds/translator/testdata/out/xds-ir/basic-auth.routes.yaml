@@ -13,6 +13,6 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.basic_auth_first-route:
+        envoy.filters.http.basic_auth/first-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

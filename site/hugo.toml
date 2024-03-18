@@ -64,7 +64,7 @@ languageName ="English"
 weight = 1
 [languages.en.params]
 title = "Envoy Gateway"
-description = "Manages Envoy Proxy as a Standalone or Kubernetes-based Application Gateway"
+description = "Manages Envoy Proxy as a Standalone or Kubernetes-based API Gateway"
 
 [markup]
   [markup.goldmark]

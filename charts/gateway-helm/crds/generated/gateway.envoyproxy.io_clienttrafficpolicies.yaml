@@ -91,6 +91,27 @@ spec:
                 x-kubernetes-validations:
                 - message: customHeader cannot be used in conjunction with xForwardedFor
                   rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
+              connection:
+                description: Connection includes client connection settings.
+                properties:
+                  limit:
+                    description: Limit defines limits related to connections
+                    properties:
+                      closeDelay:
+                        description: 'CloseDelay defines the delay to use before closing
+                          connections that are rejected once the limit value is reached.
+                          Default: none.'
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      value:
+                        description: 'Value of the maximum concurrent connections
+                          limit. When the limit is reached, incoming connections will
+                          be closed after the CloseDelay duration. Default: unlimited.'
+                        format: int64
+                        minimum: 0
+                        type: integer
+                    type: object
+                type: object
               enableProxyProtocol:
                 description: EnableProxyProtocol interprets the ProxyProtocol header
                   and adds the Client Address into the X-Forwarded-For header. Note

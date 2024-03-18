@@ -9,12 +9,12 @@ title: Envoy Gateway
 <a class="btn btn-lg btn-secondary me-3 mb-4" href="/v1.0.0/contributions">
   CONTRIBUTING <i class="fa fa-heartbeat ms-2 "></i>
 </a>
-<p class="lead mt-5">Manages Envoy Proxy as a Standalone or Kubernetes-based Application Gateway</p>
+<p class="lead mt-5">Manages Envoy Proxy as a Standalone or Kubernetes-based API Gateway</p>
 {{< blocks/link-down color="white" >}}
 {{< /blocks/cover >}}
 
 {{% blocks/lead color="black" %}}
-Manage **Envoy Proxy** as a **Standalone** or **Kubernetes-based** Application Gateway.
+Manage **Envoy Proxy** as a **Standalone** or **Kubernetes-based** API Gateway.
 
 **Gateway API** are used to **dynamically** provision and configure the managed Envoy Proxies.
 {{% /blocks/lead %}}

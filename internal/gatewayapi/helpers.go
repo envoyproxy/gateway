@@ -411,6 +411,7 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 	return protocolStrings
 }
 
+// getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
 func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alpha2.SectionName) v1alpha2.ParentReference {
 	return v1alpha2.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
