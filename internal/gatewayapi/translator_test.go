@@ -78,6 +78,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				Namespace:               "envoy-gateway-system",
+				MergeGateways:           IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures
@@ -270,6 +271,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
 				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
+				MergeGateways:          IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures
