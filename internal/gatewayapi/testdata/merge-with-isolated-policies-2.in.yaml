@@ -90,6 +90,44 @@ httpRoutes:
           backendRefs:
             - name: service-2
               port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-3
+    spec:
+      hostnames:
+        - bar.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-4
+    spec:
+      hostnames:
+        - foo.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-2
+          sectionName: http-2
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-2
+              port: 8080
 securityPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
@@ -123,10 +161,9 @@ securityPolicies:
     spec:
       targetRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
+        kind: HTTPRoute
+        name: httproute-3
         namespace: default
-        sectionName: http
       cors:
         allowOrigins:
           - "*"
