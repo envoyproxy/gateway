@@ -74,16 +74,16 @@ var ConnectionLimitTest = suite.ConformanceTest{
 
 			// expect error
 			if err != nil {
-				ue := &url.Error{}
-				if errors.As(err, &ue) {
-					if ue.Err.Error() != "EOF" {
-						t.Errorf("Exepcted EOF when connection limit is reached")
+				urlError := &url.Error{}
+				if errors.As(err, &urlError) {
+					if urlError.Err.Error() != "EOF" {
+						t.Errorf("expected EOF when connection limit is reached")
 					}
 				} else {
-					t.Errorf("Exepcted net/url error when connection limit is reached")
+					t.Errorf("expected net/url error when connection limit is reached")
 				}
 			} else {
-				t.Errorf("Exepcted error when connection limit is reached")
+				t.Errorf("expected error when connection limit is reached")
 			}
 
 		})

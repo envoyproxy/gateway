@@ -10,7 +10,7 @@ Users may want to limit the number of connections for several reasons:
 * Ensure that different listeners can receive a fair share of global resources.
 * Protect from malicious activity like DoS attacks. 
 
-Envoy Gateway introduces a new CRD called [ClientTrafficPolicy][] that allows the user to describe their desired connection limit settings.
+Envoy Gateway introduces a new CRD called [Client Traffic Policy][] that allows the user to describe their desired connection limit settings.
 This instantiated resource can be linked to a [Gateway][].
 
 The Envoy [connection limit][] implementation is distributed: counters are not synchronized between different envoy proxies.
