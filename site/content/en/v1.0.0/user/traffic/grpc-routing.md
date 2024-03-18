@@ -1,14 +1,12 @@
 ---
-title: "GRPC Routing"
+title: GRPC Routing
 ---
 
-The [GRPCRoute][] resource allows users to configure gRPC routing by matching HTTP/2 traffic and forwarding it to backend gRPC servers.
-To learn more about gRPC routing, refer to the [Gateway API documentation][].
+The [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/) resource allows users to configure gRPC routing by matching HTTP/2 traffic and forwarding it to backend gRPC servers. To learn more about gRPC routing, refer to the [Gateway API documentation](https://gateway-api.sigs.k8s.io/).
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Installation
 
@@ -18,11 +16,9 @@ Install the gRPC routing example resources:
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/grpc-routing.yaml
 ```
 
-The manifest installs a [GatewayClass][], [Gateway][], a Deployment, a Service, and a GRPCRoute resource.
-The GatewayClass is a cluster-scoped resource that represents a class of Gateways that can be instantiated.
+The manifest installs a [GatewayClass](https://gateway-api.sigs.k8s.io/api-types/gatewayclass/), [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/), a Deployment, a Service, and a GRPCRoute resource. The GatewayClass is a cluster-scoped resource that represents a class of Gateways that can be instantiated.
 
-__Note:__ Envoy Gateway is configured by default to manage a GatewayClass with
-`controllerName: gateway.envoyproxy.io/gatewayclass-controller`.
+**Note:** Envoy Gateway is configured by default to manage a GatewayClass with `controllerName: gateway.envoyproxy.io/gatewayclass-controller`.
 
 ## Verification
 
@@ -34,17 +30,13 @@ kubectl get gc --selector=example=grpc-routing
 
 The status should reflect "Accepted=True", indicating Envoy Gateway is managing the GatewayClass.
 
-A Gateway represents configuration of infrastructure. When a Gateway is created, [Envoy proxy][] infrastructure is
-provisioned or configured by Envoy Gateway. The `gatewayClassName` defines the name of a GatewayClass used by this
-Gateway. Check the status of the Gateway:
+A Gateway represents configuration of infrastructure. When a Gateway is created, [Envoy proxy](https://www.envoyproxy.io/) infrastructure is provisioned or configured by Envoy Gateway. The `gatewayClassName` defines the name of a GatewayClass used by this Gateway. Check the status of the Gateway:
 
 ```shell
 kubectl get gateways --selector=example=grpc-routing
 ```
 
-The status should reflect "Ready=True", indicating the Envoy proxy infrastructure has been provisioned. The status also
-provides the address of the Gateway. This address is used later in the guide to test connectivity to proxied backend
-services.
+The status should reflect "Ready=True", indicating the Envoy proxy infrastructure has been provisioned. The status also provides the address of the Gateway. This address is used later in the guide to test connectivity to proxied backend services.
 
 Check the status of the GRPCRoute:
 
@@ -52,8 +44,7 @@ Check the status of the GRPCRoute:
 kubectl get grpcroutes --selector=example=grpc-routing -o yaml
 ```
 
-The status for the GRPCRoute should surface "Accepted=True" and a `parentRef` that references the example Gateway.
-The `example-route` matches any traffic for "grpc-example.com" and forwards it to the "yages" Service.
+The status for the GRPCRoute should surface "Accepted=True" and a `parentRef` that references the example Gateway. The `example-route` matches any traffic for "grpc-example.com" and forwards it to the "yages" Service.
 
 ## Testing the Configuration
 
@@ -63,7 +54,7 @@ Before testing GRPC routing to the `yages` backend, get the Gateway's address.
 export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Test GRPC routing to the `yages` backend using the [grpcurl][] command.
+Test GRPC routing to the `yages` backend using the [grpcurl](https://github.com/fullstorydev/grpcurl) command.
 
 ```shell
 grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
@@ -77,7 +68,7 @@ You should see the below response
 }
 ```
 
-Envoy Gateway also supports [gRPC-Web][] requests for this configuration. The below `curl` command can be used to send a grpc-Web request with over HTTP/2. You should receive the same response seen in the previous command.
+Envoy Gateway also supports [gRPC-Web](https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2) requests for this configuration. The below `curl` command can be used to send a grpc-Web request with over HTTP/2. You should receive the same response seen in the previous command.
 
 The data in the body `AAAAAAA=` is a base64 encoded representation of an empty message (data length 0) that the Ping RPC accepts.
 
@@ -86,15 +77,14 @@ curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grp
 ```
 
 ## GRPCRoute Match
-The `matches` field can be used to restrict the route to a specific set of requests based on GRPC's service and/or method names.
-It supports two match types: `Exact` and `RegularExpression`.
+
+The `matches` field can be used to restrict the route to a specific set of requests based on GRPC's service and/or method names. It supports two match types: `Exact` and `RegularExpression`.
 
 ### Exact
 
 `Exact` match is the default match type.
 
-The following example shows how to match a request based on the service and method names for `grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`,
-as well as a match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
+The following example shows how to match a request based on the service and method names for `grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`, as well as a match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -131,7 +121,7 @@ Verify the GRPCRoute status:
 kubectl get grpcroutes --selector=example=grpc-routing -o yaml
 ```
 
-Test GRPC routing to the `yages` backend using the [grpcurl][] command.
+Test GRPC routing to the `yages` backend using the [grpcurl](https://github.com/fullstorydev/grpcurl) command.
 
 ```shell
 grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
@@ -139,9 +129,7 @@ grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Pin
 
 ### RegularExpression
 
-The following example shows how to match a request based on the service and method names
-with match type `RegularExpression`. It matches all the services and methods with pattern
-`/.*.Echo/Pin.+`, which matches `yages.Echo/Ping` in our deployment.
+The following example shows how to match a request based on the service and method names with match type `RegularExpression`. It matches all the services and methods with pattern `/.*.Echo/Pin.+`, which matches `yages.Echo/Ping` in our deployment.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -180,16 +168,8 @@ Verify the GRPCRoute status:
 kubectl get grpcroutes --selector=example=grpc-routing -o yaml
 ```
 
-Test GRPC routing to the `yages` backend using the [grpcurl][] command.
+Test GRPC routing to the `yages` backend using the [grpcurl](https://github.com/fullstorydev/grpcurl) command.
 
 ```shell
 grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
 ```
-
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
-[Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[Envoy proxy]: https://www.envoyproxy.io/
-[grpcurl]: https://github.com/fullstorydev/grpcurl
-[gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2

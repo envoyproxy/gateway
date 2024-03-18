@@ -1,25 +1,25 @@
 ---
-title: "HTTP Timeouts"
+title: HTTP Timeouts
 ---
 
-The [HTTPRouteTimeouts][] resource allows users to configure request timeouts and response timeouts for an [HTTPRouteRule][]. This guide shows how to configure timeouts.
+The [HTTPRouteTimeouts](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteTimeouts) resource allows users to configure request timeouts and response timeouts for an [HTTPRouteRule](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule). This guide shows how to configure timeouts.
 
-The [HTTPRouteTimeouts][] supports two kinds of timeouts:
-- **request**: Request specifies the maximum duration for a gateway to respond to an HTTP request. 
+The [HTTPRouteTimeouts](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteTimeouts) supports two kinds of timeouts:
+- **request**: Request specifies the maximum duration for a gateway to respond to an HTTP request.
 - **backendRequest**: BackendRequest specifies a timeout for an individual request from the gateway to a backend.
 
-__Note:__  The Request duration must be >= BackendRequest duration
+**Note:** The Request duration must be >= BackendRequest duration
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Verification
 
 backend has the ability to delay responses; we use it as the backend to control response time.
 
 ### request timeout
+
 We configure the backend to delay responses by 3 seconds, then we set the request timeout to 4 seconds. Envoy Gateway will successfully respond to the request.
 
 ```shell
@@ -116,6 +116,3 @@ curl --header "Host: timeout.example.com" http://${GATEWAY_HOST}/?delay=3s  -v
 * Connection #0 to host 127.0.0.1 left intact
 upstream request timeout
 ```
-
-[HTTPRouteTimeouts]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteTimeouts
-[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule

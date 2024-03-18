@@ -1,14 +1,12 @@
 ---
-title: "Routing outside Kubernetes"
+title: Routing outside Kubernetes
 ---
 
-Routing to endpoints outside the Kubernetes cluster where Envoy Gateway and its corresponding Envoy Proxy fleet is
-running is a common use. This can be achieved by defining FQDN addresses in a [EndpointSlice][].
+Routing to endpoints outside the Kubernetes cluster where Envoy Gateway and its corresponding Envoy Proxy fleet is running is a common use. This can be achieved by defining FQDN addresses in a [EndpointSlice](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/).
 
 ## Installation
 
-Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
@@ -46,7 +44,7 @@ endpoints:
 EOF
 ```
 
-* Lets update the [Gateway][] to include a TLS Listener on port 443
+* Lets update the [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) to include a TLS Listener on port 443
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{
@@ -63,7 +61,7 @@ kubectl patch gateway eg --type=json --patch '[{
 }]'
 ```
 
-* Lets add a [TLSRoute][] that can route incoming traffic to the above backend that we created
+* Lets add a [TLSRoute](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute) that can route incoming traffic to the above backend that we created
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -80,7 +78,7 @@ spec:
     - name: httpbin
       port: 443
 EOF
-```    
+```
 
 Lets get the Gateway address
 
@@ -88,13 +86,8 @@ Lets get the Gateway address
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-
 Lets send a request and view the response
 
 ```shell
 curl -I -HHost:httpbin.org --resolve "httpbin.org:443:${GATEWAY_HOST}" https://httpbin.org:443
 ```
-
-[EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute

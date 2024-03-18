@@ -1,25 +1,22 @@
 ---
-title: "Client Traffic Policy"
+title: Client Traffic Policy
 ---
 
-This guide explains the usage of the [ClientTrafficPolicy][] API.
-
+This guide explains the usage of the [ClientTrafficPolicy](../../api/extension_types#clienttrafficpolicy) API.
 
 ## Introduction
 
-The [ClientTrafficPolicy][] API allows system administrators to configure
-the behavior for how the Envoy Proxy server behaves with downstream clients.
+The [ClientTrafficPolicy](../../api/extension_types#clienttrafficpolicy) API allows system administrators to configure the behavior for how the Envoy Proxy server behaves with downstream clients.
 
 ## Motivation
 
-This API was added as a new policy attachment resource that can be applied to Gateway resources and it is meant to hold settings for configuring behavior of the connection between the downstream client and Envoy Proxy listener. It is the counterpart to the [BackendTrafficPolicy][] API resource.
+This API was added as a new policy attachment resource that can be applied to Gateway resources and it is meant to hold settings for configuring behavior of the connection between the downstream client and Envoy Proxy listener. It is the counterpart to the [BackendTrafficPolicy](../../api/extension_types#backendtrafficpolicy) API resource.
 
 ## Quickstart
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+* Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Support TCP keepalive for downstream client
 
@@ -412,8 +409,7 @@ Handling connection for 8888
 
 ### Enable HTTP Request Received Timeout
 
-This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
-This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
+This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts).
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -463,6 +459,3 @@ curl -v http://$GATEWAY_HOST/get \
 * Closing connection
 request timeout
 ```
-
-[ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
-[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy

@@ -1,5 +1,5 @@
 ---
-title: "TLS Termination for TCP"
+title: TLS Termination for TCP
 ---
 
 This guide will walk through the steps required to configure TLS Terminate mode for TCP traffic via Envoy Gateway. The guide uses a self-signed CA, so it should be used for testing and demonstration purposes only.
@@ -13,6 +13,7 @@ This guide will walk through the steps required to configure TLS Terminate mode 
 Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway.
 
 ## TLS Certificates
+
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.
 
 Create a root certificate and private key to sign certificates:

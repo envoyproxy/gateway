@@ -1,15 +1,12 @@
 ---
-title: "Customize EnvoyProxy"
+title: Customize EnvoyProxy
 ---
 
-Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the ParametersRef
-in GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
-Service. To learn more about GatewayClass and ParametersRef, please refer to [Gateway API documentation][].
+Envoy Gateway provides an [EnvoyProxy](../../api/extension_types#envoyproxy) CRD that can be linked to the ParametersRef in GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and Service. To learn more about GatewayClass and ParametersRef, please refer to [Gateway API documentation](https://gateway-api.sigs.k8s.io/).
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Add GatewayClass ParametersRef
 
@@ -51,10 +48,9 @@ spec:
 EOF
 ```
 
-After you apply the config, you should see the replicas of envoyproxy changes to 2.
-And also you can dynamically change the value.
+After you apply the config, you should see the replicas of envoyproxy changes to 2. And also you can dynamically change the value.
 
-``` shell
+```shell
 kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg
 ```
 
@@ -220,8 +216,7 @@ After applying the config, you can get the envoyproxy service, and see annotatio
 
 ## Customize EnvoyProxy Bootstrap Config
 
-You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config.
-There are two ways to customize it:
+You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config. There are two ways to customize it:
 
 * Replace: the whole bootstrap config will be replaced by the config you provided.
 * Merge: the config you provided will be merged into the default bootstrap config.
@@ -310,12 +305,9 @@ spec:
 EOF
 ```
 
-You can use [egctl translate][]
-to get the default xDS Bootstrap configuration used by Envoy Gateway.
+You can use [egctl translate](../operations/egctl#validating-gateway-api-configuration) to get the default xDS Bootstrap configuration used by Envoy Gateway.
 
-After applying the config, the bootstrap config will be overridden by the new config you provided.
-Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
-You can also validate this configuration using [egctl translate][].
+After applying the config, the bootstrap config will be overridden by the new config you provided. Any errors in the configuration will be surfaced as status within the `GatewayClass` resource. You can also validate this configuration using [egctl translate](../operations/egctl#validating-gateway-api-configuration).
 
 ## Customize EnvoyProxy Horizontal Pod Autoscaler
 
@@ -351,8 +343,7 @@ After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is gen
 
 ## Customize EnvoyProxy Command line options
 
-You can customize the EnvoyProxy Command line options via `spec.extraArgs` in EnvoyProxy Config.
-For example, the following configuration will add `--disable-extensions` arg in order to disable `envoy.access_loggers/envoy.access_loggers.wasm` extension:
+You can customize the EnvoyProxy Command line options via `spec.extraArgs` in EnvoyProxy Config. For example, the following configuration will add `--disable-extensions` arg in order to disable `envoy.access_loggers/envoy.access_loggers.wasm` extension:
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -366,7 +357,3 @@ spec:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
 EOF
 ```
-
-[Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
-[egctl translate]: ../operations/egctl#validating-gateway-api-configuration

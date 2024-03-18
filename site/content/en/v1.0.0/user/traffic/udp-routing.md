@@ -1,24 +1,18 @@
 ---
-title: "UDP Routing"
+title: UDP Routing
 ---
 
-The [UDPRoute][] resource allows users to configure UDP routing by matching UDP traffic and forwarding it to Kubernetes
-backends. This guide will use CoreDNS example to walk you through the steps required to configure UDPRoute on Envoy
-Gateway.
+The [UDPRoute](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute) resource allows users to configure UDP routing by matching UDP traffic and forwarding it to Kubernetes backends. This guide will use CoreDNS example to walk you through the steps required to configure UDPRoute on Envoy Gateway.
 
-__Note:__ UDPRoute allows Envoy Gateway to operate as a non-transparent proxy between a UDP client and server. The lack
-of transparency means that the upstream server will see the source IP and port of the Gateway instead of the client.
-For additional information, refer to Envoy's [UDP proxy documentation][].
+**Note:** UDPRoute allows Envoy Gateway to operate as a non-transparent proxy between a UDP client and server. The lack of transparency means that the upstream server will see the source IP and port of the Gateway instead of the client. For additional information, refer to Envoy's [UDP proxy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy).
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Installation
 
-Install CoreDNS in the Kubernetes cluster as the example backend. The installed CoreDNS is listening on
-UDP port 53 for DNS lookups.
+Install CoreDNS in the Kubernetes cluster as the example backend. The installed CoreDNS is listening on UDP port 53 for DNS lookups.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/udp-routing-example-backend.yaml
@@ -96,8 +90,7 @@ Use `dig` command to query the dns entry foo.bar.com through the Gateway.
 dig @${GATEWAY_HOST} -p 5300 foo.bar.com
 ```
 
-You should see the result of the dns query as the below output, which means that the dns query has been successfully
-routed to the backend CoreDNS.
+You should see the result of the dns query as the below output, which means that the dns query has been successfully routed to the backend CoreDNS.
 
 Note: 49.51.177.138 is the resolved address of GATEWAY_HOST.
 
@@ -142,6 +135,3 @@ kubectl delete udproute/coredns
 ## Next Steps
 
 Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.
-
-[UDPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
-[UDP proxy documentation]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy

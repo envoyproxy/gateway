@@ -1,10 +1,8 @@
 ---
-title: "TLS Passthrough"
+title: TLS Passthrough
 ---
 
-This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring
-Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself
-to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
+This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
 
 ## Prerequisites
 
@@ -12,15 +10,13 @@ to terminate the TLS connection, while the Gateway routes the requests to the ap
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
 
-Generate the certificates and keys used by the Service to terminate client TLS connections.
-For the application, we'll deploy a sample echoserver app, with the certificates loaded in the application Pod.
+Generate the certificates and keys used by the Service to terminate client TLS connections. For the application, we'll deploy a sample echoserver app, with the certificates loaded in the application Pod.
 
-__Note:__ These certificates will not be used by the Gateway, but will remain in the application scope.
+**Note:** These certificates will not be used by the Gateway, but will remain in the application scope.
 
 Create a root certificate and private key to sign certificates:
 
@@ -49,8 +45,7 @@ Deploy TLS Passthrough application Deployment, Service and TLSRoute:
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/tls-passthrough.yaml
 ```
 
-Patch the Gateway from the Quickstart guide to include a TLS listener that listens on port `6443` and is configured for
-TLS mode Passthrough:
+Patch the Gateway from the Quickstart guide to include a TLS listener that listens on port `6443` and is configured for TLS mode Passthrough:
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{

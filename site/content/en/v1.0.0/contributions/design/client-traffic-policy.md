@@ -1,16 +1,14 @@
 ---
-title: "ClientTrafficPolicy "
+title: 'ClientTrafficPolicy '
 ---
 
 ## Overview
 
-This design document introduces the `ClientTrafficPolicy` API allowing system administrators to configure
-the behavior for how the Envoy Proxy server behaves with downstream clients.
+This design document introduces the `ClientTrafficPolicy` API allowing system administrators to configure the behavior for how the Envoy Proxy server behaves with downstream clients.
 
 ## Goals
 
-* Add an API definition to hold settings for configuring behavior of the connection between the downstream
-client and Envoy Proxy listener.
+* Add an API definition to hold settings for configuring behavior of the connection between the downstream client and Envoy Proxy listener.
 
 ## Non Goals
 
@@ -18,8 +16,7 @@ client and Envoy Proxy listener.
 
 ## Implementation
 
-`ClientTrafficPolicy` is a [Direct Policy Attachment][] type API that can be used to extend [Gateway API][]
-to define configuration that affect the connection between the downstream client and Envoy Proxy listener.
+`ClientTrafficPolicy` is a [Direct Policy Attachment](https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment) type API that can be used to extend [Gateway API](https://gateway-api.sigs.k8s.io/) to define configuration that affect the connection between the downstream client and Envoy Proxy listener.
 
 ### Example
 
@@ -94,21 +91,13 @@ Here is a list of features that can be included in this API
 
 * This API will only support a single `targetRef` and can bind to only a `Gateway` resource.
 * This API resource MUST be part of same namespace as the `Gateway` resource
-* There can be only be ONE policy resource attached to a specific `Listener` (section)  within a `Gateway`
-* If the policy targets a resource but cannot attach to it, this information should be reflected
-in the Policy Status field using the `Conflicted=True` condition.
-* If multiple polices target the same resource, the oldest resource (based on creation timestamp) will
-attach to the Gateway Listeners, the others will not.
-* If Policy A has a `targetRef` that includes a `sectionName` i.e.
-it targets a specific Listener within a `Gateway` and Policy B has a `targetRef` that targets the same
-entire Gateway then
+* There can be only be ONE policy resource attached to a specific `Listener` (section) within a `Gateway`
+* If the policy targets a resource but cannot attach to it, this information should be reflected in the Policy Status field using the `Conflicted=True` condition.
+* If multiple polices target the same resource, the oldest resource (based on creation timestamp) will attach to the Gateway Listeners, the others will not.
+* If Policy A has a `targetRef` that includes a `sectionName` i.e. it targets a specific Listener within a `Gateway` and Policy B has a `targetRef` that targets the same entire Gateway then
   * Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
-  * Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional
-  status condition `Overridden=True`.
+  * Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional status condition `Overridden=True`.
 
 ## Alternatives
 
-* The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
-
-[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment
-[Gateway API]: https://gateway-api.sigs.k8s.io/
+* The project can indefintely wait for these configuration parameters to be part of the [Gateway API](https://gateway-api.sigs.k8s.io/).

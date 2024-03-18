@@ -1,11 +1,10 @@
 ---
-title: "Backend TLS: Gateway to Backend"
+title: 'Backend TLS: Gateway to Backend'
 ---
 
-This guide demonstrates how TLS can be achieved between the Gateway and a backend. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This guide demonstrates how TLS can be achieved between the Gateway and a backend. The guide uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
-Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][].
+Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/).
 
 ## Prerequisites
 
@@ -17,7 +16,7 @@ Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gat
 
 ## TLS Certificates
 
-Generate the certificates and keys used by the backend to terminate TLS connections from the Gateways. 
+Generate the certificates and keys used by the backend to terminate TLS connections from the Gateways.
 
 Create a root certificate and private key to sign certificates:
 
@@ -46,7 +45,7 @@ kubectl create configmap example-ca --from-file=ca.crt
 
 ## Setup TLS on the backend
 
-Patch the existing quickstart backend to enable TLS. The patch will mount the TLS certificate secret into the backend as volume. 
+Patch the existing quickstart backend to enable TLS. The patch will mount the TLS certificate secret into the backend as volume.
 
 ```shell
 kubectl patch deployment backend --type=json --patch '[
@@ -101,7 +100,7 @@ kubectl patch deployment backend --type=json --patch '[
 ]'
 ```
 
-Create a service that exposes port 443 on the backend service. 
+Create a service that exposes port 443 on the backend service.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -124,7 +123,7 @@ spec:
 EOF
 ```
 
-Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS connection with the backend and validate the backend certificate is issued by a trusted CA and contains an appropriate DNS SAN.
+Create a [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/) instructing Envoy Gateway to establish a TLS connection with the backend and validate the backend certificate is issued by a trusted CA and contains an appropriate DNS SAN.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -234,5 +233,3 @@ Inspect the output and see that the response contains the details of the TLS han
   "cipherSuite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
  }
 ```
-
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/

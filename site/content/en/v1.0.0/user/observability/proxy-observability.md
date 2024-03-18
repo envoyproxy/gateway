@@ -1,14 +1,12 @@
 ---
-title: "Proxy Observability"
+title: Proxy Observability
 ---
 
-Envoy Gateway provides observability for the ControlPlane and the underlying EnvoyProxy instances.
-This guide show you how to config proxy observability, includes metrics, logs, and traces.
+Envoy Gateway provides observability for the ControlPlane and the underlying EnvoyProxy instances. This guide show you how to config proxy observability, includes metrics, logs, and traces.
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 [FluentBit](https://fluentbit.io/) is used to collect logs from the EnvoyProxy instances and forward them to Loki. Install FluentBit:
 
@@ -32,8 +30,7 @@ helm repo update
 helm upgrade --install tempo grafana/tempo -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/tempo/helm-values.yaml -n monitoring --create-namespace --version 1.3.1
 ```
 
-[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) offers a vendor-agnostic implementation of how to receive, process and export telemetry data. 
-Install OTel-Collector:
+[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) offers a vendor-agnostic implementation of how to receive, process and export telemetry data. Install OTel-Collector:
 
 ```shell
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
@@ -50,7 +47,7 @@ TEMPO_IP=$(kubectl get svc tempo -n monitoring -o jsonpath='{.status.loadBalance
 
 ## Metrics
 
-By default, Envoy Gateway expose metrics with prometheus endpoint. 
+By default, Envoy Gateway expose metrics with prometheus endpoint.
 
 Verify metrics:
 
@@ -68,8 +65,7 @@ You can disable metrics by setting the `telemetry.metrics.prometheus.disable` to
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/metric/disable-prometheus.yaml
 ```
 
-Envoy Gateway can send metrics to OpenTelemetry Sink.
-Send metrics to OTel-Collector:
+Envoy Gateway can send metrics to OpenTelemetry Sink. Send metrics to OTel-Collector:
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/metric/otel-sink.yaml
@@ -94,7 +90,6 @@ If custom format string is not specified, Envoy Gateway uses the following defau
 ```
 
 > Note: Envoy Gateway disable envoy headers by default, you can enable it by setting `EnableEnvoyHeaders` to `true` in the [ClientTrafficPolicy](../../api/extension_types#backendtrafficpolicy) CRD.
-
 
 Verify logs from loki:
 
@@ -122,8 +117,7 @@ curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={
 
 ## Traces
 
-By default, Envoy Gateway doesn't send traces to OpenTelemetry Sink.
-You can enable traces by setting the `telemetry.tracing` in the `EnvoyProxy` CRD.
+By default, Envoy Gateway doesn't send traces to OpenTelemetry Sink. You can enable traces by setting the `telemetry.tracing` in the `EnvoyProxy` CRD.
 
 ***Note:*** Envoy Gateway use 100% sample rate, which means all requests will be traced. This may cause performance issues.
 

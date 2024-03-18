@@ -1,20 +1,16 @@
 ---
-title: "External Authorization"
+title: External Authorization
 ---
 
 This guide provides instructions for configuring external authentication.
 
-External authorization calls an external HTTP or gRPC service to check whether an incoming HTTP request is authorized
-or not. If the request is deemed unauthorized, then the request will be denied with a 403 (Forbidden) response. If the
-request is authorized, then the request will be allowed to proceed to the backend service. 
+External authorization calls an external HTTP or gRPC service to check whether an incoming HTTP request is authorized or not. If the request is deemed unauthorized, then the request will be denied with a 403 (Forbidden) response. If the request is authorized, then the request will be allowed to proceed to the backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure external authorization.
-This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute][HTTPRoute] resource.
+Envoy Gateway introduces a new CRD called [SecurityPolicy](../../contributions/design/security-policy) that allows the user to configure external authorization. This instantiated resource can be linked to a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway) and [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute) resource.
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 Verify the Gateway status:
 
@@ -32,7 +28,7 @@ Install a demo HTTP service that will be used as the external authorization serv
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/ext-auth-http-service.yaml
 ```
 
-Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.  
+Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -64,10 +60,7 @@ kubectl get httproute/myapp -o yaml
 
 ### Configuration
 
-Create a new SecurityPolicy resource to configure the external authorization. This SecurityPolicy targets the HTTPRoute
-"myApp" created in the previous step. It calls the HTTP external authorization service "http-ext-auth" on port 9002 for
-authorization. The `headersToBackend` field specifies the headers that will be sent to the backend service if the request
-is successfully authorized.
+Create a new SecurityPolicy resource to configure the external authorization. This SecurityPolicy targets the HTTPRoute "myApp" created in the previous step. It calls the HTTP external authorization service "http-ext-auth" on port 9002 for authorization. The `headersToBackend` field specifies the headers that will be sent to the backend service if the request is successfully authorized.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -97,8 +90,7 @@ kubectl get securitypolicy/ext-auth-example -o yaml
 
 ### Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
-Quickstart instructions to set the variable.
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the Quickstart instructions to set the variable.
 
 ```shell
 echo $GATEWAY_HOST
@@ -133,9 +125,7 @@ Send a request to the backend service with `Authentication` header:
 curl -v -H "Host: www.example.com" -H "Authorization: Bearer token1" "http://${GATEWAY_HOST}/myapp"
 ```
 
-The request should be allowed and you should see the response from the backend service. 
-Because the `x-current-user` header from the auth response has been sent to the backend service, 
-you should see the `x-current-user` header in the response.
+The request should be allowed and you should see the response from the backend service. Because the `x-current-user` header from the auth response has been sent to the backend service, you should see the `x-current-user` header in the response.
 
 ```
 "X-Current-User": [
@@ -147,18 +137,15 @@ you should see the `x-current-user` header in the response.
 
 ### Installation
 
-Install a demo gRPC service that will be used as the external authorization service. The demo gRPC service is enabled 
-with TLS and a BackendTLSConfig is created to configure the communication between the Envoy proxy and the gRPC service.
+Install a demo gRPC service that will be used as the external authorization service. The demo gRPC service is enabled with TLS and a BackendTLSConfig is created to configure the communication between the Envoy proxy and the gRPC service.
 
-Note: TLS is optional for HTTP or gRPC external authorization services. However, enabling TLS is recommended for enhanced
-security in production environments.
+Note: TLS is optional for HTTP or gRPC external authorization services. However, enabling TLS is recommended for enhanced security in production environments.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/ext-auth-grpc-service.yaml
 ```
 
-The HTTPRoute created in the previous section is still valid and can be used with the gRPC auth service, but if you have
-not created the HTTPRoute, you can create it now.
+The HTTPRoute created in the previous section is still valid and can be used with the gRPC auth service, but if you have not created the HTTPRoute, you can create it now.
 
 Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.
 
@@ -192,8 +179,7 @@ kubectl get httproute/myapp -o yaml
 
 ### Configuration
 
-Update the SecurityPolicy that was created in the previous section to use the gRPC external authorization service.
-It calls the gRPC external authorization service "grpc-ext-auth" on port 9002 for authorization. 
+Update the SecurityPolicy that was created in the previous section to use the gRPC external authorization service. It calls the gRPC external authorization service "grpc-ext-auth" on port 9002 for authorization.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -220,8 +206,7 @@ Verify the SecurityPolicy configuration:
 kubectl get securitypolicy/ext-auth-example -o yaml
 ```
 
-Because the gRPC external authorization service is enabled with TLS, a BackendTLSConfig needs to be created to configure
-the communication between the Envoy proxy and the gRPC auth service.
+Because the gRPC external authorization service is enabled with TLS, a BackendTLSConfig needs to be created to configure the communication between the Envoy proxy and the gRPC auth service.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -252,8 +237,7 @@ kubectl get backendtlspolicy/grpc-ext-auth-btls -o yaml
 
 ### Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the
-Quickstart instructions to set the variable.
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the Quickstart instructions to set the variable.
 
 ```shell
 echo $GATEWAY_HOST
@@ -305,7 +289,3 @@ kubectl delete backendtlspolicy/grpc-ext-auth-btls
 ## Next Steps
 
 Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.
-
-[SecurityPolicy]: ../../contributions/design/security-policy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

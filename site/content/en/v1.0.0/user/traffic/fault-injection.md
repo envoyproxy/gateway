@@ -1,28 +1,25 @@
 ---
-title: "Fault Injection"
+title: Fault Injection
 ---
 
-[Envoy fault injection] can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads.
+[Envoy fault injection](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/fault_filter.html) can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads.
 
 Envoy Gateway supports the following fault scenarios:
 - **delay fault**: inject a custom fixed delay into the request with a certain probability to simulate delay failures.
 - **abort fault**: inject a custom response code into the response with a certain probability to simulate abort failures.
 
-Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their desired fault scenarios.
-This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
+Envoy Gateway introduces a new CRD called [BackendTrafficPolicy](../../api/extension_types#backendtrafficpolicy) that allows the user to describe their desired fault scenarios. This instantiated resource can be linked to a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/), [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) or [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/) resource.
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-For GRPC - follow the steps from the [GRPC Routing](../traffic/grpc-routing) example.
-Before proceeding, you should be able to query the example backend using HTTP or GRPC.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. For GRPC - follow the steps from the [GRPC Routing](../traffic/grpc-routing) example. Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
 ### Install the hey load testing tool
-* The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.
+* The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project](https://github.com/rakyll/hey) docs.
 
 ## Configuration
 
-Allow requests with a valid faultInjection by creating an [BackendTrafficPolicy][BackendTrafficPolicy] and attaching it to the example HTTPRoute or GRPCRoute.
+Allow requests with a valid faultInjection by creating an [BackendTrafficPolicy](../../api/extension_types#backendtrafficpolicy) and attaching it to the example HTTPRoute or GRPCRoute.
 
 ### HTTPRoute
 
@@ -100,7 +97,7 @@ spec:
 EOF
 ```
 
-Two HTTPRoute has been created, one for `/foo` and another for `/bar`.  `fault-injection-abort` BackendTrafficPolicy has been created and targeted HTTPRoute foo to abort requests for `/foo`. `fault-injection-delay` BackendTrafficPolicy has been created and targeted HTTPRoute foo to delay `2s` requests for `/bar`. 
+Two HTTPRoute has been created, one for `/foo` and another for `/bar`. `fault-injection-abort` BackendTrafficPolicy has been created and targeted HTTPRoute foo to abort requests for `/foo`. `fault-injection-delay` BackendTrafficPolicy has been created and targeted HTTPRoute foo to delay `2s` requests for `/bar`.
 
 Verify the HTTPRoute configuration and status:
 
@@ -170,8 +167,7 @@ kubectl get backendtrafficpolicy/fault-injection-abort -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
-Quickstart instructions to set the variable.
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the Quickstart instructions to set the variable.
 
 ```shell
 echo $GATEWAY_HOST
@@ -245,10 +241,3 @@ Delete the BackendTrafficPolicy:
 ```shell
 kubectl delete BackendTrafficPolicy/fault-injection-abort
 ```
-
-[Envoy fault injection]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/fault_filter.html
-[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
-[Hey project]: https://github.com/rakyll/hey

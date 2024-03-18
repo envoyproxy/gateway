@@ -1,6 +1,6 @@
 ---
-title: "Maintainers"
-description: "This section includes Maintainers of Envoy Gateway."
+title: Maintainers
+description: This section includes Maintainers of Envoy Gateway.
 ---
 
 ## The following maintainers, listed in alphabetical order, own everything

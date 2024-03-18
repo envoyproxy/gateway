@@ -1,23 +1,16 @@
 ---
-title: "HTTP Redirects"
+title: HTTP Redirects
 ---
 
-The [HTTPRoute][] resource can issue redirects to clients or rewrite paths sent upstream using filters. Note that
-HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway only supports __core__
-[HTTPRoute filters][] which consist of `RequestRedirect` and `RequestHeaderModifier` at the time of this writing. To
-learn more about HTTP routing, refer to the [Gateway API documentation][].
+The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) resource can issue redirects to clients or rewrite paths sent upstream using filters. Note that HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway only supports **core** [HTTPRoute filters](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter) which consist of `RequestRedirect` and `RequestHeaderModifier` at the time of this writing. To learn more about HTTP routing, refer to the [Gateway API documentation](https://gateway-api.sigs.k8s.io/).
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTPS.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTPS.
 
 ## Redirects
 
-Redirects return HTTP 3XX responses to a client, instructing it to retrieve a different resource. A
-[`RequestRedirect` filter][req_filter] instructs Gateways to emit a redirect response to requests that match the rule.
-For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `requestRedirect.statusCode=301` and
-`requestRedirect.scheme="https"`:
+Redirects return HTTP 3XX responses to a client, instructing it to retrieve a different resource. A [`RequestRedirect` filter](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRequestRedirectFilter) instructs Gateways to emit a redirect response to requests that match the rule. For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `requestRedirect.statusCode=301` and `requestRedirect.scheme="https"`:
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -44,7 +37,7 @@ spec:
 EOF
 ```
 
-__Note:__ `301` (default) and `302` are the only supported statusCodes.
+**Note:** `301` (default) and `302` are the only supported statusCodes.
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
@@ -58,8 +51,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Querying `redirect.example/get` should result in a `301` response from the example Gateway and redirecting to the
-configured redirect hostname.
+Querying `redirect.example/get` should result in a `301` response from the example Gateway and redirecting to the configured redirect hostname.
 
 ```console
 $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}/get"
@@ -69,8 +61,7 @@ $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}/get"
 ...
 ```
 
-If you followed the steps in the [Secure Gateways](../security/secure-gateways) guide, you should be able to curl the redirect
-location.
+If you followed the steps in the [Secure Gateways](../security/secure-gateways) guide, you should be able to curl the redirect location.
 
 ## HTTP --> HTTPS
 
@@ -138,8 +129,7 @@ Check for any TLS certificate issues on the gateway.
 kubectl -n default describe gateway eg
 ```
 
-Create two HTTPRoutes and attach them to the HTTP and HTTPS listeners using the [sectionName][] field.
-
+Create two HTTPRoutes and attach them to the HTTP and HTTPS listeners using the [sectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.CommonRouteSpec) field.
 
 ```shell
 cat <<EOF | kubectl apply -n default -f -
@@ -197,11 +187,9 @@ curl -v -H 'Host:www.example.com' --resolve "www.example.com:443:$GATEWAY_HOST" 
 --cacert CA.crt https://www.example.com:443/get
 ```
 
-
 ## Path Redirects
 
-Path redirects use an HTTP Path Modifier to replace either entire paths or path prefixes. For example, the HTTPRoute
-below will issue a 302 redirect to all `path.redirect.example` requests whose path begins with `/get` to `/status/200`.
+Path redirects use an HTTP Path Modifier to replace either entire paths or path prefixes. For example, the HTTPRoute below will issue a 302 redirect to all `path.redirect.example` requests whose path begins with `/get` to `/status/200`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -238,8 +226,7 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-path-redirect -o yaml
 ```
 
-Querying `path.redirect.example` should result in a `302` response from the example Gateway and a redirect location
-containing the configured redirect path.
+Querying `path.redirect.example` should result in a `302` response from the example Gateway and a redirect location containing the configured redirect path.
 
 Query the `path.redirect.example` host:
 
@@ -248,9 +235,3 @@ curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}/get"
 ```
 
 You should receive a `302` with a redirect location of `http://path.redirect.example/status/200`.
-
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[HTTPRoute filters]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter
-[Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRequestRedirectFilter
-[sectionName]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.CommonRouteSpec

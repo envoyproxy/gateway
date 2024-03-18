@@ -1,6 +1,6 @@
 ---
-title: "Install egctl"
 weight: -80
+title: Install egctl
 ---
 
 {{% alert title="What is egctl?" color="primary" %}}
@@ -8,7 +8,6 @@ weight: -80
 `egctl` is a command line tool to provide additional functionality for Envoy Gateway users.
 
 {{% /alert %}}
-
 
 This guide shows how to install the egctl CLI. egctl can be installed either from source, or from pre-built binary releases.
 

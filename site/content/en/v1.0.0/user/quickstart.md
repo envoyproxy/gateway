@@ -1,6 +1,6 @@
 ---
-title: "Quickstart"
 weight: 1
+title: Quickstart
 description: Get started with Envoy Gateway in a few simple steps.
 ---
 
@@ -10,10 +10,9 @@ This guide will help you get started with Envoy Gateway in a few simple steps.
 
 A Kubernetes cluster.
 
-__Note:__ Refer to the [Compatibility Matrix](../install/matrix) for supported Kubernetes versions.
+**Note:** Refer to the [Compatibility Matrix](../install/matrix) for supported Kubernetes versions.
 
-__Note:__ In case your Kubernetes cluster, does not have a LoadBalancer implementation, we recommend installing one
-so the `Gateway` resource has an Address associated with it. We recommend using [MetalLB](https://metallb.universe.tf/installation/).
+**Note:** In case your Kubernetes cluster, does not have a LoadBalancer implementation, we recommend installing one so the `Gateway` resource has an Address associated with it. We recommend using [MetalLB](https://metallb.universe.tf/installation/).
 
 ## Installation
 
@@ -35,15 +34,7 @@ Install the GatewayClass, Gateway, HTTPRoute and example app:
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v1.0.0/quickstart.yaml -n default
 ```
 
-**Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
-traffic on port 80 on its globally-routable IP address, to make it easy to use
-browsers to test Envoy Gateway. When Envoy Gateway sees that its Listener is
-using a privileged port (<1024), it will map this internally to an
-unprivileged port, so that Envoy Gateway doesn't need additional privileges.
-It's important to be aware of this mapping, since you may need to take it into
-consideration when debugging.
-
-[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/v1.0.0/quickstart.yaml
+**Note**: [`quickstart.yaml`](https://github.com/envoyproxy/gateway/releases/download/v1.0.0/quickstart.yaml) defines that Envoy Gateway will listen for traffic on port 80 on its globally-routable IP address, to make it easy to use browsers to test Envoy Gateway. When Envoy Gateway sees that its Listener is using a privileged port (<1024), it will map this internally to an unprivileged port, so that Envoy Gateway doesn't need additional privileges. It's important to be aware of this mapping, since you may need to take it into consideration when debugging.
 
 ## Testing the Configuration
 
@@ -67,15 +58,13 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 
 ### External LoadBalancer Support
 
-You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
-Envoy service, run:
+You can also test the same functionality by sending traffic to the External IP. To get the external IP of the Envoy service, run:
 
 ```shell
 export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
-In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
-`ip` in the above command with `hostname`.
+In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace `ip` in the above command with `hostname`.
 
 Curl the example app through Envoy proxy:
 

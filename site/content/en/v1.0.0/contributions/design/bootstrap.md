@@ -1,20 +1,15 @@
 ---
-title: "Bootstrap Design"
+title: Bootstrap Design
 ---
 
 ## Overview
 
-[Issue 31][] specifies the need for allowing advanced users to specify their custom
-Envoy Bootstrap configuration rather than using the default Bootstrap configuration
-defined in Envoy Gateway. This allows advanced users to extend Envoy Gateway and
-support their custom use cases such setting up tracing and stats configuration
-that is not supported by Envoy Gateway.
+[Issue 31](https://github.com/envoyproxy/gateway/issues/31) specifies the need for allowing advanced users to specify their custom Envoy Bootstrap configuration rather than using the default Bootstrap configuration defined in Envoy Gateway. This allows advanced users to extend Envoy Gateway and support their custom use cases such setting up tracing and stats configuration that is not supported by Envoy Gateway.
 
 ## Goals
 
 * Define an API field to allow a user to specify a custom Bootstrap
-* Provide tooling to allow the user to generate the default Bootstrap configuration
-  as well as validate their custom Bootstrap.
+* Provide tooling to allow the user to generate the default Bootstrap configuration as well as validate their custom Bootstrap.
 
 ## Non Goals
 
@@ -22,9 +17,7 @@ that is not supported by Envoy Gateway.
 
 ## API
 
-Leverage the existing [EnvoyProxy][] resource which can be attached to the [GatewayClass][] using
-the [parametersRef][] field, and define a `Bootstrap` field within the resource. If this field is set,
-the value is used as the Bootstrap configuration for all managed Envoy Proxies created by Envoy Gateway.
+Leverage the existing [EnvoyProxy](../../../api/extension_types#envoyproxy) resource which can be attached to the [GatewayClass](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass) using the [parametersRef](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference) field, and define a `Bootstrap` field within the resource. If this field is set, the value is used as the Bootstrap configuration for all managed Envoy Proxies created by Envoy Gateway.
 
 ```go
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
@@ -48,8 +41,7 @@ type EnvoyProxySpec struct {
 
 ## Tooling
 
-A CLI tool `egctl x translate` will be provided to the user to help generate a working Bootstrap configuration.
-Here is an example where a user inputs a `GatewayClass` and the CLI generates the `EnvoyProxy` resource with the `Bootstrap` field populated.
+A CLI tool `egctl x translate` will be provided to the user to help generate a working Bootstrap configuration. Here is an example where a user inputs a `GatewayClass` and the CLI generates the `EnvoyProxy` resource with the `Bootstrap` field populated.
 
 ```
 cat <<EOF | egctl x translate --from gateway-api --to gateway-api -f -
@@ -165,11 +157,7 @@ spec:
 
 ```
 
-The user can now modify the output, for their use case. Lets say for this example, the user wants to change the admin server port
-from `19000` to `18000`, they can do so by editing the previous output and running `egctl x translate` again to see if there any validation
-errors. Validation errors should be surfaced in the Status subresource. The internal validator will ensure that the Bootstrap string can be
-unmarshalled into the Bootstrap object as well as ensure the user can override certain fields within the Bootstrap configuration such as the
-`address` and tls context within the `xds_cluster` which are essential for xDS communication between Envoy Gateway and Envoy Proxy.
+The user can now modify the output, for their use case. Lets say for this example, the user wants to change the admin server port from `19000` to `18000`, they can do so by editing the previous output and running `egctl x translate` again to see if there any validation errors. Validation errors should be surfaced in the Status subresource. The internal validator will ensure that the Bootstrap string can be unmarshalled into the Bootstrap object as well as ensure the user can override certain fields within the Bootstrap configuration such as the `address` and tls context within the `xds_cluster` which are essential for xDS communication between Envoy Gateway and Envoy Proxy.
 
 ```
 cat <<EOF | egctl x translate --from gateway-api --to gateway-api -f -
@@ -374,8 +362,3 @@ spec:
             name: runtime-0
 
 ```
-
-[Issue 31]: https://github.com/envoyproxy/gateway/issues/31
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
-[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
-[parametersRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference 

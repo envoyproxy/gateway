@@ -1,5 +1,5 @@
 ---
-title: "Debug support in Envoy Gateway"
+title: Debug support in Envoy Gateway
 ---
 
 ## Overview
@@ -17,18 +17,18 @@ The endpoints are equivalent to those found in the http/pprof package. `/debug/p
 
 The following are the different types of profiles end-user can run:
 
-PROFILE	| FUNCTION
--- | --
-/debug/pprof/allocs | Returns a sampling of all past memory allocations.
-/debug/pprof/block | Returns stack traces of goroutines that led to blocking on synchronization primitives.
-/debug/pprof/cmdline | Returns the command line that was invoked by the current program.
-/debug/pprof/goroutine | Returns stack traces of all current goroutines.
-/debug/pprof/heap | Returns a sampling of memory allocations of live objects.
-/debug/pprof/mutex | Returns stack traces of goroutines holding contended mutexes.
-/debug/pprof/profile | Returns pprof-formatted cpu profile. You can specify the duration using the seconds GET parameter. The default duration is 30 seconds.
-/debug/pprof/symbol | Returns the program counters listed in the request.
-/debug/pprof/threadcreate | Returns stack traces that led to creation of new OS threads.
-/debug/pprof/trace | Returns the execution trace in binary form. You can specify the duration using the seconds GET parameter. The default duration is 1 second.
+| PROFILE                   | FUNCTION                                                                                                                                    |
+|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| /debug/pprof/allocs       | Returns a sampling of all past memory allocations.                                                                                          |
+| /debug/pprof/block        | Returns stack traces of goroutines that led to blocking on synchronization primitives.                                                      |
+| /debug/pprof/cmdline      | Returns the command line that was invoked by the current program.                                                                           |
+| /debug/pprof/goroutine    | Returns stack traces of all current goroutines.                                                                                             |
+| /debug/pprof/heap         | Returns a sampling of memory allocations of live objects.                                                                                   |
+| /debug/pprof/mutex        | Returns stack traces of goroutines holding contended mutexes.                                                                               |
+| /debug/pprof/profile      | Returns pprof-formatted cpu profile. You can specify the duration using the seconds GET parameter. The default duration is 30 seconds.      |
+| /debug/pprof/symbol       | Returns the program counters listed in the request.                                                                                         |
+| /debug/pprof/threadcreate | Returns stack traces that led to creation of new OS threads.                                                                                |
+| /debug/pprof/trace        | Returns the execution trace in binary form. You can specify the duration using the seconds GET parameter. The default duration is 1 second. |
 
 ## Non Goals
 

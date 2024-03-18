@@ -1,5 +1,5 @@
 ---
-title: "egctl Design"
+title: egctl Design
 ---
 
 ## Motivation
@@ -21,12 +21,11 @@ egctl [command] [entity] [name] [flags]
 
 where `command`, `name`, and `flags` are:
 
-* `command`: Specifies the operation that you want to perform on one or more resources,
-  for example `config`, `version`.
+* `command`: Specifies the operation that you want to perform on one or more resources, for example `config`, `version`.
 
 * `entity`: Specifies the entity the operation is being performed on such as `envoy-proxy` or `envoy-gateway`.
 
-* `name`: Specifies the name of the specified instance. 
+* `name`: Specifies the name of the specified instance.
 
 * `flags`: Specifies optional flags. For example, you can use the `-c` or `--config` flags to specify the values for installing.
 
@@ -36,12 +35,12 @@ If you need help, run `egctl help` from the terminal window.
 
 The following table includes short descriptions and the general syntax for all the `egctl` operations:
 
-| Operation     | Syntax                           | Description                                                                          |
-| --------------| -------------------------------- | -------------------------------------------------------------------------------------|
-| `version`     | `egctl version`                  | Prints out build version information.                                                |
-| `config`      | `egctl config ENTITY`            | Retrieve information about proxy configuration from envoy proxy and gateway          |
-| `analyze`     | `egctl analyze`                  | Analyze EG configuration and print validation messages                               |
-| `experimental`| `egctl experimental`             | Subcommand for experimental features. These do not guarantee backwards compatibility |
+| Operation      | Syntax                | Description                                                                          |
+|----------------|-----------------------|--------------------------------------------------------------------------------------|
+| `version`      | `egctl version`       | Prints out build version information.                                                |
+| `config`       | `egctl config ENTITY` | Retrieve information about proxy configuration from envoy proxy and gateway          |
+| `analyze`      | `egctl analyze`       | Analyze EG configuration and print validation messages                               |
+| `experimental` | `egctl experimental`  | Subcommand for experimental features. These do not guarantee backwards compatibility |
 
 ## Examples
 

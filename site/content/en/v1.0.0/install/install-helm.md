@@ -1,35 +1,29 @@
-+++
-title = "Install with Helm"
-weight = -100
-+++
+---
+weight: -100
+title: Install with Helm
+---
 
-[Helm](https://helm.sh) is a package manager for Kubernetes that automates the release and management of software on Kubernetes. 
+[Helm](https://helm.sh) is a package manager for Kubernetes that automates the release and management of software on Kubernetes.
 
 Envoy Gateway can be installed via a Helm chart with a few simple steps, depending on if you are deploying for the first time, upgrading Envoy Gateway from an existing installation, or migrating from Envoy Gateway.
 
 ## Before you begin
 
-{{% alert title="Compatibility Matrix" color="warning" %}}
-Refer to the [Version Compatibility Matrix](../install/matrix) to learn more.
-{{% /alert %}}
+{{% alert title="Compatibility Matrix" color="warning" %}} Refer to the [Version Compatibility Matrix](../install/matrix) to learn more. {{% /alert %}}
 
 The Envoy Gateway Helm chart is hosted by DockerHub.
 
 It is published at `oci://docker.io/envoyproxy/gateway-helm`.
 
-{{% alert title="Note" color="primary" %}}
-We use `v1.0.0` as the latest development version.
+{{% alert title="Note" color="primary" %}} We use `v1.0.0` as the latest development version.
 
-You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gateway-helm/tags) for more releases.
-{{% /alert %}}
+You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gateway-helm/tags) for more releases. {{% /alert %}}
 
 ## Install with Helm
 
 Envoy Gateway is typically deployed to Kubernetes from the command line. If you don't have Kubernetes, you should use `kind` to create one.
 
-{{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](../contributions/develop) to learn more.
-{{% /alert %}}
+{{% alert title="Developer Guide" color="primary" %}} Refer to the [Developer Guide](../contributions/develop) to learn more. {{% /alert %}}
 
 Install the Gateway API CRDs and Envoy Gateway:
 
@@ -49,19 +43,11 @@ Install the GatewayClass, Gateway, HTTPRoute and example app:
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
 ```
 
-**Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
-traffic on port 80 on its globally-routable IP address, to make it easy to use
-browsers to test Envoy Gateway. When Envoy Gateway sees that its Listener is
-using a privileged port (<1024), it will map this internally to an
-unprivileged port, so that Envoy Gateway doesn't need additional privileges.
-It's important to be aware of this mapping, since you may need to take it into
-consideration when debugging.
-
-[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+**Note**: [`quickstart.yaml`](https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml) defines that Envoy Gateway will listen for traffic on port 80 on its globally-routable IP address, to make it easy to use browsers to test Envoy Gateway. When Envoy Gateway sees that its Listener is using a privileged port (<1024), it will map this internally to an unprivileged port, so that Envoy Gateway doesn't need additional privileges. It's important to be aware of this mapping, since you may need to take it into consideration when debugging.
 
 ## Helm chart customizations
 
-Some of the quick ways of using the helm install command for envoy gateway installation are below. 
+Some of the quick ways of using the helm install command for envoy gateway installation are below.
 
 ### Increase the replicas
 
@@ -114,9 +100,7 @@ You can use the below command to install the envoy gateway using values.yaml fil
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.0 -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
-{{% alert title="Helm Chart Values" color="primary" %}}
-If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../install/api).
-{{% /alert %}}
+{{% alert title="Helm Chart Values" color="primary" %}} If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../install/api). {{% /alert %}}
 
 ## Open Ports
 
@@ -124,21 +108,19 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 
 ### Envoy Gateway
 
-| Envoy Gateway          | Address   |  Port  |  Configurable  |
-|:----------------------:|:---------:|:------:|    :------:    |
-| Xds EnvoyProxy Server  | 0.0.0.0   | 18000  |       No       |
-| Xds RateLimit Server   | 0.0.0.0   | 18001  |       No       |
-| Admin Server           | 127.0.0.1 | 19000  |       Yes      |
-| Metrics Server         |  0.0.0.0  | 19001  |       No       |
-| Health Check           | 127.0.0.1 |  8081  |       No       |
+| Envoy Gateway         | Address   | Port  | Configurable |
+|:---------------------:|:---------:|:-----:|:------------:|
+| Xds EnvoyProxy Server |  0.0.0.0  | 18000 |      No      |
+| Xds RateLimit Server  |  0.0.0.0  | 18001 |      No      |
+|     Admin Server      | 127.0.0.1 | 19000 |     Yes      |
+|    Metrics Server     |  0.0.0.0  | 19001 |      No      |
+|     Health Check      | 127.0.0.1 | 8081  |      No      |
 
 ### EnvoyProxy
 
-| Envoy Proxy                       | Address     | Port    |
-|:---------------------------------:|:-----------:| :-----: |
-| Admin Server                      | 127.0.0.1   | 19000   |
-| Heath Check  | 0.0.0.0     | 19001   |
+| Envoy Proxy  | Address   | Port  |
+|:------------:|:---------:|:-----:|
+| Admin Server | 127.0.0.1 | 19000 |
+| Heath Check  |  0.0.0.0  | 19001 |
 
-{{% alert title="Next Steps" color="warning" %}}
-Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../user/quickstart).
-{{% /alert %}}
+{{% alert title="Next Steps" color="warning" %}} Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../user/quickstart). {{% /alert %}}

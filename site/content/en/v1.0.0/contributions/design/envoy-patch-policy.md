@@ -1,20 +1,14 @@
 ---
-title: "EnvoyPatchPolicy"
+title: EnvoyPatchPolicy
 ---
 
 ## Overview
 
-This design introduces the `EnvoyPatchPolicy` API allowing users to modify the generated Envoy xDS Configuration
-that Envoy Gateway generates before sending it to Envoy Proxy.
+This design introduces the `EnvoyPatchPolicy` API allowing users to modify the generated Envoy xDS Configuration that Envoy Gateway generates before sending it to Envoy Proxy.
 
-Envoy Gateway allows users to configure networking and security intent using the
-upstream [Gateway API][] as well as implementation specific [Extension APIs][] defined in this project
-to provide a more batteries included experience for application developers.
-* These APIs are an abstracted version of the underlying Envoy xDS API to provide a better user experience for the application developer, exposing and setting only a subset of the fields for a specific feature, sometimes in a opinionated way (e.g [RateLimit][])
-* These APIs do not expose all the features capabilities that Envoy has either because these features are desired but the API
-is not defined yet or the project cannot support such an extensive list of features.
-To alleviate this problem, and provide an interim solution for a small section of advanced users who are well versed in
-Envoy xDS API and its capabilities, this API is being introduced.
+Envoy Gateway allows users to configure networking and security intent using the upstream [Gateway API](https://gateway-api.sigs.k8s.io/) as well as implementation specific [Extension APIs](../../api/extension_types) defined in this project to provide a more batteries included experience for application developers.
+* These APIs are an abstracted version of the underlying Envoy xDS API to provide a better user experience for the application developer, exposing and setting only a subset of the fields for a specific feature, sometimes in a opinionated way (e.g [RateLimit](../../user/traffic/global-rate-limit))
+* These APIs do not expose all the features capabilities that Envoy has either because these features are desired but the API is not defined yet or the project cannot support such an extensive list of features. To alleviate this problem, and provide an interim solution for a small section of advanced users who are well versed in Envoy xDS API and its capabilities, this API is being introduced.
 
 ## Goals
 * Add an API allowing users to modify the generated xDS Configuration
@@ -23,12 +17,11 @@ Envoy xDS API and its capabilities, this API is being introduced.
 * Support multiple patch mechanisims
 
 ## Implementation
-`EnvoyPatchPolicy` is a [Direct Policy Attachment][] type API that can be used to extend [Gateway API][]
-Modifications to the generated xDS configuration can be provided as a JSON Patch which is defined in
-[RFC 6902][]. This patching mechanism has been adopted in [Kubernetes][] as well as [Kustomize][] to update
-resource objects.
+
+`EnvoyPatchPolicy` is a [Direct Policy Attachment](https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment) type API that can be used to extend [Gateway API](https://gateway-api.sigs.k8s.io/) Modifications to the generated xDS configuration can be provided as a JSON Patch which is defined in [RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902). This patching mechanism has been adopted in [Kubernetes](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/) as well as [Kustomize](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/jsonpatch.md) to update resource objects.
 
 ### Example
+
 Here is an example highlighting how a user can configure global ratelimiting using an external rate limit service using this API.
 
 ```
@@ -135,42 +128,23 @@ spec:
                           port_value: 8081
 ```
 
-
 ## Verification
-* Offline - Leverage [egctl x translate][] to ensure that the `EnvoyPatchPolicy` can be successfully applied and the desired
-output xDS is created.
+* Offline - Leverage [egctl x translate](../../user/operations/egctl#egctl-experimental-translate) to ensure that the `EnvoyPatchPolicy` can be successfully applied and the desired output xDS is created.
 * Runtime - Use the `Status` field within `EnvoyPatchPolicy` to highlight whether the patch was applied successfully or not.
 
 ## State of the World
-* Istio - Supports the [EnvoyFilter][] API which allows users to customize the output xDS using patches and proto based merge
-semantics.
+* Istio - Supports the [EnvoyFilter](https://istio.io/latest/docs/reference/config/networking/envoy-filter) API which allows users to customize the output xDS using patches and proto based merge semantics.
 
 ## Design Decisions
-* This API will only support a single `targetRef` and can bind to only a `Gateway` or `GatewayClass` resource. This simplifies reasoning of how
-patches will work.
+* This API will only support a single `targetRef` and can bind to only a `Gateway` or `GatewayClass` resource. This simplifies reasoning of how patches will work.
 * This API will always be an experimental API and cannot be graduated into a stable API because Envoy Gateway cannot garuntee
   * that the naming scheme for the generated resources names will not change across releases
   * that the underlying Envoy Proxy API will not change across releases
-* This API needs to be explicitly enabled using the [EnvoyGateway][] API
+* This API needs to be explicitly enabled using the [EnvoyGateway](../../api/extension_types#envoygateway) API
 
 ## Open Questions
 * Should the value only support JSON or YAML as well (which is a JSON superset) ?
 
 ## Alternatives
-* Users can customize the Envoy [Bootstrap configuration using EnvoyProxy API][] and provide static xDS configuration.
-* Users can extend functionality by [Extending the Control Plane][] and adding gRPC hooks to modify the generated xDS configuration.
-
-
-
-[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment
-[RFC 6902]: https://datatracker.ietf.org/doc/html/rfc6902
-[Gateway API]: https://gateway-api.sigs.k8s.io/
-[Kubernetes]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
-[Kustomize]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/jsonpatch.md
-[Extension APIs]: ../../api/extension_types
-[RateLimit]: ../../user/traffic/global-rate-limit
-[EnvoyGateway]: ../../api/extension_types#envoygateway
-[Extending the Control Plane]: ../design/extending-envoy-gateway
-[EnvoyFilter]: https://istio.io/latest/docs/reference/config/networking/envoy-filter
-[egctl x translate]: ../../user/operations/egctl#egctl-experimental-translate
-[Bootstrap configuration using EnvoyProxy API]: ../../user/operations/customize-envoyproxy#customize-envoyproxy-bootstrap-config
+* Users can customize the Envoy [Bootstrap configuration using EnvoyProxy API](../../user/operations/customize-envoyproxy#customize-envoyproxy-bootstrap-config) and provide static xDS configuration.
+* Users can extend functionality by [Extending the Control Plane](../design/extending-envoy-gateway) and adding gRPC hooks to modify the generated xDS configuration.

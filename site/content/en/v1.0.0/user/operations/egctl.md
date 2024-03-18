@@ -1,34 +1,27 @@
 ---
-title: "Use egctl"
+title: Use egctl
 ---
 
 `egctl` is a command line tool to provide additional functionality for Envoy Gateway users.
-
-
 
 ## egctl experimental translate
 
 This subcommand allows users to translate from an input configuration type to an output configuration type.
 
 The `translate` subcommand can translate Kubernetes resources to:
-* Gateway API resources
-  This is useful in order to see how validation would occur if these resources were applied to Kubernetes. 
-  
-  Use the `--to gateway-api` parameter to translate to Gateway API resources.
-  
-* Envoy Gateway intermediate representation (IR)
-  This represents Envoy Gateway's translation of the Gateway API resources.
-  
-  Use the `--to ir` parameter to translate to Envoy Gateway intermediate representation.
-  
-* Envoy Proxy xDS
-  This is the xDS configuration provided to Envoy Proxy.
-  
-  Use the `--to xds` parameter to translate to Envoy Proxy xDS.
-  
+* Gateway API resources This is useful in order to see how validation would occur if these resources were applied to Kubernetes.
 
-In the below example, we will translate the Kubernetes resources (including the Gateway API resources) into xDS
-resources.
+  Use the `--to gateway-api` parameter to translate to Gateway API resources.
+
+* Envoy Gateway intermediate representation (IR) This represents Envoy Gateway's translation of the Gateway API resources.
+
+  Use the `--to ir` parameter to translate to Envoy Gateway intermediate representation.
+
+* Envoy Proxy xDS This is the xDS configuration provided to Envoy Proxy.
+
+  Use the `--to xds` parameter to translate to Envoy Proxy xDS.
+
+In the below example, we will translate the Kubernetes resources (including the Gateway API resources) into xDS resources.
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --to xds -f -
@@ -270,7 +263,7 @@ configs:
           route:
             cluster: default-backend-rule-0-match-0-www.example.com
 resourceType: all
-```  
+```
 
 You can also use the `--type`/`-t` flag to retrieve specific output types. In the below example, we will translate the Kubernetes resources (including the Gateway API resources) into xDS `route` resources.
 
@@ -413,8 +406,7 @@ spec:
 EOF
 ```
 
-You can see the output contains a [EnvoyProxy][] resource that
-can be used as a starting point to modify the xDS bootstrap resource for the managed Envoy Proxy fleet.
+You can see the output contains a [EnvoyProxy](../../api/extension_types#envoyproxy) resource that can be used as a starting point to modify the xDS bootstrap resource for the managed Envoy Proxy fleet.
 
 ```yaml
 envoyProxy:
@@ -760,21 +752,17 @@ xds:
 
 ## egctl experimental status
 
-This subcommand allows users to show the summary of the status of specific or all resource types, in order to quickly find
-out the status of any resources.
+This subcommand allows users to show the summary of the status of specific or all resource types, in order to quickly find out the status of any resources.
 
-By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only
-display the latest condition, or add `--verbose` to display more details about current status.
+By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only display the latest condition, or add `--verbose` to display more details about current status.
 
 {{% alert title="Note" color="primary" %}}
 
-Currently, this subcommand only supports: `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`,
-`TLSRoute`, `TCPRoute`, `UDPRoute`, `BackendTLSPolicy`, 
-`BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy` resource types and `all`.
+Currently, this subcommand only supports: `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`, `TLSRoute`, `TCPRoute`, `UDPRoute`, `BackendTLSPolicy`, `BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy` resource types and `all`.
 
 {{% /alert %}}
 
-Some examples of this command after installing [Multi-tenancy][] example manifest:
+Some examples of this command after installing [Multi-tenancy](../operations/deployment-mode#multi-tenancy) example manifest:
 
 - Show the summary of GatewayClass.
 
@@ -838,11 +826,6 @@ NAMESPACE   NAME      TYPE           STATUS    REASON
 marketing   backend   ResolvedRefs   True      ResolvedRefs
 product     backend   ResolvedRefs   True      ResolvedRefs
 ```
-
-
-[Multi-tenancy]: ../operations/deployment-mode#multi-tenancy
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
-
 
 ## egctl experimental dashboard
 

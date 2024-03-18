@@ -1,9 +1,8 @@
 ---
-title: "HTTP3"
+title: HTTP3
 ---
 
-This guide will help you get started using HTTP3 using EG. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This guide will help you get started using HTTP3 using EG. The guide uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 ## Prerequisites
 
@@ -11,8 +10,7 @@ testing and demonstration purposes only.
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
 
@@ -37,8 +35,7 @@ Store the cert/key in a Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
 
-Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `443` and references the
-`example-cert` Secret:
+Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `443` and references the `example-cert` Secret:
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{
@@ -88,9 +85,7 @@ kubectl get gateway/eg -o yaml
 
 ### Clusters without External LoadBalancer Support
 
-It is not possible at the moment to port-forward UDP protocol in kubernetes service 
-check out https://github.com/kubernetes/kubernetes/issues/47862. 
-Hence we need external loadbalancer to test this feature out.
+It is not possible at the moment to port-forward UDP protocol in kubernetes service check out https://github.com/kubernetes/kubernetes/issues/47862. Hence we need external loadbalancer to test this feature out.
 
 ### Clusters with External LoadBalancer Support
 

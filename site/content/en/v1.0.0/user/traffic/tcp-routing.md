@@ -1,25 +1,18 @@
 ---
-title: "TCP Routing"
+title: TCP Routing
 ---
 
-[TCPRoute][] provides a way to route TCP requests. When combined with a Gateway listener, it can be used to forward
-connections on the port specified by the listener to a set of backends specified by the TCPRoute. To learn more about
-HTTP routing, refer to the [Gateway API documentation][].
+[TCPRoute](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute) provides a way to route TCP requests. When combined with a Gateway listener, it can be used to forward connections on the port specified by the listener to a set of backends specified by the TCPRoute. To learn more about HTTP routing, refer to the [Gateway API documentation](https://gateway-api.sigs.k8s.io/).
 
 ## Installation
 
-Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
-In this example, we have one Gateway resource and two TCPRoute resources that distribute the traffic with the following
-rules:
+In this example, we have one Gateway resource and two TCPRoute resources that distribute the traffic with the following rules:
 
-All TCP streams on port `8088` of the Gateway are forwarded to port 3001 of `foo` Kubernetes Service.
-All TCP streams on port `8089` of the Gateway are forwarded to port 3002 of `bar` Kubernetes Service.
-In this example two TCP listeners will be applied to the Gateway in order to route them to two separate backend
-TCPRoutes, note that the protocol set for the listeners on the Gateway is TCP:
+All TCP streams on port `8088` of the Gateway are forwarded to port 3001 of `foo` Kubernetes Service. All TCP streams on port `8089` of the Gateway are forwarded to port 3002 of `bar` Kubernetes Service. In this example two TCP listeners will be applied to the Gateway in order to route them to two separate backend TCPRoutes, note that the protocol set for the listeners on the Gateway is TCP:
 
 Install the GatewayClass and a `tcp-gateway` Gateway first.
 
@@ -188,10 +181,9 @@ spec:
 EOF
 ```
 
-In the above example we separate the traffic for the two separate backend TCP Services by using the sectionName field in
-the parentRefs:
+In the above example we separate the traffic for the two separate backend TCP Services by using the sectionName field in the parentRefs:
 
-``` yaml
+```yaml
 spec:
   parentRefs:
   - name: tcp-gateway
@@ -200,7 +192,7 @@ spec:
 
 This corresponds directly with the name in the listeners in the Gateway:
 
-``` yaml
+```yaml
   listeners:
   - name: foo
     protocol: TCP
@@ -210,8 +202,7 @@ This corresponds directly with the name in the listeners in the Gateway:
     port: 8089
 ```
 
-In this way each TCPRoute "attaches" itself to a different port on the Gateway so that the `foo` service
-is taking traffic for port `8088` from outside the cluster and `bar` service takes the port `8089` traffic.
+In this way each TCPRoute "attaches" itself to a different port on the Gateway so that the `foo` service is taking traffic for port `8088` from outside the cluster and `bar` service takes the port `8089` traffic.
 
 Before testing, please get the tcp-gateway Gateway's address first:
 
@@ -290,6 +281,3 @@ Content-Length: 267
 ```
 
 You can see that the traffic routing to `bar` service when sending request to `8089` port.
-
-[TCPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
-[Gateway API documentation]: https://gateway-api.sigs.k8s.io/

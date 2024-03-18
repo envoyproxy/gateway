@@ -1,20 +1,18 @@
 ---
-title: "HTTPRoute Request Mirroring"
+title: HTTPRoute Request Mirroring
 ---
 
-The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Requests will be routed to these upstreams. It is possible to divide the traffic between these backends using [Traffic Splitting][], but it is also possible to mirror requests to another Service instead. Request mirroring is accomplished using Gateway API's [HTTPRequestMirrorFilter][] on the `HTTPRoute`.
+The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) resource allows one or more [backendRefs](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef) to be provided. Requests will be routed to these upstreams. It is possible to divide the traffic between these backends using [Traffic Splitting](../traffic/http-traffic-splitting), but it is also possible to mirror requests to another Service instead. Request mirroring is accomplished using Gateway API's [HTTPRequestMirrorFilter](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRequestMirrorFilter) on the `HTTPRoute`.
 
 When requests are made to a `HTTPRoute` that uses a `HTTPRequestMirrorFilter`, the response will never come from the `backendRef` defined in the filter. Responses from the mirror `backendRef` are always ignored.
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide][] to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Mirroring the Traffic
 
-Next, create a new `Deployment` and `Service` to mirror requests to. The following example will use
-a second instance of the application deployed in the quickstart.
+Next, create a new `Deployment` and `Service` to mirror requests to. The following example will use a second instance of the application deployed in the quickstart.
 
 ```shell
 kubectl apply -f - <<EOF
@@ -74,8 +72,7 @@ spec:
 EOF
 ```
 
-Then create an `HTTPRoute` that uses a `HTTPRequestMirrorFilter` to send requests to the original
-service from the quickstart, and mirror request to the service that was just deployed.
+Then create an `HTTPRoute` that uses a `HTTPRequestMirrorFilter` to send requests to the original service from the quickstart, and mirror request to the service that was just deployed.
 
 ```shell
 kubectl apply -f - <<EOF
@@ -120,9 +117,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Querying `backends.example/get` should result in a `200` response from the example Gateway and the output from the
-example app should indicate which pod handled the request. There is only one pod in the deployment for the example app
-from the quickstart, so it will be the same on all subsequent requests.
+Querying `backends.example/get` should result in a `200` response from the example Gateway and the output from the example app should indicate which pod handled the request. There is only one pod in the deployment for the example app from the quickstart, so it will be the same on all subsequent requests.
 
 ```console
 $ curl -v --header "Host: backends.example" "http://${GATEWAY_HOST}/get"
@@ -243,9 +238,3 @@ EOF
 ```console
 Error from server: error when creating "STDIN": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.rules[0].filters: Invalid value: "RequestMirror": cannot be used multiple times in the same rule
 ```
-
-[Quickstart Guide]: ../quickstart
-[Traffic Splitting]: ../traffic/http-traffic-splitting
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef
-[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRequestMirrorFilter

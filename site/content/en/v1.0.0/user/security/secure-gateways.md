@@ -1,9 +1,8 @@
 ---
-title: "Secure Gateways"
+title: Secure Gateways
 ---
 
-This guide will help you get started using secure Gateways. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This guide will help you get started using secure Gateways. The guide uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 ## Prerequisites
 
@@ -11,8 +10,7 @@ testing and demonstration purposes only.
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
 
@@ -37,8 +35,7 @@ Store the cert/key in a Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
 
-Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `443` and references the
-`example-cert` Secret:
+Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `443` and references the `example-cert` Secret:
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{
@@ -158,18 +155,15 @@ Verify the Gateway status:
 kubectl get gateway/eg -o yaml
 ```
 
-Follow the steps in the [Testing section](#testing) to test connectivity to the backend app through both Gateway
-listeners. Replace `www.example.com` with `foo.example.com` to test the new HTTPS listener.
+Follow the steps in the [Testing section](#testing) to test connectivity to the backend app through both Gateway listeners. Replace `www.example.com` with `foo.example.com` to test the new HTTPS listener.
 
 ## Cross Namespace Certificate References
 
-A Gateway can be configured to reference a certificate in a different namespace. This is allowed by a [ReferenceGrant][]
-created in the target namespace. Without the ReferenceGrant, a cross-namespace reference is invalid.
+A Gateway can be configured to reference a certificate in a different namespace. This is allowed by a [ReferenceGrant](https://gateway-api.sigs.k8s.io/api-types/referencegrant/) created in the target namespace. Without the ReferenceGrant, a cross-namespace reference is invalid.
 
 Before proceeding, ensure you can query the HTTPS backend service from the [Testing section](#testing).
 
-To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default"
-namespace to reference Secrets in the "envoy-gateway-system" namespace:
+To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default" namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
 ```console
 $ cat <<EOF | kubectl apply -f -
@@ -195,8 +189,7 @@ Delete the previously created Secret:
 kubectl delete secret/example-cert
 ```
 
-The Gateway HTTPS listener should now surface the `Ready: False` status condition and the example HTTPS backend should
-no longer be reachable through the Gateway.
+The Gateway HTTPS listener should now surface the `Ready: False` status condition and the example HTTPS backend should no longer be reachable through the Gateway.
 
 ```shell
 kubectl get gateway/eg -o yaml
@@ -235,8 +228,7 @@ spec:
 EOF
 ```
 
-The Gateway HTTPS listener status should now surface the `Ready: True` condition and you should once again be able to
-query the HTTPS backend through the Gateway.
+The Gateway HTTPS listener status should now surface the `Ready: True` condition and you should once again be able to query the HTTPS backend through the Gateway.
 
 Lastly, test connectivity using the above [Testing section](#testing).
 
@@ -257,8 +249,7 @@ This section gives a walkthrough to generate RSA and ECDSA derived certificates 
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
@@ -295,9 +286,7 @@ Moving forward in the doc, we will be configuring the existing Gateway listener 
 
 ## TLS Certificates
 
-Reuse the CA certificate and key pair generated in the [Secure Gateways](#tls-certificates) guide and use this CA to sign both RSA and ECDSA Server certificates.
-Note the CA certificate and key names are `example.com.crt` and `example.com.key` respectively.
-
+Reuse the CA certificate and key pair generated in the [Secure Gateways](#tls-certificates) guide and use this CA to sign both RSA and ECDSA Server certificates. Note the CA certificate and key names are `example.com.crt` and `example.com.key` respectively.
 
 Create an ECDSA certificate and a private key for `www.example.com`:
 
@@ -369,8 +358,7 @@ This sections gives a walkthrough to generate multiple certificates correspondin
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
@@ -388,7 +376,6 @@ kubectl create secret tls sample-cert --key=www.sample.com.key --cert=www.sample
 ```
 
 Note that all occurrences of `example.com` were just replaced with `sample.com`
-
 
 Next we update the `Gateway` configuration to accommodate the new Certificate which will be used to Terminate TLS traffic:
 
@@ -451,5 +438,3 @@ Refer to the steps mentioned earlier in the guide under [Testing in clusters wit
 ## Next Steps
 
 Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
-
-[ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
