@@ -59,7 +59,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			}
 
 			// open some connections
-			for i := 0; i < 5; i++ {
+			for i := 0; i < 10; i++ {
 				conn, err := net.DialTimeout("tcp", gwAddr, 100*time.Millisecond)
 				if err == nil {
 					defer conn.Close()
