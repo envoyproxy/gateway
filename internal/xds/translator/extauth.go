@@ -102,7 +102,10 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 	config := &extauthv3.ExtAuthz{
 		TransportApiVersion: corev3.ApiVersion_V3,
-		FailureModeAllow:    false,
+	}
+
+	if extAuth.FailOpen != nil {
+		config.FailureModeAllow = *extAuth.FailOpen
 	}
 
 	var headersToExtAuth []*matcherv3.StringMatcher

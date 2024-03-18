@@ -22,7 +22,7 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+    - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633  # v4.1.2
     - uses: ./tools/github-actions/setup-deps
 
     - name: Generate Release Manifests
@@ -61,7 +61,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@d99959edae48b5ffffd7b00da66dcdb0a33a52ee  # v0.1.15
+      uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564  # v0.1.15
       with:
         draft: false
         prerelease: true

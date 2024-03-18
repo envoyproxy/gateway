@@ -103,6 +103,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: false
       http:
         backendRef:
           name: http-backend
