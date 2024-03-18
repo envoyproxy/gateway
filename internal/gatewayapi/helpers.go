@@ -399,7 +399,7 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
-func isMergeGatewaysEnabled(resources *Resources) bool {
+func IsMergeGatewaysEnabled(resources *Resources) bool {
 	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
 }
 
