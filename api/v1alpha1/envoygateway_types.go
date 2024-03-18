@@ -339,6 +339,9 @@ type RateLimit struct {
 type RateLimitTelemetry struct {
 	// Metrics defines metrics configuration for RateLimit.
 	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+
+	// Tracing defines traces configuration for RateLimit.
+	Tracing *RateLimitTracing `json:"tracing,omitempty"`
 }
 
 type RateLimitMetrics struct {
@@ -349,6 +352,42 @@ type RateLimitMetrics struct {
 type RateLimitMetricsPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
+}
+
+type RateLimitTracing struct {
+	// TracingServiceName defines the service name appears in tracing span.
+	// The default value is "envoy-ratelimit"
+	TracingServiceName string `json:"tracingServiceName,omitempty"`
+
+	// TracingServiceNamespace defines the service namespace appears in tracing span.
+	// The default value is namespace where the RateLimit resides
+	TracingServiceNamespace string `json:"tracingServiceNamespace,omitempty"`
+
+	// TracingSampleRate defines the sampling rate, defaults to 1.0 which means always sample.
+	// Valid range: [0.0,1.0] For high volume services, adjusting the sampling rate is recommended.
+	TracingSampleRate *float64 `json:"tracingSampleRate,omitempty"`
+
+	// Provider defines the tracing provider.
+	Provider *RateLimitTraceProvider `json:"provider,omitempty"`
+}
+
+type RateLimitTraceProvider struct {
+	// Protocol defines the protocol of provider in tracing feature.
+	// Only "http"(default) and "grpc" are allowed in this field
+	Protocol string `json:"protocol,omitempty"`
+
+	// Endpoint defines target URL to which the provider is going to send traces.
+	// The endpoint must be a valid URL with scheme (http or https) and host, may contain a port,
+	// should contain a path and must not contain other parts (such as query string or fragment).
+	Endpoint string `json:"endpoint,omitempty"`
+
+	// Insecure Whether to enable client transport security for the provider gRPC connection.
+	// Default is true
+	Insecure *bool `json:"insecure,omitempty"`
+
+	// Timeout Maximum time the provider will wait for each batch export.
+	// The time format follows the Go time package, such as "300ms", "-1.5h" or "2h45m".
+	Timeout string `json:"timeout,omitempty"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

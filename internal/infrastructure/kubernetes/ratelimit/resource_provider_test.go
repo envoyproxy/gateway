@@ -648,6 +648,54 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "enable-tracing-feature-with-default",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						Provider: &egv1a1.RateLimitTraceProvider{
+							Endpoint: "http://localhost:4318/v1/traces",
+						},
+					},
+				},
+			},
+		},
+		{
+			caseName: "enable-tracing-feature-with-custom",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						TracingServiceName:      "prod-rate-limit",
+						TracingServiceNamespace: "prod",
+						TracingSampleRate: func() *float64 {
+							sampleRate := 0.9
+							return &sampleRate
+						}(),
+						Provider: &egv1a1.RateLimitTraceProvider{
+							Endpoint: "http://localhost:4317",
+							Protocol: "grpc",
+							Insecure: func() *bool {
+								insecure := false
+								return &insecure
+							}(),
+							Timeout: "10s",
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {

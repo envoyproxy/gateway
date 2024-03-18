@@ -79,7 +79,24 @@ const (
 	ConfigGrpcXdsServerURLEnvVar = "CONFIG_GRPC_XDS_SERVER_URL"
 	// ConfigGrpcXdsNodeIDEnvVar is the id of ratelimit node.
 	ConfigGrpcXdsNodeIDEnvVar = "CONFIG_GRPC_XDS_NODE_ID"
-
+	// TracingEnabledVar is enabled the tracing feature
+	TracingEnabledVar = "TRACING_ENABLED"
+	// TracingExporterProtocolVar is protocol of exporter in send tracing
+	TracingExporterProtocolVar = "TRACING_EXPORTER_PROTOCOL"
+	// TracingServiceNameVar is service name appears in tracing span
+	TracingServiceNameVar = "TRACING_SERVICE_NAME"
+	// TracingServiceNamespaceVar is service namespace appears in tracing span
+	TracingServiceNamespaceVar = "TRACING_SERVICE_NAMESPACE"
+	// TracingServiceInstanceIDVar is service instance id appears in tracing span
+	TracingServiceInstanceIDVar = "TRACING_SERVICE_INSTANCE_ID"
+	// TracingSamplingRateVar is trace sampling rate
+	TracingSamplingRateVar = "TRACING_SAMPLING_RATE"
+	// OTELExporterOTLPEndpointVar is target url to which the exporter is going to send
+	OTELExporterOTLPEndpointVar = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	// OTELExporterOTLPInsecure is enable client transport security for the exporter's gRPC connection.
+	OTELExporterOTLPInsecure = "OTEL_EXPORTER_OTLP_INSECURE"
+	// OTELExporterOTLPTimeoutVar Maximum time the OTLP exporter will wait for each batch export.
+	OTELExporterOTLPTimeoutVar = "OTEL_EXPORTER_OTLP_TIMEOUT"
 	// InfraName is the name for rate-limit resources.
 	InfraName = "envoy-ratelimit"
 	// InfraGRPCPort is the grpc port that the rate limit service listens on.
@@ -377,6 +394,77 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		}
 	}
 
+	if enableTracing(rateLimit) {
+
+		if len(rateLimit.Telemetry.Tracing.TracingServiceName) == 0 {
+			rateLimit.Telemetry.Tracing.TracingServiceName = InfraName
+		}
+
+		var sampleRate = 1.0
+		if rateLimit.Telemetry.Tracing.TracingSampleRate != nil {
+			sampleRate = *rateLimit.Telemetry.Tracing.TracingSampleRate
+		}
+
+		var insecure = true
+		if rateLimit.Telemetry.Tracing.Provider.Insecure != nil {
+			insecure = *rateLimit.Telemetry.Tracing.Provider.Insecure
+		}
+		if len(rateLimit.Telemetry.Tracing.Provider.Protocol) == 0 {
+			rateLimit.Telemetry.Tracing.Provider.Protocol = "http"
+		}
+
+		tracingEnvs := []corev1.EnvVar{
+			{
+				Name:  TracingEnabledVar,
+				Value: "true",
+			},
+			{
+				Name:  TracingServiceNameVar,
+				Value: rateLimit.Telemetry.Tracing.TracingServiceName,
+			},
+			{
+				Name:  TracingServiceNamespaceVar,
+				Value: rateLimit.Telemetry.Tracing.TracingServiceNamespace,
+			},
+			{
+				Name: TracingServiceInstanceIDVar,
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "metadata.name",
+					},
+				},
+			},
+			{
+				Name:  TracingSamplingRateVar,
+				Value: strconv.FormatFloat(sampleRate, 'f', 1, 64),
+			},
+			{
+				Name:  TracingExporterProtocolVar,
+				Value: rateLimit.Telemetry.Tracing.Provider.Protocol,
+			},
+			{
+				Name:  OTELExporterOTLPEndpointVar,
+				Value: rateLimit.Telemetry.Tracing.Provider.Endpoint,
+			},
+			{
+				Name:  OTELExporterOTLPInsecure,
+				Value: strconv.FormatBool(insecure),
+			},
+		}
+
+		if len(rateLimit.Telemetry.Tracing.Provider.Timeout) != 0 {
+			tracingEnvs = append(tracingEnvs, []corev1.EnvVar{
+				{
+					Name:  OTELExporterOTLPTimeoutVar,
+					Value: rateLimit.Telemetry.Tracing.Provider.Timeout,
+				},
+			}...)
+		}
+
+		env = append(env, tracingEnvs...)
+	}
+
 	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
@@ -389,4 +477,17 @@ func Validate(ctx context.Context, client client.Client, gateway *egv1a1.EnvoyGa
 	}
 
 	return nil
+}
+
+func enableTracing(rl *egv1a1.RateLimit) bool {
+
+	// Other fields can use the default values, but we have to make sure the user has the endpoint configured
+	if rl != nil && rl.Telemetry != nil &&
+		rl.Telemetry.Tracing != nil &&
+		rl.Telemetry.Tracing.Provider != nil &&
+		len(rl.Telemetry.Tracing.Provider.Endpoint) != 0 {
+		return true
+	}
+
+	return false
 }
