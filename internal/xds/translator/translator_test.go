@@ -293,6 +293,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "retry-partial-invalid",
 		},
+		{
+			name: "multiple-listeners-same-port-with-different-filters",
+		},
 	}
 
 	for _, tc := range testCases {

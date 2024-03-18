@@ -165,9 +165,18 @@ func (t *Translator) patchHCMWithFilters(
 	// rate limit server configuration.
 	t.patchHCMWithRateLimit(mgr, irListener)
 
-	// Add the router filter
-	headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
-	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
+	// Add the router filter if it doesn't exist.
+	hasRouter := false
+	for _, filter := range mgr.HttpFilters {
+		if filter.Name == wellknown.Router {
+			hasRouter = true
+			break
+		}
+	}
+	if !hasRouter {
+		headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
+		mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
+	}
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)
