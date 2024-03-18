@@ -67,6 +67,8 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 // Service returns the expected Service based on the provided infra.
 func (r *ResourceRender) Service() (*corev1.Service, error) {
 	var ports []corev1.ServicePort
+	uniquePorts := make(map[int32]struct{})
+	uniquePortsHTTP3 := make(map[int32]struct{})
 	for _, listener := range r.infra.Listeners {
 		for _, port := range listener.Ports {
 			target := intstr.IntOrString{IntVal: port.ContainerPort}
@@ -76,22 +78,28 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			}
 
 			p := corev1.ServicePort{
-				Name:       ExpectedResourceHashedName(port.Name),
+				Name:       fmt.Sprintf("port-%d", port.ServicePort),
 				Protocol:   protocol,
 				Port:       port.ServicePort,
 				TargetPort: target,
 			}
-			ports = append(ports, p)
+			if _, ok := uniquePorts[port.ServicePort]; !ok {
+				ports = append(ports, p)
+				uniquePorts[port.ServicePort] = struct{}{}
+			}
 
 			if port.Protocol == ir.HTTPSProtocolType {
 				if listener.HTTP3 != nil {
 					p := corev1.ServicePort{
-						Name:       ExpectedResourceHashedName(port.Name + "-h3"),
+						Name:       fmt.Sprintf("port-%d-h3", port.ServicePort),
 						Protocol:   corev1.ProtocolUDP,
 						Port:       port.ServicePort,
 						TargetPort: target,
 					}
-					ports = append(ports, p)
+					if _, ok := uniquePortsHTTP3[port.ServicePort]; !ok {
+						ports = append(ports, p)
+						uniquePortsHTTP3[port.ServicePort] = struct{}{}
+					}
 				}
 			}
 		}

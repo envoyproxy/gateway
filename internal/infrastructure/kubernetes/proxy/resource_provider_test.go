@@ -72,11 +72,13 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 					Name:          "EnvoyHTTPPort",
 					Protocol:      ir.TCPProtocolType,
 					ContainerPort: envoyHTTPPort,
+					ServicePort:   envoyHTTPPort,
 				},
 				{
 					Name:          "EnvoyHTTPSPort",
 					Protocol:      ir.TCPProtocolType,
 					ContainerPort: envoyHTTPSPort,
+					ServicePort:   envoyHTTPSPort,
 				},
 			},
 		},

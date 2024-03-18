@@ -14,12 +14,12 @@ spec:
   clusterIPs:
     - 10.102.168.100
   ports:
-    - name: envoy-EnvoyHTTPPort-d76a15e2
-      port: 0
+    - name: port-8080
+      port: 8080
       protocol: TCP
       targetPort: 8080
-    - name: envoy-EnvoyHTTPSPort-6658f727
-      port: 0
+    - name: port-8443
+      port: 8443
       protocol: TCP
       targetPort: 8443
   selector:
