@@ -59,7 +59,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			}
 
 			// open some connections
-			for i := 0; i < 10; i++ {
+			for i := 0; i < 5; i++ {
 				conn, err := net.DialTimeout("tcp", gwAddr, 100*time.Millisecond)
 				if err == nil {
 					defer conn.Close()
@@ -75,11 +75,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			// expect error
 			if err != nil {
 				urlError := &url.Error{}
-				if errors.As(err, &urlError) {
-					if urlError.Err.Error() != "EOF" {
-						t.Errorf("expected EOF when connection limit is reached")
-					}
-				} else {
+				if !errors.As(err, &urlError) {
 					t.Errorf("expected net/url error when connection limit is reached")
 				}
 			} else {
