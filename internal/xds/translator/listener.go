@@ -423,11 +423,11 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 func buildConnectionLimitFilter(statPrefix string, connection *ir.Connection) *connection_limitv3.ConnectionLimit {
 	cl := &connection_limitv3.ConnectionLimit{
 		StatPrefix:     statPrefix,
-		MaxConnections: wrapperspb.UInt64(*connection.Limit),
+		MaxConnections: wrapperspb.UInt64(*connection.Limit.Value),
 	}
 
-	if connection.CloseDelay != nil {
-		cl.Delay = durationpb.New(connection.CloseDelay.Duration)
+	if connection.Limit.CloseDelay != nil {
+		cl.Delay = durationpb.New(connection.Limit.CloseDelay.Duration)
 	}
 	return cl
 }

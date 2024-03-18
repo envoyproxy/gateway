@@ -5,7 +5,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    connection: {}
+    tcpKeepalive: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -20,7 +20,7 @@ clientTrafficPolicies:
     connection:
       limit:
         value: 3
-        closeDelay: 10s
+        closeDelay: 10mib
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

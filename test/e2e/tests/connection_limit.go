@@ -68,6 +68,9 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				}
 			}
 
+			// sleep a bit for envoy counters to update
+			time.Sleep(300 * time.Millisecond)
+
 			// new requests now fail
 			req = http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			_, _, err = suite.RoundTripper.CaptureRoundTrip(req)

@@ -81,6 +81,11 @@
       serverNames:
       - bar.com
     filters:
+    - name: envoy.filters.network.connection_limit
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        maxConnections: "3"
+        statPrefix: passthrough
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
@@ -102,6 +107,7 @@
     - name: envoy.filters.network.connection_limit
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        delay: 3s
         maxConnections: "10"
         statPrefix: tcp
     - name: envoy.filters.network.tcp_proxy

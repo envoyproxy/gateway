@@ -8,16 +8,15 @@ package ir
 import (
 	"cmp"
 	"errors"
-	"net/http"
-	"net/netip"
-	"reflect"
-
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"net/http"
+	"net/netip"
+	"reflect"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -1088,7 +1087,7 @@ type TCPListener struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
-	// Connection is ...
+	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
@@ -1768,8 +1767,17 @@ type TLSUpstreamConfig struct {
 // +k8s:deepcopy-gen=true
 type Connection struct {
 	// Limit for number of connections
-	Limit *uint64 `json:"limit,omitempty" yaml:"limit,omitempty"`
+	Limit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+}
 
-	// CloseDelay is time to wait before closing a connection rejected due to limit
+// ConnectionLimit contains settings for downstream connection limits
+// +k8s:deepcopy-gen=true
+type ConnectionLimit struct {
+	// Value of the maximum concurrent connections limit.
+	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
+	Value *uint64 `json:"value,omitempty" yaml:"value,omitempty"`
+
+	// CloseDelay defines the delay to use before closing connections that are rejected
+	// once the limit value is reached.
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }

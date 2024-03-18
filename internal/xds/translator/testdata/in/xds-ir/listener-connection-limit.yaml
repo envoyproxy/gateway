@@ -23,7 +23,8 @@ http:
   hostnames:
   - "foo.net"
   connection:
-    limit: 5
+    limit:
+      value: 5
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -40,7 +41,9 @@ tcp:
 - name: "third-listener"
   address: "0.0.0.0"
   port: 10082
-  connection: {}
+  connection:
+    limit:
+      value: 3
   tls:
     passthrough:
       snis:
@@ -54,7 +57,9 @@ tcp:
 - name: "fourth-listener"
   address: "0.0.0.0"
   connection:
-    limit: 10
+    limit:
+      value: 10
+      closeDelay: 3s
   port: 10083
   destination:
     name: "tcp-route-dest"

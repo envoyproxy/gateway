@@ -8,7 +8,7 @@ clientTrafficPolicies:
   spec:
     connection:
       limit:
-        closeDelay: 10s
+        closeDelay: 10mib
         value: 3
     targetRef:
       group: gateway.networking.k8s.io
@@ -26,9 +26,9 @@ clientTrafficPolicies:
         sectionName: http-1
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: Invalid CloseDelay value 10mib
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -38,12 +38,12 @@ clientTrafficPolicies:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    connection: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       namespace: envoy-gateway
+    tcpKeepalive: {}
   status:
     ancestors:
     - ancestorRef:
@@ -164,10 +164,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      connection:
-        limit:
-          closeDelay: 10s
-          value: 3
       hostnames:
       - '*'
       isHTTP2: false
@@ -177,7 +173,6 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
-      connection: {}
       hostnames:
       - '*'
       isHTTP2: false
@@ -186,3 +181,4 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8080
+      tcpKeepalive: {}
