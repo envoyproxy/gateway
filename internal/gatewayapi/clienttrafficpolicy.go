@@ -124,7 +124,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				// It must exist since we've already finished processing the gateways
 				gwXdsIR := xdsIR[irKey]
 				if string(l.Name) == section {
-					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR)
+					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
 					if err == nil {
 						err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 					}
@@ -234,7 +234,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				irKey := t.getIRKey(l.gateway)
 				// It must exist since we've already finished processing the gateways
 				gwXdsIR := xdsIR[irKey]
-				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR); err != nil {
+				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
 					errs = errors.Join(errs, err)
 				} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 					errs = errors.Join(errs, err)
@@ -312,7 +312,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 	return gateway.GatewayContext, nil
 }
 
-func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds) error {
+func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, attachedToGateway bool) error {
 	// Find Listener IR
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
@@ -329,7 +329,20 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds) 
 	// IR must exist since we're past validation
 	if httpIR != nil {
 		if sameListeners := listenersWithSameHTTPPort(xds, httpIR); len(sameListeners) != 0 {
-			return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
+			if attachedToGateway {
+				gatewayName := irListenerName[0:strings.LastIndex(irListenerName, "/")]
+				conflictingListeners := []string{}
+				for _, currName := range sameListeners {
+					if strings.Index(currName, gatewayName) != 0 {
+						conflictingListeners = append(conflictingListeners, currName)
+					}
+				}
+				if len(conflictingListeners) != 0 {
+					return fmt.Errorf("affects additional listeners: %s", strings.Join(conflictingListeners, ", "))
+				}
+			} else {
+				return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
+			}
 		}
 	}
 	return nil
