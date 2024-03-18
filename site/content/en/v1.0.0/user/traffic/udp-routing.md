@@ -12,7 +12,7 @@ For additional information, refer to Envoy's [UDP proxy documentation][].
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Installation
@@ -128,7 +128,7 @@ _udp.foo.bar.com.	0	IN	SRV	0 0 42376 .
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart Guide](../../quickstart) to uninstall Envoy Gateway.
+Follow the steps from the [Quickstart Guide](../quickstart) to uninstall Envoy Gateway.
 
 Delete the CoreDNS example manifest and the UDPRoute:
 
@@ -141,7 +141,7 @@ kubectl delete udproute/coredns
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.
 
 [UDPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
 [UDP proxy documentation]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy

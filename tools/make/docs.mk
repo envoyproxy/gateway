@@ -81,6 +81,11 @@ docs-release-gen:
 	@echo '  version = "$(TAG)"' >> site/hugo.toml
 	@echo '  url = "/$(TAG)"' >> site/hugo.toml
 
+.PHONY: docs-check-links
+docs-check-links:
+	@$(LOG_TARGET)
+	linkinator site/public/ -r --concurrency 25 -s "localhost:3000 localhost:9090 k8s.io ntia.gov github.com example.com _print latest v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0 v0.1.0"
+
 .PHONY: release-notes-docs
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)

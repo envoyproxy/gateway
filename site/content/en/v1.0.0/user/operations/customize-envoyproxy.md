@@ -8,7 +8,7 @@ Service. To learn more about GatewayClass and ParametersRef, please refer to [Ga
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Add GatewayClass ParametersRef
@@ -368,5 +368,5 @@ EOF
 ```
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
-[egctl translate]: ../egctl/#validating-gateway-api-configuration
+[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[egctl translate]: ../operations/egctl#validating-gateway-api-configuration

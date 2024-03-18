@@ -168,6 +168,6 @@ The draft for this document is [here][draft_design].
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
 [be]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
-[wcd]: ../watching
+[wcd]: ../design/watching
 [Issue #37]: https://github.com/envoyproxy/gateway/issues/37
-[roadmap]: ../../contributions/roadmap/
+[roadmap]: ../roadmap

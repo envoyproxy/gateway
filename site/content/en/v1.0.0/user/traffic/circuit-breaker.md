@@ -20,7 +20,7 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ### Install Envoy Gateway
 
-* Follow the installation step from the [Quickstart Guide](../../quickstart) to install Envoy Gateway and sample resources.
+* Follow the installation step from the [Quickstart Guide](../quickstart) to install Envoy Gateway and sample resources.
 
 ### Install the hey load testing tool
 * The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.   
@@ -116,7 +116,7 @@ With the new circuit breaker settings, and due to the slowness of the backend, o
 * Upstream traffic was limited, alleviating the pressure on the degraded service. 
 
 [Envoy Circuit Breakers]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking
-[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/

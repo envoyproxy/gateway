@@ -346,7 +346,7 @@ spec:
 __Note:__ The NetworkPublishing API is currently undefined and is provided here for illustration purposes only.
 
 [issue_51]: https://github.com/envoyproxy/gateway/issues/51
-[design_doc]: ../system-design/
+[design_doc]: ../../design/system-design
 [gw_api]: https://gateway-api.sigs.k8s.io/
 [gc]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/

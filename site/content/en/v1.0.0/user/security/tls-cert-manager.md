@@ -18,7 +18,7 @@ Changing to the Let's Encrypt production environment is straight-forward after t
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Deploying cert-manager
@@ -117,7 +117,7 @@ gateway.gateway.networking.k8s.io/eg condition met
 
 ### Testing The Gateway
 
-See [Testing in Secure Gateways](secure-gateways.md#testing) for the general idea.
+See [Testing in Secure Gateways](../security/secure-gateways#Testing) for the general idea.
 
 Since we have a self-signed certificate, `curl` will by default reject it, requiring the `-k` flag:
 
@@ -432,5 +432,5 @@ eg-https   kubernetes.io/tls   3      42m
 
 ## See Also
 
-* [Secure Gateways](secure-gateways.md)
+* [Secure Gateways](../security/secure-gateways)
 * [Securing gateway.networking.k8s.io Gateway Resources](https://cert-manager.io/docs/usage/gateway/)

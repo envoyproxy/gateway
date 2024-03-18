@@ -14,7 +14,7 @@ and following guidelines to streamline your contributions.
 * A "major feature" is defined as any change that is > 100 LOC altered (not including tests), or
   changes any user-facing behavior. We will use the GitHub issue to discuss the feature and come to
   agreement. This is to prevent your time being wasted, as well as ours. The GitHub review process
-  for major features is also important so that [affiliations with commit access](../codeowners) can
+  for major features is also important so that [affiliations with commit access](https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS) can
   come to agreement on the design. If it's appropriate to write a design document, the document must
   be hosted either in the GitHub issue, or linked to from the issue and hosted in a world-readable
   location.
@@ -49,7 +49,7 @@ to the following guidelines for all code, APIs, and documentation:
   build. If your PR cannot have 100% coverage for some reason please clearly explain why when you
   open it.
 * Any PR that changes user-facing behavior **must** have associated documentation in the [docs](https://github.com/envoyproxy/gateway/tree/main/site) folder of the repo as
-  well as the [changelog](/blog/releases).
+  well as the [changelog](/announcements).
 * All code comments and documentation are expected to have proper English grammar and punctuation.
   If you are not a fluent English speaker (or a bad writer ;-)) please let us know and we will try
   to find some help but there are no guarantees.
@@ -81,7 +81,7 @@ to the following guidelines for all code, APIs, and documentation:
 
 ## Maintainer PR Review Policy
 
-* See [CODEOWNERS.md](../codeowners) for the current list of maintainers.
+* See [CODEOWNERS.md](https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS) for the current list of maintainers.
 * A maintainer representing a different affiliation from the PR owner is required to review and
   approve the PR.
 * When the project matures, it is expected that a "domain expert" for the code the PR touches should
@@ -175,7 +175,7 @@ git config --add alias.c "commit -s"
 ## Fixing DCO
 
 If your PR fails the DCO check, it's necessary to fix the entire commit history in the PR. Best
-practice is to [squash](https://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)
+practice is to [squash](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)
 the commit history to a single commit, append the DCO sign-off as described above, and [force
 push](https://git-scm.com/docs/git-push#git-push---force). For example, if you have 2 commits in
 your history:

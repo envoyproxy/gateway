@@ -167,10 +167,10 @@ patches will work.
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Kubernetes]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
 [Kustomize]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/jsonpatch.md
-[Extension APIs]: ../../api/extension_types/
-[RateLimit]: ../../user/rate-limit/
-[EnvoyGateway]: ../../api/extension_types/#envoygateway
-[Extending the Control Plane]: ../extending-envoy-gateway
+[Extension APIs]: ../../api/extension_types
+[RateLimit]: ../../user/traffic/global-rate-limit
+[EnvoyGateway]: ../../api/extension_types#envoygateway
+[Extending the Control Plane]: ../design/extending-envoy-gateway
 [EnvoyFilter]: https://istio.io/latest/docs/reference/config/networking/envoy-filter
-[egctl x translate]: ../../user/egctl#egctl-experimental-translate
-[Bootstrap configuration using EnvoyProxy API]: ../../user/customize-envoyproxy#customize-envoyproxy-bootstrap-config
+[egctl x translate]: ../../user/operations/egctl#egctl-experimental-translate
+[Bootstrap configuration using EnvoyProxy API]: ../../user/operations/customize-envoyproxy#customize-envoyproxy-bootstrap-config

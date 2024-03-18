@@ -250,4 +250,4 @@ type RouteContext interface {
 }
 ```
 
-[message bus]: ../watching/
+[message bus]: ../design/watching

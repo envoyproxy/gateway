@@ -11,7 +11,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
@@ -122,7 +122,7 @@ filter to work. Otherwise, the OPTIONS request won't match the routes and the CO
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the SecurityPolicy:
 
@@ -132,9 +132,9 @@ kubectl delete securitypolicy/cors-example
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../contributions/design/security-policy/
+[SecurityPolicy]: ../../contributions/design/security-policy
 [cors]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

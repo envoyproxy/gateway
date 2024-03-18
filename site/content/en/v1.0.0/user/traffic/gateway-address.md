@@ -10,7 +10,7 @@ Depending on the Service Type, the addresses of gateway can be used as:
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 
 ## External IPs
 
@@ -62,4 +62,4 @@ this will __require__ the address to be of type `IPAddress` and the [ServiceType
 [Addresses]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayAddress
 [External IPs]: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
 [Cluster IP]: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip
-[ServiceType]: ../../../api/extension_types#servicetype
+[ServiceType]: ../../api/extension_types#servicetype

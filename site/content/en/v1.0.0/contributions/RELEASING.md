@@ -73,7 +73,7 @@ export GITHUB_REMOTE=origin
 
 ### Setup cherry picker action
 
-After release branch cut, RM (Release Manager) should add job [cherrypick action](../../../.github/workflows/cherrypick.yaml) for target release.
+After release branch cut, RM (Release Manager) should add job [cherrypick action](https://github.com/envoyproxy/gateway/blob/main/.github/workflows/cherrypick.yaml) for target release.
 
 Configuration looks like following:
 
@@ -140,7 +140,7 @@ export GITHUB_REMOTE=origin
       <a class="btn btn-lg btn-primary me-3 mb-4" href="/v0.5.0">
       Get Started <i class="fas fa-arrow-alt-circle-right ms-2"></i>
       </a>
-      <a class="btn btn-lg btn-secondary me-3 mb-4" href="/v0.5.0/contributions">
+      <a class="btn btn-lg btn-secondary me-3 mb-4" href="/latest/contributions">
       Contributing <i class="fa fa-heartbeat ms-2 "></i>
       </a>
    ```

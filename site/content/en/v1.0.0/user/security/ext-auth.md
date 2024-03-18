@@ -13,7 +13,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Verify the Gateway status:
@@ -97,7 +97,7 @@ kubectl get securitypolicy/ext-auth-example -o yaml
 
 ### Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -304,8 +304,8 @@ kubectl delete backendtlspolicy/grpc-ext-auth-btls
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../contributions/design/security-policy/
+[SecurityPolicy]: ../../contributions/design/security-policy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

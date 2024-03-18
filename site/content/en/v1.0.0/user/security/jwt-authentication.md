@@ -11,8 +11,8 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
-For GRPC - follow the steps from the [GRPC Routing](../grpc-routing) example.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
+For GRPC - follow the steps from the [GRPC Routing](../traffic/grpc-routing) example.
 Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
 ## Configuration
@@ -71,7 +71,7 @@ kubectl get securitypolicy/jwt-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -150,7 +150,7 @@ You should see the below response
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the SecurityPolicy:
 
@@ -160,9 +160,9 @@ kubectl delete securitypolicy/jwt-example
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../contributions/design/security-policy/
+[SecurityPolicy]: ../../contributions/design/security-policy
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway

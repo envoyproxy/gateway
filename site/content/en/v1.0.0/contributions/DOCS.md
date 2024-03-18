@@ -66,4 +66,4 @@ Pages. For more details, see `.github/workflows/docs.yaml`.
 Go to [Hugo](https://gohugo.io) and [Docsy](https://www.docsy.dev/docs) to learn more.
 
 [Markdown]: https://daringfireball.net/projects/markdown/syntax
-[latest-website]: /latest
+[latest-website]: ../../latest

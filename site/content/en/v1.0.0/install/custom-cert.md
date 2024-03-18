@@ -143,4 +143,4 @@ We use Cert-Manager to manage the certificates. You can install it by following 
    EOF
    ```
 
-5. Now you can follow the helm chart [installation guide](../install-helm) to install envoy gateway with custom certs.
+5. Now you can follow the helm chart [installation guide](../install/install-helm) to install envoy gateway with custom certs.

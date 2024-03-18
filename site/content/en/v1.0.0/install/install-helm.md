@@ -10,7 +10,7 @@ Envoy Gateway can be installed via a Helm chart with a few simple steps, dependi
 ## Before you begin
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
-Refer to the [Version Compatibility Matrix](/blog/2022/10/01/versions/) to learn more.
+Refer to the [Version Compatibility Matrix](../install/matrix) to learn more.
 {{% /alert %}}
 
 The Envoy Gateway Helm chart is hosted by DockerHub.
@@ -28,7 +28,7 @@ You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gat
 Envoy Gateway is typically deployed to Kubernetes from the command line. If you don't have Kubernetes, you should use `kind` to create one.
 
 {{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](/latest/contributions/develop) to learn more.
+Refer to the [Developer Guide](../contributions/develop) to learn more.
 {{% /alert %}}
 
 Install the Gateway API CRDs and Envoy Gateway:
@@ -115,7 +115,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.0 -n envo
 ```
 
 {{% alert title="Helm Chart Values" color="primary" %}}
-If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../api).
+If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../install/api).
 {{% /alert %}}
 
 ## Open Ports
@@ -140,5 +140,5 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 | Heath Check  | 0.0.0.0     | 19001   |
 
 {{% alert title="Next Steps" color="warning" %}}
-Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../../user).
+Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../user/quickstart).
 {{% /alert %}}

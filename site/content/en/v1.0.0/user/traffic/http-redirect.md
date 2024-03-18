@@ -9,7 +9,7 @@ learn more about HTTP routing, refer to the [Gateway API documentation][].
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTPS.
 
 ## Redirects
@@ -69,7 +69,7 @@ $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}/get"
 ...
 ```
 
-If you followed the steps in the [Secure Gateways](secure-gateways.md) guide, you should be able to curl the redirect
+If you followed the steps in the [Secure Gateways](../security/secure-gateways) guide, you should be able to curl the redirect
 location.
 
 ## HTTP --> HTTPS
