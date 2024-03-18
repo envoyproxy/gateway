@@ -102,7 +102,7 @@ Error distribution:
 With the new connection limit, only 5 of 10 connections are established, and so only 50 requests succeed.  
 
 
-[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[Client Traffic Policy]: ../../../api/extension_types#clienttrafficpolicy
 [Hey project]: https://github.com/rakyll/hey
 [connection limit]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/network_filters/connection_limit_filter
 [listener]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Listener
