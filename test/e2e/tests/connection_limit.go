@@ -31,7 +31,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 	Description: "Deny All Requests",
 	Manifests:   []string{"testdata/connection-limit.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("Deny All Requests", func(t *testing.T) {
+		t.Run("Close connections over limit", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-connection-limit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "connection-limit-gateway", Namespace: ns}
@@ -58,8 +58,8 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 
-			// open max allowed connections
-			for i := 0; i < 5; i++ {
+			// open some connections
+			for i := 0; i < 10; i++ {
 				conn, err := net.DialTimeout("tcp", gwAddr, 100*time.Millisecond)
 				if err == nil {
 					defer conn.Close()
@@ -67,9 +67,6 @@ var ConnectionLimitTest = suite.ConformanceTest{
 					t.Errorf("failed to open connection: %v", err)
 				}
 			}
-
-			// sleep a bit for envoy counters to update
-			time.Sleep(300 * time.Millisecond)
 
 			// new requests now fail
 			req = http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
