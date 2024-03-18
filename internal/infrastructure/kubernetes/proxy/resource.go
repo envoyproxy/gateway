@@ -107,6 +107,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	var ports []corev1.ContainerPort
 
 	// Iterate over listeners and ports to get container ports
+	uniquePorts := make(map[string]struct{})
 	for _, listener := range infra.Listeners {
 		for _, p := range listener.Ports {
 			var protocol corev1.Protocol
@@ -119,12 +120,15 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				// hashed container port name including up to the 6 characters of the port name and the maximum of 15 characters.
-				Name:          utils.GetHashedName(p.Name, 6),
+				Name:          fmt.Sprintf("port-%d-%s", p.ContainerPort, protocol),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}
-			ports = append(ports, port)
+			uname := fmt.Sprintf("%s-%d", protocol, p.ContainerPort)
+			if _, ok := uniquePorts[uname]; !ok {
+				ports = append(ports, port)
+				uniquePorts[uname] = struct{}{}
+			}
 		}
 	}
 
