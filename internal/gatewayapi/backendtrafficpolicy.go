@@ -350,7 +350,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			if r.BackendTraffic == nil || r.BackendTraffic.Any() {
+			if r.BackendTraffic.Any() {
 				continue
 			}
 

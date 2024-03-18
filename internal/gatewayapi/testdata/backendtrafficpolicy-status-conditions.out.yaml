@@ -580,7 +580,8 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic: {}
+        backendWeights:
           invalid: 1
           valid: 0
         directResponse:
@@ -607,7 +608,8 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic: {}
+        backendWeights:
           invalid: 1
           valid: 0
         directResponse:

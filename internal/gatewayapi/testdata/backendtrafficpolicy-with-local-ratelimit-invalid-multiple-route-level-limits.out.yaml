@@ -168,7 +168,8 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic: {}
+        backendWeights:
           invalid: 0
           valid: 0
         destination:

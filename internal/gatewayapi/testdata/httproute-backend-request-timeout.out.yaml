@@ -110,7 +110,11 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic:
+          timeout:
+            http:
+              requestTimeout: 1s
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -129,6 +133,3 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout:
-          http:
-            requestTimeout: 1s

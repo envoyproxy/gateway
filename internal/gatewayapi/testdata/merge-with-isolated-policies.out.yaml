@@ -306,24 +306,14 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic:
+          tcpKeepalive:
+            idleTime: 1200
+            interval: 60
+            probes: 3
+        backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -340,10 +330,22 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        tcpKeepalive:
-          idleTime: 1200
-          interval: 60
-          probes: 3
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
     - address: 0.0.0.0
       hostnames:
       - '*'

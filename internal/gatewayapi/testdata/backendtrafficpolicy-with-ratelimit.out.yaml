@@ -277,7 +277,20 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic:
+          rateLimit:
+            global:
+              rules:
+              - headerMatches:
+                - distinct: false
+                  exact: one
+                  name: x-user-id
+                - distinct: true
+                  name: x-org-id
+                limit:
+                  requests: 10
+                  unit: Hour
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -292,18 +305,6 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-        rateLimit:
-          global:
-            rules:
-            - headerMatches:
-              - distinct: false
-                exact: one
-                name: x-user-id
-              - distinct: true
-                name: x-org-id
-              limit:
-                requests: 10
-                unit: Hour
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -319,7 +320,20 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic:
+          rateLimit:
+            global:
+              rules:
+              - cidrMatch:
+                  cidr: 192.168.0.0/16
+                  distinct: true
+                  ipv6: false
+                  maskLen: 16
+                headerMatches: []
+                limit:
+                  requests: 20
+                  unit: Hour
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -338,15 +352,3 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        rateLimit:
-          global:
-            rules:
-            - cidrMatch:
-                cidr: 192.168.0.0/16
-                distinct: true
-                ipv6: false
-                maskLen: 16
-              headerMatches: []
-              limit:
-                requests: 20
-                unit: Hour

@@ -220,7 +220,11 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic:
+          loadBalancer:
+            consistentHash:
+              sourceIP: true
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -234,15 +238,21 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        loadBalancer:
-          consistentHash:
-            sourceIP: true
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
+      - backendTraffic:
+          loadBalancer:
+            random: {}
+          timeout:
+            http:
+              connectionIdleTimeout: 21s
+              maxConnectionDuration: 22s
+            tcp:
+              connectTimeout: 20s
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -256,16 +266,8 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        loadBalancer:
-          random: {}
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-        timeout:
-          http:
-            connectionIdleTimeout: 21s
-            maxConnectionDuration: 22s
-          tcp:
-            connectTimeout: 20s

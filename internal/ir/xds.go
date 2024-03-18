@@ -474,6 +474,10 @@ type BackendTrafficFeatures struct {
 
 // Any returns true if any of the features are already set.
 func (b *BackendTrafficFeatures) Any() bool {
+	if b == nil {
+		return false
+	}
+
 	return b.RateLimit != nil ||
 		b.LoadBalancer != nil ||
 		b.ProxyProtocol != nil ||
@@ -519,6 +523,10 @@ type SecurityFeatures struct {
 
 // Any returns true if any of the features are already set.
 func (s *SecurityFeatures) Any() bool {
+	if s == nil {
+		return false
+	}
+
 	return s.CORS != nil ||
 		s.JWT != nil ||
 		s.OIDC != nil ||

@@ -257,7 +257,9 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			setRequestTimeout(rto, metav1.Duration{Duration: d})
 		}
 
-		irRoute.BackendTraffic.Timeout = rto
+		irRoute.BackendTraffic = &ir.BackendTrafficFeatures{
+			Timeout: rto,
+		}
 	}
 }
 
@@ -668,8 +670,10 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					hostRoute.BackendWeights = routeRoute.BackendWeights
 				}
 				if routeRoute.BackendTraffic != nil {
-					hostRoute.BackendTraffic.Timeout = routeRoute.BackendTraffic.Timeout
-					hostRoute.BackendTraffic.Retry = routeRoute.BackendTraffic.Retry
+					hostRoute.BackendTraffic = &ir.BackendTrafficFeatures{
+						Timeout: routeRoute.BackendTraffic.Timeout,
+						Retry:   routeRoute.BackendTraffic.Retry,
+					}
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
