@@ -19,4 +19,3 @@ http:
     timeout:
       http:
         requestReceivedTimeout: "5s"
-

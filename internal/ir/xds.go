@@ -179,12 +179,8 @@ func (x Xds) Printable() *Xds {
 
 		for _, route := range listener.Routes {
 			// Omit field
-			if route.OIDC != nil {
-				route.OIDC.ClientSecret = redacted
-				route.OIDC.HMACSecret = redacted
-			}
-			if route.BasicAuth != nil {
-				route.BasicAuth.Users = redacted
+			if route.Security != nil {
+				route.Security.Printable()
 			}
 		}
 	}
@@ -446,14 +442,15 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
-
-	BackendTrafficPolicy `json:",inline" yaml:",inline"`
-	SecurityPolicy       `json:",inline" yaml:",inline"`
+	// BackendTraffic holds the features associated with BackendTrafficPolicy
+	BackendTraffic *BackendTrafficFeatures `json:"backendTraffic,omitempty" yaml:"backendTraffic,omitempty"`
+	// Security holds the features associated with SecurityPolicy
+	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
 }
 
-// BackendTrafficPolicy holds the information associated with the Backend Traffic Policy.
+// BackendTrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
-type BackendTrafficPolicy struct {
+type BackendTrafficFeatures struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -476,7 +473,7 @@ type BackendTrafficPolicy struct {
 }
 
 // Any returns true if any of the features are already set.
-func (b *BackendTrafficPolicy) Any() bool {
+func (b *BackendTrafficFeatures) Any() bool {
 	return b.RateLimit != nil ||
 		b.LoadBalancer != nil ||
 		b.ProxyProtocol != nil ||
@@ -488,44 +485,26 @@ func (b *BackendTrafficPolicy) Any() bool {
 		b.Retry != nil
 }
 
-// Set sets the features if they are unset.
-func (b *BackendTrafficPolicy) Set(btp *BackendTrafficPolicy) {
-	if btp == nil {
-		return
+func (b *BackendTrafficFeatures) Validate() error {
+	var errs error
+
+	if b.LoadBalancer != nil {
+		if err := b.LoadBalancer.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if b.HealthCheck != nil {
+		if err := b.HealthCheck.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
 
-	if b.RateLimit == nil {
-		b.RateLimit = btp.RateLimit
-	}
-	if b.LoadBalancer == nil {
-		b.LoadBalancer = btp.LoadBalancer
-	}
-	if b.ProxyProtocol == nil {
-		b.ProxyProtocol = btp.ProxyProtocol
-	}
-	if b.HealthCheck == nil {
-		b.HealthCheck = btp.HealthCheck
-	}
-	if b.CircuitBreaker == nil {
-		b.CircuitBreaker = btp.CircuitBreaker
-	}
-	if b.FaultInjection == nil {
-		b.FaultInjection = btp.FaultInjection
-	}
-	if b.TCPKeepalive == nil {
-		b.TCPKeepalive = btp.TCPKeepalive
-	}
-	if b.Retry == nil {
-		b.Retry = btp.Retry
-	}
-	if b.Timeout == nil {
-		b.Timeout = btp.Timeout
-	}
+	return errs
 }
 
-// SecurityPolicy holds the information associated with the Security Policy.
+// SecurityFeatures holds the information associated with the Security Policy.
 // +k8s:deepcopy-gen=true
-type SecurityPolicy struct {
+type SecurityFeatures struct {
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
@@ -539,7 +518,7 @@ type SecurityPolicy struct {
 }
 
 // Any returns true if any of the features are already set.
-func (s *SecurityPolicy) Any() bool {
+func (s *SecurityFeatures) Any() bool {
 	return s.CORS != nil ||
 		s.JWT != nil ||
 		s.OIDC != nil ||
@@ -547,27 +526,26 @@ func (s *SecurityPolicy) Any() bool {
 		s.ExtAuth != nil
 }
 
-// Set sets the features if they are unset.
-func (s *SecurityPolicy) Set(sp *SecurityPolicy) {
-	if sp == nil {
-		return
+func (s *SecurityFeatures) Printable() {
+	if s.OIDC != nil {
+		s.OIDC.ClientSecret = redacted
+		s.OIDC.HMACSecret = redacted
+	}
+	if s.BasicAuth != nil {
+		s.BasicAuth.Users = redacted
+	}
+}
+
+func (s *SecurityFeatures) Validate() error {
+	var errs error
+
+	if s.JWT != nil {
+		if err := s.JWT.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
 
-	if s.CORS == nil {
-		s.CORS = sp.CORS
-	}
-	if s.JWT == nil {
-		s.JWT = sp.JWT
-	}
-	if s.OIDC == nil {
-		s.OIDC = sp.OIDC
-	}
-	if s.BasicAuth == nil {
-		s.BasicAuth = sp.BasicAuth
-	}
-	if s.ExtAuth == nil {
-		s.ExtAuth = sp.ExtAuth
-	}
+	return errs
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -858,18 +836,13 @@ func (h HTTPRoute) Validate() error {
 			occurred.Insert(header)
 		}
 	}
-	if h.LoadBalancer != nil {
-		if err := h.LoadBalancer.Validate(); err != nil {
+	if h.BackendTraffic != nil {
+		if err := h.BackendTraffic.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
-	if h.JWT != nil {
-		if err := h.JWT.validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	if h.HealthCheck != nil {
-		if err := h.HealthCheck.Validate(); err != nil {
+	if h.Security != nil {
+		if err := h.Security.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -877,7 +850,7 @@ func (h HTTPRoute) Validate() error {
 	return errs
 }
 
-func (j *JWT) validate() error {
+func (j *JWT) Validate() error {
 	var errs error
 
 	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {

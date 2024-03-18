@@ -349,7 +349,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
-	spIR, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(route).String())
+	security, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(route).String())
 
 	// Apply IR to all relevant routes
 	// Note: there are multiple features in a security policy, even if some of them
@@ -363,7 +363,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
 					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
-					r.SecurityPolicy = *spIR
+					r.Security = security
 				}
 			}
 		}
@@ -392,7 +392,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
-	spIR, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(gateway).String())
+	security, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(gateway).String())
 
 	// Apply IR to all the routes within the specific Gateway that originated
 	// from the gateway to which this security policy was attached.
@@ -419,52 +419,52 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			if r.SecurityPolicy.Any() {
+			if r.Security == nil || r.Security.Any() {
 				continue
 			}
 
-			r.SecurityPolicy.Set(spIR)
+			r.Security = security
 		}
 	}
 	return err
 }
 
-func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, resources *Resources, targetName string) (*ir.SecurityPolicy, error) {
+func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, resources *Resources, targetName string) (*ir.SecurityFeatures, error) {
 	var (
-		spIR      = new(ir.SecurityPolicy)
+		security  = new(ir.SecurityFeatures)
 		err, errs error
 	)
 
 	if policy.Spec.CORS != nil {
-		spIR.CORS = t.buildCORS(policy.Spec.CORS)
+		security.CORS = t.buildCORS(policy.Spec.CORS)
 	}
 
 	if policy.Spec.JWT != nil {
-		spIR.JWT = t.buildJWT(policy.Spec.JWT)
+		security.JWT = t.buildJWT(policy.Spec.JWT)
 	}
 
 	if policy.Spec.OIDC != nil {
-		if spIR.OIDC, err = t.buildOIDC(policy, resources); err != nil {
+		if security.OIDC, err = t.buildOIDC(policy, resources); err != nil {
 			err = perr.WithMessage(err, "OIDC")
 			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
-		if spIR.BasicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
+		if security.BasicAuth, err = t.buildBasicAuth(policy, resources); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
 			errs = errors.Join(errs, err)
 		}
 	}
 
 	if policy.Spec.ExtAuth != nil {
-		if spIR.ExtAuth, err = t.buildExtAuth(targetName, policy, resources); err != nil {
+		if security.ExtAuth, err = t.buildExtAuth(targetName, policy, resources); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
 	}
 
-	return spIR, errs
+	return security, errs
 }
 
 func validatePortOverlapForSecurityPolicyGateway(xds *ir.Xds) error {

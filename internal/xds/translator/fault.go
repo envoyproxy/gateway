@@ -110,7 +110,8 @@ func routeContainsFault(irRoute *ir.HTTPRoute) bool {
 	}
 
 	if irRoute != nil &&
-		irRoute.FaultInjection != nil {
+		irRoute.BackendTraffic != nil &&
+		irRoute.BackendTraffic.FaultInjection != nil {
 		return true
 	}
 
@@ -130,7 +131,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.FaultInjection == nil {
+	if irRoute.BackendTraffic == nil || irRoute.BackendTraffic.FaultInjection == nil {
 		return nil
 	}
 
@@ -143,31 +144,33 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 	routeCfgProto := &xdshttpfaultv3.HTTPFault{}
 
-	if irRoute.FaultInjection.Delay != nil {
+	delay := irRoute.BackendTraffic.FaultInjection.Delay
+	if delay != nil {
 		routeCfgProto.Delay = &xdsfault.FaultDelay{}
-		if irRoute.FaultInjection.Delay.Percentage != nil {
-			routeCfgProto.Delay.Percentage = translatePercentToFractionalPercent(irRoute.FaultInjection.Delay.Percentage)
+		if delay.Percentage != nil {
+			routeCfgProto.Delay.Percentage = translatePercentToFractionalPercent(delay.Percentage)
 		}
-		if irRoute.FaultInjection.Delay.FixedDelay != nil {
+		if delay.FixedDelay != nil {
 			routeCfgProto.Delay.FaultDelaySecifier = &xdsfault.FaultDelay_FixedDelay{
-				FixedDelay: durationpb.New(irRoute.FaultInjection.Delay.FixedDelay.Duration),
+				FixedDelay: durationpb.New(delay.FixedDelay.Duration),
 			}
 		}
 	}
 
-	if irRoute.FaultInjection.Abort != nil {
+	abort := irRoute.BackendTraffic.FaultInjection.Abort
+	if abort != nil {
 		routeCfgProto.Abort = &xdshttpfaultv3.FaultAbort{}
-		if irRoute.FaultInjection.Abort.Percentage != nil {
-			routeCfgProto.Abort.Percentage = translatePercentToFractionalPercent(irRoute.FaultInjection.Abort.Percentage)
+		if abort.Percentage != nil {
+			routeCfgProto.Abort.Percentage = translatePercentToFractionalPercent(abort.Percentage)
 		}
-		if irRoute.FaultInjection.Abort.HTTPStatus != nil {
+		if abort.HTTPStatus != nil {
 			routeCfgProto.Abort.ErrorType = &xdshttpfaultv3.FaultAbort_HttpStatus{
-				HttpStatus: uint32(*irRoute.FaultInjection.Abort.HTTPStatus),
+				HttpStatus: uint32(*abort.HTTPStatus),
 			}
 		}
-		if irRoute.FaultInjection.Abort.GrpcStatus != nil {
+		if abort.GrpcStatus != nil {
 			routeCfgProto.Abort.ErrorType = &xdshttpfaultv3.FaultAbort_GrpcStatus{
-				GrpcStatus: uint32(*irRoute.FaultInjection.Abort.GrpcStatus),
+				GrpcStatus: uint32(*abort.GrpcStatus),
 			}
 		}
 

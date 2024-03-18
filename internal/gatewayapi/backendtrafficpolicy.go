@@ -297,7 +297,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR XdsIRMap) error {
 	var err error
 	// Build IR
-	btpIR, errs := t.translateBackendTrafficPolicyToIR(policy)
+	backendTraffic, errs := t.translateBackendTrafficPolicyToIR(policy)
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
@@ -308,13 +308,13 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 				if strings.HasPrefix(r.Name, prefix) {
 					// Built Timeout IR here since its setting originate from the route.
 					if policy.Spec.Timeout != nil {
-						if btpIR.Timeout, err = t.buildTimeout(policy, r); err != nil {
+						if backendTraffic.Timeout, err = t.buildTimeout(policy, r); err != nil {
 							err = perr.WithMessage(err, "Timeout")
 							errs = errors.Join(err)
 						}
 					}
 
-					r.BackendTrafficPolicy = *btpIR
+					r.BackendTraffic = backendTraffic
 				}
 			}
 		}
@@ -326,7 +326,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, gateway *GatewayContext, xdsIR XdsIRMap) error {
 	// Build IR
 	var err error
-	btpIR, errs := t.translateBackendTrafficPolicyToIR(policy)
+	backendTraffic, errs := t.translateBackendTrafficPolicyToIR(policy)
 
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -350,74 +350,73 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			if r.BackendTrafficPolicy.Any() {
+			if r.BackendTraffic == nil || r.BackendTraffic.Any() {
 				continue
 			}
 
 			// Built Timeout IR here since its setting originate from the route.
 			if policy.Spec.Timeout != nil {
-				if btpIR.Timeout, err = t.buildTimeout(policy, r); err != nil {
+				if backendTraffic.Timeout, err = t.buildTimeout(policy, r); err != nil {
 					err = perr.WithMessage(err, "Timeout")
 					errs = errors.Join(err)
 				}
 			}
 
-			// Apply if not already set
-			r.BackendTrafficPolicy.Set(btpIR)
+			r.BackendTraffic = backendTraffic
 		}
 	}
 
 	return errs
 }
 
-func (t *Translator) translateBackendTrafficPolicyToIR(policy *egv1a1.BackendTrafficPolicy) (*ir.BackendTrafficPolicy, error) {
+func (t *Translator) translateBackendTrafficPolicyToIR(policy *egv1a1.BackendTrafficPolicy) (*ir.BackendTrafficFeatures, error) {
 	var (
-		btpIR     = new(ir.BackendTrafficPolicy)
-		err, errs error
+		backendTraffic = new(ir.BackendTrafficFeatures)
+		err, errs      error
 	)
 
 	if policy.Spec.RateLimit != nil {
-		if btpIR.RateLimit, err = t.buildRateLimit(policy); err != nil {
+		if backendTraffic.RateLimit, err = t.buildRateLimit(policy); err != nil {
 			err = perr.WithMessage(err, "RateLimit")
 			errs = errors.Join(err)
 		}
 	}
 
 	if policy.Spec.LoadBalancer != nil {
-		btpIR.LoadBalancer = t.buildLoadBalancer(policy)
+		backendTraffic.LoadBalancer = t.buildLoadBalancer(policy)
 	}
 
 	if policy.Spec.ProxyProtocol != nil {
-		btpIR.ProxyProtocol = t.buildProxyProtocol(policy)
+		backendTraffic.ProxyProtocol = t.buildProxyProtocol(policy)
 	}
 
 	if policy.Spec.HealthCheck != nil {
-		btpIR.HealthCheck = t.buildHealthCheck(policy)
+		backendTraffic.HealthCheck = t.buildHealthCheck(policy)
 	}
 
 	if policy.Spec.CircuitBreaker != nil {
-		if btpIR.CircuitBreaker, err = t.buildCircuitBreaker(policy); err != nil {
+		if backendTraffic.CircuitBreaker, err = t.buildCircuitBreaker(policy); err != nil {
 			err = perr.WithMessage(err, "CircuitBreaker")
 			errs = errors.Join(err)
 		}
 	}
 
 	if policy.Spec.FaultInjection != nil {
-		btpIR.FaultInjection = t.buildFaultInjection(policy)
+		backendTraffic.FaultInjection = t.buildFaultInjection(policy)
 	}
 
 	if policy.Spec.TCPKeepalive != nil {
-		if btpIR.TCPKeepalive, err = t.buildTCPKeepAlive(policy); err != nil {
+		if backendTraffic.TCPKeepalive, err = t.buildTCPKeepAlive(policy); err != nil {
 			err = perr.WithMessage(err, "TCPKeepalive")
 			errs = errors.Join(err)
 		}
 	}
 
 	if policy.Spec.Retry != nil {
-		btpIR.Retry = t.buildRetry(policy)
+		backendTraffic.Retry = t.buildRetry(policy)
 	}
 
-	return btpIR, errs
+	return backendTraffic, errs
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
@@ -910,19 +909,23 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 
 	// if backendtrafficpolicy is not translatable, return the original timeout if it's initialized
 	if terr {
-		if r.Timeout != nil {
-			return r.Timeout.DeepCopy(), errs
+		if r.BackendTraffic != nil && r.BackendTraffic.Timeout != nil {
+			return r.BackendTraffic.Timeout.DeepCopy(), errs
 		}
 	} else {
 		// http request timeout is translated during the gateway-api route resource translation
 		// merge route timeout setting with backendtrafficpolicy timeout settings
-		if r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
+		if r.BackendTraffic != nil &&
+			r.BackendTraffic.Timeout != nil &&
+			r.BackendTraffic.Timeout.HTTP != nil &&
+			r.BackendTraffic.Timeout.HTTP.RequestTimeout != nil {
+			rt := r.BackendTraffic.Timeout.HTTP.RequestTimeout
 			if hto == nil {
 				hto = &ir.HTTPTimeout{
-					RequestTimeout: r.Timeout.HTTP.RequestTimeout,
+					RequestTimeout: rt,
 				}
 			} else {
-				hto.RequestTimeout = r.Timeout.HTTP.RequestTimeout
+				hto.RequestTimeout = rt
 			}
 		}
 

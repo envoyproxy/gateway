@@ -446,7 +446,7 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("jwtauthen"),
 		},
-		SecurityPolicy: SecurityPolicy{
+		Security: &SecurityFeatures{
 			JWT: &JWT{
 				Providers: []egv1a1.JWTProvider{
 					{
@@ -1155,9 +1155,9 @@ func TestValidateJWT(t *testing.T) {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.validate())
+				require.NoError(t, test.input.Validate())
 			} else {
-				require.EqualError(t, test.input.validate(), test.want.Error())
+				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
 		})
 	}
