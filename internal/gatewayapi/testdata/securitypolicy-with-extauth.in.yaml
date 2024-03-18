@@ -141,6 +141,7 @@ securityPolicies:
         name: httproute-1
         namespace: default
       extAuth:
+        failOpen: true
         headersToExtAuth:
           - header1
           - header2
@@ -160,6 +161,7 @@ securityPolicies:
         name: gateway-1
         namespace: default
       extAuth:
+        failOpen: false
         http:
           backendRef:
             Name: http-backend

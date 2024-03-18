@@ -30,6 +30,7 @@ http:
               weight: 1
         extAuth:
           name: securitypolicy/default/policy-for-http-route-1
+          failOpen: false
           grpc:
             authority: grpc-backend.default:9000
             destination:
@@ -65,6 +66,7 @@ http:
               weight: 1
         extAuth:
           name: securitypolicy/default/policy-for-http-route-1
+          failOpen: false
           grpc:
             authority: grpc-backend.default:9000
             destination:
@@ -99,6 +101,8 @@ http:
               protocol: HTTP
               weight: 1
         extAuth:
+          name: securitypolicy/default/policy-for-gateway-1
+          failOpen: true
           http:
             authority: http-backend.envoy-gateway:80
             destination:

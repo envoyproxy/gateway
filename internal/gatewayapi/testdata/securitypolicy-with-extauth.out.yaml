@@ -147,6 +147,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: true
       grpc:
         backendRef:
           name: grpc-backend
@@ -182,6 +183,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: false
       http:
         backendRef:
           name: http-backend
@@ -245,6 +247,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: true
           grpc:
             authority: grpc-backend.default:9000
             destination:
@@ -280,6 +283,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: true
           grpc:
             authority: grpc-backend.default:9000
             destination:
@@ -315,6 +319,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: false
           http:
             authority: http-backend.envoy-gateway:80
             destination:

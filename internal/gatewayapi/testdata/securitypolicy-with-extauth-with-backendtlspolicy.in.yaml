@@ -210,6 +210,7 @@ securityPolicies:
           headersToBackend:
             - header1
             - header2
+        failOpen: false
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:
@@ -229,3 +230,4 @@ securityPolicies:
           backendRef:
             name: grpc-backend
             port: 9000
+        failOpen: true

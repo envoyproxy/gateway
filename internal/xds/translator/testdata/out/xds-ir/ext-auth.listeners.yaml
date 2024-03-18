@@ -32,6 +32,7 @@
           name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-gateway-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            failureModeAllow: true
             httpService:
               authorizationResponse:
                 allowedUpstreamHeaders:

@@ -866,6 +866,7 @@ func (t *Translator) buildExtAuth(
 	extAuth := &ir.ExtAuth{
 		Name:             irConfigName(policy),
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
+		FailOpen:         policy.Spec.ExtAuth.FailOpen,
 	}
 
 	if http != nil {
