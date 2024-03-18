@@ -37,6 +37,7 @@
               patterns:
               - exact: header1
               - exact: header2
+            failureModeAllow: true
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
