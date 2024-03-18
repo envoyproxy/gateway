@@ -446,12 +446,14 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("jwtauthen"),
 		},
-		JWT: &JWT{
-			Providers: []egv1a1.JWTProvider{
-				{
-					Name: "test1",
-					RemoteJWKS: egv1a1.RemoteJWKS{
-						URI: "https://test1.local",
+		Security: &Security{
+			JWT: &JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test1",
+						RemoteJWKS: egv1a1.RemoteJWKS{
+							URI: "https://test1.local",
+						},
 					},
 				},
 			},
