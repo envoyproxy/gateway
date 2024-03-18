@@ -410,3 +410,52 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 	}
 	return protocolStrings
 }
+
+// getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alpha2.SectionName) v1alpha2.ParentReference {
+	return v1alpha2.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(KindGateway),
+		Namespace:   NamespacePtr(gatewayNN.Namespace),
+		Name:        gwapiv1.ObjectName(gatewayNN.Name),
+		SectionName: sectionName,
+	}
+}
+
+type policyTargetRouteKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+type policyRouteTargetContext struct {
+	RouteContext
+	attached bool
+}
+
+type policyGatewayTargetContext struct {
+	*GatewayContext
+	attached bool
+}
+
+// listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
+// that would share the same filter chain as the provided listener when translated
+// to XDS
+func listenersWithSameHTTPPort(xdsIR *ir.Xds, listener *ir.HTTPListener) []string {
+	// if TLS is enabled, the listener would have its own filterChain in Envoy, so
+	// no conflicts are possible
+	if listener.TLS != nil {
+		return nil
+	}
+	res := []string{}
+	for _, http := range xdsIR.HTTP {
+		if http == listener {
+			continue
+		}
+		// Non-TLS listeners can be distinguished by their ports
+		if http.Port == listener.Port {
+			res = append(res, http.Name)
+		}
+	}
+	return res
+}

@@ -98,6 +98,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	if err := processClusterForAccessLog(tCtx, ir.AccessLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
+
 	if err := processClusterForTracing(tCtx, ir.Tracing); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -259,7 +260,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			if enabledHTTP3 {
-				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.Port))
+				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.HTTP3.QUICPort))
 				if xdsRoute.ResponseHeadersToAdd == nil {
 					xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 				}

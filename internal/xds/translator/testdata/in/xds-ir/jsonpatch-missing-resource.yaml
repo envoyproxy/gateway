@@ -1,10 +1,16 @@
 envoyPatchPolicies:
-- status: {}
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "foobar"
   name: "first-policy"
   namespace: "default"
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "non-existant-listener"
+    name: "non-existing-listener"
     operation:
       op: "add"
       path: "/default_filter_chain/filters/0/typed_config/http_filters/0"

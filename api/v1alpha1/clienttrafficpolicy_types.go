@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -32,10 +31,9 @@ type ClientTrafficPolicy struct {
 	Spec ClientTrafficPolicySpec `json:"spec"`
 
 	// Status defines the current status of ClientTrafficPolicy.
-	Status ClientTrafficPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="has(self.http3) && has(self.tls) && has(self.tls.alpnProtocols) ? self.tls.alpnProtocols.size() == 0 : true",message="alpn protocols can't be set if HTTP/3 is enabled"
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -93,14 +91,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Connection *Connection `json:"connection,omitempty"`
-}
-
-// Connection allows users to configure connection-level settings
-type Connection struct {
-	// ConnectionBufferLimit provides configuration for the maximum buffer size for incoming connections.
-	//
-	// +optional
-	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
 
 // HeaderSettings providess configuration options for headers on the listener.
@@ -186,17 +176,6 @@ type HTTP10Settings struct {
 	// it will be rejected.
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
-}
-
-// ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy
-type ClientTrafficPolicyStatus struct {
-	// Conditions describe the current conditions of the ClientTrafficPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 const (

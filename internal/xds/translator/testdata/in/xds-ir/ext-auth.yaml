@@ -19,6 +19,7 @@ http:
         - host: "10.0.0.1"
           port: 50000
     extAuth:
+      name: default/httproute-1
       http:
         authority: http-backend.envoy-gateway:80
         headersToBackend:
@@ -34,6 +35,35 @@ http:
               port: 80
             protocol: HTTP
             weight: 1
+      failOpen: false
+  - name: httproute/default/httproute-1/rule/1/match/0/www_example_com
+    hostname: "*"
+    pathMatch:
+      exact: "foo"
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - endpoints:
+        - host: "10.0.0.1"
+          port: 50000
+    extAuth:
+      name: default/httproute-1
+      http:
+        authority: http-backend.envoy-gateway:80
+        headersToBackend:
+        - header1
+        - header2
+        path: /auth
+        destination:
+          name: securitypolicy/default/policy-for-first-route/http-backend
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 80
+            protocol: HTTP
+            weight: 1
+      failOpen: false
   - name: httproute/default/httproute-2/rule/0/match/0/www_example_com
     hostname: "*"
     pathMatch:
@@ -45,6 +75,7 @@ http:
         - host: "10.0.0.2"
           port: 60000
     extAuth:
+      name: default/gateway-1
       grpc:
         authority: grpc-backend.default:9000
         destination:
@@ -59,3 +90,4 @@ http:
       headersToExtAuth:
       - header1
       - header2
+      failOpen: true

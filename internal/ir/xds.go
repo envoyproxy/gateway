@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -574,6 +575,10 @@ type BasicAuth struct {
 //
 // +k8s:deepcopy-gen=true
 type ExtAuth struct {
+	// Name is a unique name for an ExtAuth configuration.
+	// The xds translator only generates one external authorization filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// GRPC defines the gRPC External Authorization service.
 	// Only one of GRPCService or HTTPService may be specified.
 	GRPC *GRPCExtAuthService `json:"grpc,omitempty"`
@@ -594,6 +599,14 @@ type ExtAuth struct {
 	// in HeadersToExtAuth or not.
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
+
+	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
+	// If FailOpen is set to true, the system allows the traffic to pass through.
+	// Otherwise, if it is set to false or not set (defaulting to false),
+	// the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.
+	// This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
+	// +optional
+	FailOpen *bool `json:"failOpen,omitempty"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -1283,7 +1296,7 @@ type EnvoyPatchPolicyStatus struct {
 	Name      string `json:"name,omitempty" yaml:"name"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
-	Status *egv1a1.EnvoyPatchPolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status *gwv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
