@@ -185,11 +185,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
-	if enableTracing(r.rateLimit) && len(r.rateLimit.Telemetry.Tracing.TracingServiceNamespace) == 0 {
-		r.rateLimit.Telemetry.Tracing.TracingServiceNamespace = r.Namespace
-	}
-
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
 	labels := rateLimitLabels()
 	selector := resource.GetSelector(labels)
 

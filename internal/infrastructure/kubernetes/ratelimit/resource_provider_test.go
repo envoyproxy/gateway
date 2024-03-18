@@ -649,7 +649,7 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
-			caseName: "enable-tracing-feature-with-default",
+			caseName: "enable-tracing-with-default",
 			rateLimit: &egv1a1.RateLimit{
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
@@ -659,15 +659,15 @@ func TestDeployment(t *testing.T) {
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
 					Tracing: &egv1a1.RateLimitTracing{
-						Provider: &egv1a1.RateLimitTraceProvider{
-							Endpoint: "http://localhost:4318/v1/traces",
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: "trace-collector",
 						},
 					},
 				},
 			},
 		},
 		{
-			caseName: "enable-tracing-feature-with-custom",
+			caseName: "enable-tracing-with-custom",
 			rateLimit: &egv1a1.RateLimit{
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
@@ -677,21 +677,49 @@ func TestDeployment(t *testing.T) {
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
 					Tracing: &egv1a1.RateLimitTracing{
-						TracingServiceName:      "prod-rate-limit",
-						TracingServiceNamespace: "prod",
-						TracingSampleRate: func() *float64 {
-							sampleRate := 0.9
-							return &sampleRate
+						SampleRate: func() *uint32 {
+							var rate uint32 = 95
+							return &rate
 						}(),
-						Provider: &egv1a1.RateLimitTraceProvider{
-							Endpoint: "http://localhost:4317",
-							Protocol: "grpc",
-							Insecure: func() *bool {
-								insecure := false
-								return &insecure
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: "trace-collector",
+							Namespace: func() *gwapiv1.Namespace {
+								var ns gwapiv1.Namespace = "observability"
+								return &ns
 							}(),
-							Timeout: "10s",
+							Port: func() *gwapiv1.PortNumber {
+								var port gwapiv1.PortNumber = 4317
+								return &port
+							}(),
 						},
+						Protocol: "grpc",
+					},
+				},
+			},
+		},
+		{
+			caseName: "enable-tracing-with-custom-domain",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						SampleRate: func() *uint32 {
+							var rate uint32 = 55
+							return &rate
+						}(),
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: "trace-collector",
+							Namespace: func() *gwapiv1.Namespace {
+								var ns gwapiv1.Namespace = "observability"
+								return &ns
+							}(),
+						},
+						ClusterDomain: "example.local",
 					},
 				},
 			},
@@ -710,7 +738,7 @@ func TestDeployment(t *testing.T) {
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if true {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint:gosec

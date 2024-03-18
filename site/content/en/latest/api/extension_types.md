@@ -2213,6 +2213,24 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
+| `tracing` | _[RateLimitTracing](#ratelimittracing)_ |  true  | Tracing defines traces configuration for RateLimit. |
+
+
+#### RateLimitTracing
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `tracingSampleRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef defines the target trace collector endpoint configuration |
+| `protocol` | _string_ |  false  | Protocol defines the protocol of provider in tracing feature. Only "http"(default) and "grpc" are allowed in this field |
+| `clusterDomain` | _string_ |  false  | ClusterDomain is an optional field that specifies the custom domain used for the Kubernetes cluster. This field is used when the cluster is configured with a custom DNS domain, different from the default "cluster.local". Envoy Gateway uses this custom domain to generate fully qualified domain names (FQDN) for trace gatherer services. |
 
 
 #### RateLimitType
