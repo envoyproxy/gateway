@@ -118,4 +118,3 @@ http:
               - header1
               - header2
             path: /auth
-          name: securitypolicy/default/policy-for-gateway-1
