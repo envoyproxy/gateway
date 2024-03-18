@@ -93,7 +93,7 @@ func basicAuthConfig(route *ir.HTTPRoute) *basicauthv3.BasicAuth {
 	return &basicauthv3.BasicAuth{
 		Users: &corev3.DataSource{
 			Specifier: &corev3.DataSource_InlineBytes{
-				InlineBytes: route.BasicAuth.Users,
+				InlineBytes: route.Security.BasicAuth.Users,
 			},
 		},
 	}
@@ -106,7 +106,8 @@ func routeContainsBasicAuth(irRoute *ir.HTTPRoute) bool {
 	}
 
 	if irRoute != nil &&
-		irRoute.BasicAuth != nil {
+		irRoute.Security != nil &&
+		irRoute.Security.BasicAuth != nil {
 		return true
 	}
 
@@ -126,7 +127,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.BasicAuth == nil {
+	if irRoute.Security == nil || irRoute.Security.BasicAuth == nil {
 		return nil
 	}
 	filterName := basicAuthFilterName(irRoute)

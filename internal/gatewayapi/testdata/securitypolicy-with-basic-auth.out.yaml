@@ -146,8 +146,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        basicAuth:
-          users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -164,3 +162,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+        security:
+          basicAuth:
+            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=

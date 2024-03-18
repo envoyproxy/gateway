@@ -390,19 +390,21 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
 	prefix := irRoutePrefix(route)
-	for _, ir := range xdsIR {
-		for _, http := range ir.HTTP {
+	for _, i := range xdsIR {
+		for _, http := range i.HTTP {
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				// TODO zhaohuabing: extract a utils function to check if an HTTP
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
 					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
-					r.CORS = cors
-					r.JWT = jwt
-					r.OIDC = oidc
-					r.BasicAuth = basicAuth
-					r.ExtAuth = extAuth
+					r.Security = &ir.Security{
+						CORS:      cors,
+						JWT:       jwt,
+						OIDC:      oidc,
+						BasicAuth: basicAuth,
+						ExtAuth:   extAuth,
+					}
 				}
 			}
 		}
@@ -478,13 +480,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// are invalid, we still want to apply the valid ones.
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
-	ir := xdsIR[irKey]
+	i := xdsIR[irKey]
 
 	policyTarget := irStringKey(
 		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
 		string(policy.Spec.TargetRef.Name),
 	)
-	for _, http := range ir.HTTP {
+	for _, http := range i.HTTP {
 		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
@@ -494,28 +496,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			// TODO: zhaohuabing group the features into a struct and check if all of them are set
-			if r.CORS != nil ||
-				r.JWT != nil ||
-				r.OIDC != nil ||
-				r.BasicAuth != nil ||
-				r.ExtAuth != nil {
+			if !r.Security.Empty() {
 				continue
 			}
-			if r.CORS == nil {
-				r.CORS = cors
-			}
-			if r.JWT == nil {
-				r.JWT = jwt
-			}
-			if r.OIDC == nil {
-				r.OIDC = oidc
-			}
-			if r.BasicAuth == nil {
-				r.BasicAuth = basicAuth
-			}
-			if r.ExtAuth == nil {
-				r.ExtAuth = extAuth
+			r.Security = &ir.Security{
+				CORS:      cors,
+				JWT:       jwt,
+				OIDC:      oidc,
+				BasicAuth: basicAuth,
+				ExtAuth:   extAuth,
 			}
 		}
 	}

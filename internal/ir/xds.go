@@ -179,12 +179,8 @@ func (x Xds) Printable() *Xds {
 
 		for _, route := range listener.Routes {
 			// Omit field
-			if route.OIDC != nil {
-				route.OIDC.ClientSecret = redacted
-				route.OIDC.HMACSecret = redacted
-			}
-			if route.BasicAuth != nil {
-				route.BasicAuth.Users = redacted
+			if route.Security != nil {
+				route.Security = route.Security.Printable()
 			}
 		}
 	}
@@ -225,6 +221,7 @@ type HTTPListener struct {
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// HTTP1 provides HTTP/1 configuration on the listener
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
@@ -449,18 +446,8 @@ type HTTPRoute struct {
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
-	// CORS policy for the route.
-	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
-	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
-	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
-	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
-	// BasicAuth defines the schema for the HTTP Basic Authentication.
-	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
-	// ExtAuth defines the schema for the external authorization.
-	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
@@ -475,6 +462,56 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// Security configuration for the route.
+	Security *Security `json:"security,omitempty" yaml:"security,omitempty"`
+}
+
+// Security holds the Security configuration associated with  the HTTP Route
+// +k8s:deepcopy-gen=true
+type Security struct {
+	// CORS policy for the route.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
+	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
+	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// BasicAuth defines the schema for the HTTP Basic Authentication.
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	// ExtAuth defines the schema for the external authorization.
+	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
+}
+
+func (s *Security) Empty() bool {
+	if s == nil {
+		return true
+	}
+	if s.CORS == nil &&
+		s.JWT == nil &&
+		s.OIDC == nil &&
+		s.BasicAuth == nil &&
+		s.ExtAuth == nil {
+		return true
+	}
+	return false
+}
+
+func (s *Security) Printable() *Security {
+	out := s.DeepCopy()
+	if out.OIDC != nil {
+		out.OIDC.ClientSecret = redacted
+		out.OIDC.HMACSecret = redacted
+	}
+	if out.BasicAuth != nil {
+		out.BasicAuth.Users = redacted
+	}
+	return out
+}
+
+func (s *Security) Validate() error {
+	if s.JWT != nil {
+		return s.JWT.validate()
+	}
+	return nil
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -770,8 +807,8 @@ func (h HTTPRoute) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-	if h.JWT != nil {
-		if err := h.JWT.validate(); err != nil {
+	if h.Security != nil {
+		if err := h.Security.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
