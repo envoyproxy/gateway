@@ -37,7 +37,7 @@ func Test_toNetworkFilter(t *testing.T) {
 			if tt.wantErr != nil {
 				assert.Equalf(t, tt.wantErr, err, "toNetworkFilter(%v)", tt.proto)
 			} else {
-				assert.Equalf(t, nil, err, "toNetworkFilter(%v)", tt.proto)
+				assert.NoErrorf(t, err, "toNetworkFilter(%v)", tt.proto)
 			}
 		})
 	}
