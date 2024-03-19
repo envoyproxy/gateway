@@ -15,8 +15,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+
 	"k8s.io/apimachinery/pkg/types"
 
+	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -37,26 +41,13 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "connection-limit-gateway", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			// make a request
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "connection-limit-ctp", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			// open some connections
 			for i := 0; i < 10; i++ {
@@ -68,9 +59,19 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				}
 			}
 
-			// new requests now fail
-			req = http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			_, _, err = suite.RoundTripper.CaptureRoundTrip(req)
+			// make a request, expect a failure
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			_, _, err := suite.RoundTripper.CaptureRoundTrip(req)
 
 			// expect error
 			if err != nil {
