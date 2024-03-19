@@ -659,13 +659,9 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 	irConnection := &ir.Connection{}
 
 	if connection.Limit != nil {
-		hasLimit := false
 		irConnectionLimit := &ir.ConnectionLimit{}
 
-		if connection.Limit.Value != nil {
-			irConnectionLimit.Value = ptr.To(uint64(*connection.Limit.Value))
-			hasLimit = true
-		}
+		irConnectionLimit.Value = ptr.To(uint64(connection.Limit.Value))
 
 		if connection.Limit.CloseDelay != nil {
 			d, err := time.ParseDuration(string(*connection.Limit.CloseDelay))
@@ -673,12 +669,9 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 				return fmt.Errorf("invalid CloseDelay value %s", *connection.Limit.CloseDelay)
 			}
 			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
-			hasLimit = true
 		}
 
-		if hasLimit {
-			irConnection.Limit = irConnectionLimit
-		}
+		irConnection.Limit = irConnectionLimit
 	}
 
 	httpIR.Connection = irConnection

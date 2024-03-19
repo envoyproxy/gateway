@@ -28,7 +28,7 @@ func init() {
 
 var ConnectionLimitTest = suite.ConformanceTest{
 	ShortName:   "ConnectionLimit",
-	Description: "Deny All Requests",
+	Description: "Deny Requests over connection limit",
 	Manifests:   []string{"testdata/connection-limit.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Close connections over limit", func(t *testing.T) {
