@@ -103,6 +103,9 @@ conformance: create-cluster kube-install-image kube-deploy run-conformance delet
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
+.PHONY: benchmark
+benchmark: create-cluster kube-install-image kube-deploy run-benchmark 
+
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
 
@@ -207,6 +210,13 @@ run-experimental-conformance: ## Run Experimental Gateway API conformance.
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest --report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
+
+.PHONY: run-benchmark
+run-benchmark: ## Run benchmark tests
+	@$(LOG_TARGET)
+	@$(call log, "Running benchmark")
+	WAIT_TIMEOUT=$(WAIT_TIMEOUT) RPS=$(RPS) CONNECTIONS=$(CONNECTIONS) DURATION=$(DURATION) HTTPROUTE_NUM=$(HTTPROUTE_NUM) sh test/benchmark/run-benchmark.sh
+	
 
 .PHONY: delete-cluster
 delete-cluster: $(tools/kind) ## Delete kind cluster.
