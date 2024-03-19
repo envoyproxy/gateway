@@ -128,16 +128,8 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 				Path: *pathMatch.Exact,
 			}
 		} else if pathMatch.Prefix != nil {
-			if *pathMatch.Prefix == "/" {
-				outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
-					Prefix: "/",
-				}
-			} else {
-				// Remove trailing /
-				trimmedPrefix := strings.TrimSuffix(*pathMatch.Prefix, "/")
-				outMatch.PathSpecifier = &routev3.RouteMatch_PathSeparatedPrefix{
-					PathSeparatedPrefix: trimmedPrefix,
-				}
+			outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
+				Prefix: *pathMatch.Prefix,
 			}
 		} else if pathMatch.SafeRegex != nil {
 			outMatch.PathSpecifier = &routev3.RouteMatch_SafeRegex{
