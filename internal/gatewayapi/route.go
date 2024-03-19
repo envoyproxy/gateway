@@ -109,7 +109,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		routeRoutes, err := t.processHTTPRouteRules(httpRoute, parentRef, resources)
 		if err != nil {
 			routeStatus := GetRouteStatus(httpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -123,7 +123,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(httpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -141,7 +141,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(httpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -155,7 +155,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		if parentRef.HTTPRoute != nil &&
 			len(parentRef.HTTPRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			routeStatus := GetRouteStatus(httpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -214,7 +214,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// TODO: support mixed endpointslice address type between backendRefs
 		if !t.EndpointRoutingDisabled && len(dstAddrTypeMap) > 1 {
 			routeStatus := GetRouteStatus(httpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -424,7 +424,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		routeRoutes, err := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
 		if err != nil {
 			routeStatus := GetRouteStatus(grpcRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				grpcRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -438,7 +438,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(grpcRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				grpcRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -454,7 +454,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(grpcRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				grpcRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -468,7 +468,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		if parentRef.GRPCRoute != nil &&
 			len(parentRef.GRPCRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				grpcRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -768,7 +768,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(tlsRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(tlsRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tlsRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -816,7 +816,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(tlsRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tlsRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -830,7 +830,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		if parentRef.TLSRoute != nil &&
 			len(parentRef.TLSRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			routeStatus := GetRouteStatus(tlsRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tlsRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -881,7 +881,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// compute backends
 		if len(udpRoute.Spec.Rules) != 1 {
 			routeStatus := GetRouteStatus(udpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				udpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -893,7 +893,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 		if len(udpRoute.Spec.Rules[0].BackendRefs) != 1 {
 			routeStatus := GetRouteStatus(udpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				udpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -915,7 +915,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(udpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(udpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				udpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -964,7 +964,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		if accepted && parentRef.UDPRoute != nil &&
 			len(parentRef.UDPRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			routeStatus := GetRouteStatus(udpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				udpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -976,7 +976,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		if !accepted {
 			routeStatus := GetRouteStatus(udpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				udpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -1028,7 +1028,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		// compute backends
 		if len(tcpRoute.Spec.Rules) != 1 {
 			routeStatus := GetRouteStatus(tcpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tcpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -1040,7 +1040,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 		if len(tcpRoute.Spec.Rules[0].BackendRefs) != 1 {
 			routeStatus := GetRouteStatus(tcpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tcpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -1061,7 +1061,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(tcpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(tcpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tcpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
@@ -1110,7 +1110,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		if accepted && parentRef.TCPRoute != nil &&
 			len(parentRef.TCPRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			routeStatus := GetRouteStatus(tcpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tcpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -1121,7 +1121,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 		if !accepted {
 			routeStatus := GetRouteStatus(tcpRoute)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				tcpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -1232,7 +1232,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	// TODO: support mixed endpointslice address type for the same backendRef
 	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
 		routeStatus := GetRouteStatus(route)
-		status.SetConditionForRoute(routeStatus,
+		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
 			route.GetGeneration(),
 			gwapiv1.RouteConditionResolvedRefs,
@@ -1288,7 +1288,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 
 		if len(selectedListeners) == 0 {
 			routeStatus := GetRouteStatus(routeContext)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
 				routeContext.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -1310,7 +1310,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 
 		if len(allowedListeners) == 0 {
 			routeStatus := GetRouteStatus(routeContext)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
 				routeContext.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -1333,7 +1333,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 
 		if !HasReadyListener(selectedListeners) {
 			routeStatus := GetRouteStatus(routeContext)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
 				routeContext.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -1347,7 +1347,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		parentRefCtx.SetListeners(allowedListeners...)
 
 		routeStatus := GetRouteStatus(routeContext)
-		status.SetConditionForRoute(routeStatus,
+		status.SetRouteStatusCondition(routeStatus,
 			parentRefCtx.routeParentStatusIdx,
 			routeContext.GetGeneration(),
 			gwapiv1.RouteConditionAccepted,

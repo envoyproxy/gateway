@@ -39,7 +39,7 @@ func TestContexts(t *testing.T) {
 	lctx := gctx.listeners[0]
 	require.NotNil(t, lctx)
 
-	status.SetConditionForGatewayListener(lctx.gateway, lctx.listenerStatusIdx,
+	status.SetGatewayListenerStatusCondition(lctx.gateway, lctx.listenerStatusIdx,
 		gwapiv1.ListenerConditionAccepted, metav1.ConditionFalse, gwapiv1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
 
 	require.Len(t, gateway.Status.Listeners, 1)

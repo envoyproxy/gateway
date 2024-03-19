@@ -9,11 +9,11 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func SetConditionForRoute(route *gwv1.RouteStatus, routeParentStatusIdx int, routeGeneration int64,
-	conditionType gwv1.RouteConditionType, status metav1.ConditionStatus, reason gwv1.RouteConditionReason, message string) {
+func SetRouteStatusCondition(route *gwapiv1.RouteStatus, routeParentStatusIdx int, routeGeneration int64,
+	conditionType gwapiv1.RouteConditionType, status metav1.ConditionStatus, reason gwapiv1.RouteConditionReason, message string) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
 		Status:             status,
@@ -23,24 +23,5 @@ func SetConditionForRoute(route *gwv1.RouteStatus, routeParentStatusIdx int, rou
 		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
-	idx := -1
-	for i, existing := range route.Parents[routeParentStatusIdx].Conditions {
-		if existing.Type == cond.Type {
-			// return early if the condition is unchanged
-			if existing.Status == cond.Status &&
-				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message &&
-				existing.ObservedGeneration == cond.ObservedGeneration {
-				return
-			}
-			idx = i
-			break
-		}
-	}
-
-	if idx > -1 {
-		route.Parents[routeParentStatusIdx].Conditions[idx] = cond
-	} else {
-		route.Parents[routeParentStatusIdx].Conditions = append(route.Parents[routeParentStatusIdx].Conditions, cond)
-	}
+	route.Parents[routeParentStatusIdx].Conditions = MergeConditions(route.Parents[routeParentStatusIdx].Conditions, cond)
 }

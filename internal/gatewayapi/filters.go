@@ -148,7 +148,7 @@ func (t *Translator) processURLRewriteFilter(
 	filterContext *HTTPFiltersContext) {
 	if filterContext.URLRewrite != nil {
 		routeStatus := GetRouteStatus(filterContext.Route)
-		status.SetConditionForRoute(routeStatus,
+		status.SetRouteStatusCondition(routeStatus,
 			filterContext.ParentRef.routeParentStatusIdx,
 			filterContext.Route.GetGeneration(),
 			gwapiv1.RouteConditionAccepted,
@@ -168,7 +168,7 @@ func (t *Translator) processURLRewriteFilter(
 	if rewrite.Hostname != nil {
 		if err := t.validateHostname(string(*rewrite.Hostname)); err != nil {
 			routeStatus := GetRouteStatus(filterContext.Route)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
 				filterContext.Route.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -188,7 +188,7 @@ func (t *Translator) processURLRewriteFilter(
 			if rewrite.Path.ReplacePrefixMatch != nil {
 				errMsg := "ReplacePrefixMatch cannot be set when rewrite path type is \"ReplaceFullPath\""
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -201,7 +201,7 @@ func (t *Translator) processURLRewriteFilter(
 			if rewrite.Path.ReplaceFullPath == nil {
 				errMsg := "ReplaceFullPath must be set when rewrite path type is \"ReplaceFullPath\""
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -220,7 +220,7 @@ func (t *Translator) processURLRewriteFilter(
 			if rewrite.Path.ReplaceFullPath != nil {
 				errMsg := "ReplaceFullPath cannot be set when rewrite path type is \"ReplacePrefixMatch\""
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -233,7 +233,7 @@ func (t *Translator) processURLRewriteFilter(
 			if rewrite.Path.ReplacePrefixMatch == nil {
 				errMsg := "ReplacePrefixMatch must be set when rewrite path type is \"ReplacePrefixMatch\""
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -251,7 +251,7 @@ func (t *Translator) processURLRewriteFilter(
 		default:
 			errMsg := fmt.Sprintf("Rewrite path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", rewrite.Path.Type)
 			routeStatus := GetRouteStatus(filterContext.Route)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
 				filterContext.Route.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -272,7 +272,7 @@ func (t *Translator) processRedirectFilter(
 	// Can't have two redirects for the same route
 	if filterContext.RedirectResponse != nil {
 		routeStatus := GetRouteStatus(filterContext.Route)
-		status.SetConditionForRoute(routeStatus,
+		status.SetRouteStatusCondition(routeStatus,
 			filterContext.ParentRef.routeParentStatusIdx,
 			filterContext.Route.GetGeneration(),
 			gwapiv1.RouteConditionAccepted,
@@ -296,7 +296,7 @@ func (t *Translator) processRedirectFilter(
 		} else {
 			errMsg := fmt.Sprintf("Scheme: %s is unsupported, only 'https' and 'http' are supported", *redirect.Scheme)
 			routeStatus := GetRouteStatus(filterContext.Route)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
 				filterContext.Route.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -311,7 +311,7 @@ func (t *Translator) processRedirectFilter(
 	if redirect.Hostname != nil {
 		if err := t.validateHostname(string(*redirect.Hostname)); err != nil {
 			routeStatus := GetRouteStatus(filterContext.Route)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
 				filterContext.Route.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -342,7 +342,7 @@ func (t *Translator) processRedirectFilter(
 		default:
 			errMsg := fmt.Sprintf("Redirect path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", redirect.Path.Type)
 			routeStatus := GetRouteStatus(filterContext.Route)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
 				filterContext.Route.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -362,7 +362,7 @@ func (t *Translator) processRedirectFilter(
 		} else {
 			errMsg := fmt.Sprintf("Status code %d is invalid, only 302 and 301 are supported", redirectCode)
 			routeStatus := GetRouteStatus(filterContext.Route)
-			status.SetConditionForRoute(routeStatus,
+			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
 				filterContext.Route.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
@@ -400,7 +400,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -414,7 +414,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -457,7 +457,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 
 			if setHeader.Name == "" {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -470,7 +470,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -513,7 +513,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -542,7 +542,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(filterContext.AddRequestHeaders) == 0 && len(filterContext.RemoveRequestHeaders) == 0 && !emptyFilterConfig {
 		routeStatus := GetRouteStatus(filterContext.Route)
-		status.SetConditionForRoute(routeStatus,
+		status.SetRouteStatusCondition(routeStatus,
 			filterContext.ParentRef.routeParentStatusIdx,
 			filterContext.Route.GetGeneration(),
 			gwapiv1.RouteConditionAccepted,
@@ -571,7 +571,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -585,7 +585,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -628,7 +628,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 
 			if setHeader.Name == "" {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -641,7 +641,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -684,7 +684,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
 				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetConditionForRoute(routeStatus,
+				status.SetRouteStatusCondition(routeStatus,
 					filterContext.ParentRef.routeParentStatusIdx,
 					filterContext.Route.GetGeneration(),
 					gwapiv1.RouteConditionAccepted,
@@ -714,7 +714,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(filterContext.AddResponseHeaders) == 0 && len(filterContext.RemoveResponseHeaders) == 0 && !emptyFilterConfig {
 		routeStatus := GetRouteStatus(filterContext.Route)
-		status.SetConditionForRoute(routeStatus,
+		status.SetRouteStatusCondition(routeStatus,
 			filterContext.ParentRef.routeParentStatusIdx,
 			filterContext.Route.GetGeneration(),
 			gwapiv1.RouteConditionAccepted,
@@ -803,7 +803,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {
 	routeStatus := GetRouteStatus(filterContext.Route)
-	status.SetConditionForRoute(routeStatus,
+	status.SetRouteStatusCondition(routeStatus,
 		filterContext.ParentRef.routeParentStatusIdx,
 		filterContext.Route.GetGeneration(),
 		gwapiv1.RouteConditionResolvedRefs,
@@ -811,7 +811,7 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 		gwapiv1.RouteReasonBackendNotFound,
 		errMsg,
 	)
-	status.SetConditionForRoute(routeStatus,
+	status.SetRouteStatusCondition(routeStatus,
 		filterContext.ParentRef.routeParentStatusIdx,
 		filterContext.Route.GetGeneration(),
 		gwapiv1.RouteConditionAccepted,
@@ -828,7 +828,7 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) {
 	errMsg := fmt.Sprintf("Unsupported filter type: %s", filterType)
 	routeStatus := GetRouteStatus(filterContext.Route)
-	status.SetConditionForRoute(routeStatus,
+	status.SetRouteStatusCondition(routeStatus,
 		filterContext.ParentRef.routeParentStatusIdx,
 		filterContext.Route.GetGeneration(),
 		gwapiv1.RouteConditionAccepted,
@@ -845,7 +845,7 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) {
 	errMsg := fmt.Sprintf("Invalid filter %s: %v", filterType, err)
 	routeStatus := GetRouteStatus(filterContext.Route)
-	status.SetConditionForRoute(routeStatus,
+	status.SetRouteStatusCondition(routeStatus,
 		filterContext.ParentRef.routeParentStatusIdx,
 		filterContext.Route.GetGeneration(),
 		gwapiv1.RouteConditionAccepted,
