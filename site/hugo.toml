@@ -59,6 +59,7 @@ id = "UA-00000000-0"
 
 [languages]
   [languages.en]
+    contentDir = "content/en"
     languageName ="English"
     # Weight used for sorting.
     weight = 1
