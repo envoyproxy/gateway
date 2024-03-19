@@ -14,7 +14,7 @@ James Callaghan, Torin van den Bulk, Eduardo Olarte
 
 ## Reviewers
 
-Arko Dasgupta, Matt Turner, Zack Butcher, Marco De Benedectis
+Arko Dasgupta, Matt Turner, Zack Butcher, Marco De Benedictis
 
 ## Introduction
 
