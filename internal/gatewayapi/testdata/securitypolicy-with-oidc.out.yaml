@@ -181,7 +181,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway-discover-endpoints
+    name: policy-for-gateway
     namespace: envoy-gateway
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
@@ -251,26 +251,26 @@ xdsIR:
         hostname: www.example.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+        oidc:
+          clientID: client2.oauth.foo.com
+          clientSecret: Y2xpZW50MTpzZWNyZXQK
+          cookieSuffix: 5f93c2e4
+          hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+          logoutPath: /foo/logout
+          name: securitypolicy/default/policy-for-http-route
+          provider:
+            authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            tokenEndpoint: https://oauth.foo.com/token
+          redirectPath: /foo/oauth2/callback
+          redirectURL: https://www.example.com/foo/oauth2/callback
+          scopes:
+          - openid
+          - email
+          - profile
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-        security:
-          oidc:
-            clientID: client2.oauth.foo.com
-            clientSecret: Y2xpZW50MTpzZWNyZXQK
-            cookieSuffix: 5f93c2e4
-            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
-            logoutPath: /foo/logout
-            provider:
-              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-              tokenEndpoint: https://oauth.foo.com/token
-            redirectPath: /foo/oauth2/callback
-            redirectURL: https://www.example.com/foo/oauth2/callback
-            scopes:
-            - openid
-            - email
-            - profile
       - backendWeights:
           invalid: 0
           valid: 0
@@ -286,21 +286,21 @@ xdsIR:
         hostname: www.example.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+        oidc:
+          clientID: client1.apps.googleusercontent.com
+          clientSecret: Y2xpZW50MTpzZWNyZXQK
+          cookieSuffix: b0a1b740
+          hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+          logoutPath: /bar/logout
+          name: securitypolicy/envoy-gateway/policy-for-gateway
+          provider:
+            authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+            tokenEndpoint: https://oauth2.googleapis.com/token
+          redirectPath: /bar/oauth2/callback
+          redirectURL: https://www.example.com/bar/oauth2/callback
+          scopes:
+          - openid
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-        security:
-          oidc:
-            clientID: client1.apps.googleusercontent.com
-            clientSecret: Y2xpZW50MTpzZWNyZXQK
-            cookieSuffix: b0a1b740
-            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
-            logoutPath: /bar/logout
-            provider:
-              authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
-              tokenEndpoint: https://oauth2.googleapis.com/token
-            redirectPath: /bar/oauth2/callback
-            redirectURL: https://www.example.com/bar/oauth2/callback
-            scopes:
-            - openid

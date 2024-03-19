@@ -1,23 +1,80 @@
 http:
-- name: "first-listener"
-  address: "0.0.0.0"
-  port: 10080
+- address: 0.0.0.0
   hostnames:
-  - "*"
+  - '*'
+  isHTTP2: false
+  name: default/gateway-1/http
   path:
-    mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
   routes:
-  - name: "first-route"
-    hostname: "*"
+  - name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+    hostname: www.foo.com
+    isHTTP2: false
     pathMatch:
-      exact: "foo/bar"
+      distinct: false
+      name: ""
+      prefix: /foo1
+    backendWeights:
+      invalid: 0
+      valid: 0
     destination:
-      name: "first-route-dest"
+      name: httproute/default/httproute-1/rule/0
       settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
     security:
       basicAuth:
-        users: "dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo="
+        name: securitypolicy/default/policy-for-http-route-1
+        users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+  - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+    backendWeights:
+    hostname: www.foo.com
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo2
+      invalid: 0
+      valid: 0
+    destination:
+      name: httproute/default/httproute-1/rule/1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+    security:
+      basicAuth:
+        name: securitypolicy/default/policy-for-http-route-1
+        users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+  - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+    hostname: www.bar.com
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /bar
+    backendWeights:
+      invalid: 0
+      valid: 0
+    destination:
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+    security:
+      basicAuth:
+        name: securitypolicy/default/policy-for-gateway-1
+        users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=

@@ -349,7 +349,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
-	security, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(route).String())
+	security, err := t.translateSecurityPolicyToIR(policy, resources, irConfigName(policy))
 
 	// Apply IR to all relevant routes
 	// Note: there are multiple features in a security policy, even if some of them
@@ -392,7 +392,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
-	security, err := t.translateSecurityPolicyToIR(policy, resources, utils.NamespacedName(gateway).String())
+	security, err := t.translateSecurityPolicyToIR(policy, resources, irConfigName(policy))
 
 	// Apply IR to all the routes within the specific Gateway that originated
 	// from the gateway to which this security policy was attached.
@@ -429,7 +429,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	return err
 }
 
-func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, resources *Resources, targetName string) (*ir.SecurityFeatures, error) {
+func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, resources *Resources, oidctName string) (*ir.SecurityFeatures, error) {
 	var (
 		security  = new(ir.SecurityFeatures)
 		err, errs error
@@ -444,7 +444,7 @@ func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, 
 	}
 
 	if policy.Spec.OIDC != nil {
-		if security.OIDC, err = t.buildOIDC(policy, resources); err != nil {
+		if security.OIDC, err = t.buildOIDC(oidctName, policy, resources); err != nil {
 			err = perr.WithMessage(err, "OIDC")
 			errs = errors.Join(errs, err)
 		}
@@ -458,7 +458,7 @@ func (t *Translator) translateSecurityPolicyToIR(policy *egv1a1.SecurityPolicy, 
 	}
 
 	if policy.Spec.ExtAuth != nil {
-		if security.ExtAuth, err = t.buildExtAuth(targetName, policy, resources); err != nil {
+		if security.ExtAuth, err = t.buildExtAuth(policy, resources); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
@@ -525,6 +525,7 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 }
 
 func (t *Translator) buildOIDC(
+	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.OIDC, error) {
 	var (
@@ -598,6 +599,7 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
+		Name:         name,
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
@@ -740,11 +742,13 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
-	return &ir.BasicAuth{Users: usersSecretBytes}, nil
+	return &ir.BasicAuth{
+		Name:  irConfigName(policy),
+		Users: usersSecretBytes,
+	}, nil
 }
 
 func (t *Translator) buildExtAuth(
-	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.ExtAuth, error) {
 	var (
@@ -792,12 +796,12 @@ func (t *Translator) buildExtAuth(
 		return nil, err
 	}
 	rd := ir.RouteDestination{
-		Name:     irExtServiceDestinationName(policy, string(backendRef.Name)),
+		Name:     irExtServiceDestinationName(policy, backendRef),
 		Settings: []*ir.DestinationSetting{ds},
 	}
 
 	extAuth := &ir.ExtAuth{
-		Name:             name,
+		Name:             irConfigName(policy),
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 		FailOpen:         policy.Spec.ExtAuth.FailOpen,
 	}
@@ -889,11 +893,21 @@ func (t *Translator) processExtServiceDestination(
 	}, nil
 }
 
-func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, service string) string {
+func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwapiv1.BackendObjectReference) string {
+	nn := types.NamespacedName{
+		Name:      string(backendRef.Name),
+		Namespace: NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
+	}
+
 	return strings.ToLower(fmt.Sprintf(
-		"%s/%s/%s/%s",
-		KindSecurityPolicy,
-		policy.GetNamespace(),
-		policy.GetName(),
-		service))
+		"%s/%s",
+		irConfigName(policy),
+		nn.String()))
+}
+
+func irConfigName(policy *egv1a1.SecurityPolicy) string {
+	return fmt.Sprintf(
+		"%s/%s",
+		strings.ToLower(KindSecurityPolicy),
+		utils.NamespacedName(policy).String())
 }
