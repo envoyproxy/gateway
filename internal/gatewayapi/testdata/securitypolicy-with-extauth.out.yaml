@@ -143,7 +143,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-http-route
+    name: policy-for-http-route-1
     namespace: default
   spec:
     extAuth:
@@ -179,7 +179,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway
+    name: policy-for-gateway-1
     namespace: default
   spec:
     extAuth:
@@ -251,7 +251,7 @@ xdsIR:
           grpc:
             authority: grpc-backend.default:9000
             destination:
-              name: securitypolicy/default/policy-for-http-route/grpc-backend
+              name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
               settings:
               - addressType: IP
                 endpoints:
@@ -262,7 +262,7 @@ xdsIR:
           headersToExtAuth:
           - header1
           - header2
-          name: default/httproute-1
+          name: securitypolicy/default/policy-for-http-route-1
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -287,7 +287,7 @@ xdsIR:
           grpc:
             authority: grpc-backend.default:9000
             destination:
-              name: securitypolicy/default/policy-for-http-route/grpc-backend
+              name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
               settings:
               - addressType: IP
                 endpoints:
@@ -298,7 +298,7 @@ xdsIR:
           headersToExtAuth:
           - header1
           - header2
-          name: default/httproute-1
+          name: securitypolicy/default/policy-for-http-route-1
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
@@ -323,7 +323,7 @@ xdsIR:
           http:
             authority: http-backend.envoy-gateway:80
             destination:
-              name: securitypolicy/default/policy-for-gateway/http-backend
+              name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
               settings:
               - addressType: IP
                 endpoints:
@@ -335,7 +335,7 @@ xdsIR:
             - header1
             - header2
             path: /auth
-          name: default/gateway-1
+          name: securitypolicy/default/policy-for-gateway-1
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com

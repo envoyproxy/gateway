@@ -181,7 +181,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway-discover-endpoints
+    name: policy-for-gateway
     namespace: envoy-gateway
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
@@ -257,6 +257,7 @@ xdsIR:
           cookieSuffix: 5f93c2e4
           hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
           logoutPath: /foo/logout
+          name: securitypolicy/default/policy-for-http-route
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
             tokenEndpoint: https://oauth.foo.com/token
@@ -291,6 +292,7 @@ xdsIR:
           cookieSuffix: b0a1b740
           hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
           logoutPath: /bar/logout
+          name: securitypolicy/envoy-gateway/policy-for-gateway
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
             tokenEndpoint: https://oauth2.googleapis.com/token
