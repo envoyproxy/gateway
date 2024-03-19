@@ -126,36 +126,60 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	// errors and return them at the end.
 	var errs error
 	for _, httpListener := range httpListeners {
-		addFilterChain := true
-		var xdsRouteCfg *routev3.RouteConfiguration
+		var (
+			enabledHTTP3    = httpListener.HTTP3 != nil // Whether HTTP3 is enabled
+			tcpXDSListener  *listenerv3.Listener        // TCP Listener for HTTP1/HTTP2 traffic
+			quicXDSListener *listenerv3.Listener        // UDP(QUIC) Listener for HTTP3 traffic
+			xdsRouteCfg     *routev3.RouteConfiguration // The route config is used by both the TCP and QUIC listeners
+			addHCM          bool                        // Whether to add an HCM(HTTP Connection Manager filter) to the listener's TCP filter chain
+			err             error
+		)
 
-		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
-		var quicXDSListener *listenerv3.Listener
-		enabledHTTP3 := httpListener.HTTP3 != nil
-		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, accessLog)
-			if enabledHTTP3 {
-				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
-				if err := tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
-					return err
-				}
-			}
-			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
-				// skip this listener if failed to add xds listener to the
-				// resource version table. Normally, this should not happen.
+		// Search for an existing TCP listener.
+		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
+
+		switch {
+		// If no existing listener exists, create a new one.
+		case tcpXDSListener == nil:
+			// Create a new TCP listener for HTTP1/HTTP2 traffic.
+			tcpXDSListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, accessLog)
+			if err = tCtx.AddXdsResource(resourcev3.ListenerType, tcpXDSListener); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
-		} else if httpListener.TLS == nil {
+
+			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
+			if enabledHTTP3 {
+				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
+				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+			}
+
+			// We need to add an HCM to the newly created listener.
+			addHCM = true
+		case tcpXDSListener != nil && httpListener.TLS == nil:
+			// If an existing xds listener exists, and Gateway HTTP Listener does
+			// not enable TLS, we use the listener's default filter chain for HTTP
+			// traffic.
+			// A HCM(HTTP Connection Manager filter) is added to the listener's
+			// default filter chain if it has not yet been added.
+			// The HCM is configured with a RouteConfiguration, which is used to
+			// route HTTP traffic to the correct virtual host for all the domains
+			// specified in the Gateway HTTP Listener's routes.
+			var (
+				routeName                  string
+				hasHCMInDefaultFilterChain bool
+			)
+
 			// Find the route config associated with this listener that
 			// maps to the default filter chain for http traffic
-			routeName := findXdsHTTPRouteConfigName(xdsListener)
+			routeName = findXdsHTTPRouteConfigName(tcpXDSListener)
+			hasHCMInDefaultFilterChain = routeName != ""
+			addHCM = !hasHCMInDefaultFilterChain
+
 			if routeName != "" {
-				// If an existing listener exists, dont create a new filter chain
-				// for HTTP traffic, match on the Domains field within VirtualHosts
-				// within the same RouteConfiguration instead
-				addFilterChain = false
 				xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
 				if xdsRouteCfg == nil {
 					// skip this listener if failed to find xds route config
@@ -163,30 +187,59 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 					continue
 				}
 			}
+		case tcpXDSListener != nil && httpListener.TLS != nil:
+			// If an existing xds listener exists, and Gateway HTTP Listener enables
+			// TLS, we need to create an HCM.
+			// In this case, a new filter chain is created and added to the listener,
+			// and the HCM is added to the new filter chain.
+			// The newly created filter chain is configured with a filter chain
+			// match to match the server names(SNI) based on the listener's hostnames.
+			addHCM = true
 		}
 
-		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
-				return err
+		if addHCM {
+			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false); err != nil {
+				errs = errors.Join(errs, err)
+				continue
 			}
 			if enabledHTTP3 {
-				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
-					return err
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
+					errs = errors.Join(errs, err)
+					continue
 				}
 			}
 		} else {
 			// When the DefaultFilterChain is shared by multiple Gateway HTTP
 			// Listeners, we need to add the HTTP filters associated with the
 			// HTTPListener to the HCM if they have not yet been added.
-			hcm, err := findHCMinFilterChain(xdsListener.DefaultFilterChain)
-			if err != nil {
-				return err // should not happen
+			if err = t.addHttpFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener); err != nil {
+				errs = errors.Join(errs, err)
+				continue
 			}
-			if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
-				return err
+			if enabledHTTP3 {
+				if err = t.addHttpFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
 			}
-			if err = updateHCMinFilterChain(xdsListener.DefaultFilterChain, hcm); err != nil {
-				return err
+		}
+
+		// Add the secrets referenced by the listener's TLS configuration to the
+		// resource version table.
+		// 1:1 between IR TLSListenerConfig and xDS Secret
+		if httpListener.TLS != nil {
+			for t := range httpListener.TLS.Certificates {
+				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[t])
+				if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+
+			if httpListener.TLS.CACertificate != nil {
+				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate)
+				if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 		}
 
@@ -197,144 +250,180 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				Name:                     httpListener.Name,
 			}
 
-			if err := tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
+			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
 
-		// 1:1 between IR TLSListenerConfig and xDS Secret
-		if httpListener.TLS != nil {
-			for t := range httpListener.TLS.Certificates {
-				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[t])
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
-
-			if httpListener.TLS.CACertificate != nil {
-				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate)
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
+		// Generate xDS virtual hosts and routes for the given HTTPListener,
+		// and add them to the xDS route config.
+		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, enabledHTTP3); err != nil {
+			errs = errors.Join(errs, err)
 		}
-
-		// store virtual hosts by domain
-		vHosts := map[string]*routev3.VirtualHost{}
-		// keep track of order by using a list as well as the map
-		var vHostsList []*routev3.VirtualHost
-
-		// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
-		for _, httpRoute := range httpListener.Routes {
-			// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
-			vHost := vHosts[httpRoute.Hostname]
-			if vHost == nil {
-				// Remove dots from the hostname before appending it to the virtualHost name
-				// since dots are special chars used in stats tag extraction in Envoy
-				underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
-				// Allocate virtual host for this httpRoute.
-				vHost = &routev3.VirtualHost{
-					Name:    fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
-					Domains: []string{httpRoute.Hostname},
-				}
-				if metrics != nil && metrics.EnableVirtualHostStats {
-					vHost.VirtualClusters = []*routev3.VirtualCluster{
-						{
-							Name: underscoredHostname,
-							Headers: []*routev3.HeaderMatcher{
-								{
-									Name: AuthorityHeaderKey,
-									HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
-										StringMatch: &matcherv3.StringMatcher{
-											MatchPattern: &matcherv3.StringMatcher_Prefix{
-												Prefix: httpRoute.Hostname,
-											},
-										},
-									},
-								},
-							},
-						},
-					}
-				}
-				vHosts[httpRoute.Hostname] = vHost
-				vHostsList = append(vHostsList, vHost)
-			}
-
-			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute, err := buildXdsRoute(httpRoute)
-			if err != nil {
-				// skip this route if failed to build xds route
-				errs = errors.Join(errs, err)
-				continue
-			}
-
-			// Check if an extension want to modify the route we just generated
-			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-			if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
-				if err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
-
-			if enabledHTTP3 {
-				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.HTTP3.QUICPort))
-				if xdsRoute.ResponseHeadersToAdd == nil {
-					xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
-				}
-				xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, http3AltSvcHeader)
-			}
-			vHost.Routes = append(vHost.Routes, xdsRoute)
-
-			if httpRoute.Destination != nil {
-				if err = processXdsCluster(tCtx, httpRoute, httpListener.HTTP1); err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
-
-			if httpRoute.Mirrors != nil {
-				for _, mirrorDest := range httpRoute.Mirrors {
-					if err := addXdsCluster(tCtx, &xdsClusterArgs{
-						name:         mirrorDest.Name,
-						settings:     mirrorDest.Settings,
-						tSocket:      nil,
-						endpointType: EndpointTypeStatic,
-					}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-						errs = errors.Join(errs, err)
-					}
-				}
-			}
-		}
-
-		for _, vHost := range vHostsList {
-			// Check if an extension want to modify the Virtual Host we just generated
-			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-			if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
-				errs = errors.Join(errs, err)
-			}
-		}
-		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostsList...)
 
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
-		if err := patchResources(tCtx, httpListener.Routes); err != nil {
-			return err
+		if err = patchResources(tCtx, httpListener.Routes); err != nil {
+			errs = errors.Join(errs, err)
 		}
 
 		// RateLimit filter is handled separately because it relies on the global
 		// rate limit server configuration.
 		// Check if a ratelimit cluster exists, if not, add it, if it's needed.
-		if err := t.createRateLimitServiceCluster(tCtx, httpListener); err != nil {
+		if err = t.createRateLimitServiceCluster(tCtx, httpListener); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
 		// Check if an extension want to modify the listener that was just configured/created
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
-		if err := processExtensionPostListenerHook(tCtx, xdsListener, t.ExtensionManager); err != nil {
+		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
 	return errs
+}
+
+// addRouteToRouteConfig generates xDS virtual hosts and routes for the given HTTPListener,
+// and adds them to the provided xDS route config.
+func (t *Translator) addRouteToRouteConfig(
+	tCtx *types.ResourceVersionTable,
+	xdsRouteCfg *routev3.RouteConfiguration,
+	httpListener *ir.HTTPListener,
+	metrics *ir.Metrics,
+	enabledHTTP3 bool) error {
+	var (
+		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
+		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
+		errs      error                               // the accumulated errors
+		err       error
+	)
+
+	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
+	for _, httpRoute := range httpListener.Routes {
+		// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
+		vHost := vHosts[httpRoute.Hostname]
+		if vHost == nil {
+			// Remove dots from the hostname before appending it to the virtualHost name
+			// since dots are special chars used in stats tag extraction in Envoy
+			underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
+			// Allocate virtual host for this httpRoute.
+			vHost = &routev3.VirtualHost{
+				Name:    fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
+				Domains: []string{httpRoute.Hostname},
+			}
+			if metrics != nil && metrics.EnableVirtualHostStats {
+				vHost.VirtualClusters = []*routev3.VirtualCluster{
+					{
+						Name: underscoredHostname,
+						Headers: []*routev3.HeaderMatcher{
+							{
+								Name: AuthorityHeaderKey,
+								HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+									StringMatch: &matcherv3.StringMatcher{
+										MatchPattern: &matcherv3.StringMatcher_Prefix{
+											Prefix: httpRoute.Hostname,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			}
+			vHosts[httpRoute.Hostname] = vHost
+			vHostList = append(vHostList, vHost)
+		}
+
+		var xdsRoute *routev3.Route
+		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
+		xdsRoute, err = buildXdsRoute(httpRoute)
+		if err != nil {
+			// skip this route if failed to build xds route
+			errs = errors.Join(errs, err)
+			continue
+		}
+
+		// Check if an extension want to modify the route we just generated
+		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
+			if err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		if enabledHTTP3 {
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.HTTP3.QUICPort))
+			if xdsRoute.ResponseHeadersToAdd == nil {
+				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
+			}
+			xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, http3AltSvcHeader)
+		}
+		vHost.Routes = append(vHost.Routes, xdsRoute)
+
+		if httpRoute.Destination != nil {
+			if err = processXdsCluster(tCtx, httpRoute, httpListener.HTTP1); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		if httpRoute.Mirrors != nil {
+			for _, mirrorDest := range httpRoute.Mirrors {
+				if err = addXdsCluster(tCtx, &xdsClusterArgs{
+					name:         mirrorDest.Name,
+					settings:     mirrorDest.Settings,
+					tSocket:      nil,
+					endpointType: EndpointTypeStatic,
+				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+					errs = errors.Join(errs, err)
+				}
+			}
+		}
+	}
+
+	for _, vHost := range vHostList {
+		// Check if an extension want to modify the Virtual Host we just generated
+		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+
+	return errs
+}
+
+func (t *Translator) addHttpFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
+	var (
+		hcm *hcmv3.HttpConnectionManager
+		err error
+	)
+
+	if hcm, err = findHCMinFilterChain(filterChain); err != nil {
+		return err // should not happen
+	}
+
+	// Add http filters to the HCM if they have not yet been added.
+	if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
+		return err
+	}
+
+	for i, filter := range filterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			var mgrAny *anypb.Any
+			if mgrAny, err = protocov.ToAnyWithError(hcm); err != nil {
+				return err
+			}
+
+			filterChain.Filters[i] = &listenerv3.Filter{
+				Name: wellknown.HTTPConnectionManager,
+				ConfigType: &listenerv3.Filter_TypedConfig{
+					TypedConfig: mgrAny,
+				},
+			}
+		}
+	}
+	return nil
 }
 
 func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConnectionManager, error) {
@@ -348,25 +437,6 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 		}
 	}
 	return nil, errors.New("http connection manager not found")
-}
-
-func updateHCMinFilterChain(filterChain *listenerv3.FilterChain, hcm *hcmv3.HttpConnectionManager) error {
-	for i, filter := range filterChain.Filters {
-		if filter.Name == wellknown.HTTPConnectionManager {
-			mgrAny, err := protocov.ToAnyWithError(hcm)
-			if err != nil {
-				return err
-			}
-
-			filterChain.Filters[i] = &listenerv3.Filter{
-				Name: wellknown.HTTPConnectionManager,
-				ConfigType: &listenerv3.Filter_TypedConfig{
-					TypedConfig: mgrAny,
-				},
-			}
-		}
-	}
-	return nil
 }
 
 func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
