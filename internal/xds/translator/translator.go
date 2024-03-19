@@ -212,12 +212,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// When the DefaultFilterChain is shared by multiple Gateway HTTP
 			// Listeners, we need to add the HTTP filters associated with the
 			// HTTPListener to the HCM if they have not yet been added.
-			if err = t.addHttpFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener); err != nil {
+			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if enabledHTTP3 {
-				if err = t.addHttpFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -393,7 +393,7 @@ func (t *Translator) addRouteToRouteConfig(
 	return errs
 }
 
-func (t *Translator) addHttpFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
+func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
 	var (
 		hcm *hcmv3.HttpConnectionManager
 		err error
