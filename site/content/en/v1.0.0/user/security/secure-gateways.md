@@ -234,7 +234,7 @@ Lastly, test connectivity using the above [Testing section](#testing).
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart Guide](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secrets:
 
@@ -358,7 +358,7 @@ This sections gives a walkthrough to generate multiple certificates correspondin
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
@@ -437,4 +437,4 @@ Refer to the steps mentioned earlier in the guide under [Testing in clusters wit
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.

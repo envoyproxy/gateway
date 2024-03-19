@@ -8,7 +8,7 @@ Envoy Gateway introduces a new CRD called [SecurityPolicy](../../contributions/d
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest. Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
@@ -165,7 +165,7 @@ The request should be allowed and you should see the response from the backend s
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the SecurityPolicy and the secret
 

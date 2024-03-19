@@ -4,6 +4,7 @@ title: Gateway Address
 
 The Gateway API provides an optional [Addresses](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayAddress) field through which Envoy Gateway can set addresses for Envoy Proxy Service. Depending on the Service Type, the addresses of gateway can be used as:
 
+- [Prerequisites](#prerequisites)
 - [External IPs](#external-ips)
 - [Cluster IP](#cluster-ip)
 

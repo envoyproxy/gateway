@@ -4,7 +4,7 @@ title: Configuration API Design
 
 ## Motivation
 
-[Issue 51](https://github.com/envoyproxy/gateway/issues/51) specifies the need to design an API for configuring Envoy Gateway. The control plane is configured statically at startup and the data plane is configured dynamically through Kubernetes resources, primarily [Gateway API](https://gateway-api.sigs.k8s.io/) objects. Refer to the Envoy Gateway [design doc](../../design/system-design) for additional details regarding Envoy Gateway terminology and configuration.
+[Issue 51](https://github.com/envoyproxy/gateway/issues/51) specifies the need to design an API for configuring Envoy Gateway. The control plane is configured statically at startup and the data plane is configured dynamically through Kubernetes resources, primarily [Gateway API](https://gateway-api.sigs.k8s.io/) objects. Refer to the Envoy Gateway [design doc](../design/system-design) for additional details regarding Envoy Gateway terminology and configuration.
 
 ## Goals
 
@@ -132,11 +132,11 @@ type EnvoyGatewayFileProvider struct {
 
 ### Gateway
 
-Gateway defines desired configuration of [Gateway API](https://gateway-api.sigs.k8s.io/) controllers that reconcile and translate Gateway API resources into the Intermediate Representation (IR). Refer to the Envoy Gateway [design doc](../../design/system-design) for additional details.
+Gateway defines desired configuration of [Gateway API](https://gateway-api.sigs.k8s.io/) controllers that reconcile and translate Gateway API resources into the Intermediate Representation (IR). Refer to the Envoy Gateway [design doc](../design/system-design) for additional details.
 
 ### Provider
 
-Provider defines the desired configuration of an Envoy Gateway provider. A provider is an infrastructure component that Envoy Gateway calls to establish its runtime configuration. Provider is a [union type](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#unions). Therefore, Envoy Gateway can be configured with only one provider based on the `type` discriminator field. Refer to the Envoy Gateway [design doc](../../design/system-design) for additional details.
+Provider defines the desired configuration of an Envoy Gateway provider. A provider is an infrastructure component that Envoy Gateway calls to establish its runtime configuration. Provider is a [union type](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#unions). Therefore, Envoy Gateway can be configured with only one provider based on the `type` discriminator field. Refer to the Envoy Gateway [design doc](../design/system-design) for additional details.
 
 ### Control Plane Configuration
 

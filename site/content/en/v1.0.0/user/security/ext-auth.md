@@ -237,7 +237,7 @@ kubectl get backendtlspolicy/grpc-ext-auth-btls -o yaml
 
 ### Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the Quickstart instructions to set the variable.
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the Quickstart instructions to set the variable.
 
 ```shell
 echo $GATEWAY_HOST
@@ -274,7 +274,7 @@ curl -v -H "Host: www.example.com" -H "Authorization: Bearer token1" "http://${G
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the demo auth services, HTTPRoute, SecurityPolicy and BackendTLSPolicy:
 

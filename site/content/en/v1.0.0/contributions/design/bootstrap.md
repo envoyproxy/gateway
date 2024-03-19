@@ -17,7 +17,7 @@ title: Bootstrap Design
 
 ## API
 
-Leverage the existing [EnvoyProxy](../../../api/extension_types#envoyproxy) resource which can be attached to the [GatewayClass](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass) using the [parametersRef](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference) field, and define a `Bootstrap` field within the resource. If this field is set, the value is used as the Bootstrap configuration for all managed Envoy Proxies created by Envoy Gateway.
+Leverage the existing [EnvoyProxy](../../api/extension_types#envoyproxy) resource which can be attached to the [GatewayClass](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass) using the [parametersRef](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference) field, and define a `Bootstrap` field within the resource. If this field is set, the value is used as the Bootstrap configuration for all managed Envoy Proxies created by Envoy Gateway.
 
 ```go
 // EnvoyProxySpec defines the desired state of EnvoyProxy.

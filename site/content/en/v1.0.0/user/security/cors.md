@@ -51,7 +51,7 @@ kubectl get securitypolicy/cors-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the Quickstart instructions to set the variable.
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the Quickstart instructions to set the variable.
 
 ```shell
 echo $GATEWAY_HOST
