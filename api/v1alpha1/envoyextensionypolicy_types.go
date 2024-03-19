@@ -55,6 +55,10 @@ type EnvoyExtensionPolicySpec struct {
 	//
 	// +optional
 	Priority int32 `json:"priority,omitempty"`
+
+	// ExtProc is an ordered list of external processing filters
+	// that should added to the envoy filter chain
+	ExtProc []ExtProc `json:"extProc,omitempty"`
 }
 
 //+kubebuilder:object:root=true

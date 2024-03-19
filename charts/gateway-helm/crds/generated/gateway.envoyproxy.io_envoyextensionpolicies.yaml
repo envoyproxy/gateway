@@ -44,6 +44,100 @@ spec:
           spec:
             description: Spec defines the desired state of EnvoyExtensionPolicy.
             properties:
+              extProc:
+                description: ExtProc is an ordered list of external processing filters
+                  that should added to the envoy filter chain
+                items:
+                  description: ExtProc defines the configuration for External Processing
+                    filter.
+                  properties:
+                    service:
+                      description: Service defines the configuration of the external
+                        processing service
+                      properties:
+                        backendRef:
+                          description: BackendObjectReference references a Kubernetes
+                            object that represents the backend server to which the
+                            processing requests will be sent. Only service Kind is
+                            supported for now.
+                          properties:
+                            group:
+                              default: ""
+                              description: Group is the group of the referent. For
+                                example, "gateway.networking.k8s.io". When unspecified
+                                or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            kind:
+                              default: Service
+                              description: "Kind is the Kubernetes resource kind of
+                                the referent. For example \"Service\". \n Defaults
+                                to \"Service\" when not specified. \n ExternalName
+                                services can refer to CNAME DNS records that may live
+                                outside of the cluster and as such are difficult to
+                                reason about in terms of conformance. They also may
+                                not be safe to forward to (see CVE-2021-25740 for
+                                more information). Implementations SHOULD NOT support
+                                ExternalName Services. \n Support: Core (Services
+                                with a type other than ExternalName) \n Support: Implementation-specific
+                                (Services with type ExternalName)"
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: "Namespace is the namespace of the backend.
+                                When unspecified, the local namespace is inferred.
+                                \n Note that when a namespace different than the local
+                                namespace is specified, a ReferenceGrant object is
+                                required in the referent namespace to allow that namespace's
+                                owner to accept the reference. See the ReferenceGrant
+                                documentation for details. \n Support: Core"
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            port:
+                              description: Port specifies the destination port number
+                                to use for this resource. Port is required when the
+                                referent is a Kubernetes Service. In this case, the
+                                port number is the service port number, not the target
+                                port. For other resources, destination port might
+                                be derived from the referent resource or this field.
+                              format: int32
+                              maximum: 65535
+                              minimum: 1
+                              type: integer
+                          required:
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Must have port for Service reference
+                            rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                              ? has(self.port) : true'
+                      required:
+                      - backendRef
+                      type: object
+                  required:
+                  - service
+                  type: object
+                  x-kubernetes-validations:
+                  - message: group is invalid, only the core API group (specified
+                      by omitting the group field or setting it to an empty string)
+                      is supported
+                    rule: 'has(self.service) ? (!has(self.service.backendRef.group)
+                      || self.service.backendRef.group == "") : true'
+                  - message: kind is invalid, only Service (specified by omitting
+                      the kind field or setting it to 'Service') is supported
+                    rule: 'has(self.service) ? (!has(self.service.backendRef.kind)
+                      || self.service.backendRef.kind == ''Service'') : true'
+                type: array
               priority:
                 description: Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices
                   are applied to the same TargetRef, extensions will execute in the

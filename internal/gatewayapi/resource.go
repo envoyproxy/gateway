@@ -52,6 +52,7 @@ type Resources struct {
 	BackendTrafficPolicies []*egv1a1.BackendTrafficPolicy `json:"backendTrafficPolicies,omitempty" yaml:"backendTrafficPolicies,omitempty"`
 	SecurityPolicies       []*egv1a1.SecurityPolicy       `json:"securityPolicies,omitempty" yaml:"securityPolicies,omitempty"`
 	BackendTLSPolicies     []*gwapiv1a2.BackendTLSPolicy  `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
+	EnvoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -72,6 +73,7 @@ func NewResources() *Resources {
 		BackendTrafficPolicies: []*egv1a1.BackendTrafficPolicy{},
 		SecurityPolicies:       []*egv1a1.SecurityPolicy{},
 		BackendTLSPolicies:     []*gwapiv1a2.BackendTLSPolicy{},
+		EnvoyExtensionPolicies: []*egv1a1.EnvoyExtensionPolicy{},
 	}
 }
 

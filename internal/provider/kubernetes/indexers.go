@@ -38,6 +38,7 @@ const (
 	configMapCtpIndex          = "configMapCtpIndex"
 	secretCtpIndex             = "secretCtpIndex"
 	configMapBtlsIndex         = "configMapBtlsIndex"
+	envoyExtensionPolicyIndex  = "backendSecurityPolicyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -510,4 +511,37 @@ func configMapBtlsIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return configMapReferences
+}
+
+// addEnvoyExtensionPolicyIndexers adds indexing on EnvoyExtensionPolicy.
+//   - For Service objects that are referenced in EnvoyExtensionPolicy objects via
+//     `.spec.extProc.[*].service.backendObjectReference`. This helps in querying for
+//     EnvoyExtensionPolicy that are affected by a particular Service CRUD.
+func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
+	var err error
+
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &v1alpha1.SecurityPolicy{}, envoyExtensionPolicyIndex,
+		backendEnvoyExtensionPolicyIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
+	envoyExtensionPolicy := rawObj.(*v1alpha1.EnvoyExtensionPolicy)
+
+	var ret []string
+
+	for _, ep := range envoyExtensionPolicy.Spec.ExtProc {
+		backendRef := ep.Service.BackendRef
+		ret = append(ret,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
+				Name:      string(backendRef.Name),
+			}.String())
+	}
+
+	return ret
 }

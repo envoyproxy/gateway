@@ -475,6 +475,8 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// EnvoyExtensionFeatures
+	EnvoyExtensionFeatures *EnvoyExtensionFeatures `json:"envoyExtensionFeatures,omitempty" yaml:"envoyExtensionFeatures,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1766,4 +1768,31 @@ type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+}
+
+// ExtProc holds the information associated with the ExtProc extensions.
+// +k8s:deepcopy-gen=true
+type ExtProc struct {
+	// Name is a unique name for an ExtProc configuration.
+	// The xds translator only generates one ExtProc filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
+	// Service contains the details of the ExtProc service.
+	Service ExtProcService `json:"service" yaml:"service"`
+}
+
+// ExtProcService defines the HTTP External Processing service
+// +k8s:deepcopy-gen=true
+type ExtProcService struct {
+	// Destination defines the destination for the gRPC External Processing service.
+	Destination RouteDestination `json:"destination"`
+
+	// Authority is the hostname:port of the HTTP External Processing service.
+	Authority string `json:"authority"`
+}
+
+// EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
+// +k8s:deepcopy-gen=true
+type EnvoyExtensionFeatures struct {
+	ExtProc []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
 }

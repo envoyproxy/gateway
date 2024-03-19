@@ -196,6 +196,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
+				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
+					envoyExtensionPolicy := envoyExtensionPolicy
+					key := utils.NamespacedName(envoyExtensionPolicy)
+					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
+						r.ProviderResources.SecurityPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
+					}
+					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
+				}
 			}
 
 			// Delete IR keys
