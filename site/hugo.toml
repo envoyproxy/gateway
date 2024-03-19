@@ -278,7 +278,7 @@ enable = true
     name = "文档"
     weight = -102
     pre = "<i class='fas fa-book pr-2'></i>"
-    url = "/v0.6.0"
+    url = "/v1.0.0"
 
 [[params.versions]]
   version = "latest"
