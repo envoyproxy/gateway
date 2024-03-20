@@ -957,6 +957,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
+| `tls` | _[EnvoyTLSConfig](#envoytlsconfig)_ |  false  | TLS is the TLS configuration for the Envoy Proxy. |
 
 
 
@@ -970,6 +971,20 @@ EnvoyResourceType specifies the type URL of the Envoy resource.
 _Appears in:_
 - [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
 
+
+
+#### EnvoyTLSConfig
+
+
+
+EnvoyTLSConfig describes the TLS configuration for Envoy Proxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCertRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  | ClientCertRef defines the reference to a Kubernetes Secret that contains the client certificate and private key for Envoy to use when connecting to backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc. |
 
 
 #### ExtAuth

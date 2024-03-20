@@ -90,7 +90,7 @@ type EnvoyProxySpec struct {
 
 	// TLS is the TLS configuration for the Envoy Proxy.
 	// +optional
-	TLS *EnvoyTLSConfig
+	TLS *EnvoyTLSConfig `json:"tls,omitempty"`
 }
 
 // EnvoyTLSConfig describes the TLS configuration for Envoy Proxy.

@@ -6975,6 +6975,51 @@ spec:
                     - provider
                     type: object
                 type: object
+              tls:
+                description: TLS is the TLS configuration for the Envoy Proxy.
+                properties:
+                  clientCertRef:
+                    description: ClientCertRef defines the reference to a Kubernetes
+                      Secret that contains the client certificate and private key
+                      for Envoy to use when connecting to backend services and external
+                      services, such as ExtAuth, ALS, OpenTelemetry, etc.
+                    properties:
+                      group:
+                        default: ""
+                        description: Group is the group of the referent. For example,
+                          "gateway.networking.k8s.io". When unspecified or empty string,
+                          core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: "Namespace is the namespace of the referenced
+                          object. When unspecified, the local namespace is inferred.
+                          \n Note that when a namespace different than the local namespace
+                          is specified, a ReferenceGrant object is required in the
+                          referent namespace to allow that namespace's owner to accept
+                          the reference. See the ReferenceGrant documentation for
+                          details. \n Support: Core"
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
             type: object
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
