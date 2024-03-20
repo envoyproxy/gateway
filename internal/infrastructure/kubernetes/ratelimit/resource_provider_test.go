@@ -126,29 +126,61 @@ func loadServiceAccount() (*corev1.ServiceAccount, error) {
 }
 
 func TestService(t *testing.T) {
+
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
-		Backend: egv1a1.RateLimitDatabaseBackend{
-			Type: egv1a1.RedisBackendType,
-			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+	cases := []struct {
+		caseName  string
+		rateLimit *egv1a1.RateLimit
+	}{
+		{
+			caseName: "default",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+		},
+		{
+			caseName: "no-prometheus",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Metrics: &egv1a1.RateLimitMetrics{
+						Prometheus: &egv1a1.RateLimitMetricsPrometheusProvider{
+							Disable: true,
+						},
+					},
+				},
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
-	svc, err := r.Service()
-	require.NoError(t, err)
 
-	expected, err := loadService()
-	require.NoError(t, err)
+	for _, tc := range cases {
+		cfg.EnvoyGateway.RateLimit = tc.rateLimit
+		r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 
-	assert.Equal(t, expected, svc)
+		svc, err := r.Service()
+		require.NoError(t, err)
+
+		expected, err := loadService(tc.caseName)
+		require.NoError(t, err)
+
+		assert.Equal(t, expected, svc)
+	}
 }
 
-func loadService() (*corev1.Service, error) {
-	serviceYAML, err := os.ReadFile("testdata/envoy-ratelimit-service.yaml")
+func loadService(caseName string) (*corev1.Service, error) {
+	serviceYAML, err := os.ReadFile(fmt.Sprintf("testdata/services/envoy-ratelimit-service-%s.yaml", caseName))
 	if err != nil {
 		return nil, err
 	}

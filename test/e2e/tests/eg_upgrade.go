@@ -38,7 +38,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v0.6.0" // Default version tag if not specified
+				lastVersionTag = "v1.0.0" // Default version tag if not specified
 			}
 
 			ns := "gateway-upgrade-infra"

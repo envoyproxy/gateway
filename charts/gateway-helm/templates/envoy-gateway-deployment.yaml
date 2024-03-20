@@ -63,8 +63,6 @@ spec:
         - containerPort: {{ .port }}
           name: {{ .name }}
         {{- end}}
-        - containerPort: 19001
-          name: http-metrics
         readinessProbe:
           httpGet:
             path: /readyz

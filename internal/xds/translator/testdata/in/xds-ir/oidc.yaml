@@ -19,6 +19,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
     oidc:
+      name: securitypolicy/default/policy-for-first-route
       clientID: client.oauth.foo.com
       clientSecret: Y2xpZW50MTpzZWNyZXQK
       provider:
@@ -43,6 +44,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
     oidc:
+      name: securitypolicy/default/policy-for-second-route
       clientID: client.oauth.bar.com
       clientSecret: Y2xpZW50MTpzZWNyZXQK
       provider:
