@@ -48,6 +48,7 @@ func TestMergeGateways(t *testing.T) {
 
 	cSuite := suite.New(suite.Options{
 		Client:               c,
+		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		RunTest:              *flags.RunTest,
