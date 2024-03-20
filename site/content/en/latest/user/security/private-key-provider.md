@@ -248,6 +248,8 @@ Or using `preferredDuringSchedulingIgnoredDuringExecution` for best effort sched
 
 ### Benchmark before enabling private key provider
 
+First follow the instructions in [TLS Termination for TCP](./tls-termination) to do the functionality test.
+
 Ensure the cpu frequency governor set as `performance`.
 
 ```shell
@@ -354,6 +356,8 @@ EOF
 
 ### Benchmark after enabling private key provider
 
+First follow the instructions in [TLS Termination for TCP](./tls-termination) to do the functionality test again.
+
 Benchmark the gateway with fortio.
 
 ```shell
@@ -379,7 +383,3 @@ With QAT private key provider, the QPS is over 3 times than without private key 
 ```shell
 All done 134746 calls (plus 128 warmup) 28.505 ms avg, 4489.6 qps
 ```
-
-## Testing
-
-Follow the instructions in [TLS Termination for TCP](./tls-termination) to do the test.
