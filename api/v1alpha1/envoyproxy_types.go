@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -86,6 +87,11 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
+
+	// ClientCertRef defines the reference to a Kubernetes Secret that contains
+	// the client certificate and private key for Envoy to use when connecting to
+	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	ClientCertRef *gwapiv1.SecretObjectReference `json:"clientCertRef,omitempty"`
 }
 
 type ProxyTelemetry struct {
