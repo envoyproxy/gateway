@@ -88,7 +88,8 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
-	// TLS is the TLS configuration for the Envoy Proxy.
+	// TLS is the TLS configuration for the Envoy proxy to use when connecting to
+	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
 	// +optional
 	TLS *EnvoyTLSConfig `json:"tls,omitempty"`
 }
