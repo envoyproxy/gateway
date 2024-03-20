@@ -88,9 +88,17 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
+	// TLS is the TLS configuration for the Envoy Proxy.
+	// +optional
+	TLS *EnvoyTLSConfig
+}
+
+// EnvoyTLSConfig describes the TLS configuration for Envoy Proxy.
+type EnvoyTLSConfig struct {
 	// ClientCertRef defines the reference to a Kubernetes Secret that contains
 	// the client certificate and private key for Envoy to use when connecting to
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	// +optional
 	ClientCertRef *gwapiv1.SecretObjectReference `json:"clientCertRef,omitempty"`
 }
 
