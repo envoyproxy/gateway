@@ -21,59 +21,59 @@ title: Envoy Gateway
 
 {{% blocks/section type="row" color="dark" %}}
 
-{{% blocks/feature icon="fa fa-commenting" title="Expressive API" %}}
-Based on Gateway API, with reasonable default settings to simplify the Envoy user experience, without knowing details of Envoy proxy.
+{{% blocks/feature icon="fa fa-commenting" title="富有表现力的 API" %}}
+基于 Gateway API，具有合理的默认设置，以简化 Envoy 用户体验，
+无需了解 Envoy 代理的详细信息。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-battery-full" title="Batteries included" %}}
-Automatically Envoy infrastructure provisioning and management.
+{{% blocks/feature icon="fa fa-battery-full" title="包含能力" %}}
+自动 Envoy 基础设施配置和管理。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-tree" title="All environments" %}}
-Support for heterogeneous environments. Initially, Kubernetes will receive the most focus.
+{{% blocks/feature icon="fa fa-tree" title="全环境" %}}
+支持异构环境。起初，将更专注于 Kubernetes。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-cubes" title="Extensibility" %}}
-Vendors will have the ability to provide value-added products built on the Envoy Gateway foundation.
+{{% blocks/feature icon="fa fa-cubes" title="扩展性" %}}
+供应商将有能力提供基于 Envoy Gateway 基础的增值产品。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-lock" title="Security"%}}
-Supports a variety of Security features, such as TLS, TLS pass-through, secure gRPC, authentication. rate-limiting, etc.
+{{% blocks/feature icon="fa fa-lock" title="安全"%}}
+支持多种安全功能，例如 TLS、TLS 直通、安全 gRPC、身份验证、限流等。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-bolt" title="High Performance"%}}
-Built on top of the high-performance Envoy proxy, which can handle millions of requests per second.
+{{% blocks/feature icon="fa fa-bolt" title="高性能"%}}
+构建在高性能 Envoy 代理之上，每秒可以处理数百万个请求。
 {{% /blocks/feature %}}
 
 {{% /blocks/section %}}
 
 {{% blocks/lead color="black" %}}
-Lower barriers to adoption through **Expressive, Extensible, Role-oriented APIs**
+通过**富有表现力、可扩展、面向角色的 API** 降低使用障碍
 
-Support a multitude of **ingress** and **L7/L4** traffic routing
+支持多种**入口**和 **L7/L4** 流量路由
 
-Common foundation for vendors to build **value-added** products
+供应商构建**增值**产品的共同基础
 
-Without having to **re-engineer**
-fundamental interactions.
+无需**重新设计**基本交互。
 
 {{% /blocks/lead %}}
 
 {{% blocks/section type="row" color="dark" %}}
 
-{{% blocks/feature icon="fab fa-app-store-ios" title="Download **from Github**" url="https://github.com/envoyproxy/gateway/releases" %}}
-Try Envoy Gateway in GitHub Releases
+{{% blocks/feature icon="fab fa-app-store-ios" title="**通过 Github** 下载" url="https://github.com/envoyproxy/gateway/releases" %}}
+尝试在 GitHub 中 Release 的 Envoy Gateway
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fab fa-github" title="Contributions Welcome!"
+{{% blocks/feature icon="fab fa-github" title="欢迎贡献！"
     url="/latest/contributions/" %}}
-We do a [Pull Request](https://github.com/envoyproxy/gateway/pulls)
-contributions workflow on **GitHub**.
+We do a [Pull Request](https://github.com/envoyproxy/gateway/pulls) contributions workflow on **GitHub**.
+我们在 **GitHub** 通过 [Pull Request](https://github.com/envoyproxy/gateway/pulls) 开启贡献流程。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fab fa-slack" title="Contact us on Slack!"
+{{% blocks/feature icon="fab fa-slack" title="在 Slack 上联系我们！"
     url="https://envoyproxy.slack.com/archives/C03E6NHLESV" %}}
-For announcement of latest features etc.
+用于发布最新功能等内容。
 {{% /blocks/feature %}}
 
 {{% /blocks/section %}}
@@ -83,5 +83,6 @@ For announcement of latest features etc.
 <img src="/img/cncf.svg" alt="CNCF" width="40%">
 
 ---
-Member of the [Envoy Proxy](https://www.envoyproxy.io/) family aimed at significantly **decreasing the barrier** to entry when using Envoy for **API Gateway**.
+[Envoy Proxy](https://www.envoyproxy.io/)
+家族的成员，旨在**显著降低**使用 Envoy 作为 **API 网关**时的使用门槛。
 {{% /blocks/lead %}}
