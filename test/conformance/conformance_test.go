@@ -50,6 +50,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		SkipTests: []string{
 			tests.GatewayStaticAddresses.ShortName,
 		},
+		RunTest:        *flags.RunTest,
 		ExemptFeatures: suite.MeshCoreFeatures,
 	})
 	cSuite.Setup(t)
