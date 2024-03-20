@@ -81,7 +81,14 @@ docs-release-gen:
 	@echo '  version = "$(TAG)"' >> site/hugo.toml
 	@echo '  url = "/$(TAG)"' >> site/hugo.toml
 
-.PHONY: release-notes-docs
+.PHONY: docs-check-links
+docs-check-links:
+	@$(LOG_TARGET)
+	# Check for broken links, right now we are focusing on the v1.0.0
+    # TODO: remove latest from ignore list
+    # TODO: remove github.com example.com from ignore list
+	linkinator site/public/ -r --concurrency 25 -s "k8s.io github.com example.com _print latest v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0 v0.1.0"
+
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
 	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \
