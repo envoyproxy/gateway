@@ -86,8 +86,8 @@ docs-check-links:
 	@$(LOG_TARGET)
 	# Check for broken links, right now we are focusing on the v1.0.0
     # TODO: remove latest from ignore list
-    # TODO: remove github.com example.com localhost from ignore list
-	linkinator site/public/ -r --concurrency 25 -s "localhost:3000 localhost:9090 k8s.io github.com example.com _print latest v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0 v0.1.0"
+    # TODO: remove github.com example.com from ignore list
+	linkinator site/public/ -r --concurrency 25 -s "k8s.io github.com example.com _print latest v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0 v0.1.0"
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
