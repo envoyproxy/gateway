@@ -252,8 +252,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 		annotations := infrastructureAnnotations(gateway.Gateway)
 		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
 
-		if isMergeGatewaysEnabled(resources) {
-			t.MergeGateways = true
+		if t.MergeGateways {
 			irKey = string(t.GatewayClassName)
 
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
