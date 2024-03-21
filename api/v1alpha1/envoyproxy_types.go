@@ -91,13 +91,27 @@ type EnvoyProxySpec struct {
 	FilterOrder *FilterOrder `json:"filterOrder,omitempty"`
 }
 
-// FilterOrder defines the order of filters in the HCM filter chain.
+// FilterOrder defines the order of filters in the HCM filter chain for Envoy proxy.
+// If unspecified, the default order of filters is applied.
+// Default order of filters:
+// - envoy.filters.http.cors
+// - envoy.filters.http.ext_authz
+// - envoy.filters.http.basic_authn
+// - envoy.filters.http.oauth2
+// - envoy.filters.http.jwt_authn
+// - envoy.filters.http.fault
+// - envoy.filters.http.local_ratelimit
+// - envoy.filters.http.rate_limit
+// - envoy.filters.http.router
 type FilterOrder struct {
 	// EnvoyFilters defines the order of filters in the filter chain.
-	// +kubebuilder:validation:MinLength=9
+	// The order of filters in the list is the order in which they will be applied.
+	// +kubebuilder:validation:MinItems=9
+	// +kubebuilder:validation:MaxItems=9
 	EnvoyFilters []EnvoyFilter `json:"envoyFilters"`
 }
 
+// EnvoyFilter defines the type of Envoy HTTP filter.
 type EnvoyFilter string
 
 const (

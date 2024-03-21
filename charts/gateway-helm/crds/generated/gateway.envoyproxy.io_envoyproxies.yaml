@@ -81,6 +81,23 @@ spec:
                 items:
                   type: string
                 type: array
+              filterOrder:
+                description: FilterOrder defines the default order of filters in the
+                  filter chain.
+                properties:
+                  envoyFilters:
+                    description: EnvoyFilters defines the order of filters in the
+                      filter chain. The order of filters in the list is the order
+                      in which they will be applied.
+                    items:
+                      description: EnvoyFilter defines the type of Envoy HTTP filter.
+                      type: string
+                    maxItems: 9
+                    minItems: 9
+                    type: array
+                required:
+                - envoyFilters
+                type: object
               logging:
                 default:
                   level:
