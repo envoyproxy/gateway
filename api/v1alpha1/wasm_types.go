@@ -30,6 +30,16 @@ type Wasm struct {
 
 	// Configuration for the wasm code.
 	Config *WasmConfig `json:"config"`
+
+	// InsertBefore is the name of the filter that this Wasm extension should be
+	// inserted before.
+	// If the specified filter is not found in the filter chain, this Wasm extension
+	// will be inserted before the next filter found in the chain, if any. If no
+	// any other filters are found in the chain, this Wasm extension will be
+	// inserted before the router filter.
+	//
+	// If not specified, this Wasm extension will be inserted before the router filter.
+	InsertBefore *EnvoyFilter `json:"insertBeforeFilter"`
 }
 
 // WasmConfig defines the configuration for the wasm code.
