@@ -17,6 +17,7 @@ type Connection struct {
 	// +optional
 	Limit *ConnectionLimit `json:"limit,omitempty"`
 	// ConnectionBufferLimit provides configuration for the maximum buffer size for each incoming connection.
+	// Default: 32768 bytes.
 	//
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
