@@ -86,7 +86,31 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
+
+	// FilterOrder defines the default order of filters in the filter chain.
+	FilterOrder *FilterOrder `json:"filterOrder,omitempty"`
 }
+
+// FilterOrder defines the order of filters in the HCM filter chain.
+type FilterOrder struct {
+	// EnvoyFilters defines the order of filters in the filter chain.
+	// +kubebuilder:validation:MinLength=9
+	EnvoyFilters []EnvoyFilter `json:"envoyFilters"`
+}
+
+type EnvoyFilter string
+
+const (
+	EnvoyFilterCORS           EnvoyFilter = "envoy.filters.http.cors"
+	EnvoyFilterExtAuthz       EnvoyFilter = "envoy.filters.http.ext_authz"
+	EnvoyFilterBasicAuthn     EnvoyFilter = "envoy.filters.http.basic_authn"
+	EnvoyFilterOAuth2         EnvoyFilter = "envoy.filters.http.oauth2"
+	EnvoyFilterJWTAuthn       EnvoyFilter = "envoy.filters.http.jwt_authn"
+	EnvoyFilterFault          EnvoyFilter = "envoy.filters.http.fault"
+	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
+	EnvoyFilterRateLimit      EnvoyFilter = "envoy.filters.http.rate_limit"
+	EnvoyFilterRouter         EnvoyFilter = "envoy.filters.http.router"
+)
 
 type ProxyTelemetry struct {
 	// AccessLogs defines accesslog parameters for managed proxies.
