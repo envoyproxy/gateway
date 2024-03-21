@@ -103,6 +103,16 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 	}
 
+	if enablePrometheus(r.rateLimit) {
+		metricsPort := corev1.ServicePort{
+			Name:       "metrics",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       PrometheusPort,
+			TargetPort: intstr.IntOrString{IntVal: PrometheusPort},
+		}
+		ports = append(ports, metricsPort)
+	}
+
 	labels := rateLimitLabels()
 	kubernetesServiceSpec := &egv1a1.KubernetesServiceSpec{
 		Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),

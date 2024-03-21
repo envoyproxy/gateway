@@ -518,6 +518,10 @@ type JWT struct {
 //
 // +k8s:deepcopy-gen=true
 type OIDC struct {
+	// Name is a unique name for an OIDC configuration.
+	// The xds translator only generates one OAuth2 filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// The OIDC Provider configuration.
 	Provider OIDCProvider `json:"provider" yaml:"provider"`
 
@@ -567,6 +571,10 @@ type OIDCProvider struct {
 //
 // +k8s:deepcopy-gen=true
 type BasicAuth struct {
+	// Name is a unique name for an BasicAuth configuration.
+	// The xds translator only generates one basic auth filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// The username-password pairs in htpasswd format.
 	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
 }
@@ -575,6 +583,10 @@ type BasicAuth struct {
 //
 // +k8s:deepcopy-gen=true
 type ExtAuth struct {
+	// Name is a unique name for an ExtAuth configuration.
+	// The xds translator only generates one external authorization filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// GRPC defines the gRPC External Authorization service.
 	// Only one of GRPCService or HTTPService may be specified.
 	GRPC *GRPCExtAuthService `json:"grpc,omitempty"`
@@ -595,6 +607,14 @@ type ExtAuth struct {
 	// in HeadersToExtAuth or not.
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
+
+	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
+	// If FailOpen is set to true, the system allows the traffic to pass through.
+	// Otherwise, if it is set to false or not set (defaulting to false),
+	// the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.
+	// This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
+	// +optional
+	FailOpen *bool `json:"failOpen,omitempty"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
