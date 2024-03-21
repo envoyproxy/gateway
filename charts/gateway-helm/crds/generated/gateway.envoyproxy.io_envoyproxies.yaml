@@ -6976,7 +6976,9 @@ spec:
                     type: object
                 type: object
               tls:
-                description: TLS is the TLS configuration for the Envoy Proxy.
+                description: TLS is the TLS configuration for the Envoy proxy to use
+                  when connecting to backend services and external services, such
+                  as ExtAuth, ALS, OpenTelemetry, etc.
                 properties:
                   clientCertRef:
                     description: ClientCertRef defines the reference to a Kubernetes
