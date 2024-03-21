@@ -30,7 +30,7 @@ jobs:
       with:
         files: site/content/*
         config_file: ".github/markdown_lint_config.json"
-    
+
     - name: Install linkinator
       run: npm install -g linkinator
 
