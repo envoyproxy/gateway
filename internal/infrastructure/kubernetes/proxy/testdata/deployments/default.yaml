@@ -12,7 +12,6 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   progressDeadlineSeconds: 600
-  replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:

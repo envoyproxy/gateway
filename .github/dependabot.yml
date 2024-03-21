@@ -32,6 +32,9 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
+      go.opentelemetry.io:
+        patterns:
+          - "go.opentelemetry.io/*"
   - package-ecosystem: pip
     directory: /tools/src/codespell
     schedule:

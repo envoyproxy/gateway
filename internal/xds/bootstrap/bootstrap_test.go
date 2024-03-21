@@ -87,6 +87,14 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := GetRenderedBootstrapConfig(tc.proxyMetrics)
 			require.NoError(t, err)
+
+			if *overrideTestData {
+				// nolint:gosec
+				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0644)
+				require.NoError(t, err)
+				return
+			}
+
 			expected, err := readTestData(tc.name)
 			require.NoError(t, err)
 			assert.Equal(t, expected, got)
@@ -95,7 +103,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 }
 
 func readTestData(caseName string) (string, error) {
-	filename := path.Join("testdata", fmt.Sprintf("%s.yaml", caseName))
+	filename := path.Join("testdata", "render", fmt.Sprintf("%s.yaml", caseName))
 
 	b, err := os.ReadFile(filename)
 	if err != nil {

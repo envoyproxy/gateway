@@ -132,7 +132,6 @@ spec:
           name: statsd-exporter-config
           readOnly: true
       dnsPolicy: ClusterFirst
-      hostNetwork: true
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:

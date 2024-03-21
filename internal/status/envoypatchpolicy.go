@@ -6,6 +6,7 @@
 package status
 
 import (
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,32 +15,38 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func SetEnvoyPatchPolicyCondition(e *egv1a1.EnvoyPatchPolicy, conditionType gwv1a2.PolicyConditionType, status metav1.ConditionStatus, reason gwv1a2.PolicyConditionReason, message string) {
-	cond := newCondition(string(conditionType), status, string(reason), message, time.Now(), e.Generation)
-	e.Status.Conditions = MergeConditions(e.Status.Conditions, cond)
-}
-
-func SetEnvoyPatchPolicyProgrammedIfUnset(s *egv1a1.EnvoyPatchPolicyStatus, message string) {
+// SetProgrammedForEnvoyPatchPolicy sets programmed conditions for each ancestor reference in policy status if it is unset.
+func SetProgrammedForEnvoyPatchPolicy(s *gwv1a2.PolicyStatus) {
 	// Return early if Programmed condition is already set
-	for _, c := range s.Conditions {
-		if c.Type == string(egv1a1.PolicyConditionProgrammed) {
-			return
-		}
-		if c.Type == string(gwv1a2.PolicyConditionAccepted) && c.Status == metav1.ConditionFalse {
-			return
+	for _, ancestor := range s.Ancestors {
+		for _, c := range ancestor.Conditions {
+			if c.Type == string(egv1a1.PolicyConditionProgrammed) {
+				return
+			}
+			if c.Type == string(gwv1a2.PolicyConditionAccepted) && c.Status == metav1.ConditionFalse {
+				return
+			}
 		}
 	}
 
+	message := "Patches have been successfully applied."
 	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, time.Now(), 0)
-	s.Conditions = MergeConditions(s.Conditions, cond)
+	for i := range s.Ancestors {
+		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
 }
 
-func SetEnvoyPatchPolicyInvalid(s *egv1a1.EnvoyPatchPolicyStatus, message string) {
-	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), message, time.Now(), 0)
-	s.Conditions = MergeConditions(s.Conditions, cond)
+func SetTranslationErrorForEnvoyPatchPolicy(s *gwv1a2.PolicyStatus, errMsg string) {
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, time.Now(), 0)
+	for i := range s.Ancestors {
+		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
 }
 
-func SetEnvoyPatchPolicyResourceNotFound(s *egv1a1.EnvoyPatchPolicyStatus, message string) {
+func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwv1a2.PolicyStatus, notFoundResources []string) {
+	message := "Unable to find xds resources: " + strings.Join(notFoundResources, ",")
 	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, time.Now(), 0)
-	s.Conditions = MergeConditions(s.Conditions, cond)
+	for i := range s.Ancestors {
+		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
 }

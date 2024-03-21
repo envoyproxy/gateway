@@ -165,12 +165,20 @@ securityPolicies:
       name: httproute-2
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Secret default/client2-secret does not exist
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Secret default/client2-secret does not exist
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -203,18 +211,25 @@ securityPolicies:
       name: gateway-1
       namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Secret envoy-gateway/client1-secret does not exist
-      reason: Invalid
-      status: "False"
-      type: Accepted
-    - lastTransitionTime: null
-      message: 'This policy is being overridden by other securityPolicies for these
-        routes: [default/httproute-2]'
-      reason: Overridden
-      status: "True"
-      type: Overridden
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Secret envoy-gateway/client1-secret does not exist
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [default/httproute-2]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

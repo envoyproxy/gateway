@@ -59,7 +59,7 @@ var ClientTimeoutTest = suite.ConformanceTest{
 			httputils.AwaitConvergence(t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
 				suite.TimeoutConfig.MaxTimeToConsistency,
-				func(_ time.Duration) bool {
+				func(elapsed time.Duration) bool {
 					resp, err := client.Do(req)
 					if err != nil {
 						panic(err)
@@ -67,9 +67,13 @@ var ClientTimeoutTest = suite.ConformanceTest{
 					defer resp.Body.Close()
 
 					// return 408 instead of 400 when request timeout.
-					return http.StatusRequestTimeout == resp.StatusCode
+					if http.StatusRequestTimeout == resp.StatusCode {
+						return true
+					} else {
+						t.Logf("response status code: %d, (after %v) ", resp.StatusCode, elapsed)
+						return false
+					}
 				})
-
 		})
 	},
 }

@@ -31,3 +31,6 @@ vendor/
 
 # values.yaml file is generated from its template counterpart.
 charts/gateway-helm/values.yaml
+
+# VIM
+.*.swp

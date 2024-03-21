@@ -7,9 +7,11 @@ package runner
 
 import (
 	"context"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -82,6 +84,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					Namespace:               r.Namespace,
+					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -155,29 +158,42 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
 				}
+
+				// Skip updating status for policies with empty status
+				// They may have been skipped in this translation because
+				// their target is not found (not relevant)
+
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
 					backendTLSPolicy := backendTLSPolicy
 					key := utils.NamespacedName(backendTLSPolicy)
-					r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
+					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
+						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
+					}
 					delete(statusesToDelete.BackendTLSPolicyStatusKeys, key)
 				}
 
 				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
 					clientTrafficPolicy := clientTrafficPolicy
 					key := utils.NamespacedName(clientTrafficPolicy)
-					r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
+					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
+						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
+					}
 					delete(statusesToDelete.ClientTrafficPolicyStatusKeys, key)
 				}
 				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
 					backendTrafficPolicy := backendTrafficPolicy
 					key := utils.NamespacedName(backendTrafficPolicy)
-					r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
+					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
+						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
+					}
 					delete(statusesToDelete.BackendTrafficPolicyStatusKeys, key)
 				}
 				for _, securityPolicy := range result.SecurityPolicies {
 					securityPolicy := securityPolicy
 					key := utils.NamespacedName(securityPolicy)
-					r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
+						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
 			}
@@ -356,23 +372,10 @@ func (r *Runner) deleteAllStatusKeys() {
 // based on the difference between the current keys and the
 // new keys parameters passed to the function.
 func getIRKeysToDelete(curKeys, newKeys []string) []string {
-	var delKeys []string
-	remaining := make(map[string]bool)
+	curSet := sets.NewString(curKeys...)
+	newSet := sets.NewString(newKeys...)
 
-	// Add all current keys to the remaining map
-	for _, key := range curKeys {
-		remaining[key] = true
-	}
+	delSet := curSet.Difference(newSet)
 
-	// Delete newKeys from the remaining map
-	// to get keys that need to be deleted
-	for _, key := range newKeys {
-		delete(remaining, key)
-	}
-
-	for key := range remaining {
-		delKeys = append(delKeys, key)
-	}
-
-	return delKeys
+	return delSet.List()
 }

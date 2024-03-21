@@ -1,0 +1,124 @@
+gateways:
+- metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: envoy-gateway-system
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+infraIR:
+  envoy-gateway-system/eg:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway-system/eg/http
+        ports:
+        - containerPort: 10080
+          name: http
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: eg
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
+      name: envoy-gateway-system/eg
+xdsIR:
+  envoy-gateway-system/eg:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      name: envoy-gateway-system/eg/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/envoy-gateway-system/backend/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 3000
+            protocol: HTTP
+            weight: 1
+        hostname: www.example.com
+        isHTTP2: false
+        name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /

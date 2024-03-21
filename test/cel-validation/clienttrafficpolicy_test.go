@@ -203,46 +203,6 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "http3 enabled and ALPN protocols set",
-			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
-				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
-						},
-					},
-					HTTP3: &egv1a1.HTTP3Settings{},
-					TLS: &egv1a1.TLSSettings{
-						ALPNProtocols: []egv1a1.ALPNProtocol{
-							egv1a1.HTTPProtocolVersion2,
-							egv1a1.HTTPProtocolVersion1_1,
-						},
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": invalid object type, expected either Properties or AdditionalProperties with Allows=true and non-empty Schema evaluating rule: alpn protocols can't be set if HTTP/3 is enabled",
-			},
-		},
-		{
-			desc: "http3 enabled and ALPN protocols not set",
-			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
-				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
-						},
-					},
-					HTTP3: &egv1a1.HTTP3Settings{},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
 			desc: "http3 enabled and ALPN protocols not set with other TLS parameters set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{

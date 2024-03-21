@@ -75,11 +75,10 @@ func outputCerts(ctx context.Context, cli client.Client, cfg *config.Server, cer
 
 	if err != nil {
 		if errors.Is(err, kubernetes.ErrSecretExists) {
-			log.Info("exiting early", "reason", err)
-			return nil
+			log.Info(err.Error())
+		} else {
+			return fmt.Errorf("failed to create or update secrets: %w", err)
 		}
-
-		return fmt.Errorf("failed to create or update secrets: %w", err)
 	}
 
 	for i := range secrets {

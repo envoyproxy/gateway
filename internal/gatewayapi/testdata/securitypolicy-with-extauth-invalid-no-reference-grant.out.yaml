@@ -103,6 +103,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: false
       http:
         backendRef:
           name: http-backend
@@ -117,13 +118,20 @@ securityPolicies:
       name: gateway-1
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Backend ref to Service envoy-gateway/http-backend not permitted by
-        any ReferenceGrant
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Backend ref to Service envoy-gateway/http-backend not permitted by
+          any ReferenceGrant
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:

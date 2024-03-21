@@ -47,6 +47,7 @@ func TestTranslateXds(t *testing.T) {
 		dnsDomain                 string
 		requireSecrets            bool
 		requireEnvoyPatchPolicies bool
+		err                       bool
 	}{
 		{
 			name: "empty",
@@ -91,7 +92,14 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-dns-cluster",
 		},
 		{
+			name: "http-route-with-tls-system-truststore",
+		},
+		{
 			name:           "http-route-with-tlsbundle",
+			requireSecrets: true,
+		},
+		{
+			name:           "http-route-with-tlsbundle-multiple-certs",
 			requireSecrets: true,
 		},
 		{
@@ -176,22 +184,27 @@ func TestTranslateXds(t *testing.T) {
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
 			requireSecrets:            true,
+			err:                       true,
 		},
 		{
 			name:                      "jsonpatch-missing-resource",
 			requireEnvoyPatchPolicies: true,
+			err:                       true,
 		},
 		{
 			name:                      "jsonpatch-invalid-patch",
 			requireEnvoyPatchPolicies: true,
+			err:                       true,
 		},
 		{
 			name:                      "jsonpatch-add-op-without-value",
 			requireEnvoyPatchPolicies: true,
+			err:                       true,
 		},
 		{
 			name:                      "jsonpatch-move-op-with-value",
 			requireEnvoyPatchPolicies: true,
+			err:                       true,
 		},
 		{
 			name: "listener-tcp-keepalive",
@@ -215,7 +228,8 @@ func TestTranslateXds(t *testing.T) {
 			name: "jwt-single-route-single-match",
 		},
 		{
-			name: "oidc",
+			name:           "oidc",
+			requireSecrets: true,
 		},
 		{
 			name: "http-route-partial-invalid",
@@ -297,7 +311,7 @@ func TestTranslateXds(t *testing.T) {
 			}
 
 			tCtx, err := tr.Translate(ir)
-			if !strings.HasSuffix(tc.name, "partial-invalid") {
+			if !strings.HasSuffix(tc.name, "partial-invalid") && !tc.err {
 				require.NoError(t, err)
 			}
 
@@ -365,13 +379,13 @@ func TestTranslateXdsNegative(t *testing.T) {
 			name: "jsonpatch-invalid",
 		},
 		{
+			name: "jsonpatch-invalid-listener",
+		},
+		{
 			name: "accesslog-invalid",
 		},
 		{
 			name: "tracing-invalid",
-		},
-		{
-			name: "jsonpatch-invalid-listener",
 		},
 	}
 

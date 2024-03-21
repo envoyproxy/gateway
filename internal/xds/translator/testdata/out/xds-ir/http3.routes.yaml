@@ -12,7 +12,7 @@
       - append: true
         header:
           key: alt-svc
-          value: h3=":10443"; ma=86400
+          value: h3=":443"; ma=86400
       route:
         cluster: httproute/default/httproute-1/rule/0
         upgradeConfigs:

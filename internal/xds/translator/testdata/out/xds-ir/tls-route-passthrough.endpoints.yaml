@@ -1,4 +1,4 @@
-- clusterName: tls-passthrough-dest
+- clusterName: tls-passthrough-foo-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -15,4 +15,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: tls-passthrough-dest/backend/0
+      region: tls-passthrough-foo-dest/backend/0

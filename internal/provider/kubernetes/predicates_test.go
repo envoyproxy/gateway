@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -556,9 +557,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
-		mergeGateways: map[string]bool{
-			"test-mg": true,
-		},
+		mergeGateways:   sets.New[string]("test-mg"),
 	}
 
 	for _, tc := range testCases {
@@ -653,9 +652,7 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
-		mergeGateways: map[string]bool{
-			"test-mg": true,
-		},
+		mergeGateways:   sets.New[string]("test-mg"),
 	}
 
 	for _, tc := range testCases {

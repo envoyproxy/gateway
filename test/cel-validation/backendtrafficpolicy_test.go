@@ -809,6 +809,74 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "valid count of Global rate limit rules items",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+
+				rules := make([]egv1a1.RateLimitRule, 64)
+				rule := egv1a1.RateLimitRule{
+					Limit: egv1a1.RateLimitValue{
+						Requests: 10,
+						Unit:     "Minute",
+					},
+				}
+				for i := range rules {
+					rules[i] = rule
+				}
+
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: rules,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid count of Global rate limit rules items",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+
+				rules := make([]egv1a1.RateLimitRule, 65)
+				rule := egv1a1.RateLimitRule{
+					Limit: egv1a1.RateLimitValue{
+						Requests: 10,
+						Unit:     "Minute",
+					},
+				}
+				for i := range rules {
+					rules[i] = rule
+				}
+
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: rules,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`[spec.rateLimit.global.rules: Too many: 65: must have at most 64 items, <nil>: Invalid value: "null": some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
+			},
+		},
 	}
 
 	for _, tc := range cases {

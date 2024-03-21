@@ -177,6 +177,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
 	}
 
+	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
+		args = append(args, fmt.Sprintf("--drain-time-s %.0f", shutdownConfig.DrainTimeout.Seconds()))
+	}
+
 	if infra.Config != nil {
 		args = append(args, infra.Config.Spec.ExtraArgs...)
 	}

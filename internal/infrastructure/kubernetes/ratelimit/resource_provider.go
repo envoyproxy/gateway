@@ -103,6 +103,16 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 	}
 
+	if enablePrometheus(r.rateLimit) {
+		metricsPort := corev1.ServicePort{
+			Name:       "metrics",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       PrometheusPort,
+			TargetPort: intstr.IntOrString{IntVal: PrometheusPort},
+		}
+		ports = append(ports, metricsPort)
+	}
+
 	labels := rateLimitLabels()
 	kubernetesServiceSpec := &egv1a1.KubernetesServiceSpec{
 		Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
@@ -217,7 +227,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
-					HostNetwork:                   r.rateLimitDeployment.Pod.HostNetwork,
 					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,

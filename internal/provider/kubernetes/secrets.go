@@ -92,7 +92,11 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 // CreateOrUpdateSecrets creates the provided secrets if they don't exist or updates
 // them if they do.
 func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []corev1.Secret, update bool) ([]corev1.Secret, error) {
-	var tidySecrets []corev1.Secret
+	var (
+		tidySecrets     []corev1.Secret
+		existingSecrets []string
+	)
+
 	for i := range secrets {
 		secret := secrets[i]
 		current := new(corev1.Secret)
@@ -109,10 +113,10 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 			// Update if current value is different and update arg is set.
 		} else {
 			if !update {
-				return nil, fmt.Errorf("%s/%s: %w;"+
-					"Either update it manually or set overwriteControlPlaneCerts "+
-					"in the EnvoyGateway config", secret.Namespace, secret.Name, ErrSecretExists)
+				existingSecrets = append(existingSecrets, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name))
+				continue
 			}
+			fmt.Println()
 
 			if !reflect.DeepEqual(secret.Data, current.Data) {
 				if err := client.Update(ctx, &secret); err != nil {
@@ -121,6 +125,12 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 			}
 		}
 		tidySecrets = append(tidySecrets, secret)
+	}
+
+	if len(existingSecrets) > 0 {
+		return tidySecrets, fmt.Errorf("%v: %w;"+
+			"Either update the secrets manually or set overwriteControlPlaneCerts "+
+			"in the EnvoyGateway config", existingSecrets, ErrSecretExists)
 	}
 
 	return tidySecrets, nil

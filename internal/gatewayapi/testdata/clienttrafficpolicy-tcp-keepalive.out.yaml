@@ -17,12 +17,20 @@ clientTrafficPolicies:
       interval: 60s
       probes: 3
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: ClientTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
@@ -37,18 +45,25 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tcpKeepalive: {}
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: There are existing ClientTrafficPolicies that are overriding these
-        sections [http-1]
-      reason: Overridden
-      status: "True"
-      type: Overridden
-    - lastTransitionTime: null
-      message: ClientTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: There are existing ClientTrafficPolicies that are overriding these
+          sections [http-1]
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

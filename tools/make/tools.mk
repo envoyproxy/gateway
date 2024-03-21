@@ -63,3 +63,11 @@ tools/bin/$(notdir $(SHELLCHECK_TXZ)):
 	mkdir -p $(@D)
 	tar -C $(@D) -Jxmf $< --strip-components=1 shellcheck-v$(SHELLCHECK_VERSION)/shellcheck
 endif
+
+tools.clean: # Remove all tools
+	@$(LOG_TARGET)
+	rm -rf $(tools.bindir)
+
+.PHONY: clean
+clean: ## Remove all files that are created during builds.
+clean: tools.clean

@@ -77,6 +77,7 @@ type ProxyListener struct {
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
 type HTTP3Settings struct {
+	QUICPort int32 `json:"quicPort" yaml:"quicPort"`
 }
 
 // ListenerPort defines a network port of a listener.

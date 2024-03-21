@@ -1,0 +1,166 @@
+apiVersion: v1
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDQzCCAiugAwIBAgIBATANBgkqhkiG9w0BAQsFADBCMRMwEQYDVQQKEwpFbnZv
+    eVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBHYXRld2F5
+    IENBMCAXDTI0MDMxMDE1MzIxN1oYDzIxMjQwMzEwMTYzMjE3WjBCMRMwEQYDVQQK
+    EwpFbnZveVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBH
+    YXRld2F5IENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7ZFmGB4e
+    m1KdGEohAZBfqydAEGLDHJ1YyfHWdd+vBAevdW64bZx3pggJOtgCnePuFd02rDQS
+    dlsJlX/6mFtoQilo6wvxDSJRfaTDbtfTjw+7k8yfd/Jsmh0RWG+UeyI7Na9sXAz7
+    b57mpxsCoNowzeK5ETiOGGNWPcjENJkSnBarz5muN00xIZWBU+yN5PLJNxZvxpZJ
+    Ol/SSI8sno0e0PxAmp3fe7QaXiZj/TAGJPGuTJkUxrHqyZGJtYUxsS8A0dT1zBjj
+    izA5Dp+b5yzYo23Hh7BgpbZ7X4gsDThFuwCD6fHyepuv2zHPqvSsdqg2hAhDp91R
+    zrn7a9GxG2VSIwIDAQABo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUw
+    AwEB/zAdBgNVHQ4EFgQUUpP1aZ1M2KIuPPWrNPDV2c5CngowDQYJKoZIhvcNAQEL
+    BQADggEBAGSEkAVz+Z0qS4FmA0q4SCpIIq64bsdEjiUzev7pK1LEK0/Y28QBPixV
+    cUXfax18VPR9pls1JgXto9qY+C0hnRZic6611QTJlWK1p6dinQ/eDdYCBC+nv5xx
+    ssASwmplIxMvj3S1qF6dr7sMI2ZVD5HElTWdO19UBLyhiKKZW2KxDsYj+5NRwGFe
+    G+JuDgq7njUM8mdyYk0NehefdBUEUUCQtnwUtW95/429XwqQROuRDteGT9kjD+Y5
+    ea5mW4mfqLeuGJXZs9bdWjKKdLQPrn9IshPysWqz2Hz8dQ1f7N9/g8UWVSjd4cyx
+    S5EAolzVv0yB7wHCWCgfG/ckdOTUNnE=
+    -----END CERTIFICATE-----
+kind: ConfigMap
+metadata:
+  name: backend-tls-checks-certificate
+  namespace: gateway-conformance-infra
+---
+apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZVENDQWttZ0F3SUJBZ0lSQUpiK2x5QTJqZCtlUmRMTzR4Sm5kWVF3RFFZSktvWklodmNOQVFFTEJRQXcKUWpFVE1CRUdBMVVFQ2hNS1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN4TUhSMkYwWlhkaGVURVpNQmNHQTFVRQpBeE1RUlc1MmIza2dSMkYwWlhkaGVTQkRRVEFnRncweU5EQXpNVEF4TlRNeU1UZGFHQTh5TVRJME1ETXhNREUyCk16SXhOMW93SkRFUU1BNEdBMVVFQ2hNSFFXTnRaU0JEYnpFUU1BNEdBMVVFQXhNSFpHVm1ZWFZzZERDQ0FTSXcKRFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUtGUnI2cVV1WFN1N3J5bHcvVmZXbm1kM0RXWgpTcGxDUFR6QUh1V3NpOVVrbW5rTVhNOXN3Y1VQZFUyd2NNSHd1bDNpNGJwTlRkUGVWRG04K3JUVXNmaHMySWZuCmhHNW9WV0JnTkJXVEYzRnpiUmgvc3orK3p6MlBnZ0Fpb3NjYmEyVm5qaExyOUM3a0Q3QnRYNVlvSENGQ3lhT24Kem9WNVdNSnBBNHNCeGdOdkpXSU5aRUNnOUlmSWxSMDZMTGlNTXJCRTVRS2cvTG5EUkpuTEZEVFZCTDdzallpVQpZdVZtRWczMXJaOVpsNXViZ09xSU9uU2ROM2RNM1hhUnBCTWFGVXg5UDlQcmhjS3l5NVRkQ3g2MHBIYXMvaFIxCmFjcEp5VmdmRFVDdXNUUFphVFo1eXM0cmhib1l3WDN5cnZKN29lMHM4QmRZU2thT1NBTElDaU9PWGtVQ0F3RUEKQWFOdU1Hd3dEZ1lEVlIwUEFRSC9CQVFEQWdXZ01CTUdBMVVkSlFRTU1Bb0dDQ3NHQVFVRkJ3TUJNQXdHQTFVZApFd0VCL3dRQ01BQXdId1lEVlIwakJCZ3dGb0FVVXBQMWFaMU0yS0l1UFBXck5QRFYyYzVDbmdvd0ZnWURWUjBSCkJBOHdEWUlMWlhoaGJYQnNaUzVqYjIwd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFBMkk1MmhrcEwwTXZmejQKeDk3ZjV6dlR5a1VtRWhDSVowN0g0anM0WVg2a1hLWVBzRDBlaGJFbzZUSWgyMkpWMkpyWnRuaWhMQnRGQStuUQp2Zk9QcE1LRnJMUU1DWVozMk9Na045T1pWbmNyMmpQNzNhaE9SaWloaGVBczJYTUtybHZmVWVKTFJrSlBlSVB6CnR2TlVacWExMmZ4T0Jsdy9hV1NqVk9lRDVMVm5nUStrQksydGRoL08xSjFWRGgzdVU3RHNZUThmRm1UcWR6ZzYKUWhtbjhaTXFIS3lNeitOdkt1d1h5eEtyeFZKVEl1QzJXZHhGWlZZMzdtZzJ5Vm9OdFhpSFNQMXpxVWV4SHNEKwpzUDBsZy9jUDdlaitOY3Q5WnpudUZBc2U4cUNDZnlaL2hPQ2NCblZabG1GUFgzRCtJSEpVWUpGaWVkYndsZHljCmw1eG1jaFU9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcFFJQkFBS0NBUUVBb1ZHdnFwUzVkSzd1dktYRDlWOWFlWjNjTlpsS21VSTlQTUFlNWF5TDFTU2FlUXhjCnoyekJ4UTkxVGJCd3dmQzZYZUxodWsxTjA5NVVPYno2dE5TeCtHelloK2VFYm1oVllHQTBGWk1YY1hOdEdIK3oKUDc3UFBZK0NBQ0tpeHh0clpXZU9FdXYwTHVRUHNHMWZsaWdjSVVMSm82Zk9oWGxZd21rRGl3SEdBMjhsWWcxawpRS0QwaDhpVkhUb3N1SXd5c0VUbEFxRDh1Y05FbWNzVU5OVUV2dXlOaUpSaTVXWVNEZld0bjFtWG01dUE2b2c2CmRKMDNkMHpkZHBHa0V4b1ZUSDAvMCt1RndyTExsTjBMSHJTa2RxeitGSFZweWtuSldCOE5RSzZ4TTlscE5ubksKeml1RnVoakJmZkt1OG51aDdTendGMWhLUm81SUFzZ0tJNDVlUlFJREFRQUJBb0lCQVFDVGlZUGh2TGVJa2R6aQpSN0RhbnVTK1NiUDJpVVlDdU9RTXhhRDhhVHhTS1hIbHQzckNjak1kcVMrZFovc1lSTFFOM2N5WWVNN3ZNRzFUCmlSUzVnYlZyQVJGZjZrdmlOaVd2U1EwWmxqZGdtVEp6cjRjZWk4STZDUi9hUTlNZnltSUVraHNNRHlSNkpqWjcKSXV6REJkZ0VTM0xpN0R3ak1vSU0rOEl6eGVGMWpTT1ErTjlLcTB3QzMzVzFuOVdIYXZWcWZvcjI0bmVySG9FcwozNmlUMncvdkU1dFJBTFlEbjh6MFp5YUM1d3Nnb3FyTG5UWXlMcnVKWnNGa1NxN25GWEE3cjhXL0dLQjBoL3ZaCmNzYkRlWU1WMjJNckdRTzhYSlAwM3J0cm9DQWJmUUhRd3lEbnpsTFJ3blNGRmhjV0F5UW9qbkozb0RQbzhZaXoKam1meVd5WlpBb0dCQU0vZGtqMGhFZm05SHBBL1dyTGVEb0V5WWtKL3N1R3RyWlpSNS9INnJieHphQ2FlQ3B0UApZQ25JcnBoMjRVYWFvaXFJY0pnazRXRjBmU3RhRnh0SkxSYXpBVElUUFlCZjF0OEEwYkhjN3UxMExiWlZkMG5uCk1lWVJPYlhzQXlvdmxNcm1ZclBPWWFXSEtJL1oyT3NLeC83UkhTcnEwZm1ZcUFYSXpzK2V1Ryt6QW9HQkFNYXMKem9YdlJwVDZGNndYaU5QemFqamc5MHJFMFhZZ0g3VkEvWHJsbUp5MVFRYy8rZzJ1ZXVYMGJ5aVhYY0FMY3BINAoybFlYcEZaelNPRkd6Z01DMEtuQkJyWmxsYWIweUczbWhsWjRtbkFhbmtSUFh4bWpDdmgvZmtkYStlQ1RCMFdHCjBOY3RQSFVvSk9GNWpLNmtxVy9rWVpkWVRPV1FjczNybURFWCtENG5Bb0dCQUwwdkhRenp6MGRyMzZoTGNRSUEKWmxVaUJSb2UzVERYQUhraWZLYllqMDFJQUErOW9VdXZWNGRQOWRBZnluS1hCR2NQbk9Kc0ZwQzdFN3prRnNtbgp0UmpHdkp6VnRCRGxxVXQzbEdKOEFSMHVzdmdUR3ltdytOSTY5VHBrM3BDRGs3bURLMndZdHZpUFpkUmU0alV4CnI4cDBpa1pvUjhrU0xrSnRmQVNzb1pKUEFvR0FWSTk4bjNrR082WnVxT3FqYkVMd2RTRWJZQkdCYlp1aW8wejAKRm5qZWllU0R0d2c5NzlEUnNrcGxmWXRmZGJ2cG1jT25lbms1a3lvaVhPLzhBMEFSZkE4U1FsUGViRjlIWjY5MApnaDEyN2p3R0hPRURneS9vSFhoMlVQeWgyam42SUZlUFQrYUxFdnB4S0I3S0NCTkJvc1E3M1dUUjVldWpVWTN6CkN3SSt3SVVDZ1lFQXJVQ0k4cng3MVd4S3A0dnNObTJpM2JlT3lYa3dVaFhKUmhmL0cwZk5vc2FhT0RvVEdNT1oKVlRRci9hVWJlQ2pWMlZENTEyVkJEQlZnYUNnZ1ZZS3pSMXpJSDFlMXZzVjhQVjN1Snh0Q2FLT3daTHV4OS9HQQp0QzJOKzFTY05GWkxtU3Z0MzU2WG5EL3VwRUcyeVMydmFURDU1K3FVUlVFWk1TWDlPdFpSL2JBPQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+kind: Secret
+metadata:
+  name: backend-tls-checks-certificate
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tls-backend-2
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: tls-backend-2
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8443
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tls-backend-2
+  namespace: gateway-conformance-infra
+  labels:
+    app: tls-backend-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tls-backend-2
+  template:
+    metadata:
+      labels:
+        app: tls-backend-2
+    spec:
+      containers:
+        - name: tls-backend
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /etc/secret-volume
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: tls-backend-2
+            - name: TLS_SERVER_CERT
+              value: /etc/secret-volume/crt
+            - name: TLS_SERVER_PRIVKEY
+              value: /etc/secret-volume/key
+          resources:
+            requests:
+              cpu: 10m
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: backend-tls-checks-certificate
+            items:
+              - key: tls.crt
+                path: crt
+              - key: tls.key
+                path: key
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: ''
+    kind: Service
+    name: tls-backend-2
+    sectionName: "443"
+  tls:
+    caCertRefs:
+      - name: backend-tls-checks-certificate
+        group: ''
+        kind: ConfigMap
+    hostname: example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-backend-tls
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-tls
+      backendRefs:
+        - name: tls-backend-2
+          port: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tls-backend-2-no-policy
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: tls-backend-2
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-without-backend-tls
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-tls-without-policy
+      backendRefs:
+        - name: tls-backend-2-no-policy
+          port: 443

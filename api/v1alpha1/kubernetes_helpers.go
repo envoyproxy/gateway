@@ -17,12 +17,6 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// DefaultKubernetesDeploymentReplicas returns the default replica settings.
-func DefaultKubernetesDeploymentReplicas() *int32 {
-	repl := int32(DefaultDeploymentReplicas)
-	return &repl
-}
-
 // DefaultKubernetesDeploymentStrategy returns the default deployment strategy settings.
 func DefaultKubernetesDeploymentStrategy() *appv1.DeploymentStrategy {
 	return &appv1.DeploymentStrategy{
@@ -38,7 +32,6 @@ func DefaultKubernetesContainerImage(image string) *string {
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
 func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
-		Replicas:  DefaultKubernetesDeploymentReplicas(),
 		Strategy:  DefaultKubernetesDeploymentStrategy(),
 		Pod:       DefaultKubernetesPod(),
 		Container: DefaultKubernetesContainer(image),
@@ -96,10 +89,6 @@ func GetKubernetesServiceExternalTrafficPolicy(serviceExternalTrafficPolicy Serv
 
 // defaultKubernetesDeploymentSpec fill a default KubernetesDeploymentSpec if unspecified.
 func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(image string) {
-	if deployment.Replicas == nil {
-		deployment.Replicas = DefaultKubernetesDeploymentReplicas()
-	}
-
 	if deployment.Strategy == nil {
 		deployment.Strategy = DefaultKubernetesDeploymentStrategy()
 	}
@@ -121,6 +110,7 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 	}
 }
 
+// setDefault fill a default HorizontalPodAutoscalerSpec if unspecified
 func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 	if len(hpa.Metrics) == 0 {
 		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()

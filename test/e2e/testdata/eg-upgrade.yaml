@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-backend-eg-upgrade
+  namespace: gateway-upgrade-infra
+spec:
+  parentRefs:
+  - name: ha-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /eg-upgrade
+    backendRefs:
+    - name: infra-backend
+      port: 8080

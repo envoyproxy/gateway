@@ -279,7 +279,6 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
       dnsPolicy: ClusterFirst
-      hostNetwork: true
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:

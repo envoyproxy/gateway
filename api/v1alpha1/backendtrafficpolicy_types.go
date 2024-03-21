@@ -31,7 +31,7 @@ type BackendTrafficPolicy struct {
 	Spec BackendTrafficPolicySpec `json:"spec"`
 
 	// status defines the current status of BackendTrafficPolicy.
-	Status BackendTrafficPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // spec defines the desired state of BackendTrafficPolicy.
@@ -96,17 +96,6 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	Compression []*Compression `json:"compression,omitempty"`
-}
-
-// BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
-type BackendTrafficPolicyStatus struct {
-	// Conditions describe the current conditions of the BackendTrafficPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

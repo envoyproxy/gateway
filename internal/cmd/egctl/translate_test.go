@@ -183,7 +183,7 @@ func TestTranslate(t *testing.T) {
 			to:           "xds",
 			output:       yamlOutput,
 			resourceType: string(AllEnvoyConfigType),
-			expect:       true,
+			expect:       false,
 		},
 		{
 			name:      "default-resources",
@@ -191,6 +191,13 @@ func TestTranslate(t *testing.T) {
 			to:        "gateway-api,xds",
 			expect:    true,
 			extraArgs: []string{"--add-missing-resources"},
+		},
+		{
+			name:   "quickstart",
+			from:   "gateway-api",
+			to:     "ir",
+			output: yamlOutput,
+			expect: true,
 		},
 		{
 			name:         "quickstart",

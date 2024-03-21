@@ -32,7 +32,7 @@ type EnvoyPatchPolicy struct {
 	Spec EnvoyPatchPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyPatchPolicy.
-	Status EnvoyPatchPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
@@ -123,17 +123,6 @@ type JSONPatchOperation struct {
 	Value *apiextensionsv1.JSON `json:"value,omitempty"`
 }
 
-// EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy
-type EnvoyPatchPolicyStatus struct {
-	// Conditions describe the current conditions of the EnvoyPatchPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
 const (
 	// PolicyConditionProgrammed indicates whether the policy has been translated
 	// and ready to be programmed into the data plane.
@@ -157,7 +146,7 @@ const (
 	// is syntactically or semantically invalid.
 	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
 
-	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
+	// PolicyReasonResourceNotFound is used with the "Programmed" condition when the
 	// policy cannot find the resource type to patch to.
 	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
 

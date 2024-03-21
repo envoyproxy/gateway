@@ -126,10 +126,6 @@ type KubernetesPodSpec struct {
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
-	// HostNetwork, If this is set to true, the pod will use host's network namespace.
-	// +optional
-	HostNetwork bool `json:"hostNetwork,omitempty"`
-
 	// ImagePullSecrets is an optional list of references to secrets
 	// in the same namespace to use for pulling any of the images used by this PodSpec.
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
@@ -348,6 +344,8 @@ const (
 )
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
+// When HPA is enabled, it is recommended that the value in `KubernetesDeploymentSpec.replicas` be removed, otherwise
+// Envoy Gateway will revert back to this value every time reconciliation occurs.
 // See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 //
 // +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
