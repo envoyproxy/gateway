@@ -968,7 +968,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterOrder](#filterorder)_ |  true  | FilterOrder defines the default order of filters in the filter chain. |
+| `filterOrder` | _[FilterOrder](#filterorder)_ |  true  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain. |
 
 
 
@@ -1142,7 +1142,7 @@ _Appears in:_
 
 
 
-FilterOrder defines the order of filters in the HCM filter chain for Envoy proxy. If unspecified, the default order of filters is applied. Default order of filters: - envoy.filters.http.cors - envoy.filters.http.ext_authz - envoy.filters.http.basic_authn - envoy.filters.http.oauth2 - envoy.filters.http.jwt_authn - envoy.filters.http.fault - envoy.filters.http.local_ratelimit - envoy.filters.http.rate_limit - envoy.filters.http.router
+FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain. If unspecified, the default order of filters is applied. Default order of filters: - envoy.filters.http.cors - envoy.filters.http.ext_authz - envoy.filters.http.basic_authn - envoy.filters.http.oauth2 - envoy.filters.http.jwt_authn - envoy.filters.http.fault - envoy.filters.http.local_ratelimit - envoy.filters.http.rate_limit - envoy.filters.http.router
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)

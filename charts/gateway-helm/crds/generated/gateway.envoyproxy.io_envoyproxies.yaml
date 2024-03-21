@@ -82,8 +82,8 @@ spec:
                   type: string
                 type: array
               filterOrder:
-                description: FilterOrder defines the default order of filters in the
-                  filter chain.
+                description: FilterOrder defines the order of filters in the Envoy
+                  proxy's HTTP filter chain.
                 properties:
                   envoyFilters:
                     description: EnvoyFilters defines the order of filters in the
@@ -91,6 +91,16 @@ spec:
                       in which they will be applied.
                     items:
                       description: EnvoyFilter defines the type of Envoy HTTP filter.
+                      enum:
+                      - envoy.filters.http.cors
+                      - envoy.filters.http.ext_authz
+                      - envoy.filters.http.basic_authn
+                      - envoy.filters.http.oauth2
+                      - envoy.filters.http.jwt_authn
+                      - envoy.filters.http.fault
+                      - envoy.filters.http.local_ratelimit
+                      - envoy.filters.http.rate_limit
+                      - envoy.filters.http.routerfilters.http.router
                       type: string
                     maxItems: 9
                     minItems: 9
