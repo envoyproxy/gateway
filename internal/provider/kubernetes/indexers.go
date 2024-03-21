@@ -20,25 +20,25 @@ import (
 )
 
 const (
-	classGatewayIndex          = "classGatewayIndex"
-	gatewayTLSRouteIndex       = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex      = "gatewayHTTPRouteIndex"
-	gatewayGRPCRouteIndex      = "gatewayGRPCRouteIndex"
-	gatewayTCPRouteIndex       = "gatewayTCPRouteIndex"
-	gatewayUDPRouteIndex       = "gatewayUDPRouteIndex"
-	secretGatewayIndex         = "secretGatewayIndex"
-	targetRefGrantRouteIndex   = "targetRefGrantRouteIndex"
-	backendHTTPRouteIndex      = "backendHTTPRouteIndex"
-	backendGRPCRouteIndex      = "backendGRPCRouteIndex"
-	backendTLSRouteIndex       = "backendTLSRouteIndex"
-	backendTCPRouteIndex       = "backendTCPRouteIndex"
-	backendUDPRouteIndex       = "backendUDPRouteIndex"
-	secretSecurityPolicyIndex  = "secretSecurityPolicyIndex"
-	backendSecurityPolicyIndex = "backendSecurityPolicyIndex"
-	configMapCtpIndex          = "configMapCtpIndex"
-	secretCtpIndex             = "secretCtpIndex"
-	configMapBtlsIndex         = "configMapBtlsIndex"
-	envoyExtensionPolicyIndex  = "backendSecurityPolicyIndex"
+	classGatewayIndex                = "classGatewayIndex"
+	gatewayTLSRouteIndex             = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex            = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex            = "gatewayGRPCRouteIndex"
+	gatewayTCPRouteIndex             = "gatewayTCPRouteIndex"
+	gatewayUDPRouteIndex             = "gatewayUDPRouteIndex"
+	secretGatewayIndex               = "secretGatewayIndex"
+	targetRefGrantRouteIndex         = "targetRefGrantRouteIndex"
+	backendHTTPRouteIndex            = "backendHTTPRouteIndex"
+	backendGRPCRouteIndex            = "backendGRPCRouteIndex"
+	backendTLSRouteIndex             = "backendTLSRouteIndex"
+	backendTCPRouteIndex             = "backendTCPRouteIndex"
+	backendUDPRouteIndex             = "backendUDPRouteIndex"
+	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
+	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
+	configMapCtpIndex                = "configMapCtpIndex"
+	secretCtpIndex                   = "secretCtpIndex"
+	configMapBtlsIndex               = "configMapBtlsIndex"
+	backendEnvoyExtensionPolicyIndex = "backendSecurityPolicyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -521,7 +521,7 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 	var err error
 
 	if err = mgr.GetFieldIndexer().IndexField(
-		ctx, &v1alpha1.SecurityPolicy{}, envoyExtensionPolicyIndex,
+		ctx, &v1alpha1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex,
 		backendEnvoyExtensionPolicyIndexFunc); err != nil {
 		return err
 	}
