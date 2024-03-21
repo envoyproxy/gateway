@@ -16,6 +16,7 @@ rules:
   - get
   - update
   - delete
+  - patch
 - apiGroups:
   - apps
   resources:
@@ -25,6 +26,7 @@ rules:
   - get
   - update
   - delete
+  - patch
 - apiGroups:
   - autoscaling
   resources:
@@ -34,6 +36,7 @@ rules:
   - get
   - update
   - delete
+  - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
