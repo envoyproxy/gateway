@@ -99,7 +99,7 @@ spec:
                     - type: integer
                     - type: string
                     description: ConnectionBufferLimit provides configuration for
-                      the maximum buffer size for incoming connections.
+                      the maximum buffer size for each incoming connection.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   limit:
