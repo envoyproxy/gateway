@@ -5,10 +5,6 @@
 
 package v1alpha1
 
-import (
-	"github.com/golang/protobuf/ptypes/any"
-)
-
 // Wasm defines a wasm extension.
 type Wasm struct {
 	// Name is a unique name for this Wasm extension. It is used to identify the
@@ -33,7 +29,17 @@ type Wasm struct {
 	Code WasmCodeSource `json:"code"`
 
 	// Configuration for the wasm code.
-	Config any.Any `json:"config"`
+	Config *WasmConfig `json:"config"`
+}
+
+// WasmConfig defines the configuration for the wasm code.
+type WasmConfig struct {
+	// A URL/resource name that uniquely identifies the type of the protocol buffer message.
+	// For example: "type.googleapis.com/google.protobuf.StringValue"
+	TypeUrl string `json:"typeUrl"`
+
+	// The protocol buffer message in json format.
+	Value string `json:"payload"`
 }
 
 // WasmCodeSource defines the source of the wasm code.
