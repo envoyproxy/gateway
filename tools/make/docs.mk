@@ -86,8 +86,10 @@ docs-check-links:
 	@$(LOG_TARGET)
 	# Check for broken links, right now we are focusing on the v1.0.0
     # TODO: remove latest from ignore list
-    # TODO: remove github.com example.com from ignore list
-	linkinator site/public/ -r --concurrency 25 -s "github.com example.com _print latest v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0 v0.1.0"
+    # github.com does not allow access too often, there're a lot of 429 errors
+    # TODO: find a way to remove github.com from ignore list
+    # TODO: example.com is not a valid domain, we should remove it from ignore list
+	linkinator site/public/ -r --concurrency 25 -s "latest github.com example.com _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0 v0.1.0"
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
