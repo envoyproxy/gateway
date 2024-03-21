@@ -102,12 +102,11 @@ type EnvoyProxySpec struct {
 // - envoy.filters.http.fault
 // - envoy.filters.http.local_ratelimit
 // - envoy.filters.http.rate_limit
-// - envoy.filters.http.router
 type FilterOrder struct {
 	// EnvoyFilters defines the order of filters in the filter chain.
 	// The order of filters in the list is the order in which they will be applied.
-	// +kubebuilder:validation:MinItems=9
-	// +kubebuilder:validation:MaxItems=9
+	// +kubebuilder:validation:MinItems=8
+	// +kubebuilder:validation:MaxItems=8
 	EnvoyFilters []EnvoyFilter `json:"envoyFilters"`
 }
 
@@ -124,7 +123,6 @@ const (
 	EnvoyFilterFault          EnvoyFilter = "envoy.filters.http.fault"
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
 	EnvoyFilterRateLimit      EnvoyFilter = "envoy.filters.http.rate_limit"
-	EnvoyFilterRouter         EnvoyFilter = "envoy.filters.http.router"
 )
 
 type ProxyTelemetry struct {
