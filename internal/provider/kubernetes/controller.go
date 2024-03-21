@@ -1452,11 +1452,11 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
 	// we don't return errors from this method, because we want to continue reconciling
 	// the rest of the EnvoyExtensionPolicies despite that one reference is invalid. This
-	// allows Envoy Gateway to continue serving traffic even if some SecurityPolicies
+	// allows Envoy Gateway to continue serving traffic even if some EnvoyExtensionPolicies
 	// are invalid.
 	//
-	// This SecurityPolicy will be marked as invalid in its status when translating
-	// to IR because the referenced secret can't be found.
+	// This EnvoyExtensionPolicy will be marked as invalid in its status when translating
+	// to IR because the referenced service can't be found.
 	for _, policy := range resourceTree.EnvoyExtensionPolicies {
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		for _, ep := range policy.Spec.ExtProc {
