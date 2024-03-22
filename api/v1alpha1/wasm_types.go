@@ -5,6 +5,10 @@
 
 package v1alpha1
 
+import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+)
+
 // Wasm defines a wasm extension.
 type Wasm struct {
 	// Name is a unique name for this Wasm extension. It is used to identify the
@@ -28,8 +32,9 @@ type Wasm struct {
 	// Code is the wasm code for the extension.
 	Code WasmCodeSource `json:"code"`
 
-	// Configuration for the wasm code.
-	Config *WasmConfig `json:"config"`
+	// Config is the configuration for the Wasm extension.
+	// This configuration will be passed as a JSON string to the Wasm extension.
+	Config *apiextensionsv1.JSON `json:"config"`
 
 	// InsertBefore is the name of the filter that this Wasm extension should be
 	// inserted before.
@@ -39,17 +44,7 @@ type Wasm struct {
 	// inserted before the router filter.
 	//
 	// If not specified, this Wasm extension will be inserted before the router filter.
-	InsertBefore *EnvoyFilter `json:"insertBeforeFilter"`
-}
-
-// WasmConfig defines the configuration for the wasm code.
-type WasmConfig struct {
-	// A URL/resource name that uniquely identifies the type of the protocol buffer message.
-	// For example: "type.googleapis.com/google.protobuf.StringValue"
-	TypeUrl string `json:"typeUrl"`
-
-	// The protocol buffer message in json format.
-	Value string `json:"payload"`
+	//InsertBefore *EnvoyFilter `json:"insertBeforeFilter"`
 }
 
 // WasmCodeSource defines the source of the wasm code.

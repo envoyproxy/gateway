@@ -44,71 +44,6 @@ spec:
           spec:
             description: Spec defines the desired state of EnvoyExtensionPolicy.
             properties:
-              extensions:
-                description: WASM is a list of Wasm extensions to be loaded by the
-                  Gateway. Order matters, as the extensions will be loaded in the
-                  order they are defined in this list.
-                items:
-                  description: Wasm defines a wasm extension.
-                  properties:
-                    code:
-                      description: Code is the wasm code for the extension.
-                      properties:
-                        ConfigMap:
-                          description: "ConfigMap is the name of the ConfigMap containing
-                            the wasm code. \n The key in the ConfigMap should be the
-                            name of the Wasm. For example, if the Wasm is named \"my-wasm-extension\",
-                            the ConfigMap should have a key named \"my-wasm-extension\"
-                            and the value should be the wasm code."
-                          type: string
-                        http:
-                          description: "HTTP is the HTTP URL containing the wasm code.
-                            \n Note that the HTTP server must be accessible from the
-                            Envoy proxy."
-                          type: string
-                      type: object
-                    config:
-                      description: Configuration for the wasm code.
-                      properties:
-                        payload:
-                          description: The protocol buffer message in json format.
-                          type: string
-                        typeUrl:
-                          description: 'A URL/resource name that uniquely identifies
-                            the type of the protocol buffer message. For example:
-                            "type.googleapis.com/google.protobuf.StringValue"'
-                          type: string
-                      required:
-                      - payload
-                      - typeUrl
-                      type: object
-                    name:
-                      description: Name is a unique name for this Wasm extension.
-                        It is used to identify the Wasm extension if multiple extensions
-                        are handled by the same vm_id and root_id. It's also used
-                        for logging/debugging.
-                      type: string
-                    rootID:
-                      description: RootID is a unique ID for a set of extensions in
-                        a VM which will share a RootContext and Contexts if applicable
-                        (e.g., an Wasm HttpFilter and an Wasm AccessLog). If left
-                        blank, all extensions with a blank root_id with the same vm_id
-                        will share Context(s).
-                      type: string
-                    vmID:
-                      description: "VmID is an ID that will be used along with a hash
-                        of the wasm code to determine which VM will be used to load
-                        the Wasm extension. All extensions that have the same vm_id
-                        and code will use the same VM. \n Note that sharing a VM between
-                        plugins can reduce memory utilization and make sharing of
-                        data easier, but it may have security implications."
-                      type: string
-                  required:
-                  - code
-                  - config
-                  - name
-                  type: object
-                type: array
               priority:
                 description: Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices
                   are applied to the same TargetRef, extensions will execute in the
@@ -173,6 +108,60 @@ spec:
                     'TCPRoute', 'TLSRoute']
                 - message: this policy does not yet support the sectionName field
                   rule: '!has(self.sectionName)'
+              wasm:
+                description: WASM is a list of Wasm extensions to be loaded by the
+                  Gateway. Order matters, as the extensions will be loaded in the
+                  order they are defined in this list.
+                items:
+                  description: Wasm defines a wasm extension.
+                  properties:
+                    code:
+                      description: Code is the wasm code for the extension.
+                      properties:
+                        ConfigMap:
+                          description: "ConfigMap is the name of the ConfigMap containing
+                            the wasm code. \n The key in the ConfigMap should be the
+                            name of the Wasm. For example, if the Wasm is named \"my-wasm-extension\",
+                            the ConfigMap should have a key named \"my-wasm-extension\"
+                            and the value should be the wasm code."
+                          type: string
+                        http:
+                          description: "HTTP is the HTTP URL containing the wasm code.
+                            \n Note that the HTTP server must be accessible from the
+                            Envoy proxy."
+                          type: string
+                      type: object
+                    config:
+                      description: Config is the configuration that will be passed
+                        on to the Wasm extension when it is loaded.
+                      x-kubernetes-preserve-unknown-fields: true
+                    name:
+                      description: Name is a unique name for this Wasm extension.
+                        It is used to identify the Wasm extension if multiple extensions
+                        are handled by the same vm_id and root_id. It's also used
+                        for logging/debugging.
+                      type: string
+                    rootID:
+                      description: RootID is a unique ID for a set of extensions in
+                        a VM which will share a RootContext and Contexts if applicable
+                        (e.g., an Wasm HttpFilter and an Wasm AccessLog). If left
+                        blank, all extensions with a blank root_id with the same vm_id
+                        will share Context(s).
+                      type: string
+                    vmID:
+                      description: "VmID is an ID that will be used along with a hash
+                        of the wasm code to determine which VM will be used to load
+                        the Wasm extension. All extensions that have the same vm_id
+                        and code will use the same VM. \n Note that sharing a VM between
+                        plugins can reduce memory utilization and make sharing of
+                        data easier, but it may have security implications."
+                      type: string
+                  required:
+                  - code
+                  - config
+                  - name
+                  type: object
+                type: array
             required:
             - targetRef
             type: object

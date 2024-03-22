@@ -532,7 +532,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `priority` | _integer_ |  false  | Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices are applied to the same TargetRef, extensions will execute in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
-| `extensions` | _[Wasm](#wasm) array_ |  false  | WASM is a list of Wasm extensions to be loaded by the Gateway. Order matters, as the extensions will be loaded in the order they are defined in this list. |
+| `wasm` | _[Wasm](#wasm) array_ |  false  | WASM is a list of Wasm extensions to be loaded by the Gateway. Order matters, as the extensions will be loaded in the order they are defined in this list. |
 
 
 #### EnvoyGateway
@@ -2627,7 +2627,7 @@ _Appears in:_
 | `vmID` | _string_ |  true  | VmID is an ID that will be used along with a hash of the wasm code to determine which VM will be used to load the Wasm extension. All extensions that have the same vm_id and code will use the same VM. <br /><br /> Note that sharing a VM between plugins can reduce memory utilization and make sharing of data easier, but it may have security implications. |
 | `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog). If left blank, all extensions with a blank root_id with the same vm_id will share Context(s). |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
-| `config` | _[WasmConfig](#wasmconfig)_ |  true  | Configuration for the wasm code. |
+| `config` | _[JSON](#json)_ |  true  | Config is the configuration for the Wasm extension. This configuration will be passed as a JSON string to the Wasm extension. |
 
 
 #### WasmCodeSource
@@ -2643,21 +2643,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `ConfigMap` | _string_ |  true  | ConfigMap is the name of the ConfigMap containing the wasm code. <br /><br /> The key in the ConfigMap should be the name of the Wasm. For example, if the Wasm is named "my-wasm-extension", the ConfigMap should have a key named "my-wasm-extension" and the value should be the wasm code. |
 | `http` | _string_ |  true  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
-
-
-#### WasmConfig
-
-
-
-WasmConfig defines the configuration for the wasm code.
-
-_Appears in:_
-- [Wasm](#wasm)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `typeUrl` | _string_ |  true  | A URL/resource name that uniquely identifies the type of the protocol buffer message. For example: "type.googleapis.com/google.protobuf.StringValue" |
-| `payload` | _string_ |  true  | The protocol buffer message in json format. |
 
 
 #### XDSTranslatorHook
