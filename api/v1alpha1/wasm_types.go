@@ -36,6 +36,17 @@ type Wasm struct {
 	// This configuration will be passed as a JSON string to the Wasm extension.
 	Config *apiextensionsv1.JSON `json:"config"`
 
+	// FailOpen is a switch used to control the behavior when a fatal error occurs
+	// during the initialization or the execution of the Wasm extension.
+	// If FailOpen is set to true, the system bypasses the Wasm extension and
+	// allows the traffic to pass through. Otherwise, if it is set to false or
+	// not set (defaulting to false), the system blocks the traffic and returns
+	// an HTTP 5xx error.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	FailOpen *bool `json:"failOpen,omitempty"`
+
 	// InsertBefore is the name of the filter that this Wasm extension should be
 	// inserted before.
 	// If the specified filter is not found in the filter chain, this Wasm extension
