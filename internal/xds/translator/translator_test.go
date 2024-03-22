@@ -294,6 +294,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "retry-partial-invalid",
 		},
+		{
+			name: "ext-proc",
+		},
 	}
 
 	for _, tc := range testCases {
