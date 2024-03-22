@@ -16,13 +16,13 @@ type Wasm struct {
 	// It's also used for logging/debugging.
 	Name string `json:"name"`
 
-	// VmID is an ID that will be used along with a hash of the wasm code to
+	// VMID is an ID that will be used along with a hash of the wasm code to
 	// determine which VM will be used to load the Wasm extension. All extensions
 	// that have the same vm_id and code will use the same VM.
 	//
 	// Note that sharing a VM between plugins can reduce memory utilization and
 	// make sharing of data easier, but it may have security implications.
-	VmID *string `json:"vmID,omitempty"`
+	VMID *string `json:"vmID,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
@@ -55,7 +55,7 @@ type Wasm struct {
 	// inserted before the router filter.
 	//
 	// If not specified, this Wasm extension will be inserted before the router filter.
-	//InsertBefore *EnvoyFilter `json:"insertBeforeFilter"`
+	// InsertBefore *EnvoyFilter `json:"insertBeforeFilter"`
 }
 
 // WasmCodeSource defines the source of the wasm code.

@@ -2624,10 +2624,11 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name is a unique name for this Wasm extension. It is used to identify the Wasm extension if multiple extensions are handled by the same vm_id and root_id. It's also used for logging/debugging. |
-| `vmID` | _string_ |  true  | VmID is an ID that will be used along with a hash of the wasm code to determine which VM will be used to load the Wasm extension. All extensions that have the same vm_id and code will use the same VM. <br /><br /> Note that sharing a VM between plugins can reduce memory utilization and make sharing of data easier, but it may have security implications. |
+| `vmID` | _string_ |  true  | VMID is an ID that will be used along with a hash of the wasm code to determine which VM will be used to load the Wasm extension. All extensions that have the same vm_id and code will use the same VM. <br /><br /> Note that sharing a VM between plugins can reduce memory utilization and make sharing of data easier, but it may have security implications. |
 | `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog). If left blank, all extensions with a blank root_id with the same vm_id will share Context(s). |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
 | `config` | _[JSON](#json)_ |  true  | Config is the configuration for the Wasm extension. This configuration will be passed as a JSON string to the Wasm extension. |
+| `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a fatal error occurs during the initialization or the execution of the Wasm extension. If FailOpen is set to true, the system bypasses the Wasm extension and allows the traffic to pass through. Otherwise, if it is set to false or not set (defaulting to false), the system blocks the traffic and returns an HTTP 5xx error. |
 
 
 #### WasmCodeSource
