@@ -9,7 +9,7 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   routes:
-  - name: "redirect-route"
+  - name: "redirect-route-1"                 # generate one xDS route
     hostname: "*"
     destination:
       name: "redirect-route-dest"
@@ -24,3 +24,29 @@ http:
       port: 8443
       path:
         prefixMatchReplace: /redirected
+  - name: "redirect-route-2"                # generate two xDS routes
+    hostname: "*"
+    pathMatch:
+      prefix: "/redirect"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    redirect:
+      path:
+        prefixMatchReplace: /
+  - name: "redirect-route-3"               # generate two xDS routes
+    hostname: "*"
+    pathMatch:
+      prefix: "/redirect/"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    redirect:
+      path:
+        prefixMatchReplace: /

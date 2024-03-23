@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -109,6 +110,63 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	return router, nil
+}
+
+func needExtraRouteForPrefixRedirect(httpRoute *ir.HTTPRoute) bool {
+	return httpRoute.Redirect != nil &&
+		httpRoute.Redirect.Path != nil &&
+		httpRoute.Redirect.Path.PrefixMatchReplace != nil &&
+		*httpRoute.Redirect.Path.PrefixMatchReplace == "/" &&
+		httpRoute.PathMatch != nil &&
+		httpRoute.PathMatch.Prefix != nil &&
+		*httpRoute.PathMatch.Prefix != "/"
+}
+
+func buildXdsRouteForPrefixRedirect(httpRoute *ir.HTTPRoute) (firstRoute, secondRoute *routev3.Route, err error) {
+	firstMatch, secondMatch := buildXdsRouteMatchForPrefixRedirect(*httpRoute.PathMatch.Prefix)
+	redirectAction := &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
+	firstRoute = &routev3.Route{
+		Name:   fmt.Sprintf("%s/%d", httpRoute.Name, 0),
+		Match:  firstMatch,
+		Action: redirectAction,
+	}
+	secondRoute = &routev3.Route{
+		Name:   fmt.Sprintf("%s/%d", httpRoute.Name, 1),
+		Match:  secondMatch,
+		Action: redirectAction,
+	}
+
+	// Add per route filter configs to the route, if needed.
+	if err = patchRouteWithPerRouteConfig(firstRoute, httpRoute); err != nil {
+		return nil, nil, err
+	}
+
+	return firstRoute, secondRoute, nil
+}
+
+func buildXdsRouteMatchForPrefixRedirect(prefix string) (firstMatch, secondMatch *routev3.RouteMatch) {
+	var (
+		prefixWithTrailingSlash    string
+		prefixWithoutTrailingSlash string
+	)
+	if strings.HasSuffix(prefix, "/") {
+		prefixWithTrailingSlash = prefix
+		prefixWithoutTrailingSlash = strings.TrimSuffix(prefix, "/")
+	} else {
+		prefixWithTrailingSlash = prefix + "/"
+		prefixWithoutTrailingSlash = prefix
+	}
+
+	return &routev3.RouteMatch{
+			PathSpecifier: &routev3.RouteMatch_Prefix{
+				Prefix: prefixWithTrailingSlash,
+			},
+		},
+		&routev3.RouteMatch{
+			PathSpecifier: &routev3.RouteMatch_PathSeparatedPrefix{
+				PathSeparatedPrefix: prefixWithoutTrailingSlash,
+			},
+		}
 }
 
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
