@@ -27,7 +27,7 @@ func init() {
 var RedirectTrailingSlashTest = suite.ConformanceTest{
 	ShortName:   "RedirectReplacePrefixMatchDoubleSlash",
 	Description: "Test that only one slash in the redirect URL",
-	Manifests:   []string{"testdata/retry.yaml"},
+	Manifests:   []string{"testdata/redirect-replaceprefixmatch-slash.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("redirect with replace prefix match with patch match with trailing slash", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
