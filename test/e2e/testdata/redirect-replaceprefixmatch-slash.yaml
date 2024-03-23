@@ -11,6 +11,13 @@ spec:
         - path:
             type: PathPrefix
             value: /api/foo/
+      filters:
+        - requestRedirect:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+          type: RequestRedirect
+    - matches:
         - path:
             type: PathPrefix
             value: /api/bar
