@@ -255,9 +255,9 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// with a replacePrefixMatch "/", two xDS routes needs to be created
 			// to avoid double slashes in the response's redirect URL.
 			//
-			//For example, given the following HTTPRoute:
+			// For example, given the following HTTPRoute:
 			//
-			//```
+			// ```
 			// - matches:
 			//   - path:
 			//       type: PathPrefix
@@ -268,11 +268,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			//         replacePrefixMatch: /
 			//         type: ReplacePrefixMatch
 			//     type: RequestRedirect
-			//```
+			// ```
 			//
 			// The following two xDS routes will be created:
 			//
-			//```
+			// ```
 			//   routes:
 			//   - match:
 			//       prefix: "/api/foo/"
@@ -282,13 +282,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			//       path_separated_prefix: "/api/foo"
 			//     redirect:
 			//       prefix_rewrite: "/bb"
-			//```
+			// ```
 			//
-			//* The first route will match the path "/api/foo/*" and redirect to "/*".
-			//* The second route will match the path "/api/foo" and redirect to "/".
+			// * The first route will match the path "/api/foo/*" and redirect to "/*".
+			// * The second route will match the path "/api/foo" and redirect to "/".
 			//
-			//Since the second route uses path_separated_prefix, paths like "/api/foo-bar" will not match.
-			//See https://github.com/envoyproxy/gateway/issues/2976 for more details.
+			// Since the second route uses path_separated_prefix, paths like "/api/foo-bar" will not match.
+			// See https://github.com/envoyproxy/gateway/issues/2976 for more details.
 			var extraRoute *routev3.Route
 			if needExtraRouteForPrefixRedirect(httpRoute) {
 				xdsRoute, extraRoute, err = buildXdsRouteForPrefixRedirect(httpRoute)

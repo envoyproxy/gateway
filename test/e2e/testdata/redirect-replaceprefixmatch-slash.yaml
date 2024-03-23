@@ -8,12 +8,15 @@ spec:
     - name: same-namespace
   rules:
     - matches:
-      - path:
-          type: PathPrefix
-          value: /api/foo/
+        - path:
+            type: PathPrefix
+            value: /api/foo/
+        - path:
+            type: PathPrefix
+            value: /api/bar
       filters:
-      - requestRedirect:
-          path:
-            replacePrefixMatch: /
-            type: ReplacePrefixMatch
-        type: RequestRedirect
+        - requestRedirect:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+          type: RequestRedirect
