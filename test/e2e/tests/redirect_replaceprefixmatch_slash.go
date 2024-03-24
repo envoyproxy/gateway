@@ -36,27 +36,53 @@ var RedirectTrailingSlashTest = suite.ConformanceTest{
 			statusCode       int
 			expectedLocation string
 		}{
+			// Test cases for the HTTPRoute match /api/foo/
 			{
-				name:             "test1",
+				name:             "match: /api/foo/, request: /api/foo/redirect",
 				path:             "/api/foo/redirect",
 				statusCode:       301,
 				expectedLocation: "/redirect",
 			},
 			{
-				name:             "test2",
+				name:             "match: /api/foo/, request: /api/foo/",
 				path:             "/api/foo/",
 				statusCode:       301,
 				expectedLocation: "/",
 			},
 			{
-				name:             "test3",
+				name:             "match: /api/foo/, request: /api/foo",
 				path:             "/api/foo",
 				statusCode:       301,
 				expectedLocation: "/",
 			},
 			{
-				name:       "test4",
+				name:       "match: /api/foo/, request: /api/foo-bar",
 				path:       "/api/foo-bar",
+				statusCode: 404,
+			},
+
+			// Test cases for the HTTPRoute match /api/bar
+			{
+				name:             "match: /api/bar, request: /api/bar/redirect",
+				path:             "/api/bar/redirect",
+				statusCode:       301,
+				expectedLocation: "/redirect",
+			},
+			{
+				name:             "match: /api/bar, request: /api/bar/",
+				path:             "/api/bar/",
+				statusCode:       301,
+				expectedLocation: "/",
+			},
+			{
+				name:             "match: /api/bar, request: /api/bar",
+				path:             "/api/bar",
+				statusCode:       301,
+				expectedLocation: "/",
+			},
+			{
+				name:       "match: /api/bar, request: /api/bar-foo",
+				path:       "/api/bar-foo",
 				statusCode: 404,
 			},
 		}
