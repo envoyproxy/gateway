@@ -228,7 +228,8 @@ func TestTranslateXds(t *testing.T) {
 			name: "jwt-single-route-single-match",
 		},
 		{
-			name: "oidc",
+			name:           "oidc",
+			requireSecrets: true,
 		},
 		{
 			name: "http-route-partial-invalid",
