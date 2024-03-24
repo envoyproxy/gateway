@@ -120,7 +120,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				Name:          fmt.Sprintf("%s-%d", protocol, p.ContainerPort),
+				Name:          strings.ToLower(fmt.Sprintf("%s-%d", protocol, p.ContainerPort)),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}

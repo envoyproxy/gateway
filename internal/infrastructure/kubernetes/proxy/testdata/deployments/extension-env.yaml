@@ -196,10 +196,10 @@ spec:
         name: envoy
         ports:
         - containerPort: 8080
-          name: TCP-8080
+          name: tcp-8080
           protocol: TCP
         - containerPort: 8443
-          name: TCP-8443
+          name: tcp-8443
           protocol: TCP
         - containerPort: 19001
           name: metrics
