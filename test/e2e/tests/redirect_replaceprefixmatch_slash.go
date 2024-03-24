@@ -40,19 +40,19 @@ var RedirectTrailingSlashTest = suite.ConformanceTest{
 			{
 				name:             "match: /api/foo/, request: /api/foo/redirect",
 				path:             "/api/foo/redirect",
-				statusCode:       301,
+				statusCode:       302,
 				expectedLocation: "/redirect",
 			},
 			{
 				name:             "match: /api/foo/, request: /api/foo/",
 				path:             "/api/foo/",
-				statusCode:       301,
+				statusCode:       302,
 				expectedLocation: "/",
 			},
 			{
 				name:             "match: /api/foo/, request: /api/foo",
 				path:             "/api/foo",
-				statusCode:       301,
+				statusCode:       302,
 				expectedLocation: "/",
 			},
 			{
@@ -65,19 +65,19 @@ var RedirectTrailingSlashTest = suite.ConformanceTest{
 			{
 				name:             "match: /api/bar, request: /api/bar/redirect",
 				path:             "/api/bar/redirect",
-				statusCode:       301,
+				statusCode:       302,
 				expectedLocation: "/redirect",
 			},
 			{
 				name:             "match: /api/bar, request: /api/bar/",
 				path:             "/api/bar/",
-				statusCode:       301,
+				statusCode:       302,
 				expectedLocation: "/",
 			},
 			{
 				name:             "match: /api/bar, request: /api/bar",
 				path:             "/api/bar",
-				statusCode:       301,
+				statusCode:       302,
 				expectedLocation: "/",
 			},
 			{
