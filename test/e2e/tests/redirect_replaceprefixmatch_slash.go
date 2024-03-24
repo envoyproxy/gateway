@@ -70,7 +70,8 @@ var RedirectTrailingSlashTest = suite.ConformanceTest{
 
 				expectedResponse := http.ExpectedResponse{
 					Request: http.Request{
-						Path: testCase.path,
+						Path:             testCase.path,
+						UnfollowRedirect: true,
 					},
 					Response: http.Response{
 						StatusCode: testCase.statusCode,
