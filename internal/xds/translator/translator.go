@@ -352,10 +352,15 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 
 		// 1:1 between IR TCPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         tcpListener.Destination.Name,
-			settings:     tcpListener.Destination.Settings,
-			tSocket:      nil,
-			endpointType: buildEndpointType(tcpListener.Destination.Settings),
+			name:           tcpListener.Destination.Name,
+			settings:       tcpListener.Destination.Settings,
+			loadBalancer:   tcpListener.LoadBalancer,
+			proxyProtocol:  tcpListener.ProxyProtocol,
+			circuitBreaker: tcpListener.CircuitBreaker,
+			tcpkeepalive:   tcpListener.TCPKeepalive,
+			healthCheck:    tcpListener.HealthCheck,
+			timeout:        tcpListener.Timeout,
+			endpointType:   buildEndpointType(tcpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -402,6 +407,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
+			loadBalancer: udpListener.LoadBalancer,
+			timeout:      udpListener.Timeout,
 			tSocket:      nil,
 			endpointType: buildEndpointType(udpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {

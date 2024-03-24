@@ -344,6 +344,25 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
+func buildTCPProxyHashPolicy(lb *ir.LoadBalancer) []*typev3.HashPolicy {
+	// Return early
+	if lb == nil || lb.ConsistentHash == nil {
+		return nil
+	}
+
+	if lb.ConsistentHash.SourceIP != nil && *lb.ConsistentHash.SourceIP {
+		hashPolicy := &typev3.HashPolicy{
+			PolicySpecifier: &typev3.HashPolicy_SourceIp_{
+				SourceIp: &typev3.HashPolicy_SourceIp{},
+			},
+		}
+
+		return []*typev3.HashPolicy{hashPolicy}
+	}
+
+	return nil
+}
+
 func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string, accesslog *ir.AccessLog) error {
 	if irListener == nil {
 		return errors.New("tcp listener is nil")
@@ -363,6 +382,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 	mgr := &tcpv3.TcpProxy{
 		AccessLog:  buildXdsAccessLog(accesslog, false),
 		StatPrefix: statPrefix,
+		HashPolicy: buildTCPProxyHashPolicy(irListener.LoadBalancer),
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
 		},

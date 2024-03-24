@@ -341,7 +341,32 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
+
+	if policy.Spec.Timeout != nil {
+		if to, err = t.buildTimeout(policy, nil); err != nil {
+			return errors.Wrap(err, "Timeout")
+		}
+	}
+
 	for _, ir := range xdsIR {
+		for _, tcp := range ir.TCP {
+			if strings.HasPrefix(tcp.Destination.Name, prefix) {
+				tcp.LoadBalancer = lb
+				tcp.ProxyProtocol = pp
+				tcp.HealthCheck = hc
+				tcp.CircuitBreaker = cb
+				tcp.TCPKeepalive = ka
+				tcp.Timeout = to
+			}
+		}
+
+		for _, udp := range ir.UDP {
+			if strings.HasPrefix(udp.Destination.Name, prefix) {
+				udp.LoadBalancer = lb
+				udp.Timeout = to
+			}
+		}
+
 		for _, http := range ir.HTTP {
 			for _, r := range http.Routes {
 				// Apply if there is a match
@@ -427,6 +452,43 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
 		string(policy.Spec.TargetRef.Name),
 	)
+
+	if policy.Spec.Timeout != nil {
+		if ct, err = t.buildTimeout(policy, nil); err != nil {
+			return errors.Wrap(err, "Timeout")
+		}
+	}
+
+	for _, tcp := range ir.TCP {
+		gatewayName := tcp.Name[0:strings.LastIndex(tcp.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
+
+		tcp.LoadBalancer = lb
+		tcp.ProxyProtocol = pp
+		tcp.HealthCheck = hc
+		tcp.CircuitBreaker = cb
+		tcp.TCPKeepalive = ka
+
+		if tcp.Timeout == nil {
+			tcp.Timeout = ct
+		}
+	}
+
+	for _, udp := range ir.UDP {
+		gatewayName := udp.Name[0:strings.LastIndex(udp.Name, "/")]
+		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
+
+		udp.LoadBalancer = lb
+
+		if udp.Timeout == nil {
+			udp.Timeout = ct
+		}
+	}
+
 	for _, http := range ir.HTTP {
 		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -973,7 +1035,7 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 
 	// http request timeout is translated during the gateway-api route resource translation
 	// merge route timeout setting with backendtrafficpolicy timeout settings
-	if r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
+	if r != nil && r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
 		if hto == nil {
 			hto = &ir.HTTPTimeout{
 				RequestTimeout: r.Timeout.HTTP.RequestTimeout,
