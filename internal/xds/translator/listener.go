@@ -148,6 +148,9 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 }
 
@@ -171,6 +174,9 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
 			QuicOptions:            &listenerv3.QuicProtocolOptions{},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
 	return xdsListener
@@ -242,14 +248,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		// always enable grpc stats filter
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
-	} else {
-		// Allow websocket upgrades for HTTP 1.1
-		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-		mgr.UpgradeConfigs = []*hcmv3.HttpConnectionManager_UpgradeConfig{
-			{
-				UpgradeType: "websocket",
-			},
-		}
 	}
 
 	if http3Listener {
@@ -434,7 +432,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
 				TlsParams:     buildTLSParams(tlsConfig),
-				AlpnProtocols: buildALPNProtocols(tlsConfig.ALPNProtocols),
+				AlpnProtocols: []string{"h3"},
 			},
 		},
 	}
@@ -555,7 +553,8 @@ func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 
 func buildALPNProtocols(alpn []string) []string {
 	if len(alpn) == 0 {
-		return []string{"h2", "http/1.1"}
+		out := []string{"h2", "http/1.1"}
+		return out
 	}
 	return alpn
 }

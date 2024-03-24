@@ -56,8 +56,7 @@
               serviceName: fake-name.fake-ns
           randomSampling:
             value: 90
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

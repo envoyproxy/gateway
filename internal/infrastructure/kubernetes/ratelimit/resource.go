@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -90,12 +91,28 @@ const (
 	// ReadinessPath is readiness path for readiness probe.
 	ReadinessPath = "/healthcheck"
 	// ReadinessPort is readiness port for readiness probe.
-	ReadinessPort = 8080
+	ReadinessPort  = 8080
+	StatsdPort     = 9125
+	PrometheusPort = 19001
 )
 
 // GetServiceURL returns the URL for the rate limit service.
 func GetServiceURL(namespace string, dnsDomain string) string {
 	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
+}
+
+// LabelSelector returns the string slice form labels used for all envoy rate limit resources.
+func LabelSelector() []string {
+
+	rlLabelMap := rateLimitLabels()
+	retLabels := make([]string, 0, len(rlLabelMap))
+
+	for labelK, labelV := range rlLabelMap {
+		ls := strings.Join([]string{labelK, labelV}, "=")
+		retLabels = append(retLabels, ls)
+	}
+
+	return retLabels
 }
 
 // rateLimitLabels returns the labels used for all envoy rate limit resources.
@@ -148,7 +165,45 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 		},
 	}
 
+	if enablePrometheus(rateLimit) {
+		containers = append(containers, promStatsdExporterContainer())
+	}
+
 	return containers
+}
+
+func promStatsdExporterContainer() corev1.Container {
+	return corev1.Container{
+		Name:            "prom-statsd-exporter",
+		Image:           "prom/statsd-exporter:v0.18.0",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command: []string{
+			"/bin/statsd_exporter",
+			fmt.Sprintf("--web.listen-address=:%d", PrometheusPort),
+			"--statsd.mapping-config=/etc/statsd-exporter/conf.yaml",
+		},
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "statsd",
+				ContainerPort: StatsdPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          "metrics",
+				ContainerPort: PrometheusPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "statsd-exporter-config",
+				ReadOnly:  true,
+				MountPath: "/etc/statsd-exporter",
+			},
+		},
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+		TerminationMessagePath:   "/dev/termination-log",
+	}
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
@@ -198,6 +253,21 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 			},
 		},
 	})
+
+	if enablePrometheus(rateLimit) {
+		volumes = append(volumes, corev1.Volume{
+			Name: "statsd-exporter-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "statsd-exporter-config",
+					},
+					Optional:    ptr.To(true),
+					DefaultMode: ptr.To[int32](420),
+				},
+			},
+		})
+	}
 
 	return resource.ExpectedDeploymentVolumes(rateLimitDeployment.Pod, volumes)
 }
@@ -307,7 +377,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		}
 	}
 
-	return resource.ExpectedProxyContainerEnv(rateLimitDeployment.Container, env)
+	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
 // Validate the ratelimit tls secret validating.

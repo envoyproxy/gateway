@@ -51,7 +51,14 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 			continue
 		}
 
-		filter, err := buildHCMBasicAuthFilter(route)
+		// Only generates one BasicAuth Envoy filter for each unique name.
+		// For example, if there are two routes under the same gateway with the
+		// same BasicAuth config, only one BasicAuth filter will be generated.
+		if hcmContainsFilter(mgr, basicAuthFilterName(route.BasicAuth)) {
+			continue
+		}
+
+		filter, err := buildHCMBasicAuthFilter(route.BasicAuth)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -60,12 +67,12 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMBasicAuthFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
-func buildHCMBasicAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
-	basicAuthProto := basicAuthConfig(route)
+func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error) {
+	basicAuthProto := basicAuthConfig(basicAuth)
 
 	if err := basicAuthProto.ValidateAll(); err != nil {
 		return nil, err
@@ -77,7 +84,7 @@ func buildHCMBasicAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name:     basicAuthFilterName(route),
+		Name:     basicAuthFilterName(basicAuth),
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: basicAuthAny,
@@ -85,15 +92,15 @@ func buildHCMBasicAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-func basicAuthFilterName(route *ir.HTTPRoute) string {
-	return perRouteFilterName(basicAuthFilter, route.Name)
+func basicAuthFilterName(basicAuth *ir.BasicAuth) string {
+	return perRouteFilterName(basicAuthFilter, basicAuth.Name)
 }
 
-func basicAuthConfig(route *ir.HTTPRoute) *basicauthv3.BasicAuth {
+func basicAuthConfig(basicAuth *ir.BasicAuth) *basicauthv3.BasicAuth {
 	return &basicauthv3.BasicAuth{
 		Users: &corev3.DataSource{
 			Specifier: &corev3.DataSource_InlineBytes{
-				InlineBytes: route.BasicAuth.Users,
+				InlineBytes: basicAuth.Users,
 			},
 		},
 	}
@@ -129,7 +136,8 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if irRoute.BasicAuth == nil {
 		return nil
 	}
-	if err := enableFilterOnRoute(basicAuthFilter, route, irRoute); err != nil {
+	filterName := basicAuthFilterName(irRoute.BasicAuth)
+	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}
 	return nil

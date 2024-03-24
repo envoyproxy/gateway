@@ -21,6 +21,8 @@
       name: valid-route
       route:
         cluster: valid-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
     - match:
         headers:
         - name: user
@@ -37,3 +39,5 @@
       name: invalid-route
       route:
         cluster: invalid-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

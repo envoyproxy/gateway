@@ -2,6 +2,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10080
+  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -30,8 +31,6 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls

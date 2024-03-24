@@ -210,9 +210,8 @@ xds:
                     routeConfigName: default/eg/http
                   serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
-                  upgradeConfigs:
-                  - upgradeType: websocket
                   useRemoteAddress: true
+            drainType: MODIFY_ONLY
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump

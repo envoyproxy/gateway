@@ -18,6 +18,8 @@ API group.
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
 - [ClientTrafficPolicyList](#clienttrafficpolicylist)
+- [EnvoyExtensionPolicy](#envoyextensionpolicy)
+- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
 - [EnvoyGateway](#envoygateway)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
@@ -169,8 +171,6 @@ _Appears in:_
 | `compression` | _[Compression](#compression) array_ |  false  | The compression config for the http streams. |
 
 
-
-
 #### BasicAuth
 
 
@@ -229,6 +229,7 @@ _Appears in:_
 | `maxConnections` | _integer_ |  false  | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
 | `maxPendingRequests` | _integer_ |  false  | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
 | `maxParallelRequests` | _integer_ |  false  | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
+| `maxParallelRetries` | _integer_ |  false  | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule. Default: unlimited. |
 
 
@@ -330,8 +331,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
-
-
+| `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
 
 
 #### ClientValidationContext
@@ -372,6 +372,35 @@ CompressorType defines the types of compressor library supported by Envoy Gatewa
 _Appears in:_
 - [Compression](#compression)
 
+
+
+#### Connection
+
+
+
+Connection allows users to configure connection-level settings
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `limit` | _[ConnectionLimit](#connectionlimit)_ |  false  | Limit defines limits related to connections |
+
+
+#### ConnectionLimit
+
+
+
+
+
+_Appears in:_
+- [Connection](#connection)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `value` | _integer_ |  false  | Value of the maximum concurrent connections limit. When the limit is reached, incoming connections will be closed after the CloseDelay duration. Default: unlimited. |
+| `closeDelay` | _[Duration](#duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected once the limit value is reached. Default: none. |
 
 
 #### ConsistentHash
@@ -455,6 +484,54 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name defines the name of the environment variable which to extract the value from. |
 | `defaultValue` | _string_ |  false  | DefaultValue defines the default value to use if the environment variable is not set. |
+
+
+#### EnvoyExtensionPolicy
+
+
+
+EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
+
+_Appears in:_
+- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`EnvoyExtensionPolicy`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)_ |  true  | Spec defines the desired state of EnvoyExtensionPolicy. |
+
+
+#### EnvoyExtensionPolicyList
+
+
+
+EnvoyExtensionPolicyList contains a list of EnvoyExtensionPolicy resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`EnvoyExtensionPolicyList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[EnvoyExtensionPolicy](#envoyextensionpolicy) array_ |  true  |  |
+
+
+#### EnvoyExtensionPolicySpec
+
+
+
+EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.
+
+_Appears in:_
+- [EnvoyExtensionPolicy](#envoyextensionpolicy)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `priority` | _integer_ |  false  | Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices are applied to the same TargetRef, extensions will execute in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
 
 
 #### EnvoyGateway
@@ -803,8 +880,6 @@ _Appears in:_
 | `priority` | _integer_ |  true  | Priority of the EnvoyPatchPolicy. If multiple EnvoyPatchPolicies are applied to the same TargetRef, they will be applied in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
 
 
-
-
 #### EnvoyPatchType
 
 _Underlying type:_ _string_
@@ -881,6 +956,7 @@ _Appears in:_
 | `concurrency` | _integer_ |  false  | Concurrency defines the number of worker threads to run. If unset, it defaults to the number of cpuset threads on the platform. |
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
+| `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
 
 
 
@@ -910,6 +986,7 @@ _Appears in:_
 | `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service. Either GRPCService or HTTPService must be specified, and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  | HeadersToExtAuth defines the client request headers that will be included in the request to the external authorization service. Note: If not specified, the default behavior for gRPC and HTTP external authorization services is different due to backward compatibility reasons. All headers will be included in the check request to a gRPC authorization server. Only the following headers will be included in the check request to an HTTP authorization server: Host, Method, Path, Content-Length, and Authorization. And these headers will always be included to the check request to an HTTP authorization server by default, no matter whether they are specified in HeadersToExtAuth or not. |
+| `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained. If FailOpen is set to true, the system allows the traffic to pass through. Otherwise, if it is set to false or not set (defaulting to false), the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach. This setting determines whether to prioritize accessibility over strict security in case of authorization service failure. |
 
 
 #### ExtensionAPISettings
@@ -925,6 +1002,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  | EnableEnvoyPatchPolicy enables Envoy Gateway to reconcile and implement the EnvoyPatchPolicy resources. |
+| `enableEnvoyExtensionPolicy` | _boolean_ |  true  | EnableEnvoyExtensionPolicy enables Envoy Gateway to reconcile and implement the EnvoyExtensionPolicy resources. |
 
 
 #### ExtensionHooks
@@ -1074,7 +1152,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `controllerName` | _string_ |  false  | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1.GatewayClass |
+| `controllerName` | _string_ |  false  | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass |
 
 
 #### GlobalRateLimit
@@ -1374,7 +1452,8 @@ _Appears in:_
 | `issuer` | _string_ |  false  | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
 | `audiences` | _string array_ |  false  | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` | _[RemoteJWKS](#remotejwks)_ |  true  | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
-| `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  true  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `recomputeRoute` | _boolean_ |  false  | RecomputeRoute clears the route cache and recalculates the routing decision. This field must be enabled if the headers generated from the claim are used for route matching decisions. If the recomputation selects a new route, features targeting the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  | ExtractFrom defines different ways to extract the JWT token from HTTP request. If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema or access_token from query parameters. |
 
 
@@ -1419,6 +1498,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to deployment |
 | `replicas` | _integer_ |  false  | Replicas is the number of desired pods. Defaults to 1. |
 | `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ |  false  | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
@@ -1430,7 +1510,7 @@ _Appears in:_
 
 
 
-KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
+KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment. When HPA is enabled, it is recommended that the value in `KubernetesDeploymentSpec.replicas` be removed, otherwise Envoy Gateway will revert back to this value every time reconciliation occurs. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 
 _Appears in:_
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
@@ -1441,6 +1521,22 @@ _Appears in:_
 | `maxReplicas` | _integer_ |  true  | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
 | `metrics` | _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#metricspec-v2-autoscaling) array_ |  false  | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
 | `behavior` | _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#horizontalpodautoscalerbehavior-v2-autoscaling)_ |  false  | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
+
+
+#### KubernetesPatchSpec
+
+
+
+KubernetesPatchSpec defines how to perform the patch operation
+
+_Appears in:_
+- [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
+- [KubernetesServiceSpec](#kubernetesservicespec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[MergeType](#mergetype)_ |  false  | Type is the type of merge operation to perform <br /><br /> By default, StrategicMerge is used as the patch type. |
+| `value` | _[JSON](#json)_ |  true  | Object contains the raw configuration for merged object |
 
 
 #### KubernetesPodSpec
@@ -1460,7 +1556,6 @@ _Appears in:_
 | `affinity` | _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ |  false  | If specified, the pod's scheduling constraints. |
 | `tolerations` | _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ |  false  | If specified, the pod's tolerations. |
 | `volumes` | _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volume-v1-core) array_ |  false  | Volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes |
-| `hostNetwork` | _boolean_ |  false  | HostNetwork, If this is set to true, the pod will use host's network namespace. |
 | `imagePullSecrets` | _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#localobjectreference-v1-core) array_ |  false  | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
 | `nodeSelector` | _object (keys:string, values:string)_ |  false  | NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ |
 | `topologySpreadConstraints` | _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#topologyspreadconstraint-v1-core) array_ |  false  | TopologySpreadConstraints describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints. All topologySpreadConstraints are ANDed. |
@@ -1483,6 +1578,7 @@ _Appears in:_
 | `allocateLoadBalancerNodePorts` | _boolean_ |  false  | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type. |
 | `loadBalancerIP` | _string_ |  false  | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field may be ignored if the load balancer provider does not support this feature. This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud providers such as GCP. |
 | `externalTrafficPolicy` | _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ |  false  | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to the service |
 
 
 #### KubernetesWatchMode
@@ -1576,6 +1672,8 @@ LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
+
+
 
 
 
@@ -1984,6 +2082,7 @@ _Appears in:_
 | `backend` | _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ |  true  | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  | FailClosed is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailClosed is false, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailClosed is False. |
+| `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  | Telemetry defines telemetry configuration for RateLimit. |
 
 
 #### RateLimitDatabaseBackend
@@ -2010,6 +2109,34 @@ RateLimitDatabaseBackendType specifies the types of database backend to be used 
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
 
+
+
+#### RateLimitMetrics
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `prometheus` | _[RateLimitMetricsPrometheusProvider](#ratelimitmetricsprometheusprovider)_ |  true  | Prometheus defines the configuration for prometheus endpoint. |
+
+
+#### RateLimitMetricsPrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [RateLimitMetrics](#ratelimitmetrics)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
 
 
 #### RateLimitRedisSettings
@@ -2072,6 +2199,20 @@ _Appears in:_
 | `type` | _[RateLimitType](#ratelimittype)_ |  true  | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global" or "Local". |
 | `global` | _[GlobalRateLimit](#globalratelimit)_ |  false  | Global defines global rate limit configuration. |
 | `local` | _[LocalRateLimit](#localratelimit)_ |  false  | Local defines local rate limit configuration. |
+
+
+#### RateLimitTelemetry
+
+
+
+
+
+_Appears in:_
+- [RateLimit](#ratelimit)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
 
 
 #### RateLimitType
@@ -2193,7 +2334,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
-| `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried. |
+| `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried. The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
 
 
 #### SecurityPolicy
@@ -2270,6 +2411,21 @@ ServiceType string describes ingress methods for a service
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
+
+
+#### ShutdownConfig
+
+
+
+ShutdownConfig defines configuration for graceful envoy shutdown process.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `drainTimeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds. If unspecified, defaults to 600 seconds. |
+| `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete. If unspecified, defaults to 5 seconds. |
 
 
 #### SlowStart

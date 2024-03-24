@@ -17,12 +17,20 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 20s
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -42,12 +50,19 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 15s
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -264,6 +279,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         timeout:
           http:
@@ -299,6 +315,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

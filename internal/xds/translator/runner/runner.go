@@ -7,6 +7,7 @@ package runner
 
 import (
 	"context"
+	"reflect"
 
 	ktypes "k8s.io/apimachinery/pkg/types"
 
@@ -90,19 +91,38 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					return
 				}
 
+				// Get all status keys from watchable and save them in the map statusesToDelete.
+				// Iterating through result.EnvoyPatchPolicyStatuses, any valid keys will be removed from statusesToDelete.
+				// Remaining keys will be deleted from watchable before we exit this function.
+				statusesToDelete := make(map[ktypes.NamespacedName]bool)
+				for key := range r.ProviderResources.EnvoyPatchPolicyStatuses.LoadAll() {
+					statusesToDelete[key] = true
+				}
+
 				// Publish EnvoyPatchPolicyStatus
 				for _, e := range result.EnvoyPatchPolicyStatuses {
 					key := ktypes.NamespacedName{
 						Name:      e.Name,
 						Namespace: e.Namespace,
 					}
-					r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					// Skip updating status for policies with empty status
+					// They may have been skipped in this translation because
+					// their target is not found (not relevant)
+					if !(reflect.ValueOf(e.Status).IsZero()) {
+						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					}
+					delete(statusesToDelete, key)
 				}
 				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
 				result.EnvoyPatchPolicyStatuses = nil
 
 				// Publish
 				r.Xds.Store(key, result)
+
+				// Delete all the deletable status keys
+				for key := range statusesToDelete {
+					r.ProviderResources.EnvoyPatchPolicyStatuses.Delete(key)
+				}
 			}
 		},
 	)

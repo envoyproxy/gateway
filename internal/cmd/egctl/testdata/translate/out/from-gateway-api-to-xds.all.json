@@ -370,6 +370,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -392,6 +399,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -422,6 +436,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -444,6 +465,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -466,6 +494,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -570,16 +605,12 @@
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http",
-                          "upgradeConfigs": [
-                            {
-                              "upgradeType": "websocket"
-                            }
-                          ],
                           "useRemoteAddress": true
                         }
                       }
                     ]
                   },
+                  "drainType": "MODIFY_ONLY",
                   "name": "default/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -684,6 +715,7 @@
                       }
                     ]
                   },
+                  "drainType": "MODIFY_ONLY",
                   "name": "default/eg/grpc",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -720,6 +752,7 @@
                       "portValue": 8443
                     }
                   },
+                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filterChainMatch": {
@@ -797,6 +830,7 @@
                       "portValue": 1234
                     }
                   },
+                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filters": [
@@ -923,7 +957,12 @@
                         },
                         "name": "httproute/default/backend/rule/0/match/0/www_example_com",
                         "route": {
-                          "cluster": "httproute/default/backend/rule/0"
+                          "cluster": "httproute/default/backend/rule/0",
+                          "upgradeConfigs": [
+                            {
+                              "upgradeType": "websocket"
+                            }
+                          ]
                         }
                       }
                     ]

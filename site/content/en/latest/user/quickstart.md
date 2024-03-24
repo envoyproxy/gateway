@@ -1,6 +1,7 @@
 ---
 title: "Quickstart"
 weight: 1
+description: Get started with Envoy Gateway in a few simple steps.
 ---
 
 This guide will help you get started with Envoy Gateway in a few simple steps.
@@ -9,7 +10,7 @@ This guide will help you get started with Envoy Gateway in a few simple steps.
 
 A Kubernetes cluster.
 
-__Note:__ Refer to the [Compatibility Matrix](/blog/2022/10/01/versions/) for supported Kubernetes versions.
+__Note:__ Refer to the [Compatibility Matrix](../install/matrix) for supported Kubernetes versions.
 
 __Note:__ In case your Kubernetes cluster, does not have a LoadBalancer implementation, we recommend installing one
 so the `Gateway` resource has an Address associated with it. We recommend using [MetalLB](https://metallb.universe.tf/installation/).
@@ -100,4 +101,4 @@ helm uninstall eg -n envoy-gateway-system
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../contributions/develop) to get involved in the project.

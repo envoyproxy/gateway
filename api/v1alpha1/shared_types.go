@@ -9,6 +9,7 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 const (
@@ -20,6 +21,12 @@ const (
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
 	DefaultEnvoyProxyImage = "envoyproxy/envoy:distroless-dev"
+	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
+	DefaultShutdownManagerCPUResourceRequests = "10m"
+	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
+	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
+	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
+	DefaultShutdownManagerImage = "envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.
@@ -52,6 +59,11 @@ const (
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
+	// Patch defines how to perform the patch operation to deployment
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
+
 	// Replicas is the number of desired pods. Defaults to 1.
 	//
 	// +optional
@@ -113,10 +125,6 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
-
-	// HostNetwork, If this is set to true, the pod will use host's network namespace.
-	// +optional
-	HostNetwork bool `json:"hostNetwork,omitempty"`
 
 	// ImagePullSecrets is an optional list of references to secrets
 	// in the same namespace to use for pulling any of the images used by this PodSpec.
@@ -256,6 +264,11 @@ type KubernetesServiceSpec struct {
 	// +kubebuilder:default:="Local"
 	// +optional
 	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
+
+	// Patch defines how to perform the patch operation to the service
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
@@ -331,6 +344,8 @@ const (
 )
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
+// When HPA is enabled, it is recommended that the value in `KubernetesDeploymentSpec.replicas` be removed, otherwise
+// Envoy Gateway will revert back to this value every time reconciliation occurs.
 // See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 //
 // +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
@@ -370,3 +385,25 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 // +kubebuilder:validation:Maximum=600
 // +kubebuilder:validation:ExclusiveMaximum=true
 type HTTPStatus int
+
+// MergeType defines the type of merge operation
+type MergeType string
+
+const (
+	// StrategicMerge indicates a strategic merge patch type
+	StrategicMerge MergeType = "StrategicMerge"
+	// JSONMerge indicates a JSON merge patch type
+	JSONMerge MergeType = "JSONMerge"
+)
+
+// KubernetesPatchSpec defines how to perform the patch operation
+type KubernetesPatchSpec struct {
+	// Type is the type of merge operation to perform
+	//
+	// By default, StrategicMerge is used as the patch type.
+	// +optional
+	Type *MergeType `json:"type,omitempty"`
+
+	// Object contains the raw configuration for merged object
+	Value apiextensionsv1.JSON `json:"value"`
+}

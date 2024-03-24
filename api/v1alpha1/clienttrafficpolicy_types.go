@@ -16,7 +16,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=ctp
+// +kubebuilder:resource:categories=envoy-gateway,shortName=ctp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -31,10 +31,9 @@ type ClientTrafficPolicy struct {
 	Spec ClientTrafficPolicySpec `json:"spec"`
 
 	// Status defines the current status of ClientTrafficPolicy.
-	Status ClientTrafficPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="has(self.http3) && has(self.tls) && has(self.tls.alpnProtocols) ? self.tls.alpnProtocols.size() == 0 : true",message="alpn protocols can't be set if HTTP/3 is enabled"
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -88,6 +87,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Timeout *ClientTimeout `json:"timeout,omitempty"`
+	// Connection includes client connection settings.
+	//
+	// +optional
+	Connection *Connection `json:"connection,omitempty"`
 }
 
 // HeaderSettings providess configuration options for headers on the listener.
@@ -173,17 +176,6 @@ type HTTP10Settings struct {
 	// it will be rejected.
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
-}
-
-// ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy
-type ClientTrafficPolicyStatus struct {
-	// Conditions describe the current conditions of the ClientTrafficPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 const (

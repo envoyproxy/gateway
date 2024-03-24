@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,8 +24,11 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
+
+// nolint: gosec
+const oidcHMACSecretName = "envoy-oidc-hmac"
 
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
@@ -152,6 +156,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isOIDCHMACSecret(&nsName) {
+		return true
+	}
+
 	return false
 }
 
@@ -201,6 +209,14 @@ func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedNa
 	return len(ctpList.Items) > 0
 }
 
+func (r *gatewayAPIReconciler) isOIDCHMACSecret(nsName *types.NamespacedName) bool {
+	oidcHMACSecret := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      oidcHMACSecretName,
+	}
+	return *nsName == oidcHMACSecret
+}
+
 // validateServiceForReconcile tries finding the owning Gateway of the Service
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
@@ -221,16 +237,11 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gclass] {
-		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
-		if res != nil {
-			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gw := range (*res)[gclass].Gateways {
-					gw := gw
-					r.updateStatusForGateway(ctx, gw)
-				}
-			}
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways.Has(gcName) {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
+			return false
 		}
 		return false
 	}
@@ -323,7 +334,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	return allAssociatedRoutes != 0
 }
 
-// validateEndpointSliceForReconcile returns true if the the endpointSlice references
+// validateEndpointSliceForReconcile returns true if the endpointSlice references
 // a service that is referenced by a xRoute
 func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Object) bool {
 	ep, ok := obj.(*discoveryv1.EndpointSlice)
@@ -378,16 +389,11 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gclass] {
-		res, _ := r.resources.GatewayAPIResources.Load(string(r.classController))
-		if res != nil {
-			if (*res)[gclass] != nil && len((*res)[gclass].Gateways) > 0 {
-				for _, gw := range (*res)[gclass].Gateways {
-					gw := gw
-					r.updateStatusForGateway(ctx, gw)
-				}
-			}
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways.Has(gcName) {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
+			return false
 		}
 		return false
 	}
@@ -400,7 +406,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
+		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -416,7 +422,7 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
+		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
@@ -448,6 +454,27 @@ func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map
 	}
 
 	return gtw
+}
+
+// updateStatusForGatewaysUnderGatewayClass updates status of all Gateways under the GatewayClass.
+func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx context.Context, gatewayClassName string) error {
+	gateways := new(gwapiv1.GatewayList)
+	if err := r.client.List(ctx, gateways, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, gatewayClassName),
+	}); err != nil {
+		return err
+	}
+
+	if len(gateways.Items) == 0 {
+		return fmt.Errorf("no gateways found for gatewayclass: %s", gatewayClassName)
+	}
+
+	for _, gateway := range gateways.Items {
+		gateway := gateway
+		r.updateStatusForGateway(ctx, &gateway)
+	}
+
+	return nil
 }
 
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
@@ -489,6 +516,18 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 	}
 
 	if len(ctpList.Items) == 0 {
+		return false
+	}
+
+	btlsList := &gwapiv1a2.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
+
+	if len(btlsList.Items) == 0 {
 		return false
 	}
 

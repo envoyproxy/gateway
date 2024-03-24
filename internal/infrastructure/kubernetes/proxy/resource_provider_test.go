@@ -6,16 +6,19 @@
 package proxy
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -25,6 +28,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+var (
+	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 const (
@@ -86,6 +93,7 @@ func TestDeployment(t *testing.T) {
 		caseName     string
 		infra        *ir.Infra
 		deploy       *egv1a1.KubernetesDeploymentSpec
+		shutdown     *egv1a1.ShutdownConfig
 		proxyLogging map[egv1a1.ProxyLogComponent]egv1a1.LogLevel
 		bootstrap    string
 		telemetry    *egv1a1.ProxyTelemetry
@@ -113,7 +121,6 @@ func TestDeployment(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: ptr.To[int64](1000),
 					},
-					HostNetwork: true,
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Image: ptr.To("envoyproxy/envoy:v1.2.3"),
@@ -130,6 +137,58 @@ func TestDeployment(t *testing.T) {
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: ptr.To(true),
 					},
+				},
+			},
+		},
+		{
+			caseName: "patch-deployment",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "shutdown-manager",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte(`{
+							"spec":{
+								"template":{
+									"spec":{
+										"containers":[{
+											"name":"shutdown-manager",
+											"resources":{
+												"requests":{"cpu":"100m","memory":"64Mi"},
+												"limits":{"cpu":"200m","memory":"96Mi"}
+											},
+											"securityContext":{"runAsUser":1234},
+											"env":[
+												{"name":"env_a","value":"env_a_value"},
+												{"name":"env_b","value":"env_b_value"}
+											],
+											"image":"envoyproxy/gateway-dev:v1.2.3"
+										}]
+									}
+								}
+							}
+						}`),
+					},
+				},
+			},
+			shutdown: &egv1a1.ShutdownConfig{
+				DrainTimeout: &metav1.Duration{
+					Duration: 30 * time.Second,
+				},
+				MinDrainDuration: &metav1.Duration{
+					Duration: 15 * time.Second,
 				},
 			},
 		},
@@ -278,11 +337,13 @@ func TestDeployment(t *testing.T) {
 			bootstrap: `test bootstrap config`,
 		},
 		{
-			caseName: "enable-prometheus",
+			caseName: "disable-prometheus",
 			infra:    newTestInfra(),
 			telemetry: &egv1a1.ProxyTelemetry{
 				Metrics: &egv1a1.ProxyMetrics{
-					Prometheus: &egv1a1.ProxyPrometheusProvider{},
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
 				},
 			},
 		},
@@ -454,14 +515,6 @@ func TestDeployment(t *testing.T) {
 
 			if tc.telemetry != nil {
 				tc.infra.Proxy.Config.Spec.Telemetry = tc.telemetry
-			} else {
-				tc.infra.Proxy.Config.Spec.Telemetry = &egv1a1.ProxyTelemetry{
-					Metrics: &egv1a1.ProxyMetrics{
-						Prometheus: &egv1a1.ProxyPrometheusProvider{
-							Disable: true,
-						},
-					},
-				}
 			}
 
 			if len(tc.proxyLogging) > 0 {
@@ -472,6 +525,10 @@ func TestDeployment(t *testing.T) {
 
 			if tc.concurrency != nil {
 				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
+			}
+
+			if tc.shutdown != nil {
+				tc.infra.Proxy.Config.Spec.Shutdown = tc.shutdown
 			}
 
 			if len(tc.extraArgs) > 0 {
@@ -489,6 +546,15 @@ func TestDeployment(t *testing.T) {
 				sort.Slice(env, func(i, j int) bool {
 					return env[i].Name > env[j].Name
 				})
+			}
+
+			if *overrideTestData {
+				deploymentYAML, err := yaml.Marshal(dp)
+				require.NoError(t, err)
+				// nolint: gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0644)
+				require.NoError(t, err)
+				return
 			}
 
 			sortEnv(dp.Spec.Template.Spec.Containers[0].Env)
@@ -562,6 +628,18 @@ func TestService(t *testing.T) {
 			}),
 			service: &egv1a1.KubernetesServiceSpec{
 				Type: &svcType,
+			},
+		},
+		{
+			caseName: "patch-service",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}}"),
+					},
+				},
 			},
 		},
 	}

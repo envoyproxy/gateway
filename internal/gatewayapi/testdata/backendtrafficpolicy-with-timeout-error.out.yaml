@@ -18,13 +18,19 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 20s
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Unable to translate HTTP Timeout: invalid MaxConnectionDuration value
-        22mib'
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: 'Timeout: invalid MaxConnectionDuration value 22mib'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -145,4 +151,5 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*

@@ -31,12 +31,8 @@ httpRoutes:
     - matches:
       - path:
           value: "/"
-      backendRefs:
-      - name: service-1
-        port: 8080
       filters:
       - type: RequestRedirect
         requestRedirect:
           scheme: unknown
           statusCode: 301
-

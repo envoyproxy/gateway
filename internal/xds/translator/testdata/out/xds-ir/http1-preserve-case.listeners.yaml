@@ -34,9 +34,8 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -76,8 +75,7 @@
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
         useRemoteAddress: true
+  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768

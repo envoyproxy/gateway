@@ -17,12 +17,20 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 20kib
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Unable to translate TCP Timeout: invalid ConnectTimeout value 20kib'
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'Timeout: invalid ConnectTimeout value 20kib'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -150,6 +158,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

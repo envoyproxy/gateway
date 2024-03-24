@@ -37,13 +37,14 @@ type RetryOn struct {
 	Triggers []TriggerEnum `json:"triggers,omitempty"`
 
 	// HttpStatusCodes specifies the http status codes to be retried.
+	// The retriable-status-codes trigger must also be configured for these status codes to trigger a retry.
 	//
 	// +optional
 	HTTPStatusCodes []HTTPStatus `json:"httpStatusCodes,omitempty"`
 }
 
 // TriggerEnum specifies the conditions that trigger retries.
-// +kubebuilder:validation:Enum={"5xx","gateway-error","disconnect-reset","connect-failure","retriable-4xx","refused-stream","retriable-status-codes","cancelled","deadline-exceeded","internal","resource-exhausted","unavailable"}
+// +kubebuilder:validation:Enum={"5xx","gateway-error","reset","connect-failure","retriable-4xx","refused-stream","retriable-status-codes","cancelled","deadline-exceeded","internal","resource-exhausted","unavailable"}
 type TriggerEnum string
 
 const (
@@ -56,7 +57,7 @@ const (
 	// The response is a gateway error (502,503 or 504).
 	GatewayError TriggerEnum = "gateway-error"
 	// The upstream server does not respond at all (disconnect/reset/read timeout.)
-	DisconnectRest TriggerEnum = "disconnect-reset"
+	Reset TriggerEnum = "reset"
 	// Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)
 	ConnectFailure TriggerEnum = "connect-failure"
 	// The upstream server responds with a retriable 4xx response code.

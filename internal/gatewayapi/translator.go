@@ -9,6 +9,7 @@ import (
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	egv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -17,6 +18,7 @@ import (
 const (
 	KindConfigMap           = "ConfigMap"
 	KindClientTrafficPolicy = "ClientTrafficPolicy"
+	KindBackendTLSPolicy    = "BackendTLSPolicy"
 	KindEnvoyProxy          = "EnvoyProxy"
 	KindGateway             = "Gateway"
 	KindGatewayClass        = "GatewayClass"
@@ -91,6 +93,9 @@ type Translator struct {
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
+
+	// Namespace is the namespace that Envoy Gateway runs in.
+	Namespace string
 }
 
 type TranslateResult struct {
@@ -108,6 +113,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
+	backendTLSPolicies []*egv1a2.BackendTLSPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -136,6 +142,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
 	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
 	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
+	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
 
 	return translateResult
 }
@@ -205,7 +212,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
-		securityPolicies, xdsIR, infraIR)
+		securityPolicies, resources.BackendTLSPolicies, xdsIR, infraIR)
 
 }
 
@@ -245,8 +252,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 		annotations := infrastructureAnnotations(gateway.Gateway)
 		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
 
-		if isMergeGatewaysEnabled(resources) {
-			t.MergeGateways = true
+		if t.MergeGateways {
 			irKey = string(t.GatewayClassName)
 
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))

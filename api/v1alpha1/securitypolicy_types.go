@@ -16,7 +16,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=sp
+// +kubebuilder:resource:categories=envoy-gateway,shortName=sp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -31,7 +31,7 @@ type SecurityPolicy struct {
 	Spec SecurityPolicySpec `json:"spec"`
 
 	// Status defines the current status of SecurityPolicy.
-	Status SecurityPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // SecurityPolicySpec defines the desired state of SecurityPolicy.

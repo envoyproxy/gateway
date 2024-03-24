@@ -98,6 +98,7 @@ resources:
 - tcproutes
 - tlsroutes
 - udproutes
+- backendtlspolicies
 verbs:
 - get
 - list
@@ -114,6 +115,7 @@ resources:
 - tcproutes/status
 - tlsroutes/status
 - udproutes/status
+- backendtlspolicies/status
 verbs:
 - update
 {{- end }}

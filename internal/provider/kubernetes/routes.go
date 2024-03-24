@@ -17,7 +17,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // processTLSRoutes finds TLSRoutes corresponding to a gatewayNamespaceName, further checks for
@@ -72,7 +72,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -150,7 +150,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -269,7 +269,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -336,7 +336,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 								"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 						default:
-							resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 								"name", refGrant.Name)
 						}
@@ -425,7 +425,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -495,7 +495,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}

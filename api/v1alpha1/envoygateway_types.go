@@ -140,7 +140,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -151,6 +151,10 @@ type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
+
+	// EnableEnvoyExtensionPolicy enables Envoy Gateway to
+	// reconcile and implement the EnvoyExtensionPolicy resources.
+	EnableEnvoyExtensionPolicy bool `json:"enableEnvoyExtensionPolicy"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -326,6 +330,25 @@ type RateLimit struct {
 	// otherwise, don't let the traffic pass and return 500.
 	// If not set, FailClosed is False.
 	FailClosed bool `json:"failClosed"`
+
+	// Telemetry defines telemetry configuration for RateLimit.
+	// +optional
+	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+}
+
+type RateLimitTelemetry struct {
+	// Metrics defines metrics configuration for RateLimit.
+	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+}
+
+type RateLimitMetrics struct {
+	// Prometheus defines the configuration for prometheus endpoint.
+	Prometheus *RateLimitMetricsPrometheusProvider `json:"prometheus,omitempty"`
+}
+
+type RateLimitMetricsPrometheusProvider struct {
+	// Disable the Prometheus endpoint.
+	Disable bool `json:"disable,omitempty"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

@@ -450,13 +450,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						MaxConnections:      valMax,
 						MaxPendingRequests:  valMin,
 						MaxParallelRequests: nil,
+						MaxParallelRetries:  nil,
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: " invalid config: min and max valyues",
+			desc: " invalid config: min and max values",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				valOverMax := pointer.Int64(4294967296)
 				valUnderMin := pointer.Int64(-1)
@@ -473,10 +474,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						MaxPendingRequests:       valUnderMin,
 						MaxParallelRequests:      valOverMax,
 						MaxRequestsPerConnection: valUnderMin,
+						MaxParallelRetries:       valOverMax,
 					},
 				}
 			},
 			wantErrors: []string{
+				"spec.circuitBreaker.MaxParallelRetries: Invalid value: 4294967296: spec.circuitBreaker.MaxParallelRetries in body should be less than or equal to 4294967295",
 				"spec.circuitBreaker.maxRequestsPerConnection: Invalid value: -1: spec.circuitBreaker.maxRequestsPerConnection in body should be greater than or equal to 0",
 				"spec.circuitBreaker.maxParallelRequests: Invalid value: 4294967296: spec.circuitBreaker.maxParallelRequests in body should be less than or equal to 4294967295",
 				"spec.circuitBreaker.maxPendingRequests: Invalid value: -1: spec.circuitBreaker.maxPendingRequests in body should be greater than or equal to 0",
@@ -805,6 +808,74 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "valid count of Global rate limit rules items",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+
+				rules := make([]egv1a1.RateLimitRule, 64)
+				rule := egv1a1.RateLimitRule{
+					Limit: egv1a1.RateLimitValue{
+						Requests: 10,
+						Unit:     "Minute",
+					},
+				}
+				for i := range rules {
+					rules[i] = rule
+				}
+
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: rules,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid count of Global rate limit rules items",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+
+				rules := make([]egv1a1.RateLimitRule, 65)
+				rule := egv1a1.RateLimitRule{
+					Limit: egv1a1.RateLimitValue{
+						Requests: 10,
+						Unit:     "Minute",
+					},
+				}
+				for i := range rules {
+					rules[i] = rule
+				}
+
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: rules,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`[spec.rateLimit.global.rules: Too many: 65: must have at most 64 items, <nil>: Invalid value: "null": some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
+			},
 		},
 	}
 
