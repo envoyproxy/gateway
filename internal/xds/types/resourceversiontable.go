@@ -76,6 +76,11 @@ func (t *ResourceVersionTable) GetXdsResources() XdsResources {
 }
 
 func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource types.Resource) error {
+	// It's a sanity check to make sure the xdsResource is not nil
+	if xdsResource == nil {
+		return fmt.Errorf("xds resource is nil")
+	}
+
 	// Perform type switch to handle different types of xdsResource
 	switch rType {
 	case resourcev3.ListenerType:
