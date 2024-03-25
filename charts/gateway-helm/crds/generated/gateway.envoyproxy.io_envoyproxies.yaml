@@ -84,12 +84,18 @@ spec:
               filterOrder:
                 description: FilterOrder defines the order of filters in the Envoy
                   proxy's HTTP filter chain.
-                properties:
-                  envoyFilters:
-                    description: EnvoyFilters defines the order of filters in the
-                      filter chain. The order of filters in the list is the order
-                      in which they will be applied.
-                    items:
+                items:
+                  description: 'FilterOrder defines the order of filters in the Envoy
+                    proxy''s HTTP filter chain. The order of filters is determined
+                    by the order field, where the filter with the lowest order value
+                    is applied first. If unspecified, the default order of filters
+                    is applied. Default order of filters: - envoy.filters.http.cors               0
+                    - envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200
+                    - envoy.filters.http.oauth2             300 - envoy.filters.http.jwt_authn          400
+                    - envoy.filters.http.fault              500 - envoy.filters.http.local_ratelimit    600
+                    - envoy.filters.http.rate_limit         700'
+                  properties:
+                    filter:
                       description: EnvoyFilter defines the type of Envoy HTTP filter.
                       enum:
                       - envoy.filters.http.cors
@@ -102,12 +108,14 @@ spec:
                       - envoy.filters.http.rate_limit
                       - envoy.filters.http.routerfilters.http.router
                       type: string
-                    maxItems: 9
-                    minItems: 9
-                    type: array
-                required:
-                - envoyFilters
-                type: object
+                    order:
+                      format: int32
+                      type: integer
+                  required:
+                  - filter
+                  - order
+                  type: object
+                type: array
               logging:
                 default:
                   level:
