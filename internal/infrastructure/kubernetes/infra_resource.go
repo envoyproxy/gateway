@@ -124,6 +124,10 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 		return err
 	}
 
+	if svc == nil {
+		return nil
+	}
+
 	current := &corev1.Service{}
 	key := types.NamespacedName{
 		Namespace: svc.Namespace,

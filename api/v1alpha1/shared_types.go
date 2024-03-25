@@ -221,6 +221,11 @@ const (
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 type KubernetesServiceSpec struct {
+	// Disable disables service if set to true.
+	// By default, the service is enabled.
+	// +optional
+	Disable bool `json:"disable,omitempty"`
+
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
 	//
