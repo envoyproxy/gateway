@@ -175,7 +175,7 @@ git config --add alias.c "commit -s"
 ## Fixing DCO
 
 If your PR fails the DCO check, it's necessary to fix the entire commit history in the PR. Best
-practice is to [squash](https://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)
+practice is to [squash](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)
 the commit history to a single commit, append the DCO sign-off as described above, and [force
 push](https://git-scm.com/docs/git-push#git-push---force). For example, if you have 2 commits in
 your history:

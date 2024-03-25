@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	fortio.org/fortio v1.63.4
-	fortio.org/log v1.12.0
+	fortio.org/log v1.12.1
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.12.1-0.20240322155512-db0b36a50fa8
@@ -19,7 +19,7 @@ require (
 	github.com/grafana/tempo v1.5.0
 	github.com/miekg/dns v1.1.58
 	github.com/prometheus/client_golang v1.19.0
-	github.com/prometheus/common v0.50.0
+	github.com/prometheus/common v0.51.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
