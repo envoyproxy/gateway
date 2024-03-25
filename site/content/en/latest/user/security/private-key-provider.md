@@ -26,10 +26,10 @@ This guide will walk you through the steps required to configure TLS Termination
 - Enable IOMMU from BIOS
 - Enable IOMMU for Linux kernel
 
-  Figure out the QAT device id
+  Figure out the QAT VF device id
 
   ```shell
-  lspci -d 8086:4940 && lspci -d 8086:4941 && lspci -d 8086:4942 && lspci -d 8086:4943 && lspci -d 8086:4946 && lspci -d 8086:4947
+  lspci -d 8086:4941 && lspci -d 8086:4943 && lspci -d 8086:4947
   ```
 
   Attach the QAT device to vfio-pci through kernel parameter by the device id gotten from previous command.
