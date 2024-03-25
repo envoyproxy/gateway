@@ -107,7 +107,7 @@ type EnvoyProxySpec struct {
 // - envoy.filters.http.local_ratelimit    600
 // - envoy.filters.http.rate_limit         700
 type FilterOrder struct {
-	Filter EnvoyFilter `json:"envoyFilters"`
+	Filter EnvoyFilter `json:"filter"`
 	Order  uint32      `json:"order"`
 }
 
