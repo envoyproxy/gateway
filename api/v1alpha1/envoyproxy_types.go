@@ -88,27 +88,27 @@ type EnvoyProxySpec struct {
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
-	FilterOrder *FilterOrder `json:"filterOrder,omitempty"`
+	//
+	// +optional
+	FilterOrder []FilterOrder `json:"filterOrder,omitempty"`
 }
 
 // FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+// The order of filters is determined by the order field, where the filter with
+// the lowest order value is applied first.
 // If unspecified, the default order of filters is applied.
 // Default order of filters:
-// - envoy.filters.http.cors
-// - envoy.filters.http.ext_authz
-// - envoy.filters.http.basic_authn
-// - envoy.filters.http.oauth2
-// - envoy.filters.http.jwt_authn
-// - envoy.filters.http.fault
-// - envoy.filters.http.local_ratelimit
-// - envoy.filters.http.rate_limit
+// - envoy.filters.http.cors               0
+// - envoy.filters.http.ext_authz          100
+// - envoy.filters.http.basic_authn        200
+// - envoy.filters.http.oauth2             300
+// - envoy.filters.http.jwt_authn          400
+// - envoy.filters.http.fault              500
+// - envoy.filters.http.local_ratelimit    600
+// - envoy.filters.http.rate_limit         700
 type FilterOrder struct {
-	// EnvoyFilters defines the order of filters in the filter chain.
-	// The order of filters in the list is the order in which they will be applied.
-	// If unspecified, the default order of filters is applied.
-	//
-	// +kubebuilder:validation:MinItems=8
-	EnvoyFilters []EnvoyFilter `json:"envoyFilters"`
+	Filter EnvoyFilter `json:"envoyFilters"`
+	Order  uint32      `json:"order"`
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
