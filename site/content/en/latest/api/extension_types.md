@@ -385,7 +385,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `limit` | _[ConnectionLimit](#connectionlimit)_ |  false  | Limit defines limits related to connections |
+| `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
 
 
 #### ConnectionLimit

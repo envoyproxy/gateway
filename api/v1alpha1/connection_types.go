@@ -9,10 +9,10 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // Connection allows users to configure connection-level settings
 type Connection struct {
-	// Limit defines limits related to connections
+	// ConnectionLimit defines limits related to connections
 	//
 	// +optional
-	Limit *ConnectionLimit `json:"limit,omitempty"`
+	ConnectionLimit *ConnectionLimit `json:"connectionLimit,omitempty"`
 }
 
 type ConnectionLimit struct {

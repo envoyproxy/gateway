@@ -9,7 +9,7 @@ spec:
     kind: Gateway
     name: connection-limit-gateway
     namespace: gateway-conformance-infra
-  connection:
+  connectionLimit:
     limit:
       value: 5
 ---

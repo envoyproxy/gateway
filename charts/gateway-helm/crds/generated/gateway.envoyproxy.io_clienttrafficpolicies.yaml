@@ -94,8 +94,8 @@ spec:
               connection:
                 description: Connection includes client connection settings.
                 properties:
-                  limit:
-                    description: Limit defines limits related to connections
+                  connectionLimit:
+                    description: ConnectionLimit defines limits related to connections
                     properties:
                       closeDelay:
                         description: 'CloseDelay defines the delay to use before closing

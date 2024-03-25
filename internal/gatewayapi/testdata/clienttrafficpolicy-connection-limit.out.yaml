@@ -7,7 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     connection:
-      limit:
+      connectionLimit:
         closeDelay: 10s
         value: 3
     targetRef:

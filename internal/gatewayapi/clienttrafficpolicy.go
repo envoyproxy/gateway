@@ -658,15 +658,15 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 
 	irConnection := &ir.Connection{}
 
-	if connection.Limit != nil {
+	if connection.ConnectionLimit != nil {
 		irConnectionLimit := &ir.ConnectionLimit{}
 
-		irConnectionLimit.Value = ptr.To(uint64(connection.Limit.Value))
+		irConnectionLimit.Value = ptr.To(uint64(connection.ConnectionLimit.Value))
 
-		if connection.Limit.CloseDelay != nil {
-			d, err := time.ParseDuration(string(*connection.Limit.CloseDelay))
+		if connection.ConnectionLimit.CloseDelay != nil {
+			d, err := time.ParseDuration(string(*connection.ConnectionLimit.CloseDelay))
 			if err != nil {
-				return fmt.Errorf("invalid CloseDelay value %s", *connection.Limit.CloseDelay)
+				return fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
 			}
 			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
 		}
