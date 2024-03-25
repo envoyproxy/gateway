@@ -65,12 +65,19 @@ type WasmCodeSource struct {
 	// The key in the ConfigMap should be the name of the Wasm. For example,
 	// if the Wasm is named "my-wasm-extension", the ConfigMap should have a key
 	// named "my-wasm-extension" and the value should be the wasm code.
+	// +optional
 	ConfigMap *string `json:"ConfigMap,omitempty"`
 
 	// HTTP is the HTTP URL containing the wasm code.
 	//
 	// Note that the HTTP server must be accessible from the Envoy proxy.
+	// +optional
 	HTTP *string `json:"http,omitempty"`
+
+	// SHA256 checksum that will be used to verify the wasm code.
+	// This field is required if the HTTP field is set.
+	// +optional
+	SHA256 *string `json:"sha256,omitempty"`
 
 	// Image is the OCI image containing the wasm code.
 	// Image *string `json:"image,omitempty"` //TODO: Add support for OCI image in the future.
