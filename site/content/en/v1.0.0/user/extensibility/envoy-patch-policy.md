@@ -238,4 +238,4 @@ such as changing the `name` field of resources.
 [JSON Patch]: https://datatracker.ietf.org/doc/html/rfc6902
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
 [Local Reply Modification]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/local_reply
-[egctl x translate]: ../egctl#egctl-experimental-translate
+[egctl x translate]: ../operations/egctl#egctl-experimental-translate
