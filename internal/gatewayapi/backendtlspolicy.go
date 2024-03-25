@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,19 +29,17 @@ func (t *Translator) processBackendTLSPolicy(
 
 	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
 
-	ancestor := gwapiv1a2.PolicyAncestorStatus{
-		AncestorRef:    parent,
-		ControllerName: gwapiv1.GatewayController(t.GatewayControllerName),
+	ancestorRefs := []gwapiv1a2.ParentReference{
+		parent,
 	}
 
 	if err != nil {
-		status.SetBackendTLSPolicyCondition(
-			policy,
-			ancestor,
-			gwapiv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwapiv1a2.PolicyReasonInvalid,
-			status.Error2ConditionMsg(err))
+		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+			ancestorRefs,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(err),
+		)
 		return nil
 	}
 
@@ -67,25 +64,21 @@ func (t *Translator) processBackendTLSPolicy(
 			},
 			resources.ReferenceGrants,
 		) {
-			status.SetBackendTLSPolicyCondition(
-				policy,
-				ancestor,
-				gwapiv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwapiv1a2.PolicyReasonInvalid,
-				fmt.Sprintf("target ref to %s %s/%s not permitted by any ReferenceGrant",
-					backendRefKind, backendNamespace, backendRef.Name))
+			err = fmt.Errorf("target ref to %s %s/%s not permitted by any ReferenceGrant",
+				backendRefKind, backendNamespace, backendRef.Name)
+
+			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				status.Error2ConditionMsg(err),
+			)
 			return nil
 		}
 	}
 
-	status.SetBackendTLSPolicyCondition(
-		policy,
-		ancestor,
-		gwapiv1a2.PolicyConditionAccepted,
-		metav1.ConditionTrue,
-		gwapiv1a2.PolicyReasonAccepted,
-		"BackendTLSPolicy is Accepted")
+	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+
 	return tlsBundle
 }
 

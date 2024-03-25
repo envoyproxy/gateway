@@ -66,7 +66,7 @@ $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}/get"
 ...
 ```
 
-If you followed the steps in the [Secure Gateways](secure-gateways.md) guide, you should be able to curl the redirect
+If you followed the steps in the [Secure Gateways](../security/secure-gateways) guide, you should be able to curl the redirect
 location.
 
 ## HTTP --> HTTPS
