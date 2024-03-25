@@ -6,7 +6,6 @@
 package status
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -118,11 +117,25 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "ClusterIP headless svc has no addresses",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "None",
+						Type:      corev1.ServiceTypeClusterIP,
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment)
-			assert.True(t, reflect.DeepEqual(tt.args.addresses, tt.args.gw.Status.Addresses))
+			assert.Equal(t, tt.args.addresses, tt.args.gw.Status.Addresses)
 		})
 	}
 }

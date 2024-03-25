@@ -16,6 +16,7 @@ import (
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 // ResourceRender renders Kubernetes infrastructure resources
@@ -40,6 +41,9 @@ type Infra struct {
 
 	// Client wrap k8s client.
 	Client *InfraClient
+
+	// Logger is the logr implementation used by Envoy Gateway.
+	Logger logging.Logger
 }
 
 // NewInfra returns a new Infra.
@@ -48,6 +52,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		Namespace:    cfg.Namespace,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
+		Logger:       cfg.Logger,
 	}
 }
 

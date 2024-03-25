@@ -116,7 +116,7 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) error {
 	})
 }
 
-// createOrUpdateRateLimitService creates a Service in the kube api server based on the provided ResourceRender,
+// createOrUpdateService creates a Service in the kube api server based on the provided ResourceRender,
 // if it doesn't exist or updates it if it does.
 func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) error {
 	svc, err := r.Service()
@@ -128,6 +128,16 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 	key := types.NamespacedName{
 		Namespace: svc.Namespace,
 		Name:      svc.Name,
+	}
+
+	if err := i.Client.Get(ctx, key, current); err == nil {
+		if svc.Spec.ClusterIP != current.Spec.ClusterIP && (svc.Spec.ClusterIP != "" || current.Spec.ClusterIP == "None") {
+			i.Logger.Info("recreating service to force clusterIP update", "current", current.Spec.ClusterIP, "configured", svc.Spec.ClusterIP)
+			if err := i.Client.Delete(ctx, current); err != nil {
+				return err
+			}
+			current = &corev1.Service{}
+		}
 	}
 
 	return i.Client.CreateOrUpdate(ctx, key, current, svc, func() bool {
