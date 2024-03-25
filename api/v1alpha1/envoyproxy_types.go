@@ -105,8 +105,9 @@ type EnvoyProxySpec struct {
 type FilterOrder struct {
 	// EnvoyFilters defines the order of filters in the filter chain.
 	// The order of filters in the list is the order in which they will be applied.
+	// If unspecified, the default order of filters is applied.
+	//
 	// +kubebuilder:validation:MinItems=8
-	// +kubebuilder:validation:MaxItems=8
 	EnvoyFilters []EnvoyFilter `json:"envoyFilters"`
 }
 
