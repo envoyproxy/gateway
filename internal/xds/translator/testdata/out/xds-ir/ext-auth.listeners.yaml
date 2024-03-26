@@ -24,6 +24,7 @@
                   patterns:
                   - exact: header1
                   - exact: header2
+              pathPrefix: /auth
               serverUri:
                 cluster: securitypolicy/default/policy-for-first-route/http-backend
                 timeout: 10s
