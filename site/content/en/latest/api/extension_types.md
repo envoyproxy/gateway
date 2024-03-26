@@ -2642,9 +2642,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `ConfigMap` | _string_ |  true  | ConfigMap is the name of the ConfigMap containing the wasm code. <br /><br /> The key in the ConfigMap should be the name of the Wasm. For example, if the Wasm is named "my-wasm-extension", the ConfigMap should have a key named "my-wasm-extension" and the value should be the wasm code. |
-| `http` | _string_ |  true  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
-| `sha256` | _string_ |  true  | SHA256 checksum that will be used to verify the wasm code. |
+| `ConfigMap` | _string_ |  false  | ConfigMap is the name of the ConfigMap containing the wasm code. <br /><br /> The key in the ConfigMap should be the name of the Wasm. For example, if the Wasm is named "my-wasm-extension", the ConfigMap should have a key named "my-wasm-extension" and the value should be the wasm code. |
+| `http` | _string_ |  false  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
+| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the wasm code. This field is required if the HTTP field is set. |
 
 
 #### XDSTranslatorHook

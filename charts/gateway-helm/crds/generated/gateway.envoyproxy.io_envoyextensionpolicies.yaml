@@ -130,6 +130,11 @@ spec:
                             \n Note that the HTTP server must be accessible from the
                             Envoy proxy."
                           type: string
+                        sha256:
+                          description: SHA256 checksum that will be used to verify
+                            the wasm code. This field is required if the HTTP field
+                            is set.
+                          type: string
                       type: object
                     config:
                       description: Config is the configuration for the Wasm extension.
