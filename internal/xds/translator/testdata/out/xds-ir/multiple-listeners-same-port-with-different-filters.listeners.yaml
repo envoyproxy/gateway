@@ -28,6 +28,7 @@
                   patterns:
                   - exact: header1
                   - exact: header2
+              pathPrefix: /auth
               serverUri:
                 cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
                 timeout: 10s
@@ -86,6 +87,7 @@
                   patterns:
                   - exact: header1
                   - exact: header2
+              pathPrefix: /auth
               serverUri:
                 cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
                 timeout: 10s
