@@ -61,7 +61,7 @@ type EnvoyExtensionPolicySpec struct {
 	// defined in this list.
 	//
 	// +optional
-	WASM []Wasm `json:"wasm"`
+	WASM []Wasm `json:"wasm,omitempty"`
 }
 
 //+kubebuilder:object:root=true
