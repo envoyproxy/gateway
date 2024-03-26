@@ -90,7 +90,7 @@ type EnvoyProxySpec struct {
 	// FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain.
 	//
 	// +optional
-	FilterPriority []FilterPriority `json:"filterOrder,omitempty"`
+	FilterPriority []FilterPriority `json:"filterPriority,omitempty"`
 }
 
 // FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain.
