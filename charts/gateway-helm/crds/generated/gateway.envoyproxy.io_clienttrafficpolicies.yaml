@@ -103,8 +103,8 @@ spec:
                       32768 bytes.'
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                  limit:
-                    description: Limit defines limits related to connections
+                  connectionLimit:
+                    description: ConnectionLimit defines limits related to connections
                     properties:
                       closeDelay:
                         description: 'CloseDelay defines the delay to use before closing
