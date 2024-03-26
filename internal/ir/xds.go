@@ -230,6 +230,8 @@ type HTTPListener struct {
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
+	// Connection settings
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -1094,6 +1096,8 @@ type TCPListener struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// Connection settings for clients
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Request and connection timeout settings
@@ -1780,4 +1784,23 @@ type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+}
+
+// Connection settings for downstream connections
+// +k8s:deepcopy-gen=true
+type Connection struct {
+	// Limit for number of connections
+	Limit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+}
+
+// ConnectionLimit contains settings for downstream connection limits
+// +k8s:deepcopy-gen=true
+type ConnectionLimit struct {
+	// Value of the maximum concurrent connections limit.
+	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
+	Value *uint64 `json:"value,omitempty" yaml:"value,omitempty"`
+
+	// CloseDelay defines the delay to use before closing connections that are rejected
+	// once the limit value is reached.
+	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }
