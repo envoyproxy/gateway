@@ -104,7 +104,7 @@ type EnvoyProxySpec struct {
 // - envoy.filters.http.jwt_authn          400
 // - envoy.filters.http.fault              500
 // - envoy.filters.http.local_ratelimit    600
-// - envoy.filters.http.ratelimit         700
+// - envoy.filters.http.ratelimit          700
 type FilterPriority struct {
 
 	// Filter defines an Envoy Filter type.
