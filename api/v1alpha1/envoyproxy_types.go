@@ -94,9 +94,9 @@ type EnvoyProxySpec struct {
 }
 
 // FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain.
-// The filter with the lower value is put before those with higher values in the HCM filter chain.
-// If unspecified, the default order of filters is applied.
-// Default order of filters:
+// The filter with the lower value is put before those with higher values in the filter chain.
+// If unspecified, the default priority of filters is applied.
+// Default priority of filters:
 // - envoy.filters.http.cors               0
 // - envoy.filters.http.ext_authz          100
 // - envoy.filters.http.basic_authn        200
