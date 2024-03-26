@@ -1,7 +1,7 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION ?= 1.27.1
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
-# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
+# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
 GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
@@ -199,7 +199,7 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 
-CONFORMANCE_REPORT_PATH ?=
+CONFORMANCE_REPORT_PATH ?= 
 
 .PHONY: run-experimental-conformance
 run-experimental-conformance: ## Run Experimental Gateway API conformance.
