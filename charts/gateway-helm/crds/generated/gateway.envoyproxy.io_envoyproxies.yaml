@@ -82,21 +82,21 @@ spec:
                   type: string
                 type: array
               filterOrder:
-                description: FilterOrder defines the order of filters in the Envoy
+                description: FilterPriority defines the order of filters in the Envoy
                   proxy's HTTP filter chain.
                 items:
-                  description: 'FilterOrder defines the order of filters in the Envoy
-                    proxy''s HTTP filter chain. The order of filters is determined
-                    by the order field, where the filter with the lowest order value
-                    is applied first. If unspecified, the default order of filters
-                    is applied. Default order of filters: - envoy.filters.http.cors               0
-                    - envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200
+                  description: 'FilterPriority defines the order of filters in the
+                    Envoy proxy''s HTTP filter chain. The filter with the lower value
+                    is put before those with higher values in the HCM filter chain.
+                    If unspecified, the default order of filters is applied. Default
+                    order of filters: - envoy.filters.http.cors               0 -
+                    envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200
                     - envoy.filters.http.oauth2             300 - envoy.filters.http.jwt_authn          400
                     - envoy.filters.http.fault              500 - envoy.filters.http.local_ratelimit    600
-                    - envoy.filters.http.rate_limit         700'
+                    - envoy.filters.http.ratelimit         700'
                   properties:
                     filter:
-                      description: EnvoyFilter defines the type of Envoy HTTP filter.
+                      description: Filter defines an Envoy Filter type.
                       enum:
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
@@ -105,15 +105,16 @@ spec:
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.fault
                       - envoy.filters.http.local_ratelimit
-                      - envoy.filters.http.rate_limit
-                      - envoy.filters.http.routerfilters.http.router
+                      - envoy.filters.http.ratelimit
                       type: string
-                    order:
+                    priority:
+                      description: Priority defines the priority for the specific
+                        Envoy Filter.
                       format: int32
                       type: integer
                   required:
                   - filter
-                  - order
+                  - priority
                   type: object
                 type: array
               logging:

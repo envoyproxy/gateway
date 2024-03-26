@@ -541,7 +541,7 @@ _Underlying type:_ _string_
 EnvoyFilter defines the type of Envoy HTTP filter.
 
 _Appears in:_
-- [FilterOrder](#filterorder)
+- [FilterPriority](#filterpriority)
 
 
 
@@ -968,7 +968,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy. More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterOrder](#filterorder) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain. |
+| `filterOrder` | _[FilterPriority](#filterpriority) array_ |  false  | FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain. |
 
 
 
@@ -1138,19 +1138,19 @@ _Appears in:_
 | `path` | _string_ |  true  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
-#### FilterOrder
+#### FilterPriority
 
 
 
-FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain. The order of filters is determined by the order field, where the filter with the lowest order value is applied first. If unspecified, the default order of filters is applied. Default order of filters: - envoy.filters.http.cors               0 - envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200 - envoy.filters.http.oauth2             300 - envoy.filters.http.jwt_authn          400 - envoy.filters.http.fault              500 - envoy.filters.http.local_ratelimit    600 - envoy.filters.http.rate_limit         700
+FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain. The filter with the lower value is put before those with higher values in the HCM filter chain. If unspecified, the default order of filters is applied. Default order of filters: - envoy.filters.http.cors               0 - envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200 - envoy.filters.http.oauth2             300 - envoy.filters.http.jwt_authn          400 - envoy.filters.http.fault              500 - envoy.filters.http.local_ratelimit    600 - envoy.filters.http.ratelimit         700
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `filter` | _[EnvoyFilter](#envoyfilter)_ |  true  |  |
-| `order` | _integer_ |  true  |  |
+| `filter` | _[EnvoyFilter](#envoyfilter)_ |  true  | Filter defines an Envoy Filter type. |
+| `priority` | _integer_ |  true  | Priority defines the priority for the specific Envoy Filter. |
 
 
 #### GRPCExtAuthService

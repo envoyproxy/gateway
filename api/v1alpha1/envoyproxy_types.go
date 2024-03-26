@@ -87,15 +87,14 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
-	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain.
 	//
 	// +optional
-	FilterOrder []FilterOrder `json:"filterOrder,omitempty"`
+	FilterPriority []FilterPriority `json:"filterOrder,omitempty"`
 }
 
-// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
-// The order of filters is determined by the order field, where the filter with
-// the lowest order value is applied first.
+// FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain.
+// The filter with the lower value is put before those with higher values in the HCM filter chain.
 // If unspecified, the default order of filters is applied.
 // Default order of filters:
 // - envoy.filters.http.cors               0
@@ -105,14 +104,18 @@ type EnvoyProxySpec struct {
 // - envoy.filters.http.jwt_authn          400
 // - envoy.filters.http.fault              500
 // - envoy.filters.http.local_ratelimit    600
-// - envoy.filters.http.rate_limit         700
-type FilterOrder struct {
+// - envoy.filters.http.ratelimit         700
+type FilterPriority struct {
+
+	// Filter defines an Envoy Filter type.
 	Filter EnvoyFilter `json:"filter"`
-	Order  uint32      `json:"order"`
+
+	// Priority defines the priority for the specific Envoy Filter.
+	Priority int32 `json:"priority"`
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.rate_limit;envoy.filters.http.routerfilters.http.router
+// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
 type EnvoyFilter string
 
 const (
@@ -123,7 +126,7 @@ const (
 	EnvoyFilterJWTAuthn       EnvoyFilter = "envoy.filters.http.jwt_authn"
 	EnvoyFilterFault          EnvoyFilter = "envoy.filters.http.fault"
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
-	EnvoyFilterRateLimit      EnvoyFilter = "envoy.filters.http.rate_limit"
+	EnvoyFilterRateLimit      EnvoyFilter = "envoy.filters.http.ratelimit"
 )
 
 type ProxyTelemetry struct {
