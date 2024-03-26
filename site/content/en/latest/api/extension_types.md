@@ -1149,7 +1149,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `envoyFilters` | _[EnvoyFilter](#envoyfilter)_ |  true  |  |
+| `filter` | _[EnvoyFilter](#envoyfilter)_ |  true  |  |
 | `order` | _integer_ |  true  |  |
 
 
