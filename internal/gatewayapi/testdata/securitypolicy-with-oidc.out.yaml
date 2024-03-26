@@ -209,10 +209,9 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Error fetching endpoints from issuer: Get "https://accounts.google.com/.well-known/openid-configuration":
-          dial tcp 74.125.23.84:443: i/o timeout'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
