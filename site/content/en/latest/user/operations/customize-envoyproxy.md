@@ -367,10 +367,6 @@ spec:
 EOF
 ```
 
-[Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
-[egctl translate]: ../egctl/#validating-gateway-api-configuration
-
 ## Customize EnvoyProxy with Patches
 
 You can customize the EnvoyProxy using patches.
@@ -410,3 +406,8 @@ EOF
 ```
 
 After applying the configuration, you will see the change in both containers in the `envoyproxy` deployment.
+
+[Gateway API documentation]: https://gateway-api.sigs.k8s.io/
+[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+[egctl translate]: ../egctl/#validating-gateway-api-configuration
+
