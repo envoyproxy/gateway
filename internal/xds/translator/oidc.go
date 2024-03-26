@@ -59,11 +59,11 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		// Only generates one BasicAuth Envoy filter for each unique name.
 		// For example, if there are two routes under the same gateway with the
 		// same BasicAuth config, only one BasicAuth filter will be generated.
-		if hcmContainsFilter(mgr, oauth2FilterName(route.OIDC)) {
+		if hcmContainsFilter(mgr, oauth2FilterName(route.Security.OIDC)) {
 			continue
 		}
 
-		filter, err := buildHCMOAuth2Filter(route.OIDC)
+		filter, err := buildHCMOAuth2Filter(route.Security.OIDC)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -182,7 +182,8 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 	}
 
 	if irRoute != nil &&
-		irRoute.OIDC != nil {
+		irRoute.Security != nil &&
+		irRoute.Security.OIDC != nil {
 		return true
 	}
 
@@ -221,7 +222,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			err     error
 		)
 
-		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint)
+		cluster, err = url2Cluster(route.Security.OIDC.Provider.TokenEndpoint)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -233,7 +234,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 		if cluster.endpointType == EndpointTypeStatic {
 			errs = errors.Join(errs, fmt.Errorf(
 				"static IP cluster is not allowed: %s",
-				route.OIDC.Provider.TokenEndpoint))
+				route.Security.OIDC.Provider.TokenEndpoint))
 			continue
 		}
 
@@ -280,12 +281,12 @@ func createOAuth2Secrets(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRout
 
 		// a separate secret is created for each route, even they share the same
 		// oauth2 client ID and secret.
-		clientSecret := buildOAuth2ClientSecret(route.OIDC)
+		clientSecret := buildOAuth2ClientSecret(route.Security.OIDC)
 		if err := addXdsSecret(tCtx, clientSecret); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
-		if err := addXdsSecret(tCtx, buildOAuth2HMACSecret(route.OIDC)); err != nil {
+		if err := addXdsSecret(tCtx, buildOAuth2HMACSecret(route.Security.OIDC)); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -344,10 +345,10 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.OIDC == nil {
+	if irRoute.Security == nil || irRoute.Security.OIDC == nil {
 		return nil
 	}
-	filterName := oauth2FilterName(irRoute.OIDC)
+	filterName := oauth2FilterName(irRoute.Security.OIDC)
 	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}

@@ -58,11 +58,11 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		// Only generates one OAuth2 Envoy filter for each unique name.
 		// For example, if there are two routes under the same gateway with the
 		// same OIDC config, only one OAuth2 filter will be generated.
-		if hcmContainsFilter(mgr, extAuthFilterName(route.ExtAuth)) {
+		if hcmContainsFilter(mgr, extAuthFilterName(route.Security.ExtAuth)) {
 			continue
 		}
 
-		filter, err := buildHCMExtAuthFilter(route.ExtAuth)
+		filter, err := buildHCMExtAuthFilter(route.Security.ExtAuth)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -203,7 +203,8 @@ func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
 	}
 
 	if irRoute != nil &&
-		irRoute.ExtAuth != nil {
+		irRoute.Security != nil &&
+		irRoute.Security.ExtAuth != nil {
 		return true
 	}
 
@@ -222,15 +223,15 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		if !routeContainsExtAuth(route) {
 			continue
 		}
-		if route.ExtAuth.HTTP != nil {
+		if route.Security.ExtAuth.HTTP != nil {
 			if err := createExtServiceXDSCluster(
-				&route.ExtAuth.HTTP.Destination, tCtx); err != nil && !errors.Is(
+				&route.Security.ExtAuth.HTTP.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
 		} else {
 			if err := createExtServiceXDSCluster(
-				&route.ExtAuth.GRPC.Destination, tCtx); err != nil && !errors.Is(
+				&route.Security.ExtAuth.GRPC.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -283,10 +284,10 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.ExtAuth == nil {
+	if irRoute.Security == nil || irRoute.Security.ExtAuth == nil {
 		return nil
 	}
-	filterName := extAuthFilterName(irRoute.ExtAuth)
+	filterName := extAuthFilterName(irRoute.Security.ExtAuth)
 	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}
