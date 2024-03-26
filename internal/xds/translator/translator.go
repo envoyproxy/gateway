@@ -166,11 +166,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
 				return err
 			}
 			if enabledHTTP3 {
-				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
+				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
 					return err
 				}
 			}
@@ -409,7 +409,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog); err != nil {
+		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog, tcpListener.Connection); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
