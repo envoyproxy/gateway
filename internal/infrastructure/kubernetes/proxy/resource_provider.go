@@ -69,6 +69,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
 
+	// If the service is disabled, return nil
 	if envoyServiceConfig.Disable {
 		return nil, nil
 	}
@@ -198,38 +199,30 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
+
+	// If the Kubernetes Provider is not of type "Deployment", return nil
+	if provider.GetEnvoyProxyKubeProvider().GetEnvoyProxyKubeProviderMode() != egv1a1.KubernetesProviderModeDeployment {
+		return nil, nil
+	}
+
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig, proxyConfig.Spec.Shutdown)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown)
 	if err != nil {
 		return nil, err
 	}
 
+	dpAnnotations := r.getAnnotations()
+	podAnnotations := r.getPodAnnotations(dpAnnotations, deploymentConfig.Pod)
+
 	// Set the labels based on the owning gateway name.
-	dpAnnotations := r.infra.GetProxyMetadata().Annotations
-	labels := r.infra.GetProxyMetadata().Labels
-	dpLabels := envoyLabels(labels)
-	if OwningGatewayLabelsAbsent(dpLabels) {
-		return nil, fmt.Errorf("missing owning gateway labels")
+	dpLabels, err := r.getLabels()
+	if err != nil {
+		return nil, err
 	}
-
-	maps.Copy(labels, deploymentConfig.Pod.Labels)
-	podLabels := envoyLabels(labels)
+	podLabels := r.getPodLabels(deploymentConfig.Pod)
 	selector := resource.GetSelector(podLabels)
-
-	// Get annotations
-	podAnnotations := map[string]string{}
-	maps.Copy(podAnnotations, dpAnnotations)
-	maps.Copy(podAnnotations, deploymentConfig.Pod.Annotations)
-	if enablePrometheus(r.infra) {
-		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
-		podAnnotations["prometheus.io/scrape"] = "true"
-		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
-	}
-	if len(podAnnotations) == 0 {
-		podAnnotations = nil
-	}
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -251,23 +244,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Labels:      selector.MatchLabels,
 					Annotations: podAnnotations,
 				},
-				Spec: corev1.PodSpec{
-					Containers:                    containers,
-					InitContainers:                deploymentConfig.InitContainers,
-					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-					AutomountServiceAccountToken:  ptr.To(false),
-					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
-					DNSPolicy:                     corev1.DNSClusterFirst,
-					RestartPolicy:                 corev1.RestartPolicyAlways,
-					SchedulerName:                 "default-scheduler",
-					SecurityContext:               deploymentConfig.Pod.SecurityContext,
-					Affinity:                      deploymentConfig.Pod.Affinity,
-					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedDeploymentVolumes(r.infra.Name, deploymentConfig),
-					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
-					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
-					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
-				},
+				Spec: r.getPodSpec(containers, deploymentConfig.InitContainers, deploymentConfig.Pod, proxyConfig),
 			},
 			RevisionHistoryLimit:    ptr.To[int32](10),
 			ProgressDeadlineSeconds: ptr.To[int32](600),
@@ -301,6 +278,11 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
+	// If the Kubernetes Provider is not of type "Deployment", return nil
+	if provider.GetEnvoyProxyKubeProvider().GetEnvoyProxyKubeProviderMode() != egv1a1.KubernetesProviderModeDeployment {
+		return nil, nil
+	}
+
 	hpaConfig := provider.GetEnvoyProxyKubeProvider().EnvoyHpa
 	if hpaConfig == nil {
 		return nil, nil
@@ -331,6 +313,136 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	return hpa, nil
+}
+
+func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
+	proxyConfig := r.infra.GetProxyConfig()
+
+	// Get the EnvoyProxy config to configure the daemonset.
+	provider := proxyConfig.GetEnvoyProxyProvider()
+	if provider.Type != egv1a1.ProviderTypeKubernetes {
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	}
+
+	// If the Kubernetes Provider is not of type "DaemonSet", return nil
+	if provider.GetEnvoyProxyKubeProvider().GetEnvoyProxyKubeProviderMode() != egv1a1.KubernetesProviderModeDaemonSet {
+		return nil, nil
+	}
+
+	daemonSetConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDaemonSet
+
+	// Get expected bootstrap configurations rendered ProxyContainers
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown)
+	if err != nil {
+		return nil, err
+	}
+
+	dsAnnotations := r.getAnnotations()
+	podAnnotations := r.getPodAnnotations(dsAnnotations, daemonSetConfig.Pod)
+
+	// Set the labels based on the owning gateway name.
+	dsLabels, err := r.getLabels()
+	if err != nil {
+		return nil, err
+	}
+	podLabels := r.getPodLabels(daemonSetConfig.Pod)
+	selector := resource.GetSelector(podLabels)
+
+	daemonSet := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   r.Namespace,
+			Name:        r.Name(),
+			Labels:      dsLabels,
+			Annotations: dsAnnotations,
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: selector,
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      selector.MatchLabels,
+					Annotations: podAnnotations,
+				},
+				Spec: r.getPodSpec(containers, daemonSetConfig.InitContainers, daemonSetConfig.Pod, proxyConfig),
+			},
+		},
+	}
+
+	// apply merge patch to daemonset
+	if daemonSet, err = daemonSetConfig.ApplyMergePatch(daemonSet); err != nil {
+		return nil, err
+	}
+
+	return daemonSet, nil
+}
+
+func (r *ResourceRender) getPodSpec(
+	containers, initContainers []corev1.Container,
+	pod *egv1a1.KubernetesPodSpec,
+	proxyConfig *egv1a1.EnvoyProxy,
+) corev1.PodSpec {
+	return corev1.PodSpec{
+		Containers:                    containers,
+		InitContainers:                initContainers,
+		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
+		AutomountServiceAccountToken:  ptr.To(false),
+		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
+		DNSPolicy:                     corev1.DNSClusterFirst,
+		RestartPolicy:                 corev1.RestartPolicyAlways,
+		SchedulerName:                 "default-scheduler",
+		SecurityContext:               pod.SecurityContext,
+		Affinity:                      pod.Affinity,
+		Tolerations:                   pod.Tolerations,
+		Volumes:                       expectedVolumes(r.infra.Name, pod),
+		ImagePullSecrets:              pod.ImagePullSecrets,
+		NodeSelector:                  pod.NodeSelector,
+		TopologySpreadConstraints:     pod.TopologySpreadConstraints,
+		HostNetwork:                   pod.HostNetwork,
+	}
+}
+
+// func (r *ResourceRender) getObjectMeta(pod egv1a1.KubernetesPodSpec) (metav1.ObjectMeta, error)
+
+func (r *ResourceRender) getAnnotations() map[string]string {
+	return r.infra.GetProxyMetadata().Annotations
+}
+
+func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string, pod *egv1a1.KubernetesPodSpec) map[string]string {
+	podAnnotations := map[string]string{}
+	maps.Copy(podAnnotations, resourceAnnotation)
+	maps.Copy(podAnnotations, pod.Annotations)
+
+	if enablePrometheus(r.infra) {
+		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
+		podAnnotations["prometheus.io/scrape"] = "true"
+		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
+	}
+
+	if len(podAnnotations) == 0 {
+		podAnnotations = nil
+	}
+
+	return podAnnotations
+}
+
+func (r *ResourceRender) getLabels() (map[string]string, error) {
+	// Set the labels based on the owning gateway name.
+	resourceLabels := envoyLabels(r.infra.GetProxyMetadata().Labels)
+	if OwningGatewayLabelsAbsent(resourceLabels) {
+		return nil, fmt.Errorf("missing owning gateway labels")
+	}
+
+	return resourceLabels, nil
+}
+
+func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]string {
+	labels := r.infra.GetProxyMetadata().Labels
+	maps.Copy(labels, pod.Labels)
+
+	return envoyLabels(labels)
 }
 
 // OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels

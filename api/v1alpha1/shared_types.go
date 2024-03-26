@@ -57,6 +57,19 @@ const (
 	ProviderTypeFile ProviderType = "File"
 )
 
+// KubernetesProviderType defines the types of Kubernetes providers supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=Deployment;DaemonSet
+type KubernetesProviderMode string
+
+const (
+	// KubernetesProviderModeDeployment defines the "Deployment" provider.
+	KubernetesProviderModeDeployment KubernetesProviderMode = "Deployment"
+
+	// KubernetesProviderModeDaemonSet defines the "DaemonSet" provider.
+	KubernetesProviderModeDaemonSet KubernetesProviderMode = "DaemonSet"
+)
+
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
 	// Patch defines how to perform the patch operation to deployment
@@ -72,6 +85,36 @@ type KubernetesDeploymentSpec struct {
 	// The deployment strategy to use to replace existing pods with new ones.
 	// +optional
 	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
+
+	// Pod defines the desired specification of pod.
+	//
+	// +optional
+	Pod *KubernetesPodSpec `json:"pod,omitempty"`
+
+	// Container defines the desired specification of main container.
+	//
+	// +optional
+	Container *KubernetesContainerSpec `json:"container,omitempty"`
+
+	// List of initialization containers belonging to the pod.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	//
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+
+	// TODO: Expose config as use cases are better understood, e.g. labels.
+}
+
+// KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+type KubernetesDaemonSetSpec struct {
+	// Patch defines how to perform the patch operation to daemonset
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
+
+	// The daemonset strategy to use to replace existing pods with new ones.
+	// +optional
+	Strategy *appv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
 
 	// Pod defines the desired specification of pod.
 	//
@@ -147,6 +190,13 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// Host networking requested for this pod. Use the host's network namespace.
+	// If this option is set, the ports that will be used must be specified.
+	// Default to false.
+	//
+	// +optional
+	HostNetwork bool `json:"hostNetwork,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.

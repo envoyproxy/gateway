@@ -69,6 +69,11 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		return err
 	}
 
+	// skip deployment creation if it is not needed
+	if deployment == nil {
+		return i.deleteDeployment(ctx, r)
+	}
+
 	current := &appsv1.Deployment{}
 	key := types.NamespacedName{
 		Namespace: deployment.Namespace,
@@ -87,6 +92,28 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 
 	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
 		return !cmp.Equal(current.Spec, deployment.Spec, opts...)
+	})
+}
+
+func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) error {
+	daemonSet, err := r.DaemonSet()
+	if err != nil {
+		return err
+	}
+
+	// skip daemonset creation if it is not needed
+	if daemonSet == nil {
+		return i.deleteDaemonSet(ctx, r)
+	}
+
+	current := &appsv1.DaemonSet{}
+	key := types.NamespacedName{
+		Namespace: daemonSet.Namespace,
+		Name:      daemonSet.Name,
+	}
+
+	return i.Client.CreateOrUpdate(ctx, key, current, daemonSet, func() bool {
+		return !cmp.Equal(current.Spec, daemonSet.Spec)
 	})
 }
 
@@ -124,8 +151,9 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 		return err
 	}
 
+	// skip service creation if it is not needed
 	if svc == nil {
-		return nil
+		return i.deleteService(ctx, r)
 	}
 
 	current := &corev1.Service{}
@@ -161,6 +189,18 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) error {
 	}
 
 	return i.Client.Delete(ctx, deployment)
+}
+
+// deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
+func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) error {
+	daemonSet := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      r.Name(),
+		},
+	}
+
+	return i.Client.Delete(ctx, daemonSet)
 }
 
 // deleteConfigMap deletes the ConfigMap in the kube api server, if it exists.

@@ -918,7 +918,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `mode` | _[KubernetesProviderMode](#kubernetesprovidermode)_ |  false  | Mode is the type of the Kubernetes resource provider. If unspecified, it defaults to "Deployment". |
 | `envoyDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the managed Envoy deployment resource are applied. |
+| `envoyDaemonSet` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  | EnvoyDaemonSet defines the desired state of the Envoy daemonset resource. If unspecified, default settings for the managed Envoy daemonset resource are applied. |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the managed Envoy service resource are applied. |
 | `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment. Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
 
@@ -1464,6 +1466,7 @@ _Appears in:_
 KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
@@ -1473,6 +1476,24 @@ _Appears in:_
 | `securityContext` | _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#securitycontext-v1-core)_ |  false  | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `image` | _string_ |  false  | Image specifies the EnvoyProxy container image to be used, instead of the default image. |
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volumemount-v1-core) array_ |  false  | VolumeMounts are volumes to mount into the container's filesystem. Cannot be updated. |
+
+
+#### KubernetesDaemonSetSpec
+
+
+
+KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+
+_Appears in:_
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to daemonset |
+| `strategy` | _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#daemonsetupdatestrategy-v1-apps)_ |  false  | The daemonset strategy to use to replace existing pods with new ones. |
+| `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
+| `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  | Container defines the desired specification of main container. |
+| `initContainers` | _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#container-v1-core) array_ |  false  | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
 
 
 #### KubernetesDeployMode
@@ -1530,6 +1551,7 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
@@ -1546,6 +1568,7 @@ _Appears in:_
 KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
@@ -1559,6 +1582,18 @@ _Appears in:_
 | `imagePullSecrets` | _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#localobjectreference-v1-core) array_ |  false  | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
 | `nodeSelector` | _object (keys:string, values:string)_ |  false  | NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ |
 | `topologySpreadConstraints` | _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#topologyspreadconstraint-v1-core) array_ |  false  | TopologySpreadConstraints describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints. All topologySpreadConstraints are ANDed. |
+| `hostNetwork` | _boolean_ |  false  | Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified. Default to false. |
+
+
+#### KubernetesProviderMode
+
+_Underlying type:_ _string_
+
+KubernetesProviderType defines the types of Kubernetes providers supported by Envoy Gateway.
+
+_Appears in:_
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
+
 
 
 #### KubernetesServiceSpec
