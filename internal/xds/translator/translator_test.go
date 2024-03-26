@@ -297,8 +297,8 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "multiple-listeners-same-port-with-different-filters",
-    },
-    {
+		},
+		{
 			name: "listener-connection-limit",
 		},
 	}
