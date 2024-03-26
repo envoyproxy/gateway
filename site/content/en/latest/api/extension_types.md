@@ -2628,7 +2628,7 @@ _Appears in:_
 
 
 Wasm defines a wasm extension. 
- Note: v8 is used as the VM for the Wasm extension.
+ Note: at the moment, Envoy Gateway does not support configuring Wasm runtime. v8 is used as the VM runtime for the Wasm extensions.
 
 _Appears in:_
 - [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)

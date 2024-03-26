@@ -12,7 +12,8 @@ import (
 
 // Wasm defines a wasm extension.
 //
-// Note: v8 is used as the VM for the Wasm extension.
+// Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
+// v8 is used as the VM runtime for the Wasm extensions.
 type Wasm struct {
 	// Name is a unique name for this Wasm extension. It is used to identify the
 	// Wasm extension if multiple extensions are handled by the same vm_id and root_id.
