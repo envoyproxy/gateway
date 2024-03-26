@@ -113,27 +113,80 @@ spec:
                   Gateway. Order matters, as the extensions will be loaded in the
                   order they are defined in this list.
                 items:
-                  description: Wasm defines a wasm extension.
+                  description: "Wasm defines a wasm extension. \n Note: v8 is used
+                    as the VM for the Wasm extension."
                   properties:
                     code:
                       description: Code is the wasm code for the extension.
                       properties:
-                        ConfigMap:
-                          description: "ConfigMap is the name of the ConfigMap containing
-                            the wasm code. \n The key in the ConfigMap should be the
-                            name of the Wasm. For example, if the Wasm is named \"my-wasm-extension\",
-                            the ConfigMap should have a key named \"my-wasm-extension\"
-                            and the value should be the wasm code."
-                          type: string
                         http:
                           description: "HTTP is the HTTP URL containing the wasm code.
                             \n Note that the HTTP server must be accessible from the
                             Envoy proxy."
                           type: string
+                        image:
+                          description: "Image is the OCI image containing the wasm
+                            code. \n Note that the image must be accessible from the
+                            Envoy Gateway."
+                          properties:
+                            pullPolicy:
+                              description: PullPolicy is the policy to use when pulling
+                                the image. If not specified, the default policy is
+                                IfNotPresent for images whose tag is not latest, and
+                                Always for images whose tag is latest.
+                              type: string
+                            pullSecret:
+                              description: PullSecret is a reference to the secret
+                                containing the credentials to pull the image.
+                              properties:
+                                group:
+                                  default: ""
+                                  description: Group is the group of the referent.
+                                    For example, "gateway.networking.k8s.io". When
+                                    unspecified or empty string, core API group is
+                                    inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  default: Secret
+                                  description: Kind is kind of the referent. For example
+                                    "Secret".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: "Namespace is the namespace of the
+                                    referenced object. When unspecified, the local
+                                    namespace is inferred. \n Note that when a namespace
+                                    different than the local namespace is specified,
+                                    a ReferenceGrant object is required in the referent
+                                    namespace to allow that namespace's owner to accept
+                                    the reference. See the ReferenceGrant documentation
+                                    for details. \n Support: Core"
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            url:
+                              description: URL is the URL of the OCI image.
+                              type: string
+                          required:
+                          - pullSecret
+                          - url
+                          type: object
                         sha256:
                           description: SHA256 checksum that will be used to verify
-                            the wasm code. This field is required if the HTTP field
-                            is set.
+                            the wasm code.
                           type: string
                       type: object
                     config:

@@ -7,9 +7,12 @@ package v1alpha1
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // Wasm defines a wasm extension.
+//
+// Note: v8 is used as the VM for the Wasm extension.
 type Wasm struct {
 	// Name is a unique name for this Wasm extension. It is used to identify the
 	// Wasm extension if multiple extensions are handled by the same vm_id and root_id.
@@ -59,26 +62,46 @@ type Wasm struct {
 }
 
 // WasmCodeSource defines the source of the wasm code.
+// TODO: zhaohuabing CEL validation" one of the HTTP or Image field must be set
 type WasmCodeSource struct {
-	// ConfigMap is the name of the ConfigMap containing the wasm code.
-	//
-	// The key in the ConfigMap should be the name of the Wasm. For example,
-	// if the Wasm is named "my-wasm-extension", the ConfigMap should have a key
-	// named "my-wasm-extension" and the value should be the wasm code.
-	// +optional
-	ConfigMap *string `json:"ConfigMap,omitempty"`
-
 	// HTTP is the HTTP URL containing the wasm code.
 	//
 	// Note that the HTTP server must be accessible from the Envoy proxy.
 	// +optional
 	HTTP *string `json:"http,omitempty"`
 
-	// SHA256 checksum that will be used to verify the wasm code.
-	// This field is required if the HTTP field is set.
-	// +optional
-	SHA256 *string `json:"sha256,omitempty"`
-
 	// Image is the OCI image containing the wasm code.
-	// Image *string `json:"image,omitempty"` //TODO: Add support for OCI image in the future.
+	//
+	// Note that the image must be accessible from the Envoy Gateway.
+	// +optional
+	Image *WasmImage `json:"image,omitempty"`
+
+	// SHA256 checksum that will be used to verify the wasm code.
+	SHA256 string `json:"sha256,omitempty"`
 }
+
+// WasmImage defines the OCI image containing the wasm code.
+type WasmImage struct {
+	// URL is the URL of the OCI image.
+	URL string `json:"url"`
+
+	// PullSecret is a reference to the secret containing the credentials to pull the image.
+	PullSecret gwapiv1b1.SecretObjectReference `json:"pullSecret"`
+
+	// PullPolicy is the policy to use when pulling the image.
+	// If not specified, the default policy is IfNotPresent for images whose tag is not latest,
+	// and Always for images whose tag is latest.
+	// +optional
+	PullPolicy *PullPolicy `json:"pullPolicy,omitempty"`
+}
+
+// PullPolicy defines the policy to use when pulling an OIC image.
+type PullPolicy string
+
+const (
+	// PullPolicyIfNotPresent will only pull the image if it does not already exist.
+	PullPolicyIfNotPresent PullPolicy = "IfNotPresent"
+
+	// PullPolicyAlways will always pull the image.
+	PullPolicyAlways PullPolicy = "Always"
+)

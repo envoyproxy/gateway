@@ -2068,6 +2068,17 @@ _Appears in:_
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider. Only OpenTelemetry is supported currently. |
 
 
+#### PullPolicy
+
+_Underlying type:_ _string_
+
+PullPolicy defines the policy to use when pulling an OIC image.
+
+_Appears in:_
+- [WasmImage](#wasmimage)
+
+
+
 #### RateLimit
 
 
@@ -2616,7 +2627,8 @@ _Appears in:_
 
 
 
-Wasm defines a wasm extension.
+Wasm defines a wasm extension. 
+ Note: v8 is used as the VM for the Wasm extension.
 
 _Appears in:_
 - [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
@@ -2635,16 +2647,32 @@ _Appears in:_
 
 
 
-WasmCodeSource defines the source of the wasm code.
+WasmCodeSource defines the source of the wasm code. TODO: zhaohuabing CEL validation" one of the HTTP or Image field must be set
 
 _Appears in:_
 - [Wasm](#wasm)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `ConfigMap` | _string_ |  false  | ConfigMap is the name of the ConfigMap containing the wasm code. <br /><br /> The key in the ConfigMap should be the name of the Wasm. For example, if the Wasm is named "my-wasm-extension", the ConfigMap should have a key named "my-wasm-extension" and the value should be the wasm code. |
 | `http` | _string_ |  false  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
-| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the wasm code. This field is required if the HTTP field is set. |
+| `image` | _[WasmImage](#wasmimage)_ |  false  | Image is the OCI image containing the wasm code. <br /><br /> Note that the image must be accessible from the Envoy Gateway. |
+| `sha256` | _string_ |  true  | SHA256 checksum that will be used to verify the wasm code. |
+
+
+#### WasmImage
+
+
+
+WasmImage defines the OCI image containing the wasm code.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `url` | _string_ |  true  | URL is the URL of the OCI image. |
+| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecret is a reference to the secret containing the credentials to pull the image. |
+| `pullPolicy` | _[PullPolicy](#pullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the image. If not specified, the default policy is IfNotPresent for images whose tag is not latest, and Always for images whose tag is latest. |
 
 
 #### XDSTranslatorHook
