@@ -296,6 +296,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "retry-partial-invalid",
 		},
 		{
+			name: "listener-connection-limit",
+		},
+		{
 			name: "ext-proc",
 		},
 	}
