@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	// ConformanceTests = append(ConformanceTests, ConnectionLimitTest)
+	ConformanceTests = append(ConformanceTests, ConnectionLimitTest)
 }
 
 var ConnectionLimitTest = suite.ConformanceTest{
