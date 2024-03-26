@@ -85,15 +85,16 @@ spec:
                 description: FilterPriority defines the order of filters in the Envoy
                   proxy's HTTP filter chain.
                 items:
-                  description: 'FilterPriority defines the order of filters in the
-                    Envoy proxy''s HTTP filter chain. The filter with the lower value
+                  description: "FilterPriority defines the order of filters in the
+                    Envoy proxy's HTTP filter chain. The filter with the lower value
                     is put before those with higher values in the filter chain. If
                     unspecified, the default priority of filters is applied. Default
-                    priority of filters: - envoy.filters.http.cors               0
-                    - envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200
-                    - envoy.filters.http.oauth2             300 - envoy.filters.http.jwt_authn          400
-                    - envoy.filters.http.fault              500 - envoy.filters.http.local_ratelimit    600
-                    - envoy.filters.http.ratelimit          700'
+                    priority of filters: \n - envoy.filters.http.cors               0
+                    \n - envoy.filters.http.ext_authz          100 \n - envoy.filters.http.basic_authn
+                    \       200 \n - envoy.filters.http.oauth2             300 \n
+                    - envoy.filters.http.jwt_authn          400 \n - envoy.filters.http.fault
+                    \             500 \n - envoy.filters.http.local_ratelimit    600
+                    \n - envoy.filters.http.ratelimit          700"
                   properties:
                     filter:
                       description: Filter defines an Envoy Filter type.
