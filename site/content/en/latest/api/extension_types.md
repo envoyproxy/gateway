@@ -1142,7 +1142,7 @@ _Appears in:_
 
 
 
-FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain. The filter with the lower value is put before those with higher values in the filter chain. If unspecified, the default priority of filters is applied. Default priority of filters: - envoy.filters.http.cors               0 - envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200 - envoy.filters.http.oauth2             300 - envoy.filters.http.jwt_authn          400 - envoy.filters.http.fault              500 - envoy.filters.http.local_ratelimit    600 - envoy.filters.http.ratelimit         700
+FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain. The filter with the lower value is put before those with higher values in the filter chain. If unspecified, the default priority of filters is applied. Default priority of filters: - envoy.filters.http.cors               0 - envoy.filters.http.ext_authz          100 - envoy.filters.http.basic_authn        200 - envoy.filters.http.oauth2             300 - envoy.filters.http.jwt_authn          400 - envoy.filters.http.fault              500 - envoy.filters.http.local_ratelimit    600 - envoy.filters.http.ratelimit          700
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
