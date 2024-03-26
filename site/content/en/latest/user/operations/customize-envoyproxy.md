@@ -408,4 +408,5 @@ spec:
                         memory: 1024Mi
 EOF
 ```
+
 After applying the configuration, you will see the change in both containers in the `envoyproxy` deployment.
