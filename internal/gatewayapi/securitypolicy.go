@@ -367,7 +367,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
-			irConfigName(policy),
 			policy,
 			resources); err != nil {
 			errs = errors.Join(errs, err)
@@ -454,7 +453,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
-			irConfigName(policy),
 			policy,
 			resources); err != nil {
 			errs = errors.Join(errs, err)
@@ -588,7 +586,6 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 }
 
 func (t *Translator) buildOIDC(
-	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.OIDC, error) {
 	var (
@@ -662,7 +659,7 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
-		Name:         name,
+		Name:         irConfigName(policy),
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
