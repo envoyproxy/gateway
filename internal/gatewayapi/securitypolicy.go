@@ -664,6 +664,7 @@ func (t *Translator) buildOIDC(
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
 		Scopes:       scopes,
+		Resources:    oidc.Resources,
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,
