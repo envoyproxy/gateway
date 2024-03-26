@@ -465,6 +465,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			continue
 		}
 
+		// policy(targeting xRoute) has already set it, so we skip it.
+		if tcp.LoadBalancer != nil || tcp.ProxyProtocol != nil ||
+			tcp.HealthCheck != nil || tcp.CircuitBreaker != nil ||
+			tcp.TCPKeepalive != nil || tcp.Timeout != nil {
+			continue
+		}
+
 		tcp.LoadBalancer = lb
 		tcp.ProxyProtocol = pp
 		tcp.HealthCheck = hc
@@ -482,8 +489,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			continue
 		}
 
-		udp.LoadBalancer = lb
+		// policy(targeting xRoute) has already set it, so we skip it.
+		if udp.LoadBalancer != nil || udp.Timeout != nil {
+			continue
+		}
 
+		udp.LoadBalancer = lb
 		if udp.Timeout == nil {
 			udp.Timeout = ct
 		}
