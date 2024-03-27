@@ -49,6 +49,8 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  upstreamConnectionOptions:
+    tcpKeepalive: {}
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -66,3 +68,6 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveProbes: 10
