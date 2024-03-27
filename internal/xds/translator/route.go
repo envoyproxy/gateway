@@ -286,7 +286,7 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 				PathRedirect: *redirection.Path.FullReplace,
 			}
 		} else if redirection.Path.PrefixMatchReplace != nil {
-			if useRegexRewriteForPrefixRedirect(httpRoute) {
+			if useRegexRewriteForPrefixMatch(httpRoute.PathMatch, *redirection.Path.PrefixMatchReplace) {
 				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_RegexRewrite{
 					RegexRewrite: &matcherv3.RegexMatchAndSubstitute{
 						Pattern: &matcherv3.RegexMatcher{
@@ -352,14 +352,17 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 // ```
 //
 // See https://github.com/envoyproxy/gateway/issues/2976 for more details.
-func useRegexRewriteForPrefixRedirect(httpRoute *ir.HTTPRoute) bool {
-	return httpRoute.PathMatch != nil &&
+func useRegexRewriteForPrefixMatch(pathMatch *ir.StringMatch, prefixMatchReplace string) bool {
+	/*return httpRoute.PathMatch != nil &&
 		httpRoute.PathMatch.Prefix != nil &&
 		*httpRoute.PathMatch.Prefix != "/" &&
 		httpRoute.Redirect != nil &&
 		httpRoute.Redirect.Path != nil &&
 		httpRoute.Redirect.Path.PrefixMatchReplace != nil &&
-		*httpRoute.Redirect.Path.PrefixMatchReplace == "/"
+	*httpRoute.Redirect.Path.PrefixMatchReplace == "/"*/
+
+	return pathMatch != nil && pathMatch.Prefix != nil &&
+		(prefixMatchReplace == "" || prefixMatchReplace == "/")
 }
 
 func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
@@ -382,8 +385,7 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			// An empty replace string does not seem to solve the issue so we are using
 			// a regex match and replace instead
 			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
-			if pathMatch != nil && pathMatch.Prefix != nil &&
-				(*urlRewrite.Path.PrefixMatchReplace == "" || *urlRewrite.Path.PrefixMatchReplace == "/") {
+			if useRegexRewriteForPrefixMatch(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
 				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 					Pattern: &matcherv3.RegexMatcher{
 						Regex: "^" + *pathMatch.Prefix + `\/*`,
