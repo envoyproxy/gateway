@@ -15,22 +15,12 @@
         responseCode: FOUND
         schemeRedirect: https
     - match:
-        prefix: /redirect/
-      name: redirect-route-2/0
+        pathSeparatedPrefix: /redirect
+      name: redirect-route-2
       redirect:
         prefixRewrite: /
     - match:
         pathSeparatedPrefix: /redirect
-      name: redirect-route-2/1
-      redirect:
-        prefixRewrite: /
-    - match:
-        prefix: /redirect/
-      name: redirect-route-3/0
-      redirect:
-        prefixRewrite: /
-    - match:
-        pathSeparatedPrefix: /redirect
-      name: redirect-route-3/1
+      name: redirect-route-3
       redirect:
         prefixRewrite: /

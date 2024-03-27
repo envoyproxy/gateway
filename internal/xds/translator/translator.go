@@ -251,66 +251,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				continue
 			}
 
-			// When an HTTPRoute's match is a path prefix and has a redirect filter
-			// with a replacePrefixMatch "/", two xDS routes needs to be created
-			// to avoid double slashes in the response's redirect URL.
-			//
-			// For example, given the following HTTPRoute:
-			//
-			// ```
-			// - matches:
-			//   - path:
-			//       type: PathPrefix
-			//       value: /api/foo/
-			//   filters:
-			//   - requestRedirect:
-			//       path:
-			//         replacePrefixMatch: /
-			//         type: ReplacePrefixMatch
-			//     type: RequestRedirect
-			// ```
-			//
-			// The following two xDS routes will be created:
-			//
-			// ```
-			//   routes:
-			//   - match:
-			//       prefix: "/api/foo/"
-			//     redirect:
-			//       prefix_rewrite: "/qq"
-			//   - match:
-			//       path_separated_prefix: "/api/foo"
-			//     redirect:
-			//       prefix_rewrite: "/bb"
-			// ```
-			//
-			// * The first route will match the path "/api/foo/*" and redirect to "/*".
-			// * The second route will match the path "/api/foo" and redirect to "/".
-			//
-			// Since the second route uses path_separated_prefix, paths like "/api/foo-bar" will not match.
-			// See https://github.com/envoyproxy/gateway/issues/2976 for more details.
-			var extraRoute *routev3.Route
-			if needExtraRouteForPrefixRedirect(httpRoute) {
-				xdsRoute, extraRoute, err = buildXdsRouteForPrefixRedirect(httpRoute)
-				if err != nil {
-					// skip this route if failed to build xds route
-					errs = errors.Join(errs, err)
-					continue
-				}
-			}
-
 			// Check if an extension want to modify the route we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 			if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
 				if err != nil {
 					errs = errors.Join(errs, err)
-				}
-			}
-			if extraRoute != nil {
-				if err = processExtensionPostRouteHook(extraRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
-					if err != nil {
-						errs = errors.Join(errs, err)
-					}
 				}
 			}
 
@@ -320,19 +265,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 					xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 				}
 				xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, http3AltSvcHeader)
-
-				if extraRoute != nil {
-					if extraRoute.ResponseHeadersToAdd == nil {
-						extraRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
-					}
-					extraRoute.ResponseHeadersToAdd = append(extraRoute.ResponseHeadersToAdd, http3AltSvcHeader)
-				}
 			}
-
 			vHost.Routes = append(vHost.Routes, xdsRoute)
-			if extraRoute != nil {
-				vHost.Routes = append(vHost.Routes, extraRoute)
-			}
 
 			if httpRoute.Destination != nil {
 				if err = processXdsCluster(tCtx, httpRoute, httpListener.HTTP1); err != nil {
