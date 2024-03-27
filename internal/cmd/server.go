@@ -18,6 +18,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/metrics"
+	"github.com/envoyproxy/gateway/internal/probs"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
 	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
@@ -127,9 +128,11 @@ func setupRunners(cfg *config.Server) error {
 	// and publishes it
 	// It also subscribes to status resources and once it receives
 	// a status resource back, it writes it out.
+	xdsHealthProb := probs.NewXdsReadyHealthProb()
 	providerRunner := providerrunner.New(&providerrunner.Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
+		XdsReady:          xdsHealthProb,
 	})
 	if err := providerRunner.Start(ctx); err != nil {
 		return err
@@ -181,8 +184,9 @@ func setupRunners(cfg *config.Server) error {
 	// It subscribes to the xds Resources and configures the remote Envoy Proxy
 	// via the xDS Protocol.
 	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
-		Server: *cfg,
-		Xds:    xds,
+		Server:   *cfg,
+		Xds:      xds,
+		XdsReady: xdsHealthProb,
 	})
 	if err := xdsServerRunner.Start(ctx); err != nil {
 		return err
