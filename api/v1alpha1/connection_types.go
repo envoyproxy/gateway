@@ -9,10 +9,10 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // Connection allows users to configure connection-level settings
 type Connection struct {
-	// Limit defines limits related to connections
+	// ConnectionLimit defines limits related to connections
 	//
 	// +optional
-	Limit *ConnectionLimit `json:"limit,omitempty"`
+	ConnectionLimit *ConnectionLimit `json:"connectionLimit,omitempty"`
 }
 
 type ConnectionLimit struct {
@@ -20,9 +20,8 @@ type ConnectionLimit struct {
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
 	// Default: unlimited.
 	//
-	// +optional
 	// +kubebuilder:validation:Minimum=0
-	Value *int64 `json:"value,omitempty"`
+	Value int64 `json:"value,omitempty"`
 
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.

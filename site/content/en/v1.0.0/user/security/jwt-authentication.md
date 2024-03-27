@@ -11,8 +11,8 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
-For GRPC - follow the steps from the [GRPC Routing](../grpc-routing) example.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
+For GRPC - follow the steps from the [GRPC Routing](../traffic/grpc-routing) example.
 Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
 ## Configuration

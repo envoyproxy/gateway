@@ -147,8 +147,12 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	var (
 		uri              string
 		headersToBackend []*matcherv3.StringMatcher
-		service          = new(extauthv3.HttpService)
+		service          *extauthv3.HttpService
 	)
+
+	service = &extauthv3.HttpService{
+		PathPrefix: http.Path,
+	}
 
 	u := url.URL{
 		// scheme should be decided by the TLS setting, but we don't have that info now.

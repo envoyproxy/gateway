@@ -385,7 +385,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `limit` | _[ConnectionLimit](#connectionlimit)_ |  false  | Limit defines limits related to connections |
+| `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
 
 
 #### ConnectionLimit
@@ -399,7 +399,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `value` | _integer_ |  false  | Value of the maximum concurrent connections limit. When the limit is reached, incoming connections will be closed after the CloseDelay duration. Default: unlimited. |
+| `value` | _integer_ |  true  | Value of the maximum concurrent connections limit. When the limit is reached, incoming connections will be closed after the CloseDelay duration. Default: unlimited. |
 | `closeDelay` | _[Duration](#duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected once the limit value is reached. Default: none. |
 
 

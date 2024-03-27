@@ -13,6 +13,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
+	connection_limitv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/connection_limit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
@@ -24,6 +25,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -43,6 +45,8 @@ const (
 	http2InitialStreamWindowSize = 65536 // 64 KiB
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
+	networkConnectionLimit = "envoy.filters.network.connection_limit"
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
@@ -183,7 +187,7 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 }
 
 func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection) error {
 	al := buildXdsAccessLog(accesslog, false)
 
 	hcmTracing, err := buildHCMTracing(tracing)
@@ -260,18 +264,25 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		return err
 	}
 
-	mgrAny, err := protocov.ToAnyWithError(mgr)
-	if err != nil {
+	var filters []*listenerv3.Filter
+
+	if connection != nil && connection.Limit != nil {
+		cl := buildConnectionLimitFilter(statPrefix, connection)
+		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+			filters = append(filters, clf)
+		} else {
+			return err
+		}
+	}
+
+	if mgrf, err := toNetworkFilter(wellknown.HTTPConnectionManager, mgr); err == nil {
+		filters = append(filters, mgrf)
+	} else {
 		return err
 	}
 
 	filterChain := &listenerv3.FilterChain{
-		Filters: []*listenerv3.Filter{{
-			Name: wellknown.HTTPConnectionManager,
-			ConfigType: &listenerv3.Filter_TypedConfig{
-				TypedConfig: mgrAny,
-			},
-		}},
+		Filters: filters,
 	}
 
 	if irListener.TLS != nil {
@@ -344,7 +355,7 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string, accesslog *ir.AccessLog) error {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string, accesslog *ir.AccessLog, connection *ir.Connection) error {
 	if irListener == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -366,19 +377,28 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
 		},
+		HashPolicy: buildTCPProxyHashPolicy(irListener.LoadBalancer),
 	}
-	mgrAny, err := anypb.New(mgr)
-	if err != nil {
+
+	var filters []*listenerv3.Filter
+
+	if connection != nil && connection.Limit != nil {
+		cl := buildConnectionLimitFilter(statPrefix, connection)
+		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+			filters = append(filters, clf)
+		} else {
+			return err
+		}
+	}
+
+	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
+		filters = append(filters, mgrf)
+	} else {
 		return err
 	}
 
 	filterChain := &listenerv3.FilterChain{
-		Filters: []*listenerv3.Filter{{
-			Name: wellknown.TCPProxy,
-			ConfigType: &listenerv3.Filter_TypedConfig{
-				TypedConfig: mgrAny,
-			},
-		}},
+		Filters: filters,
 	}
 
 	if isTLSPassthrough {
@@ -398,6 +418,18 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 
 	return nil
+}
+
+func buildConnectionLimitFilter(statPrefix string, connection *ir.Connection) *connection_limitv3.ConnectionLimit {
+	cl := &connection_limitv3.ConnectionLimit{
+		StatPrefix:     statPrefix,
+		MaxConnections: wrapperspb.UInt64(*connection.Limit.Value),
+	}
+
+	if connection.Limit.CloseDelay != nil {
+		cl.Delay = durationpb.New(connection.Limit.CloseDelay.Duration)
+	}
+	return cl
 }
 
 // addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist.
@@ -671,4 +703,37 @@ func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManag
 		return r
 	}
 	return hcmv3.HttpConnectionManager_IMPLEMENTATION_SPECIFIC_DEFAULT
+}
+
+func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.Filter, error) {
+	filterAny, err := protocov.ToAnyWithError(filterProto)
+	if err != nil {
+		return nil, err
+	}
+
+	return &listenerv3.Filter{
+		Name: filterName,
+		ConfigType: &listenerv3.Filter_TypedConfig{
+			TypedConfig: filterAny,
+		},
+	}, nil
+}
+
+func buildTCPProxyHashPolicy(lb *ir.LoadBalancer) []*typev3.HashPolicy {
+	// Return early
+	if lb == nil || lb.ConsistentHash == nil {
+		return nil
+	}
+
+	if lb.ConsistentHash.SourceIP != nil && *lb.ConsistentHash.SourceIP {
+		hashPolicy := &typev3.HashPolicy{
+			PolicySpecifier: &typev3.HashPolicy_SourceIp_{
+				SourceIp: &typev3.HashPolicy_SourceIp{},
+			},
+		}
+
+		return []*typev3.HashPolicy{hashPolicy}
+	}
+
+	return nil
 }

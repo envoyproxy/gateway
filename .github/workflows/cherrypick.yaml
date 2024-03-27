@@ -6,7 +6,7 @@ on:
     types: ["closed"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   cherry_pick_release_v1_0:

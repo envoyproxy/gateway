@@ -11,7 +11,7 @@ testing and demonstration purposes only.
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](../quickstart.md) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates

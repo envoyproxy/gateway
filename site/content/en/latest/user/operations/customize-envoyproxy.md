@@ -367,6 +367,47 @@ spec:
 EOF
 ```
 
+## Customize EnvoyProxy with Patches
+
+You can customize the EnvoyProxy using patches.
+
+For example, the following configuration will add resource limits to the `envoy` and the `shutdown-manager` containers in the `envoyproxy` deployment:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                  - name: envoy
+                    resources:
+                      limits:
+                        cpu: 500m
+                        memory: 1024Mi
+                  - name: shutdown-manager
+                    resources:
+                      limits:
+                        cpu: 200m
+                        memory: 1024Mi
+EOF
+```
+
+After applying the configuration, you will see the change in both containers in the `envoyproxy` deployment.
+
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [egctl translate]: ../egctl/#validating-gateway-api-configuration
+

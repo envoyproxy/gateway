@@ -163,11 +163,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
 				return err
 			}
 			if enabledHTTP3 {
-				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
+				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
 					return err
 				}
 			}
@@ -346,16 +346,21 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog); err != nil {
+		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog, tcpListener.Connection); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
 		// 1:1 between IR TCPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         tcpListener.Destination.Name,
-			settings:     tcpListener.Destination.Settings,
-			tSocket:      nil,
-			endpointType: buildEndpointType(tcpListener.Destination.Settings),
+			name:           tcpListener.Destination.Name,
+			settings:       tcpListener.Destination.Settings,
+			loadBalancer:   tcpListener.LoadBalancer,
+			proxyProtocol:  tcpListener.ProxyProtocol,
+			circuitBreaker: tcpListener.CircuitBreaker,
+			tcpkeepalive:   tcpListener.TCPKeepalive,
+			healthCheck:    tcpListener.HealthCheck,
+			timeout:        tcpListener.Timeout,
+			endpointType:   buildEndpointType(tcpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -402,6 +407,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
+			loadBalancer: udpListener.LoadBalancer,
+			timeout:      udpListener.Timeout,
 			tSocket:      nil,
 			endpointType: buildEndpointType(udpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
@@ -521,12 +528,14 @@ func processTLSSocket(tlsConfig *ir.TLSUpstreamConfig, tCtx *types.ResourceVersi
 	if tlsConfig == nil {
 		return nil, nil
 	}
-	CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
-	if CaSecret != nil {
+	// Create a secret for the CA certificate only if it's not using the system trust store
+	if !tlsConfig.UseSystemTrustStore {
+		CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
 		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
 			return nil, err
 		}
 	}
+
 	// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
 	// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
 	tlsSocket, err := buildXdsUpstreamTLSSocketWthCert(tlsConfig)
@@ -574,9 +583,12 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
-			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
-			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-				return err
+			// Create a secret for the CA certificate only if it's not using the system trust store
+			if !ds.TLS.UseSystemTrustStore {
+				secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -602,6 +614,7 @@ const (
 
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	// Build the tls secret
+	// It's just a sanity check, we shouldn't call this function if the system trust store is used
 	if tlsConfig.UseSystemTrustStore {
 		return nil
 	}

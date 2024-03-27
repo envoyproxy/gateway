@@ -119,6 +119,28 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be accepted")
 }
 
+// ClientTrafficPolicyMustBeAccepted waits for the specified ClientTrafficPolicy to be accepted.
+func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.ClientTrafficPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching ClientTrafficPolicy: %w", err)
+		}
+
+		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			return true, nil
+		}
+
+		t.Logf("ClientTrafficPolicy not yet accepted: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for ClientTrafficPolicy to be accepted")
+}
+
 // AlmostEquals We use a solution similar to istio:
 // Given an offset, calculate whether the actual value is within the offset of the expected value
 func AlmostEquals(actual, expect, offset int) bool {

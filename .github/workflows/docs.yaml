@@ -6,12 +6,14 @@ on:
     - "release/v*"
     paths:
     - 'site/**'
+    - 'tools/make/docs.mk'
   pull_request:
     branches:
     - "main"
     - "release/v*"
     paths:
     - 'site/**'
+    - 'tools/make/docs.mk'
 
 permissions:
   contents: read
@@ -30,6 +32,12 @@ jobs:
       with:
         files: site/content/*
         config_file: ".github/markdown_lint_config.json"
+
+    - name: Install linkinator
+      run: npm install -g linkinator
+
+    - name: Check links
+      run: make docs docs-check-links
 
   docs-build:
     runs-on: ubuntu-latest
@@ -86,4 +94,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@decdde0ac072f6dcbe43649d82d9c635fff5b4e4  # v4.0.4
+      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4.0.5

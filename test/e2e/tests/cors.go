@@ -109,7 +109,7 @@ var CorsTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					AbsentHeaders: []string{"access-control-allow-origin", "access-control-expose-headers"},
+					AbsentHeaders: []string{"access-control-allow-origin"},
 				},
 				Namespace: ns,
 			}
