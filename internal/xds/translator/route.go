@@ -286,7 +286,7 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 				PathRedirect: *redirection.Path.FullReplace,
 			}
 		} else if redirection.Path.PrefixMatchReplace != nil {
-			if useRegexRewriteForPrefixMatch(httpRoute.PathMatch, *redirection.Path.PrefixMatchReplace) {
+			if useRegexRewriteForPrefixMatchReplace(httpRoute.PathMatch, *redirection.Path.PrefixMatchReplace) {
 				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_RegexRewrite{
 					RegexRewrite: &matcherv3.RegexMatchAndSubstitute{
 						Pattern: &matcherv3.RegexMatcher{
@@ -316,52 +316,13 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 	return routeAction
 }
 
-// When an HTTPRoute's match is a path prefix and has a redirect filter with a
-// replacePrefixMatch "/", a redirect route action with regex_rewrite is generated
-// to match both the prefix with and without trailing "/" to avoid double "/" in the redirect URL.
-//
-// For example, given the following HTTPRoute:
-//
-// ```
-//   - matches:
-//   - path:
-//     type: PathPrefix
-//     value: /api/foo/
-//     filters:
-//   - requestRedirect:
-//     path:
-//     replacePrefixMatch: /
-//     type: ReplacePrefixMatch
-//     type: RequestRedirect
-//
-// ```
-//
-//	The following route will be created:
-//
-// ```
-//
-//	routes:
-//	- match:
-//	    path_separated_prefix: "/api/foo"
-//	  redirect:
-//	    regex_rewrite:
-//	      pattern:
-//	        regex: "^\/api\/foo\/*"
-//	      substitution: /
-//
-// ```
-//
-// See https://github.com/envoyproxy/gateway/issues/2976 for more details.
-func useRegexRewriteForPrefixMatch(pathMatch *ir.StringMatch, prefixMatchReplace string) bool {
-	/*return httpRoute.PathMatch != nil &&
-		httpRoute.PathMatch.Prefix != nil &&
-		*httpRoute.PathMatch.Prefix != "/" &&
-		httpRoute.Redirect != nil &&
-		httpRoute.Redirect.Path != nil &&
-		httpRoute.Redirect.Path.PrefixMatchReplace != nil &&
-	*httpRoute.Redirect.Path.PrefixMatchReplace == "/"*/
-
-	return pathMatch != nil && pathMatch.Prefix != nil &&
+// useRegexRewriteForPrefixMatchReplace checks if the regex rewrite should be used for prefix match replace
+// due to the issue with Envoy not handling the case of "//" when the replace string is "/".
+// See: https://github.com/envoyproxy/envoy/issues/26055
+func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatchReplace string) bool {
+	return pathMatch != nil &&
+		pathMatch.Prefix != nil &&
+		*pathMatch.Prefix != "/" &&
 		(prefixMatchReplace == "" || prefixMatchReplace == "/")
 }
 
@@ -385,7 +346,7 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			// An empty replace string does not seem to solve the issue so we are using
 			// a regex match and replace instead
 			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
-			if useRegexRewriteForPrefixMatch(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
+			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
 				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 					Pattern: &matcherv3.RegexMatcher{
 						Regex: "^" + *pathMatch.Prefix + `\/*`,
