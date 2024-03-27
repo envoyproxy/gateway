@@ -360,6 +360,11 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// Translate TCPKeepalive
 		translateListenerTCPKeepalive(policy.Spec.TCPKeepalive, httpIR)
 
+		// Translate Connection
+		if err := translateListenerConnection(policy.Spec.Connection, httpIR); err != nil {
+			return err
+		}
+
 		// Translate Proxy Protocol
 		translateListenerProxyProtocol(policy.Spec.EnableProxyProtocol, httpIR)
 
@@ -641,6 +646,35 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 			httpIR.TLS.CACertificate = irCACert
 		}
 	}
+
+	return nil
+}
+
+func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPListener) error {
+	// Return early if not set
+	if connection == nil {
+		return nil
+	}
+
+	irConnection := &ir.Connection{}
+
+	if connection.ConnectionLimit != nil {
+		irConnectionLimit := &ir.ConnectionLimit{}
+
+		irConnectionLimit.Value = ptr.To(uint64(connection.ConnectionLimit.Value))
+
+		if connection.ConnectionLimit.CloseDelay != nil {
+			d, err := time.ParseDuration(string(*connection.ConnectionLimit.CloseDelay))
+			if err != nil {
+				return fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
+			}
+			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
+		}
+
+		irConnection.Limit = irConnectionLimit
+	}
+
+	httpIR.Connection = irConnection
 
 	return nil
 }
