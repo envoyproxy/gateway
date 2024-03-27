@@ -16,15 +16,18 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -163,12 +166,26 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
 				return err
 			}
 			if enabledHTTP3 {
-				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
+				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
 					return err
+				}
+			}
+		} else {
+			// When the DefaultFilterChain is shared by multiple Gateway HTTP
+			// Listeners, we need to add the HTTP filters associated with the
+			// HTTPListener to the HCM if they have not yet been added.
+			if err := t.addHTTPFiltersToHCM(xdsListener.DefaultFilterChain, httpListener); err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			if enabledHTTP3 {
+				if err := t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+					errs = errors.Join(errs, err)
+					continue
 				}
 			}
 		}
@@ -320,6 +337,52 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	return errs
 }
 
+func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
+	var (
+		hcm *hcmv3.HttpConnectionManager
+		err error
+	)
+
+	if hcm, err = findHCMinFilterChain(filterChain); err != nil {
+		return err // should not happen
+	}
+
+	// Add http filters to the HCM if they have not yet been added.
+	if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
+		return err
+	}
+
+	for i, filter := range filterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			var mgrAny *anypb.Any
+			if mgrAny, err = protocov.ToAnyWithError(hcm); err != nil {
+				return err
+			}
+
+			filterChain.Filters[i] = &listenerv3.Filter{
+				Name: wellknown.HTTPConnectionManager,
+				ConfigType: &listenerv3.Filter_TypedConfig{
+					TypedConfig: mgrAny,
+				},
+			}
+		}
+	}
+	return nil
+}
+
+func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConnectionManager, error) {
+	for _, filter := range filterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			hcm := &hcmv3.HttpConnectionManager{}
+			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, proto.UnmarshalOptions{}); err != nil {
+				return nil, err
+			}
+			return hcm, nil
+		}
+	}
+	return nil, errors.New("http connection manager not found")
+}
+
 func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
 	return &corev3.HeaderValueOption{
 		Append: &wrapperspb.BoolValue{Value: true},
@@ -346,16 +409,21 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog); err != nil {
+		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog, tcpListener.Connection); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
 		// 1:1 between IR TCPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         tcpListener.Destination.Name,
-			settings:     tcpListener.Destination.Settings,
-			tSocket:      nil,
-			endpointType: buildEndpointType(tcpListener.Destination.Settings),
+			name:           tcpListener.Destination.Name,
+			settings:       tcpListener.Destination.Settings,
+			loadBalancer:   tcpListener.LoadBalancer,
+			proxyProtocol:  tcpListener.ProxyProtocol,
+			circuitBreaker: tcpListener.CircuitBreaker,
+			tcpkeepalive:   tcpListener.TCPKeepalive,
+			healthCheck:    tcpListener.HealthCheck,
+			timeout:        tcpListener.Timeout,
+			endpointType:   buildEndpointType(tcpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -402,6 +470,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
+			loadBalancer: udpListener.LoadBalancer,
+			timeout:      udpListener.Timeout,
 			tSocket:      nil,
 			endpointType: buildEndpointType(udpListener.Destination.Settings),
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {

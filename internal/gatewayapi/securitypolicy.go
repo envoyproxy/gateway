@@ -134,10 +134,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			err := validatePortOverlapForSecurityPolicyRoute(xdsIR, targetedRoute)
-			if err == nil {
-				err = t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
-			}
+			err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
 
 			if err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -407,23 +404,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						OIDC:      oidc,
 						BasicAuth: basicAuth,
 						ExtAuth:   extAuth,
-					}
-				}
-			}
-		}
-	}
-	return errs
-}
-
-func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext) error {
-	var errs error
-	prefix := irRoutePrefix(route)
-	for _, ir := range xds {
-		for _, http := range ir.HTTP {
-			for _, r := range http.Routes {
-				if strings.HasPrefix(r.Name, prefix) {
-					if sameListeners := listenersWithSameHTTPPort(ir, http); len(sameListeners) != 0 {
-						errs = errors.Join(errs, fmt.Errorf("affects multiple listeners: %s", strings.Join(sameListeners, ", ")))
 					}
 				}
 			}
