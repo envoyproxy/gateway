@@ -186,7 +186,6 @@ rules:
   verbs:
   - create
   - get
-  - update
   - delete
   - patch
 - apiGroups:
@@ -196,7 +195,6 @@ rules:
   verbs:
   - create
   - get
-  - update
   - delete
   - patch
 - apiGroups:
@@ -206,7 +204,6 @@ rules:
   verbs:
   - create
   - get
-  - update
   - delete
   - patch
 ---
