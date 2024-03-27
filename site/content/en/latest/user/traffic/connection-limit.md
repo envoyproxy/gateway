@@ -71,7 +71,7 @@ spec:
     name: eg
     namespace: default
   connection:
-    limit:
+    connectionLimit:
       value: 5    
 EOF
 ```
