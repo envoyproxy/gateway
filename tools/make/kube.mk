@@ -123,16 +123,20 @@ run-e2e: install-e2e-telemetry
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
-	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/merge-gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
-	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false \
+		--run-test $(E2E_RUN_TEST)
+	go test -v -tags e2e ./test/e2e/merge-gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 else
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
 endif
+
 .PHONY: install-e2e-telemetry
 install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
 	@$(LOG_TARGET)
