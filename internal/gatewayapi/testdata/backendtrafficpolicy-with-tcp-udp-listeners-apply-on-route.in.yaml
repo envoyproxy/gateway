@@ -1,0 +1,169 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: tcp-gateway
+      namespace: default
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: foo
+          protocol: UDP
+          port: 8162
+          allowedRoutes:
+            kinds:
+              - kind: UDPRoute
+                group: gateway.networking.k8s.io
+        - name: bar
+          protocol: TCP
+          port: 8089
+          allowedRoutes:
+            kinds:
+              - kind: TCPRoute
+                group: gateway.networking.k8s.io
+udpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: UDPRoute
+    metadata:
+      namespace: default
+      name: udp-app-1
+    spec:
+      parentRefs:
+        - name: tcp-gateway
+          sectionName: foo
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8162
+              namespace: default
+tcpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcp-app-1
+    spec:
+      parentRefs:
+        - name: tcp-gateway
+          sectionName: bar
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8163
+              namespace: default
+
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: UDPRoute
+        name: udp-app-1
+        namespace: default
+      circuitBreaker:
+        maxConnections: 2048
+        maxPendingRequests: 1
+        maxParallelRequests: 4294967295
+        maxParallelRetries: 1024
+        maxRequestsPerConnection: 1
+      loadBalancer:
+        type: ConsistentHash
+        consistentHash:
+          type: SourceIP
+      tcpKeepalive:
+        probes: 3
+        idleTime: 20m
+        interval: 60s
+      timeout:
+        tcp:
+          connectTimeout: 15s
+        http:
+          connectionIdleTimeout: 16s
+          maxConnectionDuration: 17s
+      proxyProtocol:
+        version: V2
+      healthCheck:
+        active:
+          timeout: "500ms"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          type: HTTP
+          http:
+            path: "/healthz"
+            method: "GET"
+            expectedStatuses:
+              - 200
+              - 300
+            expectedResponse:
+              type: Binary
+              binary: RXZlcnl0aGluZyBPSw==
+        passive:
+          baseEjectionTime: 160s
+          interval: 2s
+          maxEjectionPercent: 100
+          consecutive5XxErrors: 5
+          consecutiveGatewayErrors: 0
+          consecutiveLocalOriginFailures: 5
+          splitExternalLocalOriginErrors: false
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: TCPRoute
+        name: tcp-app-1
+        namespace: default
+      circuitBreaker:
+        maxConnections: 2048
+        maxPendingRequests: 1
+        maxParallelRequests: 4294967295
+        maxParallelRetries: 1024
+        maxRequestsPerConnection: 1
+      loadBalancer:
+        type: ConsistentHash
+        consistentHash:
+          type: SourceIP
+      tcpKeepalive:
+        probes: 3
+        idleTime: 20m
+        interval: 60s
+      timeout:
+        tcp:
+          connectTimeout: 15s
+        http:
+          connectionIdleTimeout: 16s
+          maxConnectionDuration: 17s
+      proxyProtocol:
+        version: V2
+      healthCheck:
+        active:
+          timeout: "500ms"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          type: HTTP
+          http:
+            path: "/healthz"
+            method: "GET"
+            expectedStatuses:
+              - 200
+              - 300
+            expectedResponse:
+              type: Binary
+              binary: RXZlcnl0aGluZyBPSw==
+        passive:
+          baseEjectionTime: 160s
+          interval: 2s
+          maxEjectionPercent: 100
+          consecutive5XxErrors: 5
+          consecutiveGatewayErrors: 0
+          consecutiveLocalOriginFailures: 5
+          splitExternalLocalOriginErrors: false
