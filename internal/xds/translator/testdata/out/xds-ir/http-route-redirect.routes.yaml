@@ -18,9 +18,13 @@
         pathSeparatedPrefix: /redirect
       name: redirect-route-2
       redirect:
-        prefixRewrite: /
+        regexRewrite:
+          pattern:
+            regex: ^/redirect\/*
     - match:
         pathSeparatedPrefix: /redirect
       name: redirect-route-3
       redirect:
-        prefixRewrite: /
+        regexRewrite:
+          pattern:
+            regex: ^/redirect/\/*

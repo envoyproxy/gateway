@@ -52,7 +52,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	case httpRoute.DirectResponse != nil:
 		router.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
 	case httpRoute.Redirect != nil:
-		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
+		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
 		if httpRoute.Mirrors != nil {
@@ -269,8 +269,11 @@ func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
 	return nil
 }
 
-func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
-	routeAction := &routev3.RedirectAction{}
+func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
+	var (
+		redirection = httpRoute.Redirect
+		routeAction = &routev3.RedirectAction{}
+	)
 
 	if redirection.Scheme != nil {
 		routeAction.SchemeRewriteSpecifier = &routev3.RedirectAction_SchemeRedirect{
@@ -283,8 +286,18 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 				PathRedirect: *redirection.Path.FullReplace,
 			}
 		} else if redirection.Path.PrefixMatchReplace != nil {
-			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PrefixRewrite{
-				PrefixRewrite: *redirection.Path.PrefixMatchReplace,
+			if useRegexRewriteForPrefixRedirect(httpRoute) {
+				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_RegexRewrite{
+					RegexRewrite: &matcherv3.RegexMatchAndSubstitute{
+						Pattern: &matcherv3.RegexMatcher{
+							Regex: "^" + *httpRoute.PathMatch.Prefix + `\/*`,
+						},
+					},
+				}
+			} else {
+				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PrefixRewrite{
+					PrefixRewrite: *redirection.Path.PrefixMatchReplace,
+				}
 			}
 		}
 	}
@@ -301,6 +314,52 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 	}
 
 	return routeAction
+}
+
+// When an HTTPRoute's match is a path prefix and has a redirect filter with a
+// replacePrefixMatch "/", a redirect route action with regex_rewrite is generated
+// to match both the prefix with and without trailing "/" to avoid double "/" in the redirect URL.
+//
+// For example, given the following HTTPRoute:
+//
+// ```
+//   - matches:
+//   - path:
+//     type: PathPrefix
+//     value: /api/foo/
+//     filters:
+//   - requestRedirect:
+//     path:
+//     replacePrefixMatch: /
+//     type: ReplacePrefixMatch
+//     type: RequestRedirect
+//
+// ```
+//
+//	The following route will be created:
+//
+// ```
+//
+//	routes:
+//	- match:
+//	    path_separated_prefix: "/api/foo"
+//	  redirect:
+//	    regex_rewrite:
+//	      pattern:
+//	        regex: "^\/api\/foo\/*"
+//	      substitution: /
+//
+// ```
+//
+// See https://github.com/envoyproxy/gateway/issues/2976 for more details.
+func useRegexRewriteForPrefixRedirect(httpRoute *ir.HTTPRoute) bool {
+	return httpRoute.PathMatch != nil &&
+		httpRoute.PathMatch.Prefix != nil &&
+		*httpRoute.PathMatch.Prefix != "/" &&
+		httpRoute.Redirect != nil &&
+		httpRoute.Redirect.Path != nil &&
+		httpRoute.Redirect.Path.PrefixMatchReplace != nil &&
+		*httpRoute.Redirect.Path.PrefixMatchReplace == "/"
 }
 
 func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
