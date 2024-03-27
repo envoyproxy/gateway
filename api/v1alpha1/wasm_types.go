@@ -79,7 +79,7 @@ type WasmCodeSource struct {
 
 	// SHA256 checksum that will be used to verify the wasm code.
 	// +optional
-	SHA256 *string `json:"sha256,omitempty"`
+	// SHA256 *string `json:"sha256,omitempty"`
 }
 
 // WasmCodeSourceType specifies the types of RateLimiting.

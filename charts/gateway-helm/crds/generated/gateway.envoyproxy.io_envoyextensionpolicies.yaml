@@ -191,10 +191,6 @@ spec:
                           - pullSecret
                           - url
                           type: object
-                        sha256:
-                          description: SHA256 checksum that will be used to verify
-                            the wasm code.
-                          type: string
                         type:
                           allOf:
                           - enum:

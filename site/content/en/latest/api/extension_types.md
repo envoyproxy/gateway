@@ -2685,7 +2685,6 @@ _Appears in:_
 | `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code. Valid WasmCodeSourceType values are "HTTP" or "Image". |
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code. <br /><br /> Note that the image must be accessible from the Envoy Gateway. |
-| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the wasm code. |
 
 
 #### WasmCodeSourceType
