@@ -1,91 +1,91 @@
 {
-	"Resource": [
-		{
-			"Key": "metric-type",
-			"Value": {
-				"Type": "STRING",
-				"Value": "Histogram"
-			}
-		},
-		{
-			"Key": "service.name",
-			"Value": {
-				"Type": "STRING",
-				"Value": "test"
-			}
-		}
-	],
-	"ScopeMetrics": [
-		{
-			"Scope": {
-				"Name": "envoy-gateway",
-				"Version": "",
-				"SchemaURL": ""
-			},
-			"Metrics": [
-				{
-					"Name": "sent_bytes_total",
-					"Description": "Histogram of sent bytes by method",
-					"Unit": "By",
-					"Data": {
-						"DataPoints": [
-							{
-								"Attributes": [
-									{
-										"Key": "method",
-										"Value": {
-											"Type": "STRING",
-											"Value": "/request/path/1"
-										}
-									}
-								],
-								"StartTime": "2024-03-27T15:52:49.7963479+08:00",
-								"Time": "2024-03-27T15:52:49.7963479+08:00",
-								"Count": 3,
-								"Bounds": [
-									0,
-									5,
-									10,
-									25,
-									50,
-									75,
-									100,
-									250,
-									500,
-									750,
-									1000,
-									2500,
-									5000,
-									7500,
-									10000
-								],
-								"BucketCounts": [
-									0,
-									0,
-									0,
-									1,
-									0,
-									0,
-									0,
-									0,
-									1,
-									0,
-									0,
-									1,
-									0,
-									0,
-									0,
-									0
-								],
-								"Min": 20,
-								"Max": 2000,
-								"Sum": 2478
-							}
-						],
-						"Temporality": "CumulativeTemporality"
-					}
-				}
-			]
-		}
-	]
+  "Resource": [
+    {
+      "Key": "metric-type",
+      "Value": {
+        "Type": "STRING",
+        "Value": "Histogram"
+      }
+    },
+    {
+      "Key": "service.name",
+      "Value": {
+        "Type": "STRING",
+        "Value": "test"
+      }
+    }
+  ],
+  "ScopeMetrics": [
+    {
+      "Scope": {
+        "Name": "envoy-gateway",
+        "Version": "",
+        "SchemaURL": ""
+      },
+      "Metrics": [
+        {
+          "Name": "sent_bytes_total",
+          "Description": "Histogram of sent bytes by method",
+          "Unit": "By",
+          "Data": {
+            "DataPoints": [
+              {
+                "Attributes": [
+                  {
+                    "Key": "method",
+                    "Value": {
+                      "Type": "STRING",
+                      "Value": "/request/path/1"
+                    }
+                  }
+                ],
+                "StartTime": "2024-03-27T21:54:18.8567405+08:00",
+                "Time": "2024-03-27T21:54:18.8567405+08:00",
+                "Count": 3,
+                "Bounds": [
+                  0,
+                  5,
+                  10,
+                  25,
+                  50,
+                  75,
+                  100,
+                  250,
+                  500,
+                  750,
+                  1000,
+                  2500,
+                  5000,
+                  7500,
+                  10000
+                ],
+                "BucketCounts": [
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "Min": 20,
+                "Max": 2000,
+                "Sum": 2478
+              }
+            ],
+            "Temporality": "CumulativeTemporality"
+          }
+        }
+      ]
+    }
+  ]
 }

@@ -7,6 +7,7 @@ package metrics_test
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"testing"
@@ -72,9 +73,11 @@ func watchableSubCounter() {
 }
 
 func initCounterProvider(writer io.Writer) (*metric.MeterProvider, error) {
+	enc := json.NewEncoder(writer)
+	enc.SetIndent("", "  ")
+
 	stdExp, err := stdoutmetric.New(
-		stdoutmetric.WithPrettyPrint(),
-		stdoutmetric.WithWriter(writer),
+		stdoutmetric.WithEncoder(enc),
 	)
 	if err != nil {
 		return nil, err

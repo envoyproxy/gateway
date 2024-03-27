@@ -1,79 +1,80 @@
 {
-	"Resource": [
-		{
-			"Key": "metric-type",
-			"Value": {
-				"Type": "STRING",
-				"Value": "Counter"
-			}
-		},
-		{
-			"Key": "service.name",
-			"Value": {
-				"Type": "STRING",
-				"Value": "test"
-			}
-		}
-	],
-	"ScopeMetrics": [
-		{
-			"Scope": {
-				"Name": "envoy-gateway",
-				"Version": "",
-				"SchemaURL": ""
-			},
-			"Metrics": [
-				{
-					"Name": "ir_updates_total",
-					"Description": "Number of IR updates, by ir type",
-					"Unit": "1",
-					"Data": {
-						"DataPoints": [
-							{
-								"Attributes": [
-									{
-										"Key": "ir-type",
-										"Value": {
-											"Type": "STRING",
-											"Value": "xds"
-										}
-									}
-								],
-								"StartTime": "2024-03-27T16:02:06.6440075+08:00",
-								"Time": "2024-03-27T16:02:06.6440075+08:00",
-								"Value": 3
-							}
-						],
-						"Temporality": "CumulativeTemporality",
-						"IsMonotonic": true
-					}
-				},
-				{
-					"Name": "watchable_subscribed_total",
-					"Description": "Total number of subscribed watchable.",
-					"Unit": "1",
-					"Data": {
-						"DataPoints": [
-							{
-								"Attributes": [
-									{
-										"Key": "ir-type",
-										"Value": {
-											"Type": "STRING",
-											"Value": "xds"
-										}
-									}
-								],
-								"StartTime": "2024-03-27T16:02:06.6440075+08:00",
-								"Time": "2024-03-27T16:02:06.6440075+08:00",
-								"Value": 7
-							}
-						],
-						"Temporality": "CumulativeTemporality",
-						"IsMonotonic": true
-					}
-				}
-			]
-		}
-	]
+  "Resource": [
+    {
+      "Key": "metric-type",
+      "Value": {
+        "Type": "STRING",
+        "Value": "Counter"
+      }
+    },
+    {
+      "Key": "service.name",
+      "Value": {
+        "Type": "STRING",
+        "Value": "test"
+      }
+    }
+  ],
+  "ScopeMetrics": [
+    {
+      "Scope": {
+        "Name": "envoy-gateway",
+        "Version": "",
+        "SchemaURL": ""
+      },
+      "Metrics": [
+        {
+          "Name": "ir_updates_total",
+          "Description": "Number of IR updates, by ir type",
+          "Unit": "1",
+          "Data": {
+            "DataPoints": [
+              {
+                "Attributes": [
+                  {
+                    "Key": "ir-type",
+                    "Value": {
+                      "Type": "STRING",
+                      "Value": "xds"
+                    }
+                  }
+                ],
+                "StartTime": "2024-03-27T21:54:18.820255+08:00",
+                "Time": "2024-03-27T21:54:18.8202957+08:00",
+                "Value": 3
+              }
+            ],
+            "Temporality": "CumulativeTemporality",
+            "IsMonotonic": true
+          }
+        },
+        {
+          "Name": "watchable_subscribed_total",
+          "Description": "Total number of subscribed watchable.",
+          "Unit": "1",
+          "Data": {
+            "DataPoints": [
+              {
+                "Attributes": [
+                  {
+                    "Key": "ir-type",
+                    "Value": {
+                      "Type": "STRING",
+                      "Value": "xds"
+                    }
+                  }
+                ],
+                "StartTime": "2024-03-27T21:54:18.8202957+08:00",
+                "Time": "2024-03-27T21:54:18.8202957+08:00",
+                "Value": 7
+              }
+            ],
+            "Temporality": "CumulativeTemporality",
+            "IsMonotonic": true
+          }
+        }
+      ]
+    }
+  ]
 }
+
