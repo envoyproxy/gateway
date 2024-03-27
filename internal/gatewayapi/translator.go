@@ -89,6 +89,10 @@ type Translator struct {
 	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
 
+	// EnvoyExtensionPolicyEnabled when the EnvoyExtensionPolicy
+	// feature is enabled.
+	EnvoyExtensionPolicyEnabled bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.

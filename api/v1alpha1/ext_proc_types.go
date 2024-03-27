@@ -15,15 +15,15 @@ import (
 // ExtProc defines the configuration for External Processing filter.
 type ExtProc struct {
 	// Service defines the configuration of the external processing service
-	Service ExtProcService `json:"service"`
+	BackendRef ExtProcBackendRef `json:"backendRef"`
 }
 
 // ExtProcService defines the gRPC External Processing service using the envoy grpc client
 // The processing request and response messages are defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/ext_proc/v3/external_processor.proto
-type ExtProcService struct {
+type ExtProcBackendRef struct {
 	// BackendObjectReference references a Kubernetes object that represents the
 	// backend server to which the processing requests will be sent.
 	// Only service Kind is supported for now.
-	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
+	gwapiv1.BackendObjectReference `json:",inline"`
 }

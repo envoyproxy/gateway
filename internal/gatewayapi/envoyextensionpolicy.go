@@ -32,8 +32,9 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	xdsIR XdsIRMap) []*egv1a1.EnvoyExtensionPolicy {
 	var res []*egv1a1.EnvoyExtensionPolicy
 
+	// Sort based on timestamp
 	sort.Slice(envoyExtensionPolicies, func(i, j int) bool {
-		return envoyExtensionPolicies[i].Spec.Priority < envoyExtensionPolicies[j].Spec.Priority
+		return envoyExtensionPolicies[i].CreationTimestamp.Before(&(envoyExtensionPolicies[j].CreationTimestamp))
 	})
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
@@ -99,6 +100,22 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				}
 			}
 
+			// Ensure EnvoyExtensionPolicy is enabled
+			if !t.EnvoyExtensionPolicyEnabled {
+				resolveErr = &status.PolicyResolveError{
+					Reason:  egv1a1.PolicyReasonDisabled,
+					Message: "EnvoyExtensionPolicy is disabled in the EnvoyGateway configuration",
+				}
+				status.SetResolveErrorForPolicyAncestors(&policy.Status,
+					ancestorRefs,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+
+				continue
+			}
+
 			// Set conditions for resolve error, then skip current xroute
 			if resolveErr != nil {
 				status.SetResolveErrorForPolicyAncestors(&policy.Status,
@@ -145,6 +162,22 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				getAncestorRefForPolicy(gatewayNN, nil),
 			}
 
+			// Ensure EnvoyExtensionPolicy is enabled
+			if !t.EnvoyExtensionPolicyEnabled {
+				resolveErr = &status.PolicyResolveError{
+					Reason:  egv1a1.PolicyReasonDisabled,
+					Message: "EnvoyExtensionPolicy is disabled in the EnvoyGateway configuration",
+				}
+				status.SetResolveErrorForPolicyAncestors(&policy.Status,
+					ancestorRefs,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+
+				continue
+			}
+
 			// Set conditions for resolve error, then skip current gateway
 			if resolveErr != nil {
 				status.SetResolveErrorForPolicyAncestors(&policy.Status,
@@ -158,7 +191,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 			}
 
 			// Set conditions for translation error if it got any
-			if err := t.translateEnvoyExtensionPolicyForGateway(policy, gateway, gatewayRouteMap, xdsIR, resources); err != nil {
+			if err := t.translateEnvoyExtensionPolicyForGateway(policy, gateway, xdsIR, resources); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					ancestorRefs,
 					t.GatewayControllerName,
@@ -224,6 +257,16 @@ func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gatewa
 		}
 	}
 
+	// Check if another policy targeting the same Gateway exists
+	if gateway.attached {
+		message := "Unable to target Gateway, another EnvoyExtensionPolicy has already attached to it"
+
+		return gateway.GatewayContext, &status.PolicyResolveError{
+			Reason:  gwv1a2.PolicyReasonConflicted,
+			Message: message,
+		}
+	}
+
 	// Set context and save
 	gateway.attached = true
 	gateways[key] = gateway
@@ -262,6 +305,17 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes m
 		}
 	}
 
+	// Check if another policy targeting the same xRoute exists
+	if route.attached {
+		message := fmt.Sprintf("Unable to target %s, another EnvoyExtensionPolicy has already attached to it",
+			string(policy.Spec.TargetRef.Kind))
+
+		return route.RouteContext, &status.PolicyResolveError{
+			Reason:  gwv1a2.PolicyReasonConflicted,
+			Message: message,
+		}
+	}
+
 	// Set context and save
 	route.attached = true
 	routes[key] = route
@@ -280,7 +334,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 				if strings.HasPrefix(r.Name, prefix) {
 					if policyFeatures, err := t.buildEnvoyExtensionFeatures(policy, resources); err == nil {
 						// since multiple policies can attach to a route, aggregate features from each policy
-						r.EnvoyExtensionFeatures = t.addEnvoyExtensionFeatures(r, policyFeatures)
+						r.EnvoyExtensionFeatures = policyFeatures
 					} else {
 						return err
 					}
@@ -316,28 +370,8 @@ func (t *Translator) buildEnvoyExtensionFeatures(policy *egv1a1.EnvoyExtensionPo
 	}, nil
 }
 
-func (t *Translator) addEnvoyExtensionFeatures(r *ir.HTTPRoute,
-	featuresToAdd *ir.EnvoyExtensionFeatures) *ir.EnvoyExtensionFeatures {
-	var eef *ir.EnvoyExtensionFeatures
-
-	if featuresToAdd == nil {
-		return nil
-	}
-
-	if r.EnvoyExtensionFeatures != nil {
-		eef = r.EnvoyExtensionFeatures.DeepCopy()
-	} else {
-		eef = &ir.EnvoyExtensionFeatures{}
-	}
-
-	eef.ExtProc = append(eef.ExtProc, featuresToAdd.ExtProc...)
-
-	return eef
-}
-
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.EnvoyExtensionPolicy,
-	gateway *GatewayContext, gatewayMap map[string]sets.Set[string], xdsIR XdsIRMap, resources *Resources) error {
-	overridingRoutes := gatewayMap[utils.NamespacedName(gateway.Gateway).String()]
+	gateway *GatewayContext, xdsIR XdsIRMap, resources *Resources) error {
 
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
@@ -362,13 +396,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
-			routeName := r.Name[strings.Index(r.Name, "/")+1 : strings.Index(r.Name, "/rule")]
-			// If Gateway Policy is route-`overridden`, skip this route
-			if overridingRoutes.Has(routeName) {
-				continue
+			// if already set - there's a route level policy, so skip
+			if r.EnvoyExtensionFeatures == nil {
+				r.EnvoyExtensionFeatures = policyFeatures
 			}
-			// since multiple policies can attach to a gateway, aggregate features from each policy
-			r.EnvoyExtensionFeatures = t.addEnvoyExtensionFeatures(r, policyFeatures)
 		}
 	}
 
@@ -388,7 +419,7 @@ func (t *Translator) buildExtProc(
 		err        error
 	)
 
-	backendRef = &extProc.Service.BackendRef
+	backendRef = &extProc.BackendRef.BackendObjectReference
 
 	if err = t.validateExtServiceBackendReference(
 		backendRef,

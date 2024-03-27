@@ -79,12 +79,13 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:   r.Server.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:        v1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					Namespace:               r.Namespace,
-					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					GatewayControllerName:       r.Server.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:            v1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:      r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:     r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					EnvoyExtensionPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyExtensionPolicy,
+					Namespace:                   r.Namespace,
+					MergeGateways:               gatewayapi.IsMergeGatewaysEnabled(resources),
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator

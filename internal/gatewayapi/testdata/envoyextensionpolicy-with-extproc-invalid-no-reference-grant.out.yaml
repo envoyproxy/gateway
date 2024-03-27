@@ -7,11 +7,10 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - service:
-        backendRef:
-          name: grpc-backend
-          namespace: envoy-gateway
-          port: 9000
+    - backendRef:
+        name: grpc-backend
+        namespace: envoy-gateway
+        port: 9000
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

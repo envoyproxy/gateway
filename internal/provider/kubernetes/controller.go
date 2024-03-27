@@ -1245,15 +1245,18 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		eepPredicates = append(eepPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.EnvoyExtensionPolicy{}),
-		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
-		eepPredicates...,
-	); err != nil {
-		return err
-	}
-	if err := addEnvoyExtensionPolicyIndexers(ctx, mgr); err != nil {
-		return err
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyExtensionPolicy {
+		// Watch EnvoyPatchPolicy CRUDs
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.EnvoyExtensionPolicy{}),
+			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+			eepPredicates...,
+		); err != nil {
+			return err
+		}
+		if err := addEnvoyExtensionPolicyIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")
@@ -1460,7 +1463,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	for _, policy := range resourceTree.EnvoyExtensionPolicies {
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		for _, ep := range policy.Spec.ExtProc {
-			backendRef := ep.Service.BackendRef
+			backendRef := ep.BackendRef.BackendObjectReference
 
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
 			resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{

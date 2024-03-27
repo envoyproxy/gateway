@@ -46,11 +46,10 @@ spec:
     kind: HTTPRoute
     name: http-with-ext-proc
   extProc:
-  - service:
-      backendRef:
-        name: grpc-ext-proc
-        namespace: gateway-conformance-infra
-        port: 9002
+  - backendRef:
+      name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: BackendTLSPolicy

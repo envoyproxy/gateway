@@ -46,16 +46,6 @@ type EnvoyExtensionPolicySpec struct {
 	// TargetRef
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
-	// Priority of the EnvoyExtensionPolicy.
-	// If multiple EnvoyExtensionPolices are applied to the same
-	// TargetRef, extensions will execute in the ascending order of
-	// the priority i.e. int32.min has the highest priority and
-	// int32.max has the lowest priority.
-	// Defaults to 0.
-	//
-	// +optional
-	Priority int32 `json:"priority,omitempty"`
-
 	// ExtProc is an ordered list of external processing filters
 	// that should added to the envoy filter chain
 	ExtProc []ExtProc `json:"extProc,omitempty"`

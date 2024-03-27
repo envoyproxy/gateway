@@ -276,11 +276,12 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 	}
 
 	t := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
-		EnvoyPatchPolicyEnabled: true,
+		GatewayControllerName:       egv1a1.GatewayControllerName,
+		GatewayClassName:            gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:      true,
+		EndpointRoutingDisabled:     true,
+		EnvoyPatchPolicyEnabled:     true,
+		EnvoyExtensionPolicyEnabled: true,
 	}
 
 	// Fix the services in the resources section so that they have an IP address - this prevents nasty
@@ -303,11 +304,12 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
-		EnvoyPatchPolicyEnabled: true,
+		GatewayControllerName:       egv1a1.GatewayControllerName,
+		GatewayClassName:            gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:      true,
+		EndpointRoutingDisabled:     true,
+		EnvoyPatchPolicyEnabled:     true,
+		EnvoyExtensionPolicyEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
@@ -335,11 +337,12 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
-		EnvoyPatchPolicyEnabled: true,
+		GatewayControllerName:       egv1a1.GatewayControllerName,
+		GatewayClassName:            gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:      true,
+		EndpointRoutingDisabled:     true,
+		EnvoyPatchPolicyEnabled:     true,
+		EnvoyExtensionPolicyEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 

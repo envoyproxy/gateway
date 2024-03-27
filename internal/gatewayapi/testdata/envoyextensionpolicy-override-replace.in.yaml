@@ -86,10 +86,9 @@ envoyExtensionPolicies:
       name: gateway-1
       namespace: envoy-gateway
     extProc:
-    - service:
-        backendRef:
-          name: grpc-backend
-          port: 9000
+    - backendRef:
+        name: grpc-backend
+        port: 9000
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -102,7 +101,6 @@ envoyExtensionPolicies:
       name: httproute-1
       namespace: default
     extProc:
-    - service:
-        backendRef:
-          name: grpc-backend-2
-          port: 8000
+    - backendRef:
+        name: grpc-backend-2
+        port: 8000

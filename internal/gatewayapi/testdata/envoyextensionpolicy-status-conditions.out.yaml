@@ -46,9 +46,10 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: Unable to target HTTPRoute, another EnvoyExtensionPolicy has already
+          attached to it
+        reason: Conflicted
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -171,16 +172,11 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: Unable to target Gateway, another EnvoyExtensionPolicy has already
+          attached to it
+        reason: Conflicted
+        status: "False"
         type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these routes: [envoy-gateway/httproute-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy

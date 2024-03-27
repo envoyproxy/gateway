@@ -530,8 +530,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtProc: []v1alpha1.ExtProc{
 							{
-								Service: v1alpha1.ExtProcService{
-									BackendRef: gwapiv1.BackendObjectReference{
+								BackendRef: v1alpha1.ExtProcBackendRef{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
 										Name: "ext-proc-service",
 									},
 								},

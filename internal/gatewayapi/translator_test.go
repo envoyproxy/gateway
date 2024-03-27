@@ -44,12 +44,17 @@ func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 
 func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
-		name                    string
-		EnvoyPatchPolicyEnabled bool
+		name                        string
+		EnvoyPatchPolicyEnabled     bool
+		EnvoyExtensionPolicyEnabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
+		},
+		{
+			name:                        "envoyextensionpolicy-invalid-feature-disabled",
+			EnvoyExtensionPolicyEnabled: false,
 		},
 	}
 
@@ -65,20 +70,23 @@ func TestTranslate(t *testing.T) {
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
+			envoyExtensionPolicyEnabled := true
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+					envoyExtensionPolicyEnabled = config.EnvoyExtensionPolicyEnabled
 				}
 			}
 
 			translator := &Translator{
-				GatewayControllerName:   egv1a1.GatewayControllerName,
-				GatewayClassName:        "envoy-gateway-class",
-				GlobalRateLimitEnabled:  true,
-				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
-				Namespace:               "envoy-gateway-system",
-				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				GatewayControllerName:       egv1a1.GatewayControllerName,
+				GatewayClassName:            "envoy-gateway-class",
+				GlobalRateLimitEnabled:      true,
+				EnvoyPatchPolicyEnabled:     envoyPatchPolicyEnabled,
+				EnvoyExtensionPolicyEnabled: envoyExtensionPolicyEnabled,
+				Namespace:                   "envoy-gateway-system",
+				MergeGateways:               IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures

@@ -535,7 +535,7 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 	var ret []string
 
 	for _, ep := range envoyExtensionPolicy.Spec.ExtProc {
-		backendRef := ep.Service.BackendRef
+		backendRef := ep.BackendRef.BackendObjectReference
 		ret = append(ret,
 			types.NamespacedName{
 				Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
