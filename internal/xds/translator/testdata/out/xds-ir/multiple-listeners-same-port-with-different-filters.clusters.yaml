@@ -1,0 +1,104 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/0
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-1/rule/0
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-2/rule/0
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-2/rule/0
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
+  lbPolicy: LEAST_REQUEST
+  name: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-3/rule/0
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-3/rule/0
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: oauth_foo_com_443
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: oauth.foo.com
+              portValue: 443
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: oauth_foo_com_443/backend/0
+  name: oauth_foo_com_443
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
+      sni: oauth.foo.com
+  type: STRICT_DNS

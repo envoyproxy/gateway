@@ -1,0 +1,160 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+      protocol: UDP
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        codecType: HTTP3
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        http3ProtocolOptions: {}
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            failureModeAllow: true
+            httpService:
+              authorizationResponse:
+                allowedUpstreamHeaders:
+                  patterns:
+                  - exact: header1
+                  - exact: header2
+              pathPrefix: /auth
+              serverUri:
+                cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
+                timeout: 10s
+                uri: http://http-backend.envoy-gateway:80/auth
+            transportApiVersion: V3
+        - disabled: true
+          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
+            users:
+              inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: default/gateway-1/http-quic
+  udpListenerConfig:
+    downstreamSocketConfig: {}
+    quicOptions: {}
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            failureModeAllow: true
+            httpService:
+              authorizationResponse:
+                allowedUpstreamHeaders:
+                  patterns:
+                  - exact: header1
+                  - exact: header2
+              pathPrefix: /auth
+              serverUri:
+                cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
+                timeout: 10s
+                uri: http://http-backend.envoy-gateway:80/auth
+            transportApiVersion: V3
+        - disabled: true
+          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
+            users:
+              inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        - disabled: true
+          name: envoy.filters.http.oauth2/securitypolicy/default/policy-for-gateway-2
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+            config:
+              authScopes:
+              - openid
+              - email
+              - profile
+              authType: BASIC_AUTH
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              credentials:
+                clientId: client.oauth.foo.com
+                cookieNames:
+                  bearerToken: BearerToken-5F93C2E4
+                  idToken: IdToken-5F93C2E4
+                  oauthExpires: OauthExpires-5F93C2E4
+                  oauthHmac: OauthHMAC-5F93C2E4
+                  refreshToken: RefreshToken-5F93C2E4
+                hmacSecret:
+                  name: oauth2/hmac_secret/securitypolicy/default/policy-for-gateway-2
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+                tokenSecret:
+                  name: oauth2/client_secret/securitypolicy/default/policy-for-gateway-2
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+              forwardBearerToken: true
+              redirectPathMatcher:
+                path:
+                  exact: /foo/oauth2/callback
+              redirectUri: https://www.example.com/foo/oauth2/callback
+              signoutPath:
+                path:
+                  exact: /foo/logout
+              tokenEndpoint:
+                cluster: oauth_foo_com_443
+                timeout: 10s
+                uri: https://oauth.foo.com/token
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: default/gateway-1/http
+  perConnectionBufferLimitBytes: 32768
