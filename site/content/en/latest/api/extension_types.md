@@ -1312,6 +1312,20 @@ _Appears in:_
 | `maxConnectionDuration` | _[Duration](#duration)_ |  false  | The maximum duration of an HTTP connection. Default: unlimited. |
 
 
+#### HTTPWasmCodeSource
+
+
+
+
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `url` | _string_ |  true  | URL is the URL containing the wasm code. |
+
+
 
 
 #### HeaderMatchType
@@ -1352,6 +1366,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
+
+
+#### ImageWasmCodeSource
+
+
+
+ImageWasmCodeSource defines the OCI image containing the wasm code.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `url` | _string_ |  true  | URL is the URL of the OCI image. |
+| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecret is a reference to the secret containing the credentials to pull the image. |
+| `pullPolicy` | _[PullPolicy](#pullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the image. If not specified, the default policy is IfNotPresent for images whose tag is not latest, and Always for images whose tag is latest. |
 
 
 #### InfrastructureProviderType
@@ -2075,7 +2105,7 @@ _Underlying type:_ _string_
 PullPolicy defines the policy to use when pulling an OIC image.
 
 _Appears in:_
-- [WasmImage](#wasmimage)
+- [ImageWasmCodeSource](#imagewasmcodesource)
 
 
 
@@ -2636,8 +2666,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name is a unique name for this Wasm extension. It is used to identify the Wasm extension if multiple extensions are handled by the same vm_id and root_id. It's also used for logging/debugging. |
-| `vmID` | _string_ |  true  | VMID is an ID that will be used along with a hash of the wasm code to determine which VM will be used to load the Wasm extension. All extensions that have the same vm_id and code will use the same VM. <br /><br /> Note that sharing a VM between plugins can reduce memory utilization and make sharing of data easier, but it may have security implications. |
-| `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog). If left blank, all extensions with a blank root_id with the same vm_id will share Context(s). |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
 | `config` | _[JSON](#json)_ |  true  | Config is the configuration for the Wasm extension. This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a fatal error occurs during the initialization or the execution of the Wasm extension. If FailOpen is set to true, the system bypasses the Wasm extension and allows the traffic to pass through. Otherwise, if it is set to false or not set (defaulting to false), the system blocks the traffic and returns an HTTP 5xx error. |
@@ -2647,32 +2675,28 @@ _Appears in:_
 
 
 
-WasmCodeSource defines the source of the wasm code. TODO: zhaohuabing CEL validation" one of the HTTP or Image field must be set
+WasmCodeSource defines the source of the wasm code.
 
 _Appears in:_
 - [Wasm](#wasm)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `http` | _string_ |  false  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
-| `image` | _[WasmImage](#wasmimage)_ |  false  | Image is the OCI image containing the wasm code. <br /><br /> Note that the image must be accessible from the Envoy Gateway. |
-| `sha256` | _string_ |  true  | SHA256 checksum that will be used to verify the wasm code. |
+| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code. Valid WasmCodeSourceType values are "HTTP" or "Image". |
+| `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
+| `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code. <br /><br /> Note that the image must be accessible from the Envoy Gateway. |
+| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the wasm code. |
 
 
-#### WasmImage
+#### WasmCodeSourceType
 
+_Underlying type:_ _string_
 
-
-WasmImage defines the OCI image containing the wasm code.
+WasmCodeSourceType specifies the types of RateLimiting.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
 
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `url` | _string_ |  true  | URL is the URL of the OCI image. |
-| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecret is a reference to the secret containing the credentials to pull the image. |
-| `pullPolicy` | _[PullPolicy](#pullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the image. If not specified, the default policy is IfNotPresent for images whose tag is not latest, and Always for images whose tag is latest. |
 
 
 #### XDSTranslatorHook

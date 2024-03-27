@@ -124,7 +124,13 @@ spec:
                           description: "HTTP is the HTTP URL containing the wasm code.
                             \n Note that the HTTP server must be accessible from the
                             Envoy proxy."
-                          type: string
+                          properties:
+                            url:
+                              description: URL is the URL containing the wasm code.
+                              type: string
+                          required:
+                          - url
+                          type: object
                         image:
                           description: "Image is the OCI image containing the wasm
                             code. \n Note that the image must be accessible from the
@@ -189,6 +195,19 @@ spec:
                           description: SHA256 checksum that will be used to verify
                             the wasm code.
                           type: string
+                        type:
+                          allOf:
+                          - enum:
+                            - Global
+                            - Local
+                          - enum:
+                            - HTTP
+                            - Image
+                          description: Type is the type of the source of the wasm
+                            code. Valid WasmCodeSourceType values are "HTTP" or "Image".
+                          type: string
+                      required:
+                      - type
                       type: object
                     config:
                       description: Config is the configuration for the Wasm extension.
@@ -210,21 +229,6 @@ spec:
                         It is used to identify the Wasm extension if multiple extensions
                         are handled by the same vm_id and root_id. It's also used
                         for logging/debugging.
-                      type: string
-                    rootID:
-                      description: RootID is a unique ID for a set of extensions in
-                        a VM which will share a RootContext and Contexts if applicable
-                        (e.g., an Wasm HttpFilter and an Wasm AccessLog). If left
-                        blank, all extensions with a blank root_id with the same vm_id
-                        will share Context(s).
-                      type: string
-                    vmID:
-                      description: "VMID is an ID that will be used along with a hash
-                        of the wasm code to determine which VM will be used to load
-                        the Wasm extension. All extensions that have the same vm_id
-                        and code will use the same VM. \n Note that sharing a VM between
-                        plugins can reduce memory utilization and make sharing of
-                        data easier, but it may have security implications."
                       type: string
                   required:
                   - code

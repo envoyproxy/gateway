@@ -26,12 +26,12 @@ type Wasm struct {
 	//
 	// Note that sharing a VM between plugins can reduce memory utilization and
 	// make sharing of data easier, but it may have security implications.
-	VMID *string `json:"vmID,omitempty"`
+	// VMID *string `json:"vmID,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
 	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
-	RootID *string `json:"rootID,omitempty"`
+	// RootID *string `json:"rootID,omitempty"`
 
 	// Code is the wasm code for the extension.
 	Code WasmCodeSource `json:"code"`
@@ -51,38 +51,58 @@ type Wasm struct {
 	// +kubebuilder:default=false
 	FailOpen *bool `json:"failOpen,omitempty"`
 
-	// InsertBefore is the name of the filter that this Wasm extension should be
-	// inserted before.
-	// If the specified filter is not found in the filter chain, this Wasm extension
-	// will be inserted before the next filter found in the chain, if any. If no
-	// any other filters are found in the chain, this Wasm extension will be
-	// inserted before the router filter.
-	//
-	// If not specified, this Wasm extension will be inserted before the router filter.
-	// InsertBefore *EnvoyFilter `json:"insertBeforeFilter"`
+	// Priority defines the location of the Wasm extension in the HTTP filter chain.
+	// If not specified, the Wasm extension will be inserted before the router filter.
+	// Priority *uint32 `json:"priority,omitempty"`
 }
 
 // WasmCodeSource defines the source of the wasm code.
-// TODO: zhaohuabing CEL validation" one of the HTTP or Image field must be set
 type WasmCodeSource struct {
+	// Type is the type of the source of the wasm code.
+	// Valid WasmCodeSourceType values are "HTTP" or "Image".
+	//
+	// +kubebuilder:validation:Enum=HTTP;Image
+	// +unionDiscriminator
+	Type WasmCodeSourceType `json:"type"`
+
 	// HTTP is the HTTP URL containing the wasm code.
 	//
 	// Note that the HTTP server must be accessible from the Envoy proxy.
 	// +optional
-	HTTP *string `json:"http,omitempty"`
+	HTTP *HTTPWasmCodeSource `json:"http,omitempty"`
 
 	// Image is the OCI image containing the wasm code.
 	//
 	// Note that the image must be accessible from the Envoy Gateway.
 	// +optional
-	Image *WasmImage `json:"image,omitempty"`
+	Image *ImageWasmCodeSource `json:"image,omitempty"`
 
 	// SHA256 checksum that will be used to verify the wasm code.
-	SHA256 string `json:"sha256,omitempty"`
+	// +optional
+	SHA256 *string `json:"sha256,omitempty"`
 }
 
-// WasmImage defines the OCI image containing the wasm code.
-type WasmImage struct {
+// WasmCodeSourceType specifies the types of RateLimiting.
+// +kubebuilder:validation:Enum=Global;Local
+type WasmCodeSourceType string
+
+const (
+	// HTTPWasmCodeSourceType allows the rate limits to be applied across all Envoy
+	// proxy instances.
+	HTTPWasmCodeSourceType WasmCodeSourceType = "HTTP"
+
+	// ImageWasmCodeSourceType allows the rate limits to be applied on a per Envoy
+	// proxy instance basis.
+	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
+)
+
+type HTTPWasmCodeSource struct {
+	// URL is the URL containing the wasm code.
+	URL string `json:"url"`
+}
+
+// ImageWasmCodeSource defines the OCI image containing the wasm code.
+type ImageWasmCodeSource struct {
 	// URL is the URL of the OCI image.
 	URL string `json:"url"`
 
