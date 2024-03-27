@@ -288,11 +288,7 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 		} else if redirection.Path.PrefixMatchReplace != nil {
 			if useRegexRewriteForPrefixMatchReplace(httpRoute.PathMatch, *redirection.Path.PrefixMatchReplace) {
 				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_RegexRewrite{
-					RegexRewrite: &matcherv3.RegexMatchAndSubstitute{
-						Pattern: &matcherv3.RegexMatcher{
-							Regex: "^" + *httpRoute.PathMatch.Prefix + `\/*`,
-						},
-					},
+					RegexRewrite: prefix2RegexRewrite(*httpRoute.PathMatch.Prefix),
 				}
 			} else {
 				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PrefixRewrite{
@@ -326,6 +322,15 @@ func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatch
 		(prefixMatchReplace == "" || prefixMatchReplace == "/")
 }
 
+func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
+	return &matcherv3.RegexMatchAndSubstitute{
+		Pattern: &matcherv3.RegexMatcher{
+			Regex: "^" + prefix + `\/*`,
+		},
+		Substitution: "/",
+	}
+}
+
 func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
 	routeAction := &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
@@ -347,12 +352,7 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			// a regex match and replace instead
 			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
 			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
-				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
-					Pattern: &matcherv3.RegexMatcher{
-						Regex: "^" + *pathMatch.Prefix + `\/*`,
-					},
-					Substitution: "/",
-				}
+				routeAction.RegexRewrite = prefix2RegexRewrite(*pathMatch.Prefix)
 			} else {
 				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
 			}

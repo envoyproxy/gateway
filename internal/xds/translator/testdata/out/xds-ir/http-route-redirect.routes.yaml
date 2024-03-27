@@ -21,6 +21,7 @@
         regexRewrite:
           pattern:
             regex: ^/redirect\/*
+          substitution: /
     - match:
         pathSeparatedPrefix: /redirect
       name: redirect-route-3
@@ -28,3 +29,4 @@
         regexRewrite:
           pattern:
             regex: ^/redirect/\/*
+          substitution: /
