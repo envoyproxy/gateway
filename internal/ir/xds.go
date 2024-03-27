@@ -180,7 +180,7 @@ func (x Xds) Printable() *Xds {
 		for _, route := range listener.Routes {
 			// Omit field
 			if route.Security != nil {
-				route.Security.Printable()
+				route.Security = route.Security.Printable()
 			}
 		}
 	}
@@ -483,27 +483,29 @@ type SecurityFeatures struct {
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
 }
 
-// Any returns true if any of the features are already set.
-func (s *SecurityFeatures) Any() bool {
+// Empty returns true if all the features are not set.
+func (s *SecurityFeatures) Empty() bool {
 	if s == nil {
-		return false
+		return true
 	}
 
-	return s.CORS != nil ||
-		s.JWT != nil ||
-		s.OIDC != nil ||
-		s.BasicAuth != nil ||
-		s.ExtAuth != nil
+	return s.CORS == nil &&
+		s.JWT == nil &&
+		s.OIDC == nil &&
+		s.BasicAuth == nil &&
+		s.ExtAuth == nil
 }
 
-func (s *SecurityFeatures) Printable() {
-	if s.OIDC != nil {
-		s.OIDC.ClientSecret = redacted
-		s.OIDC.HMACSecret = redacted
+func (s *SecurityFeatures) Printable() *SecurityFeatures {
+	out := s.DeepCopy()
+	if out.OIDC != nil {
+		out.OIDC.ClientSecret = redacted
+		out.OIDC.HMACSecret = redacted
 	}
-	if s.BasicAuth != nil {
-		s.BasicAuth.Users = redacted
+	if out.BasicAuth != nil {
+		out.BasicAuth.Users = redacted
 	}
+	return out
 }
 
 func (s *SecurityFeatures) Validate() error {
