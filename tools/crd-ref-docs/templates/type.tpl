@@ -4,6 +4,15 @@
 
 #### {{ $type.Name }}
 
+{{ $metaList := index .Markers "kubebuilder:metadata" }}
+{{- range $meta := $metaList -}}
+{{- range $anno := $meta.Annotations -}}
+{{- if hasPrefix "gateway.envoyproxy.io/release-channel" $anno -}}
+_Release Channel:_ {{ trimPrefix "gateway.envoyproxy.io/release-channel=" $anno }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{ if $type.IsAlias }}_Underlying type:_ _{{ markdownRenderTypeLink $type.UnderlyingType  }}_{{ end }}
 
 {{ $type.Doc }}

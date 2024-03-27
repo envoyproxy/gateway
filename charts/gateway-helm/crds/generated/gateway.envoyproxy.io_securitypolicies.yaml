@@ -4,6 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
+    gateway.envoyproxy.io/release-channel: experimental
   name: securitypolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
