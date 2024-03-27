@@ -8,8 +8,6 @@ package translator
 import (
 	"errors"
 
-	"google.golang.org/protobuf/proto"
-
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -27,6 +25,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -378,6 +377,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
 		},
+		HashPolicy: buildTCPProxyHashPolicy(irListener.LoadBalancer),
 	}
 
 	var filters []*listenerv3.Filter
@@ -717,4 +717,23 @@ func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.
 			TypedConfig: filterAny,
 		},
 	}, nil
+}
+
+func buildTCPProxyHashPolicy(lb *ir.LoadBalancer) []*typev3.HashPolicy {
+	// Return early
+	if lb == nil || lb.ConsistentHash == nil {
+		return nil
+	}
+
+	if lb.ConsistentHash.SourceIP != nil && *lb.ConsistentHash.SourceIP {
+		hashPolicy := &typev3.HashPolicy{
+			PolicySpecifier: &typev3.HashPolicy_SourceIp_{
+				SourceIp: &typev3.HashPolicy_SourceIp{},
+			},
+		}
+
+		return []*typev3.HashPolicy{hashPolicy}
+	}
+
+	return nil
 }
