@@ -56,7 +56,7 @@ type HTTPClientTimeout struct {
 	// +optional
 	RequestReceivedTimeout *gwapiv1.Duration `json:"requestReceivedTimeout,omitempty"`
 
-	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	// Default: 1 hour.
 	//
 	// +optional
