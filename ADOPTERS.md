@@ -41,3 +41,13 @@ If you would like to be included in this table, please submit a PR to this file 
 * Status: production
 * (Option) https://tetrate.io/wp-content/uploads/2023/03/tetrate-logo-dark.svg
 * (Option) Description:
+
+## Airspace Link
+* Organizatioin: Airspace Link
+* Website: https://airspacelink.com/
+* Category: End User
+* Environments: Azure
+* Use Cases:
+    - Airspace Link is using Envoy Gateway to route all public APIs to Kubernetes clusters, developers are manipulating routes descriptions using agnostic manifest files, which are then automatically provisioned using Envoy Gateway.
+* Status: production
+* Logo: https://airhub.airspacelink.com/images/asl-flat-logo.png
