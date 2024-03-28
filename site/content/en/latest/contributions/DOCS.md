@@ -20,10 +20,10 @@ the version of docs. The root of the latest site is in `site/content/en/latest`.
 This is probably where to start if you're trying to understand how things fit together.
 
 Note that the new contents should be added to `site/content/en/latest` and will be cut off at
-the next release. The contents under `site/content/en/v0.5.0` are auto-generated,
+the next release. The contents under `site/content/en/v1.0.0` are auto-generated,
 and usually do not need to make changes to them, unless if you find the current release pages have
 some incorrect contents. If so, you should send a PR to update contents both of `site/content/en/latest`
-and `site/content/en/v0.5.0`.
+and `site/content/en/v1.0.0`.
 
 You can access the website which represents the current release in default,
 and you can access the website which contains the latest version changes in
@@ -45,16 +45,16 @@ by running:
 make docs-serve
 ```
 
-If you want to generate a new release version of the docs, like `v0.6.0`, then run
+If you want to generate a new release version of the docs, like `v1.0.1`, then run
 
 ```bash
-make docs-release TAG=v0.6.0
+make docs-release TAG=v1.0.1
 ```
 
 This will update the VERSION file at the project root, which records current release version,
 and it will be used in the pages version context and binary version output. Also, this will generate
-new dir `site/content/en/v0.6.0`, which contains docs at v0.6.0 and updates artifact links to `v0.6.0`
-in all files under `site/content/en/v0.6.0/user`, like `quickstart.md`, `http-routing.md` and etc.
+new dir `site/content/en/v1.0.1`, which contains docs at v1.0.1 and updates artifact links to `v1.0.1`
+in all files under `site/content/en/v1.0.1/user`, like `quickstart.md`, `http-routing.md` and etc.
 
 ## Publishing Docs
 
