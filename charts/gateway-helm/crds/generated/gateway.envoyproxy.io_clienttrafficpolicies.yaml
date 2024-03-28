@@ -106,7 +106,8 @@ spec:
                     x-kubernetes-int-or-string: true
                     x-kubernetes-validations:
                     - message: bufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                      rule: self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                        : type(self) == int'
                   connectionLimit:
                     description: ConnectionLimit defines limits related to connections
                     properties:

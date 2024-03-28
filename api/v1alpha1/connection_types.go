@@ -21,7 +21,7 @@ type Connection struct {
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Default: 32768 bytes.
 	//
-	// +kubebuilder:validation:XValidation:rule="self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\")",message="bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
