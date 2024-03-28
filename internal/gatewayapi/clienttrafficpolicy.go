@@ -328,8 +328,14 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 
 	// IR must exist since we're past validation
 	if httpIR != nil {
+		// Get a list of all other non-TLS listeners on this Gateway that share a port with
+		// the listener in question.
 		if sameListeners := listenersWithSameHTTPPort(xds, httpIR); len(sameListeners) != 0 {
 			if attachedToGateway {
+				// If this policy is attached to an entire gateway and the mergeGateways feature
+				// is turned on, validate that all the listeners affected by this policy originated
+				// from the same Gateway resource. The name of the Gateway from which this listener
+				// originated is part of the listener's name by construction.
 				gatewayName := irListenerName[0:strings.LastIndex(irListenerName, "/")]
 				conflictingListeners := []string{}
 				for _, currName := range sameListeners {
@@ -341,6 +347,8 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 					return fmt.Errorf("affects additional listeners: %s", strings.Join(conflictingListeners, ", "))
 				}
 			} else {
+				// If this policy is attached to a specific listener, any other listeners in the list
+				// would be affected by this policy but should not be, so this policy can't be accepted.
 				return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
 			}
 		}
