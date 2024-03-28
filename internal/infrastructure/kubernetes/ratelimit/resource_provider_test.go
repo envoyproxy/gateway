@@ -648,6 +648,82 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "enable-tracing-with-default",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: "trace-collector",
+						},
+					},
+				},
+			},
+		},
+		{
+			caseName: "enable-tracing-with-custom",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						SampleRate: func() *uint32 {
+							var rate uint32 = 95
+							return &rate
+						}(),
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: "trace-collector",
+							Namespace: func() *gwapiv1.Namespace {
+								var ns gwapiv1.Namespace = "observability"
+								return &ns
+							}(),
+							Port: func() *gwapiv1.PortNumber {
+								var port gwapiv1.PortNumber = 4317
+								return &port
+							}(),
+						},
+						Protocol: "grpc",
+					},
+				},
+			},
+		},
+		{
+			caseName: "enable-tracing-with-custom-domain",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						SampleRate: func() *uint32 {
+							var rate uint32 = 55
+							return &rate
+						}(),
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: "trace-collector",
+							Namespace: func() *gwapiv1.Namespace {
+								var ns gwapiv1.Namespace = "observability"
+								return &ns
+							}(),
+						},
+						ClusterDomain: "example.local",
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -662,7 +738,7 @@ func TestDeployment(t *testing.T) {
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if true {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint:gosec

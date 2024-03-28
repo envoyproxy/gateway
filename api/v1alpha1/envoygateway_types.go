@@ -339,6 +339,9 @@ type RateLimit struct {
 type RateLimitTelemetry struct {
 	// Metrics defines metrics configuration for RateLimit.
 	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+
+	// Tracing defines traces configuration for RateLimit.
+	Tracing *RateLimitTracing `json:"tracing,omitempty"`
 }
 
 type RateLimitMetrics struct {
@@ -349,6 +352,29 @@ type RateLimitMetrics struct {
 type RateLimitMetricsPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
+}
+
+type RateLimitTracing struct {
+	// SamplingRate controls the rate at which traffic will be
+	// selected for tracing if no prior sampling decision has been made.
+	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+	// +optional
+	SampleRate *uint32 `json:"tracingSampleRate"`
+
+	// BackendRef defines the target trace collector endpoint configuration
+	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
+
+	// Protocol defines the protocol of provider in tracing feature.
+	// Only "http"(default) and "grpc" are allowed in this field
+	// +optional
+	Protocol string `json:"protocol,omitempty"`
+
+	// ClusterDomain is an optional field that specifies the custom domain used for the Kubernetes cluster.
+	// This field is used when the cluster is configured with a custom DNS domain,
+	// different from the default "cluster.local".
+	// Envoy Gateway uses this custom domain to generate fully qualified domain names (FQDN) for trace gatherer services.
+	// +optional
+	ClusterDomain string `json:"clusterDomain,omitempty"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with
