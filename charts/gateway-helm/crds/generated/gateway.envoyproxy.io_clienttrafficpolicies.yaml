@@ -125,6 +125,15 @@ spec:
                     description: EnableEnvoyHeaders configures Envoy Proxy to add
                       the "X-Envoy-" headers to requests and responses.
                     type: boolean
+                  withUnderscoresAction:
+                    description: WithUnderscoresAction configures the action to take
+                      when an HTTP header with underscores is encountered. The default
+                      action is to reject the request.
+                    enum:
+                    - Allow
+                    - RejectRequest
+                    - DropHeader
+                    type: string
                 type: object
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.

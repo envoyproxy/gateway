@@ -236,7 +236,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		MergeSlashes:                 irListener.Path.MergeSlashes,
 		PathWithEscapedSlashesAction: translateEscapePath(irListener.Path.EscapedSlashesAction),
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
-			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
+			HeadersWithUnderscoresAction: translateHeadersWithUnderscoresAction(irListener.Headers),
 		},
 		Tracing: hcmTracing,
 	}
@@ -736,4 +736,18 @@ func buildTCPProxyHashPolicy(lb *ir.LoadBalancer) []*typev3.HashPolicy {
 	}
 
 	return nil
+}
+
+func translateHeadersWithUnderscoresAction(in *ir.HeaderSettings) corev3.HttpProtocolOptions_HeadersWithUnderscoresAction {
+	if in != nil {
+		switch in.WithUnderscoresAction {
+		case ir.WithUnderscoresActionAllow:
+			return corev3.HttpProtocolOptions_ALLOW
+		case ir.WithUnderscoresActionRejectRequest:
+			return corev3.HttpProtocolOptions_REJECT_REQUEST
+		case ir.WithUnderscoresActionDropHeader:
+			return corev3.HttpProtocolOptions_DROP_HEADER
+		}
+	}
+	return corev3.HttpProtocolOptions_REJECT_REQUEST
 }
