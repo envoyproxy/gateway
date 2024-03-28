@@ -2541,6 +2541,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.RedirectURL != nil {
 		in, out := &in.RedirectURL, &out.RedirectURL
 		*out = new(string)
