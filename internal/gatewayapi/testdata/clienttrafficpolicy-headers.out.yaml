@@ -8,6 +8,7 @@ clientTrafficPolicies:
   spec:
     headers:
       enableEnvoyHeaders: true
+      withUnderscoresAction: Allow
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -129,6 +130,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
+        withUnderscoresAction: Allow
       hostnames:
       - '*'
       isHTTP2: false
@@ -140,6 +142,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
+        withUnderscoresAction: Allow
       hostnames:
       - '*'
       isHTTP2: false

@@ -7,6 +7,7 @@ clientTrafficPolicies:
   spec:
     headers:
       enableEnvoyHeaders: true
+      withUnderscoresAction: Allow
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

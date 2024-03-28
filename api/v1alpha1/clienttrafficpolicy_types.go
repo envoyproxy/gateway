@@ -99,7 +99,29 @@ type HeaderSettings struct {
 	// and responses.
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
+
+	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+	// is encountered. The default action is to reject the request.
+	// +optional
+	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
 }
+
+// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+// is encountered.
+// +kubebuilder:validation:Enum=Allow;RejectRequest;DropHeader
+type WithUnderscoresAction string
+
+const (
+	// WithUnderscoresActionAllow allows headers with underscores to be passed through.
+	WithUnderscoresActionAllow WithUnderscoresAction = "Allow"
+	// WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with
+	// the 400 status. HTTP/2 requests end with the stream reset.
+	WithUnderscoresActionRejectRequest WithUnderscoresAction = "RejectRequest"
+	// WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header
+	// is dropped before the filter chain is invoked and as such filters will not see
+	// dropped headers.
+	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
+)
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
