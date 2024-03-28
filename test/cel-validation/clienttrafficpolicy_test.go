@@ -11,6 +11,7 @@ package celvalidation
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strings"
 	"testing"
 	"time"
@@ -262,6 +263,26 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "invalid bufferLimit format",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					Connection: &egv1a1.Connection{
+						BufferLimit: ptr.To(resource.MustParse("15m")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.connection.bufferLimit: Invalid value: \"\": bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
+			},
 		},
 	}
 
