@@ -31,6 +31,8 @@ http:
         - openid
         - email
         - profile
+        resources:
+        - api
         redirectURL: "https://www.example.com/foo/oauth2/callback"
         redirectPath: "/foo/oauth2/callback"
         logoutPath: "/foo/logout"
@@ -58,6 +60,8 @@ http:
         - openid
         - email
         - profile
+        resources:
+        - api
         redirectURL: "https://www.example.com/bar/oauth2/callback"
         redirectPath: "/bar/oauth2/callback"
         logoutPath: "/bar/logout"
