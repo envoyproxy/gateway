@@ -106,6 +106,20 @@ func TestDeployment(t *testing.T) {
 			deploy:   nil,
 		},
 		{
+			caseName: "duplicate-listeners",
+			infra: func() *ir.Infra {
+				infra := newTestInfra()
+				infra.Proxy.Listeners[0].Ports = append(infra.Proxy.Listeners[0].Ports,
+					ir.ListenerPort{
+						Name:          "Envoy-second-https-listener",
+						Protocol:      ir.TCPProtocolType,
+						ContainerPort: envoyHTTPSPort,
+					})
+				return infra
+			}(),
+			deploy: nil,
+		},
+		{
 			caseName: "custom",
 			infra:    newTestInfra(),
 			deploy: &egv1a1.KubernetesDeploymentSpec{
