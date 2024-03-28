@@ -27,14 +27,15 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
-    jwt:
-      providers:
-      - name: example
-        issuer: https://www.example.com
-        audiences:
-        - foo.com
-        remoteJWKS:
-          uri: https://192.168.1.250/jwt/public-key/jwks.json
+    security:
+      jwt:
+        providers:
+        - name: example
+          issuer: https://www.example.com
+          audiences:
+          - foo.com
+          remoteJWKS:
+            uri: https://192.168.1.250/jwt/public-key/jwks.json
   - name: "second-route"
     hostname: "*"
     rateLimit:

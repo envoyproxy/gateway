@@ -54,11 +54,11 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 		// Only generates one BasicAuth Envoy filter for each unique name.
 		// For example, if there are two routes under the same gateway with the
 		// same BasicAuth config, only one BasicAuth filter will be generated.
-		if hcmContainsFilter(mgr, basicAuthFilterName(route.BasicAuth)) {
+		if hcmContainsFilter(mgr, basicAuthFilterName(route.Security.BasicAuth)) {
 			continue
 		}
 
-		filter, err := buildHCMBasicAuthFilter(route.BasicAuth)
+		filter, err := buildHCMBasicAuthFilter(route.Security.BasicAuth)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -113,7 +113,8 @@ func routeContainsBasicAuth(irRoute *ir.HTTPRoute) bool {
 	}
 
 	if irRoute != nil &&
-		irRoute.BasicAuth != nil {
+		irRoute.Security != nil &&
+		irRoute.Security.BasicAuth != nil {
 		return true
 	}
 
@@ -133,10 +134,10 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.BasicAuth == nil {
+	if irRoute.Security == nil || irRoute.Security.BasicAuth == nil {
 		return nil
 	}
-	filterName := basicAuthFilterName(irRoute.BasicAuth)
+	filterName := basicAuthFilterName(irRoute.Security.BasicAuth)
 	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}
