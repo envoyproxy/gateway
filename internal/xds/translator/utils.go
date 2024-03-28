@@ -13,8 +13,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
+
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -121,4 +126,38 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 		}
 	}
 	return false
+}
+
+func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
+	var (
+		endpointType EndpointType
+		tSocket      *corev3.TransportSocket
+		err          error
+	)
+
+	// Get the address type from the first setting.
+	// This is safe because no mixed address types in the settings.
+	addrTypeState := rd.Settings[0].AddressType
+	if addrTypeState != nil && *addrTypeState == ir.FQDN {
+		endpointType = EndpointTypeDNS
+	} else {
+		endpointType = EndpointTypeStatic
+	}
+
+	if rd.Settings[0].TLS != nil {
+		tSocket, err = processTLSSocket(rd.Settings[0].TLS, tCtx)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = addXdsCluster(tCtx, &xdsClusterArgs{
+		name:         rd.Name,
+		settings:     rd.Settings,
+		tSocket:      tSocket,
+		endpointType: endpointType,
+	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
+	}
+	return nil
 }

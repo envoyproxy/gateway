@@ -364,6 +364,38 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		)
 		r.log.Info("backendTlsPolicy status subscriber shutting down")
 	}()
+
+	// EnvoyExtensionPolicy object status updater
+	go func() {
+		message.HandleSubscription(
+			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "envoyextensionpolicy-status"},
+			r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(v1alpha1.EnvoyExtensionPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*v1alpha1.EnvoyExtensionPolicy)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("envoyExtensionPolicy status subscriber shutting down")
+	}()
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {

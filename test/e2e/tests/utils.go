@@ -203,3 +203,25 @@ func policyAcceptedByAncestor(ancestors []gwv1a2.PolicyAncestorStatus, controlle
 	}
 	return false
 }
+
+// EnvoyExtensionPolicyMustBeAccepted waits for the specified EnvoyExtensionPolicy to be accepted.
+func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.EnvoyExtensionPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyExtensionPolicy: %w", err)
+		}
+
+		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			return true, nil
+		}
+
+		t.Logf("EnvoyExtensionPolicy not yet accepted: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
+}

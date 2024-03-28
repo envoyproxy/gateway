@@ -196,6 +196,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
+				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
+					envoyExtensionPolicy := envoyExtensionPolicy
+					key := utils.NamespacedName(envoyExtensionPolicy)
+					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
+						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
+					}
+					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
+				}
 			}
 
 			// Delete IR keys
@@ -233,6 +241,7 @@ type StatusesToDelete struct {
 	ClientTrafficPolicyStatusKeys  map[types.NamespacedName]bool
 	BackendTrafficPolicyStatusKeys map[types.NamespacedName]bool
 	SecurityPolicyStatusKeys       map[types.NamespacedName]bool
+	EnvoyExtensionPolicyStatusKeys map[types.NamespacedName]bool
 }
 
 func (r *Runner) getAllStatuses() *StatusesToDelete {
@@ -249,6 +258,7 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 		BackendTrafficPolicyStatusKeys: make(map[types.NamespacedName]bool),
 		SecurityPolicyStatusKeys:       make(map[types.NamespacedName]bool),
 		BackendTLSPolicyStatusKeys:     make(map[types.NamespacedName]bool),
+		EnvoyExtensionPolicyStatusKeys: make(map[types.NamespacedName]bool),
 	}
 
 	// Get current status keys
@@ -283,7 +293,9 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 	for key := range r.ProviderResources.SecurityPolicyStatuses.LoadAll() {
 		ds.SecurityPolicyStatusKeys[key] = true
 	}
-
+	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
+		ds.EnvoyExtensionPolicyStatusKeys[key] = true
+	}
 	return ds
 }
 
@@ -329,6 +341,10 @@ func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
 		r.ProviderResources.BackendTLSPolicyStatuses.Delete(key)
 		delete(ds.BackendTLSPolicyStatusKeys, key)
 	}
+	for key := range ds.EnvoyExtensionPolicyStatusKeys {
+		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
+		delete(ds.EnvoyExtensionPolicyStatusKeys, key)
+	}
 }
 
 // deleteAllStatusKeys deletes all status keys stored by the subscriber.
@@ -365,6 +381,9 @@ func (r *Runner) deleteAllStatusKeys() {
 	}
 	for key := range r.ProviderResources.SecurityPolicyStatuses.LoadAll() {
 		r.ProviderResources.SecurityPolicyStatuses.Delete(key)
+	}
+	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
+		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
 	}
 }
 

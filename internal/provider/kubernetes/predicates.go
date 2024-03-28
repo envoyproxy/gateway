@@ -251,7 +251,11 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
@@ -363,7 +367,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
@@ -532,4 +540,16 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 	}
 
 	return true
+}
+
+func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *types.NamespacedName) bool {
+	spList := &egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendEnvoyExtensionPolicyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyExtensionPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
 }
