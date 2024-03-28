@@ -261,9 +261,9 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Affects multiple listeners: default/gateway-1/http'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
@@ -314,6 +314,20 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
+        cors:
+          allowCredentials: true
+          allowMethods:
+          - PUT
+          - GET
+          - POST
+          - DELETE
+          - PATCH
+          - OPTIONS
+          allowOrigins:
+          - distinct: false
+            name: ""
+            safeRegex: http://.*\.foo\.com
+          maxAge: 10m0s
         destination:
           name: httproute/default/mfqjpuycbgjrtdww/rule/0
           settings:
