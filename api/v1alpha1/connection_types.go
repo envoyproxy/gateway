@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -15,13 +16,14 @@ type Connection struct {
 	//
 	// +optional
 	ConnectionLimit *ConnectionLimit `json:"connectionLimit,omitempty"`
-	// BufferLimitBytes provides configuration for the maximum buffer size in bytes for each incoming connection.
+	// BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.
+	// For example, 20Mi, 1Gi, 256Ki etc.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Default: 32768 bytes.
 	//
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:validation:XValidation:rule="self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\")",message="bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
-	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty"`
+	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
 
 type ConnectionLimit struct {

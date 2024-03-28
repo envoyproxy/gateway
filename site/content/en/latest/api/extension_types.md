@@ -386,7 +386,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
-| `bufferLimit` | _integer_ |  false  | BufferLimitBytes provides configuration for the maximum buffer size in bytes for each incoming connection. Default: 32768 bytes. |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection. For example, 20Mi, 1Gi, 256Ki etc. Note that when the suffix is not provided, the value is interpreted as bytes. Default: 32768 bytes. |
 
 
 #### ConnectionLimit

@@ -581,10 +581,10 @@ func (in *Connection) DeepCopyInto(out *Connection) {
 		*out = new(ConnectionLimit)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.BufferLimitBytes != nil {
-		in, out := &in.BufferLimitBytes, &out.BufferLimitBytes
-		*out = new(uint32)
-		**out = **in
+	if in.BufferLimit != nil {
+		in, out := &in.BufferLimit, &out.BufferLimit
+		x := (*in).DeepCopy()
+		*out = &x
 	}
 }
 
