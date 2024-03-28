@@ -1266,7 +1266,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `requestReceivedTimeout` | _[Duration](#duration)_ |  false  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
-| `idleTimeout` | _[Duration](#duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
+| `idleTimeout` | _[Duration](#duration)_ |  false  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection. Default: 1 hour. |
 
 
 #### HTTPExtAuthService

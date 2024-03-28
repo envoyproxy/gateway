@@ -260,9 +260,9 @@ spec:
                     description: Timeout settings for HTTP.
                     properties:
                       idleTimeout:
-                        description: 'The idle timeout for an HTTP connection. Idle
-                          time is defined as a period in which there are no active
-                          requests in the connection. Default: 1 hour.'
+                        description: 'IdleTimeout for an HTTP connection. Idle time
+                          is defined as a period in which there are no active requests
+                          in the connection. Default: 1 hour.'
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       requestReceivedTimeout:
