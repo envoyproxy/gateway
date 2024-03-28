@@ -37,6 +37,11 @@ type OIDC struct {
 	// +optional
 	Scopes []string `json:"scopes,omitempty"`
 
+	// The OIDC resources to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// +optional
+	Resources []string `json:"resources,omitempty"`
+
 	// The redirect URL to be used in the OIDC
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"

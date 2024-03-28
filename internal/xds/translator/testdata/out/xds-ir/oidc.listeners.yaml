@@ -48,6 +48,8 @@
                 path:
                   exact: /foo/oauth2/callback
               redirectUri: https://www.example.com/foo/oauth2/callback
+              resources:
+              - api
               signoutPath:
                 path:
                   exact: /foo/logout
@@ -89,6 +91,8 @@
                 path:
                   exact: /bar/oauth2/callback
               redirectUri: https://www.example.com/bar/oauth2/callback
+              resources:
+              - api
               signoutPath:
                 path:
                   exact: /bar/logout

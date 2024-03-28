@@ -170,6 +170,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			// every OIDC provider supports basic auth
 			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH,
 			AuthScopes: oidc.Scopes,
+			Resources:  oidc.Resources,
 		},
 	}
 	return oauth2, nil
