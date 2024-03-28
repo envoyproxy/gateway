@@ -37,6 +37,7 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
 func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	return &EnvoyProxyKubernetesProvider{
+		Mode:            KubernetesProviderModeDeployment,
 		EnvoyDeployment: DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
 		EnvoyService:    DefaultKubernetesService(),
 	}
@@ -70,25 +71,52 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 		return r.Kubernetes
 	}
 
-	if r.Kubernetes.EnvoyDeployment == nil {
-		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
+	if r.Kubernetes.Mode == KubernetesProviderModeDeployment {
+		if r.Kubernetes.EnvoyDeployment == nil {
+			r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
+		}
+
+		r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+
+		if r.Kubernetes.EnvoyService == nil {
+			r.Kubernetes.EnvoyService = DefaultKubernetesService()
+		}
+
+		if r.Kubernetes.EnvoyService.Type == nil {
+			r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
+		}
+
+		if r.Kubernetes.EnvoyHpa != nil {
+			r.Kubernetes.EnvoyHpa.setDefault()
+		}
 	}
 
-	r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+	if r.Kubernetes.Mode == KubernetesProviderModeDaemonSet {
+		if r.Kubernetes.EnvoyDaemonSet == nil {
+			r.Kubernetes.EnvoyDaemonSet = DefaultKubernetesDaemonSet(DefaultEnvoyProxyImage)
+		}
 
-	if r.Kubernetes.EnvoyService == nil {
-		r.Kubernetes.EnvoyService = DefaultKubernetesService()
-	}
+		r.Kubernetes.EnvoyDaemonSet.defaultKubernetesDaemonSetSpec(DefaultEnvoyProxyImage)
 
-	if r.Kubernetes.EnvoyService.Type == nil {
-		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
-	}
+		if r.Kubernetes.EnvoyService == nil {
+			r.Kubernetes.EnvoyService = DefaultKubernetesService()
+		}
 
-	if r.Kubernetes.EnvoyHpa != nil {
-		r.Kubernetes.EnvoyHpa.setDefault()
+		if r.Kubernetes.EnvoyService.Type == nil {
+			r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeClusterIP)
+		}
 	}
 
 	return r.Kubernetes
+}
+
+// GetEnvoyProxyKubeProviderMode returns the EnvoyProxyKubernetesProvider Type of EnvoyProxyProvider.
+func (h *EnvoyProxyKubernetesProvider) GetEnvoyProxyKubeProviderMode() KubernetesProviderMode {
+	if h == nil {
+		return ""
+	}
+
+	return h.Mode
 }
 
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.

@@ -474,7 +474,7 @@ func TestExpectedDeploymentVolumes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, ExpectedDeploymentVolumes(tt.args.pod, tt.args.volumes), "ExpectedDeploymentVolumes(%v, %v)", tt.args.pod, tt.args.volumes)
+			assert.Equalf(t, tt.want, ExpectedVolumes(tt.args.pod, tt.args.volumes), "ExpectedDeploymentVolumes(%v, %v)", tt.args.pod, tt.args.volumes)
 		})
 	}
 }

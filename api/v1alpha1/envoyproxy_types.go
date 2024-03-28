@@ -137,12 +137,24 @@ type ShutdownConfig struct {
 // EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource
 // provider.
 type EnvoyProxyKubernetesProvider struct {
+	// Mode is the type of the Kubernetes resource provider. If unspecified, it defaults to "Deployment".
+	// +kubebuilder:default:="Deployment"
+	// +optional
+	Mode KubernetesProviderMode `json:"mode"`
+
 	// EnvoyDeployment defines the desired state of the Envoy deployment resource.
 	// If unspecified, default settings for the managed Envoy deployment resource
 	// are applied.
 	//
 	// +optional
 	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
+
+	// EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.
+	// If unspecified, default settings for the managed Envoy daemonset resource
+	// are applied.
+	//
+	// +optional
+	EnvoyDaemonSet *KubernetesDaemonSetSpec `json:"envoyDaemonSet,omitempty"`
 
 	// EnvoyService defines the desired state of the Envoy service resource.
 	// If unspecified, default settings for the managed Envoy service resource
