@@ -46,11 +46,9 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		Clientset:            clientset,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		SupportedFeatures:    suite.AllFeatures,
-		SkipTests: []string{
-			tests.GatewayStaticAddresses.ShortName,
-		},
-		ExemptFeatures: suite.MeshCoreFeatures,
+		SupportedFeatures:    EnvoyGatewaySuite.SupportedFeatures,
+		SkipTests:            EnvoyGatewaySuite.SkipTests,
+		ExemptFeatures:       EnvoyGatewaySuite.ExemptFeatures,
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)
