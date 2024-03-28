@@ -54,12 +54,17 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, make(chan struct{}))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
+
+	testNs := config.DefaultNamespace
+	cli := provider.manager.GetClient()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
 
 	// Stop the kube provider.
 	defer func() {
@@ -154,15 +159,8 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	// Create the namespace for the test case.
 	// Note: The namespace for the EnvoyProxy must match EG's configured namespace.
 	testNs := config.DefaultNamespace
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
-	require.NoError(t, cli.Create(ctx, ns))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, ns))
-	}()
 
 	epName := "test-envoy-proxy"
 	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: testNs, Name: epName}, false)
@@ -1263,7 +1261,7 @@ func TestNamespacedProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, make(chan struct{}))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1323,19 +1321,23 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(cliCfg, svr, resources, make(chan struct{}))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
 
+	testNs := config.DefaultNamespace
+	cli := provider.manager.GetClient()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
+
 	defer func() {
 		cancel()
 		require.NoError(t, testEnv.Stop())
 	}()
 
-	cli := provider.manager.GetClient()
 	watchedNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
 		Name:   "watched-ns",
 		Labels: map[string]string{"label-1": "true", "label-2": "true"},

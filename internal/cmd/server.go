@@ -127,9 +127,11 @@ func setupRunners(cfg *config.Server) error {
 	// and publishes it
 	// It also subscribes to status resources and once it receives
 	// a status resource back, it writes it out.
+	elected := make(chan struct{})
 	providerRunner := providerrunner.New(&providerrunner.Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
+		Elected:           elected,
 	})
 	if err := providerRunner.Start(ctx); err != nil {
 		return err
@@ -172,6 +174,7 @@ func setupRunners(cfg *config.Server) error {
 	infraRunner := infrarunner.New(&infrarunner.Config{
 		Server:  *cfg,
 		InfraIR: infraIR,
+		Elected: elected,
 	})
 	if err := infraRunner.Start(ctx); err != nil {
 		return err

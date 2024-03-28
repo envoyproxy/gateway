@@ -18,6 +18,7 @@ import (
 type Config struct {
 	config.Server
 	InfraIR *message.InfraIR
+	Elected <-chan struct{}
 }
 
 type Runner struct {
@@ -41,14 +42,30 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
 	}
-	go r.subscribeToProxyInfraIR(ctx)
 
-	// Enable global ratelimit if it has been configured.
-	if r.EnvoyGateway.RateLimit != nil {
-		go r.enableRateLimitInfra(ctx)
+	var initInfra = func() {
+		go r.subscribeToProxyInfraIR(ctx)
+
+		// Enable global ratelimit if it has been configured.
+		if r.EnvoyGateway.RateLimit != nil {
+			go r.enableRateLimitInfra(ctx)
+		}
+		r.Logger.Info("started")
 	}
 
-	r.Logger.Info("started")
+	// Wait for leader if leader election is enabled
+	if r.LeaderElection.Enabled {
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-r.Elected:
+				initInfra()
+			}
+		}()
+		return
+	}
+	initInfra()
 	return
 }
 

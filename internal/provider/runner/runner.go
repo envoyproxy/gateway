@@ -20,6 +20,7 @@ import (
 type Config struct {
 	config.Server
 	ProviderResources *message.ProviderResources
+	Elected           chan struct{}
 }
 
 type Runner struct {
@@ -43,7 +44,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		if err != nil {
 			return fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
-		p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
+		p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources, r.Elected)
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s: %w", v1alpha1.ProviderTypeKubernetes, err)
 		}

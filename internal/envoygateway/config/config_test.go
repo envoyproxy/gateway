@@ -6,7 +6,9 @@
 package config
 
 import (
+	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -19,6 +21,42 @@ var (
 	TLSSecretKind       = v1.Kind("Secret")
 	TLSUnrecognizedKind = v1.Kind("Unrecognized")
 )
+
+func setEnv(t *testing.T, key, value string) {
+	t.Helper() // Marks the function as a test helper function.
+	prevValue, isSet := os.LookupEnv(key)
+	require.NoError(t, os.Setenv(key, value))
+	t.Cleanup(func() {
+		if isSet {
+			require.NoError(t, os.Setenv(key, prevValue))
+		} else {
+			require.NoError(t, os.Unsetenv(key))
+		}
+	})
+}
+
+func TestConfig_Defaults(t *testing.T) {
+	cfg, err := New()
+	require.NoError(t, err)
+	require.Nil(t, cfg.LeaderElection.RenewDeadline)
+	require.Nil(t, cfg.LeaderElection.RetryPeriod)
+	require.Nil(t, cfg.LeaderElection.LeaseDuration)
+	require.True(t, cfg.LeaderElection.Enabled, "leader election should be enabled by default")
+}
+
+func TestConfig_EnvOverrides(t *testing.T) {
+	setEnv(t, "ENVOY_GATEWAY_LEADER_ELECTION_ENABLED", "false")
+	setEnv(t, "ENVOY_GATEWAY_LEADER_ELECTION_RENEW_DEADLINE", "1s")
+	setEnv(t, "ENVOY_GATEWAY_LEADER_ELECTION_RETRY_PERIOD", "1m")
+	setEnv(t, "ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION", "1h")
+
+	cfg, err := New()
+	require.NoError(t, err)
+	require.False(t, cfg.LeaderElection.Enabled, "leader election should be disabled by env var")
+	require.Equal(t, time.Second, *cfg.LeaderElection.RenewDeadline, "renew deadline should equal to a second")
+	require.Equal(t, time.Minute, *cfg.LeaderElection.RetryPeriod, "retry period should equal to a minute")
+	require.Equal(t, time.Hour, *cfg.LeaderElection.LeaseDuration, "lease duration should equal to an hour")
+}
 
 func TestValidate(t *testing.T) {
 	cfg, err := New()

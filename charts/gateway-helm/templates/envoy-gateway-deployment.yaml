@@ -42,6 +42,14 @@ spec:
         - server
         - --config-path=/config/envoy-gateway.yaml
         env:
+        - name: ENVOY_GATEWAY_LEADER_ELECTION_ENABLED
+          value: "{{ .Values.deployment.envoyGateway.leaderElection.enabled }}"
+        - name: ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION
+          value: "{{ .Values.deployment.envoyGateway.leaderElection.leaseDuration }}"
+        - name: ENVOY_GATEWAY_LEADER_ELECTION_RETRY_PERIOD
+          value: "{{ .Values.deployment.envoyGateway.leaderElection.retryPeriod }}"
+        - name: ENVOY_GATEWAY_LEADER_ELECTION_RENEW_DEADLINE
+          value: "{{ .Values.deployment.envoyGateway.leaderElection.renewDeadline }}"
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
             fieldRef:
