@@ -1,0 +1,54 @@
+- ignorePortInHostMatching: true
+  name: default/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.foo.com
+    name: default/gateway-1/http/www_foo_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo1
+      name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        pathSeparatedPrefix: /foo2
+      name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+  - domains:
+    - www.bar.com
+    name: default/gateway-2/http/www_bar_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /bar
+      name: httproute/default/httproute-3/rule/0/match/0/www_bar_com
+      route:
+        cluster: httproute/default/httproute-3/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.oauth2/securitypolicy/default/policy-for-gateway-2:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

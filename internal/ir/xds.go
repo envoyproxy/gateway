@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -229,6 +230,8 @@ type HTTPListener struct {
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
+	// Connection settings
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -517,6 +520,10 @@ type JWT struct {
 //
 // +k8s:deepcopy-gen=true
 type OIDC struct {
+	// Name is a unique name for an OIDC configuration.
+	// The xds translator only generates one OAuth2 filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// The OIDC Provider configuration.
 	Provider OIDCProvider `json:"provider" yaml:"provider"`
 
@@ -536,6 +543,10 @@ type OIDC struct {
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+
+	// The OIDC resources to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	Resources []string `json:"resources,omitempty" yaml:"resources,omitempty"`
 
 	// The redirect URL to be used in the OIDC
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -566,6 +577,10 @@ type OIDCProvider struct {
 //
 // +k8s:deepcopy-gen=true
 type BasicAuth struct {
+	// Name is a unique name for an BasicAuth configuration.
+	// The xds translator only generates one basic auth filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// The username-password pairs in htpasswd format.
 	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
 }
@@ -574,6 +589,10 @@ type BasicAuth struct {
 //
 // +k8s:deepcopy-gen=true
 type ExtAuth struct {
+	// Name is a unique name for an ExtAuth configuration.
+	// The xds translator only generates one external authorization filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// GRPC defines the gRPC External Authorization service.
 	// Only one of GRPCService or HTTPService may be specified.
 	GRPC *GRPCExtAuthService `json:"grpc,omitempty"`
@@ -594,6 +613,14 @@ type ExtAuth struct {
 	// in HeadersToExtAuth or not.
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
+
+	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
+	// If FailOpen is set to true, the system allows the traffic to pass through.
+	// Otherwise, if it is set to false or not set (defaulting to false),
+	// the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.
+	// This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
+	// +optional
+	FailOpen *bool `json:"failOpen,omitempty"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -1073,6 +1100,18 @@ type TCPListener struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// Connection settings for clients
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// load balancer policy to use when routing to the backend endpoints.
+	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
+	// Request and connection timeout settings
+	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// Retry settings
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
+	// HealthCheck defines the configuration for health checking on the upstream.
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
+	// Proxy Protocol Settings
+	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1147,6 +1186,10 @@ type UDPListener struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// Destination associated with UDP traffic to the service.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
+	// load balancer policy to use when routing to the backend endpoints.
+	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
+	// Request and connection timeout settings
+	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -1283,7 +1326,7 @@ type EnvoyPatchPolicyStatus struct {
 	Name      string `json:"name,omitempty" yaml:"name"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
-	Status *egv1a1.EnvoyPatchPolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status *gwv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
@@ -1745,4 +1788,23 @@ type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+}
+
+// Connection settings for downstream connections
+// +k8s:deepcopy-gen=true
+type Connection struct {
+	// Limit for number of connections
+	Limit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+}
+
+// ConnectionLimit contains settings for downstream connection limits
+// +k8s:deepcopy-gen=true
+type ConnectionLimit struct {
+	// Value of the maximum concurrent connections limit.
+	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
+	Value *uint64 `json:"value,omitempty" yaml:"value,omitempty"`
+
+	// CloseDelay defines the delay to use before closing connections that are rejected
+	// once the limit value is reached.
+	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }

@@ -143,12 +143,13 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	allowCredentials = &wrappers.BoolValue{Value: irRoute.CORS.AllowCredentials}
 
 	routeCfgProto := &corsv3.CorsPolicy{
-		AllowOriginStringMatch: allowOrigins,
-		AllowMethods:           allowMethods,
-		AllowHeaders:           allowHeaders,
-		ExposeHeaders:          exposeHeaders,
-		MaxAge:                 maxAge,
-		AllowCredentials:       allowCredentials,
+		AllowOriginStringMatch:       allowOrigins,
+		AllowMethods:                 allowMethods,
+		AllowHeaders:                 allowHeaders,
+		ExposeHeaders:                exposeHeaders,
+		MaxAge:                       maxAge,
+		AllowCredentials:             allowCredentials,
+		ForwardNotMatchingPreflights: &wrappers.BoolValue{Value: false},
 	}
 
 	routeCfgAny, err := anypb.New(routeCfgProto)

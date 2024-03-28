@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,19 +29,17 @@ func (t *Translator) processBackendTLSPolicy(
 
 	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
 
-	ancestor := gwapiv1a2.PolicyAncestorStatus{
-		AncestorRef:    parent,
-		ControllerName: gwapiv1.GatewayController(t.GatewayControllerName),
+	ancestorRefs := []gwapiv1a2.ParentReference{
+		parent,
 	}
 
 	if err != nil {
-		status.SetBackendTLSPolicyCondition(
-			policy,
-			ancestor,
-			gwapiv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwapiv1a2.PolicyReasonInvalid,
-			status.Error2ConditionMsg(err))
+		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+			ancestorRefs,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(err),
+		)
 		return nil
 	}
 
@@ -67,25 +64,21 @@ func (t *Translator) processBackendTLSPolicy(
 			},
 			resources.ReferenceGrants,
 		) {
-			status.SetBackendTLSPolicyCondition(
-				policy,
-				ancestor,
-				gwapiv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwapiv1a2.PolicyReasonInvalid,
-				fmt.Sprintf("target ref to %s %s/%s not permitted by any ReferenceGrant",
-					backendRefKind, backendNamespace, backendRef.Name))
+			err = fmt.Errorf("target ref to %s %s/%s not permitted by any ReferenceGrant",
+				backendRefKind, backendNamespace, backendRef.Name)
+
+			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				status.Error2ConditionMsg(err),
+			)
 			return nil
 		}
 	}
 
-	status.SetBackendTLSPolicyCondition(
-		policy,
-		ancestor,
-		gwapiv1a2.PolicyConditionAccepted,
-		metav1.ConditionTrue,
-		gwapiv1a2.PolicyReasonAccepted,
-		"BackendTLSPolicy is Accepted")
+	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+
 	return tlsBundle
 }
 
@@ -161,42 +154,4 @@ func getBackendTLSBundle(policies []*gwapiv1a2.BackendTLSPolicy, configmaps []*c
 	}
 
 	return tlsBundle, nil
-}
-
-func (t *Translator) ProcessBackendTLSPoliciesAncestorRef(backendTLSPolicies []*gwapiv1a2.BackendTLSPolicy, gateways []*GatewayContext) []*gwapiv1a2.BackendTLSPolicy {
-
-	var res []*gwapiv1a2.BackendTLSPolicy
-
-	for _, btlsPolicy := range backendTLSPolicies {
-
-		policy := btlsPolicy.DeepCopy()
-		res = append(res, policy)
-
-		if policy.Status.Ancestors != nil {
-			for k, status := range policy.Status.Ancestors {
-				if status.AncestorRef.Kind != nil && *status.AncestorRef.Kind != KindGateway {
-					continue
-				}
-				exist := false
-				for _, gwContext := range gateways {
-					gw := gwContext.Gateway
-					if gw.Name == string(status.AncestorRef.Name) && gw.Namespace == NamespaceDerefOrAlpha(status.AncestorRef.Namespace, "default") {
-						for _, lis := range gw.Spec.Listeners {
-							if lis.Name == ptr.Deref(status.AncestorRef.SectionName, "") {
-								exist = true
-							}
-						}
-					}
-				}
-
-				if !exist {
-					policy.Status.Ancestors = append(policy.Status.Ancestors[:k], policy.Status.Ancestors[k+1:]...)
-				}
-			}
-		} else {
-			policy.Status.Ancestors = []gwapiv1a2.PolicyAncestorStatus{}
-		}
-	}
-
-	return res
 }
