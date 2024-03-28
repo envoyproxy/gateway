@@ -1,0 +1,225 @@
+envoyproxy:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeGateways: true
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      name: gateway-1
+      namespace: default
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          port: 80
+          protocol: HTTP
+          hostname: bar.example.com
+          allowedRoutes:
+            namespaces:
+              from: Same
+        - name: http-2
+          port: 80
+          hostname: foo.example.com
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: Same
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      name: gateway-2
+      namespace: default
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          port: 81
+          protocol: HTTP
+          hostname: bar.example.com
+          allowedRoutes:
+            namespaces:
+              from: Same
+        - name: http-2
+          port: 81
+          hostname: foo.example.com
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: Same
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - bar.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      hostnames:
+        - foo.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http-2
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-2
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-3
+    spec:
+      hostnames:
+        - bar.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-4
+    spec:
+      hostnames:
+        - foo.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-2
+          sectionName: http-2
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-2
+              port: 8080
+securityPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route-1
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      cors:
+        allowOrigins:
+          - "*"
+        allowMethods:
+          - GET
+          - POST
+        allowHeaders:
+          - "x-header-5"
+          - "x-header-6"
+        exposeHeaders:
+          - "x-header-7"
+          - "x-header-8"
+        maxAge: 2000s
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route-2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-3
+        namespace: default
+      cors:
+        allowOrigins:
+          - "*"
+        allowMethods:
+          - GET
+          - POST
+        allowHeaders:
+          - "x-header-5"
+          - "x-header-6"
+        exposeHeaders:
+          - "x-header-7"
+          - "x-header-8"
+        maxAge: 2000s
+clientTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: ClientTrafficPolicy
+    metadata:
+      namespace: default
+      name: target-gateway-2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        sectionName: http
+        namespace: default
+      timeout:
+        http:
+          requestReceivedTimeout: "5s"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: ClientTrafficPolicy
+    metadata:
+      namespace: default
+      name: target-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      timeout:
+        http:
+          requestReceivedTimeout: "5s"
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      tcpKeepalive:
+        probes: 3
+        idleTime: 20m
+        interval: 60s
