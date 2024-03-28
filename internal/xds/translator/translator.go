@@ -236,16 +236,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// resource version table.
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
-			for t := range httpListener.TLS.Certificates {
-				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[t])
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+			for c := range httpListener.TLS.Certificates {
+				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[c])
+				if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
 
 			if httpListener.TLS.CACertificate != nil {
 				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate)
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+				if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -258,7 +258,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				Name:                     httpListener.Name,
 			}
 
-			if err := tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
+			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -271,20 +271,20 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
-		if err := patchResources(tCtx, httpListener.Routes); err != nil {
-			return err
+		if err = patchResources(tCtx, httpListener.Routes); err != nil {
+			errs = errors.Join(errs, err)
 		}
 
 		// RateLimit filter is handled separately because it relies on the global
 		// rate limit server configuration.
 		// Check if a ratelimit cluster exists, if not, add it, if it's needed.
-		if err := t.createRateLimitServiceCluster(tCtx, httpListener); err != nil {
+		if err = t.createRateLimitServiceCluster(tCtx, httpListener); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
 		// Check if an extension want to modify the listener that was just configured/created
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
-		// TODO zhaohuabing should we also check the quicXDSListener?
+		// TODO zhaohuabing should we also process the quicXDSListener?
 		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
 		}
