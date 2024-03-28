@@ -1381,7 +1381,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `url` | _string_ |  true  | URL is the URL of the OCI image. |
 | `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
-| `pullPolicy` | _[PullPolicy](#pullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the image. If not specified, the default policy is IfNotPresent for images whose tag is not latest, and Always for images whose tag is latest. |
 
 
 #### InfrastructureProviderType
@@ -2096,17 +2095,6 @@ _Appears in:_
 | `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  true  | CustomTags defines the custom tags to add to each span. If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider. Only OpenTelemetry is supported currently. |
-
-
-#### PullPolicy
-
-_Underlying type:_ _string_
-
-PullPolicy defines the policy to use when pulling an OIC image.
-
-_Appears in:_
-- [ImageWasmCodeSource](#imagewasmcodesource)
-
 
 
 #### RateLimit

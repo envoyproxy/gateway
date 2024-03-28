@@ -112,11 +112,11 @@ type ImageWasmCodeSource struct {
 	// If not specified, the default policy is IfNotPresent for images whose tag is not latest,
 	// and Always for images whose tag is latest.
 	// +optional
-	PullPolicy *PullPolicy `json:"pullPolicy,omitempty"`
+	// PullPolicy *PullPolicy `json:"pullPolicy,omitempty"`
 }
 
 // PullPolicy defines the policy to use when pulling an OIC image.
-type PullPolicy string
+/* type PullPolicy string
 
 const (
 	// PullPolicyIfNotPresent will only pull the image if it does not already exist.
@@ -124,4 +124,4 @@ const (
 
 	// PullPolicyAlways will always pull the image.
 	PullPolicyAlways PullPolicy = "Always"
-)
+)*/

@@ -136,12 +136,6 @@ spec:
                             code. \n Note that the image must be accessible from the
                             Envoy Gateway."
                           properties:
-                            pullPolicy:
-                              description: PullPolicy is the policy to use when pulling
-                                the image. If not specified, the default policy is
-                                IfNotPresent for images whose tag is not latest, and
-                                Always for images whose tag is latest.
-                              type: string
                             pullSecret:
                               description: PullSecretRef is a reference to the secret
                                 containing the credentials to pull the image.
