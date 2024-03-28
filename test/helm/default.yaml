@@ -186,8 +186,8 @@ rules:
   verbs:
   - create
   - get
-  - update
   - delete
+  - patch
 - apiGroups:
   - apps
   resources:
@@ -195,8 +195,8 @@ rules:
   verbs:
   - create
   - get
-  - update
   - delete
+  - patch
 - apiGroups:
   - autoscaling
   resources:
@@ -204,8 +204,8 @@ rules:
   verbs:
   - create
   - get
-  - update
   - delete
+  - patch
 ---
 # Source: gateway-helm/templates/leader-election-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
