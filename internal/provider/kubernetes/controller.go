@@ -1245,18 +1245,16 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		eepPredicates = append(eepPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
-	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyExtensionPolicy {
-		// Watch EnvoyPatchPolicy CRUDs
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &egv1a1.EnvoyExtensionPolicy{}),
-			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
-			eepPredicates...,
-		); err != nil {
-			return err
-		}
-		if err := addEnvoyExtensionPolicyIndexers(ctx, mgr); err != nil {
-			return err
-		}
+	// Watch EnvoyExtensionPolicy CRUDs
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.EnvoyExtensionPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		eepPredicates...,
+	); err != nil {
+		return err
+	}
+	if err := addEnvoyExtensionPolicyIndexers(ctx, mgr); err != nil {
+		return err
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")

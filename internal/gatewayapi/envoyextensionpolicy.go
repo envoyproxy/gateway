@@ -100,22 +100,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				}
 			}
 
-			// Ensure EnvoyExtensionPolicy is enabled
-			if !t.EnvoyExtensionPolicyEnabled {
-				resolveErr = &status.PolicyResolveError{
-					Reason:  egv1a1.PolicyReasonDisabled,
-					Message: "EnvoyExtensionPolicy is disabled in the EnvoyGateway configuration",
-				}
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
-
-				continue
-			}
-
 			// Set conditions for resolve error, then skip current xroute
 			if resolveErr != nil {
 				status.SetResolveErrorForPolicyAncestors(&policy.Status,
@@ -160,22 +144,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 			ancestorRefs := []gwv1a2.ParentReference{
 				// Don't need a section name since the policy is targeting to a gateway
 				getAncestorRefForPolicy(gatewayNN, nil),
-			}
-
-			// Ensure EnvoyExtensionPolicy is enabled
-			if !t.EnvoyExtensionPolicyEnabled {
-				resolveErr = &status.PolicyResolveError{
-					Reason:  egv1a1.PolicyReasonDisabled,
-					Message: "EnvoyExtensionPolicy is disabled in the EnvoyGateway configuration",
-				}
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
-
-				continue
 			}
 
 			// Set conditions for resolve error, then skip current gateway
