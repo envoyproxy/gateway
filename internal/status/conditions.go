@@ -14,86 +14,13 @@
 package status
 
 import (
-	"fmt"
 	"time"
 	"unicode"
 
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
-
-const (
-	ReasonOlderGatewayClassExists gwapiv1.GatewayClassConditionReason = "OlderGatewayClassExists"
-
-	MsgOlderGatewayClassExists   = "Invalid GatewayClass: another older GatewayClass with the same Spec.Controller exists"
-	MsgValidGatewayClass         = "Valid GatewayClass"
-	MsgGatewayClassInvalidParams = "Invalid parametersRef"
-)
-
-// computeGatewayClassAcceptedCondition computes the GatewayClass Accepted status condition.
-func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
-	accepted bool,
-	reason, msg string) metav1.Condition {
-	switch accepted {
-	case true:
-		return metav1.Condition{
-			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
-			Status:             metav1.ConditionTrue,
-			Reason:             reason,
-			Message:            msg,
-			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
-		}
-	default:
-		return metav1.Condition{
-			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
-			Status:             metav1.ConditionFalse,
-			Reason:             reason,
-			Message:            msg,
-			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
-		}
-	}
-}
-
-// computeGatewayAcceptedCondition computes the Gateway Accepted status condition.
-func computeGatewayAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) metav1.Condition {
-	switch accepted {
-	case true:
-		return newCondition(string(gwapiv1.GatewayReasonAccepted), metav1.ConditionTrue,
-			string(gwapiv1.GatewayReasonAccepted),
-			"The Gateway has been scheduled by Envoy Gateway", time.Now(), gw.Generation)
-	default:
-		return newCondition(string(gwapiv1.GatewayReasonAccepted), metav1.ConditionFalse,
-			string(gwapiv1.GatewayReasonAccepted),
-			"The Gateway has not been scheduled by Envoy Gateway", time.Now(), gw.Generation)
-	}
-}
-
-// computeGatewayProgrammedCondition computes the Gateway Programmed status condition.
-// Programmed condition surfaces true when the Envoy Deployment status is ready.
-func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
-	if len(gw.Status.Addresses) == 0 {
-		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
-			string(gwapiv1.GatewayReasonAddressNotAssigned),
-			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
-	}
-
-	// If there are no available replicas for the Envoy Deployment, don't
-	// mark the Gateway as ready yet.
-
-	if deployment == nil || deployment.Status.AvailableReplicas == 0 {
-		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
-			string(gwapiv1.GatewayReasonNoResources),
-			"Deployment replicas unavailable", time.Now(), gw.Generation)
-	}
-
-	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy Deployment replicas available",
-		deployment.Status.AvailableReplicas, deployment.Status.Replicas)
-	return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue,
-		string(gwapiv1.GatewayConditionProgrammed), message, time.Now(), gw.Generation)
-}
 
 // MergeConditions adds or updates matching conditions, and updates the transition
 // time if details of a condition have changed. Returns the updated condition array.
@@ -134,10 +61,8 @@ func newCondition(t string, status metav1.ConditionStatus, reason, msg string, l
 }
 
 func conditionChanged(a, b metav1.Condition) bool {
-	return (a.Status != b.Status) ||
-		(a.Reason != b.Reason) ||
-		(a.Message != b.Message) ||
-		(a.ObservedGeneration != b.ObservedGeneration)
+	opts := cmpopts.IgnoreFields(metav1.Condition{}, "Type", "LastTransitionTime")
+	return !cmp.Equal(a, b, opts)
 }
 
 // Error2ConditionMsg format the error string to a Status condition message.
