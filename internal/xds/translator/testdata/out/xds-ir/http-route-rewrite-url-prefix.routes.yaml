@@ -15,3 +15,5 @@
       route:
         cluster: rewrite-route-dest
         prefixRewrite: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket
