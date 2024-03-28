@@ -121,12 +121,12 @@ spec:
                   - message: group is invalid, only the core API group (specified
                       by omitting the group field or setting it to an empty string)
                       is supported
-                    rule: 'has(self.service) ? (!has(self.service.backendRef.group)
-                      || self.service.backendRef.group == "") : true'
+                    rule: 'has(self.backendRef) ? (!has(self.backendRef.group) ||
+                      self.backendRef.group == "") : true'
                   - message: kind is invalid, only Service (specified by omitting
                       the kind field or setting it to 'Service') is supported
-                    rule: 'has(self.service) ? (!has(self.service.backendRef.kind)
-                      || self.service.backendRef.kind == ''Service'') : true'
+                    rule: 'has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind
+                      == ''Service'') : true'
                 type: array
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy

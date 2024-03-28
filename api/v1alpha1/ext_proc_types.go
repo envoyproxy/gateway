@@ -9,8 +9,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// +kubebuilder:validation:XValidation:rule="has(self.service) ? (!has(self.service.backendRef.group) || self.service.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.service) ? (!has(self.service.backendRef.kind) || self.service.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.group) || self.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
 //
 // ExtProc defines the configuration for External Processing filter.
 type ExtProc struct {
