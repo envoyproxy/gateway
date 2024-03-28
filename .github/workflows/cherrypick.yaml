@@ -6,6 +6,7 @@ on:
     types: ["closed"]
 
 permissions:
+  pull-requests: write
   contents: write
 
 jobs:
