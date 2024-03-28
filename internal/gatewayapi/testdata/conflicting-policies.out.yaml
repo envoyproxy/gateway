@@ -23,7 +23,8 @@ clientTrafficPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Affects additional listeners: default/gateway-1/http'
+        message: ClientTrafficPolicy is being applied to multiple http (non https)
+          listeners (default/gateway-1/http) on the same port, which is not allowed
         reason: Invalid
         status: "False"
         type: Accepted

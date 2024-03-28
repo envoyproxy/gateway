@@ -344,12 +344,12 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 					}
 				}
 				if len(conflictingListeners) != 0 {
-					return fmt.Errorf("affects additional listeners: %s", strings.Join(conflictingListeners, ", "))
+					return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(conflictingListeners, ", "))
 				}
 			} else {
 				// If this policy is attached to a specific listener, any other listeners in the list
 				// would be affected by this policy but should not be, so this policy can't be accepted.
-				return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
+				return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(sameListeners, ", "))
 			}
 		}
 	}
