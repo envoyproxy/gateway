@@ -1316,7 +1316,7 @@ _Appears in:_
 
 
 
-
+HTTPWasmCodeSource defines the HTTP URL containing the wasm code.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
@@ -1380,7 +1380,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `url` | _string_ |  true  | URL is the URL of the OCI image. |
-| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecret is a reference to the secret containing the credentials to pull the image. |
+| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
 | `pullPolicy` | _[PullPolicy](#pullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the image. If not specified, the default policy is IfNotPresent for images whose tag is not latest, and Always for images whose tag is latest. |
 
 
@@ -2691,7 +2691,7 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-WasmCodeSourceType specifies the types of RateLimiting.
+WasmCodeSourceType specifies the types of sources for the wasm code.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)

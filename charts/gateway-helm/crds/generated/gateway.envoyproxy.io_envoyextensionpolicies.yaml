@@ -143,7 +143,7 @@ spec:
                                 Always for images whose tag is latest.
                               type: string
                             pullSecret:
-                              description: PullSecret is a reference to the secret
+                              description: PullSecretRef is a reference to the secret
                                 containing the credentials to pull the image.
                               properties:
                                 group:

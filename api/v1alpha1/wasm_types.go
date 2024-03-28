@@ -82,20 +82,19 @@ type WasmCodeSource struct {
 	// SHA256 *string `json:"sha256,omitempty"`
 }
 
-// WasmCodeSourceType specifies the types of RateLimiting.
+// WasmCodeSourceType specifies the types of sources for the wasm code.
 // +kubebuilder:validation:Enum=Global;Local
 type WasmCodeSourceType string
 
 const (
-	// HTTPWasmCodeSourceType allows the rate limits to be applied across all Envoy
-	// proxy instances.
+	// HTTPWasmCodeSourceType allows the user to specify the wasm code in an HTTP URL.
 	HTTPWasmCodeSourceType WasmCodeSourceType = "HTTP"
 
-	// ImageWasmCodeSourceType allows the rate limits to be applied on a per Envoy
-	// proxy instance basis.
+	// ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.
 	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
 )
 
+// HTTPWasmCodeSource defines the HTTP URL containing the wasm code.
 type HTTPWasmCodeSource struct {
 	// URL is the URL containing the wasm code.
 	URL string `json:"url"`
@@ -106,8 +105,8 @@ type ImageWasmCodeSource struct {
 	// URL is the URL of the OCI image.
 	URL string `json:"url"`
 
-	// PullSecret is a reference to the secret containing the credentials to pull the image.
-	PullSecret gwapiv1b1.SecretObjectReference `json:"pullSecret"`
+	// PullSecretRef is a reference to the secret containing the credentials to pull the image.
+	PullSecretRef gwapiv1b1.SecretObjectReference `json:"pullSecret"`
 
 	// PullPolicy is the policy to use when pulling the image.
 	// If not specified, the default policy is IfNotPresent for images whose tag is not latest,
