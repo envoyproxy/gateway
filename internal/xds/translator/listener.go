@@ -186,7 +186,17 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 	return xdsListener
 }
 
-func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
+// addHCMToXDSListener adds a HCM filter to the listener's filter chain, and adds
+// all the necessary HTTP filters to that HCM.
+//
+//   - If tls is not enabled, a HCM filter is added to the Listener's default TCP filter chain.
+//     All the ir HTTP Listeners on the same address + port combination share the
+//     same HCM + HTTP filters.
+//   - If tls is enabled, a new TCP filter chain is created and added to the listener.
+//     A HCM filter is added to the new TCP filter chain.
+//     The newly created TCP filter chain is configured with a filter chain match to
+//     match the server names(SNI) based on the listener's hostnames.
+func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection) error {
 	al := buildXdsAccessLog(accesslog, false)
 
