@@ -134,9 +134,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
-
-			if err != nil {
+			if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
 					t.GatewayControllerName,
@@ -188,15 +186,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			irKey := t.getIRKey(targetedGateway.Gateway)
-			// Should exist since we've validated this
-			xds := xdsIR[irKey]
-			err := validatePortOverlapForSecurityPolicyGateway(xds, targetedGateway)
-			if err == nil {
-				err = t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR)
-			}
-
-			if err != nil {
+			if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
 					t.GatewayControllerName,
@@ -506,35 +496,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 	return errs
-}
-
-// should return error if the policy attaches to listeners that originate from gateways other than the one requested on the policy.
-func validatePortOverlapForSecurityPolicyGateway(xds *ir.Xds, targetedGateway *GatewayContext) error {
-	targetedGwName := irStringKey(targetedGateway.Namespace, targetedGateway.Name)
-	relevantPorts := map[uint32]bool{}
-	for _, listener := range targetedGateway.listeners {
-		containerPort := servicePortToContainerPort(int32(listener.Port))
-		relevantPorts[uint32(containerPort)] = true
-	}
-	affectedListeners := []string{}
-	for _, http := range xds.HTTP {
-		if _, found := relevantPorts[http.Port]; !found {
-			continue
-		}
-		// look for listeners on this XDS that aren't from the targetedGateway
-		for _, currListener := range listenersWithSameHTTPPort(xds, http) {
-			listenerName := currListener[0:strings.LastIndex(currListener, "/")]
-			if listenerName != targetedGwName {
-				affectedListeners = append(affectedListeners, currListener)
-			}
-
-		}
-	}
-
-	if len(affectedListeners) > 0 {
-		return fmt.Errorf("affects multiple listeners: %s", strings.Join(affectedListeners, ", "))
-	}
-	return nil
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
