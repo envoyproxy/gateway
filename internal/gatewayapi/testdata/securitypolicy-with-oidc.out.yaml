@@ -153,6 +153,8 @@ securityPolicies:
         issuer: https://oauth.foo.com
         tokenEndpoint: https://oauth.foo.com/token
       redirectURL: https://www.example.com/foo/oauth2/callback
+      resources:
+      - api
       scopes:
       - openid
       - email
@@ -263,6 +265,8 @@ xdsIR:
             tokenEndpoint: https://oauth.foo.com/token
           redirectPath: /foo/oauth2/callback
           redirectURL: https://www.example.com/foo/oauth2/callback
+          resources:
+          - api
           scopes:
           - openid
           - email

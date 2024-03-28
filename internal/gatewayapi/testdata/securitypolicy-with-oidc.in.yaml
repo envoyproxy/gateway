@@ -123,5 +123,6 @@ securityPolicies:
       clientSecret:
         name: "client2-secret"
       scopes: ["openid", "email", "profile"]
+      resources: ["api"]
       redirectURL: "https://www.example.com/foo/oauth2/callback"
       logoutPath: "/foo/logout"
