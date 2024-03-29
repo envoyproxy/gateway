@@ -202,15 +202,9 @@ func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
 
 // routeContainsExtAuth returns true if ExtAuth exists for the provided route.
 func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
-	if irRoute != nil &&
-		irRoute.ExtAuth != nil {
+	if irRoute != nil && irRoute.ExtAuth != nil {
 		return true
 	}
-
 	return false
 }
 

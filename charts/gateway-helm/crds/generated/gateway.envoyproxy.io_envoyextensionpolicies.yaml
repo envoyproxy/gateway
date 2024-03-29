@@ -185,6 +185,124 @@ spec:
                     'TCPRoute', 'TLSRoute']
                 - message: this policy does not yet support the sectionName field
                   rule: '!has(self.sectionName)'
+              wasm:
+                description: WASM is a list of Wasm extensions to be loaded by the
+                  Gateway. Order matters, as the extensions will be loaded in the
+                  order they are defined in this list.
+                items:
+                  description: "Wasm defines a wasm extension. \n Note: at the moment,
+                    Envoy Gateway does not support configuring Wasm runtime. v8 is
+                    used as the VM runtime for the Wasm extensions."
+                  properties:
+                    code:
+                      description: Code is the wasm code for the extension.
+                      properties:
+                        http:
+                          description: "HTTP is the HTTP URL containing the wasm code.
+                            \n Note that the HTTP server must be accessible from the
+                            Envoy proxy."
+                          properties:
+                            url:
+                              description: URL is the URL containing the wasm code.
+                              type: string
+                          required:
+                          - url
+                          type: object
+                        image:
+                          description: "Image is the OCI image containing the wasm
+                            code. \n Note that the image must be accessible from the
+                            Envoy Gateway."
+                          properties:
+                            pullSecret:
+                              description: PullSecretRef is a reference to the secret
+                                containing the credentials to pull the image.
+                              properties:
+                                group:
+                                  default: ""
+                                  description: Group is the group of the referent.
+                                    For example, "gateway.networking.k8s.io". When
+                                    unspecified or empty string, core API group is
+                                    inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  default: Secret
+                                  description: Kind is kind of the referent. For example
+                                    "Secret".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: "Namespace is the namespace of the
+                                    referenced object. When unspecified, the local
+                                    namespace is inferred. \n Note that when a namespace
+                                    different than the local namespace is specified,
+                                    a ReferenceGrant object is required in the referent
+                                    namespace to allow that namespace's owner to accept
+                                    the reference. See the ReferenceGrant documentation
+                                    for details. \n Support: Core"
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            url:
+                              description: URL is the URL of the OCI image.
+                              type: string
+                          required:
+                          - pullSecret
+                          - url
+                          type: object
+                        type:
+                          allOf:
+                          - enum:
+                            - Global
+                            - Local
+                          - enum:
+                            - HTTP
+                            - Image
+                          description: Type is the type of the source of the wasm
+                            code. Valid WasmCodeSourceType values are "HTTP" or "Image".
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    config:
+                      description: Config is the configuration for the Wasm extension.
+                        This configuration will be passed as a JSON string to the
+                        Wasm extension.
+                      x-kubernetes-preserve-unknown-fields: true
+                    failOpen:
+                      default: false
+                      description: FailOpen is a switch used to control the behavior
+                        when a fatal error occurs during the initialization or the
+                        execution of the Wasm extension. If FailOpen is set to true,
+                        the system bypasses the Wasm extension and allows the traffic
+                        to pass through. Otherwise, if it is set to false or not set
+                        (defaulting to false), the system blocks the traffic and returns
+                        an HTTP 5xx error.
+                      type: boolean
+                    name:
+                      description: Name is a unique name for this Wasm extension.
+                        It is used to identify the Wasm extension if multiple extensions
+                        are handled by the same vm_id and root_id. It's also used
+                        for logging/debugging.
+                      type: string
+                  required:
+                  - code
+                  - config
+                  - name
+                  type: object
+                type: array
             required:
             - targetRef
             type: object
