@@ -14,6 +14,7 @@ API group.
 
 
 ### Resource Types
+- [Backend](#backend)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
@@ -99,6 +100,28 @@ _Appears in:_
 
 
 
+#### AddressProtocolType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [SocketAddress](#socketaddress)
+
+
+
+#### ApplicationProtocolType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [BackendAddress](#backendaddress)
+
+
+
 #### BackOffPolicy
 
 
@@ -112,6 +135,54 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `baseInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | BaseInterval is the base interval between retries. |
 | `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set. The default is 10 times the base_interval |
+
+
+#### Backend
+
+
+
+Backend allows the user to configure the behavior of the connection between the Envoy Proxy listener and the backend service.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`Backend`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[BackendSpec](#backendspec)_ |  true  | spec defines the desired state of Backend. |
+
+
+#### BackendAddress
+
+
+
+BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `socketAddress` | _[SocketAddress](#socketaddress)_ |  true  | SocketAddress is a [FQDN\|IP]:[Port] address |
+| `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  true  | UnixDomainSocketAddress is a unix domain socket path |
+| `applicationProtocol` | _[ApplicationProtocolType](#applicationprotocoltype)_ |  true  | ApplicationProtocol determines the application protocol to be used, e.g. HTTP2. |
+
+
+#### BackendSpec
+
+
+
+BackendSpec describes the desired state of BackendSpec.
+
+_Appears in:_
+- [Backend](#backend)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `Addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
+
+
 
 
 #### BackendTrafficPolicy
@@ -2475,6 +2546,22 @@ _Appears in:_
 | `window` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | Window defines the duration of the warm up period for newly added host. During slow start window, traffic sent to the newly added hosts will gradually increase. Currently only supports linear growth of traffic. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
 
 
+#### SocketAddress
+
+
+
+SocketAddress describes TCP/UDP socket address, corresponding to Envoy's SocketAddress https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+
+_Appears in:_
+- [BackendAddress](#backendaddress)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `address` | _string_ |  true  | Address refers to the FQDN or IP address of the backend service. |
+| `port` | _integer_ |  true  | Address refers to the FQDN or IP address of the backend service. |
+| `protocol` | _[AddressProtocolType](#addressprotocoltype)_ |  true  |  |
+
+
 
 
 #### SourceMatchType
@@ -2642,6 +2729,20 @@ TriggerEnum specifies the conditions that trigger retries.
 _Appears in:_
 - [RetryOn](#retryon)
 
+
+
+#### UnixDomainSocketAddress
+
+
+
+UnixDomainSocketAddress describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
+
+_Appears in:_
+- [BackendAddress](#backendaddress)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `path` | _string_ |  true  |  |
 
 
 #### Wasm
