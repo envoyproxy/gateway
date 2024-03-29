@@ -24,7 +24,7 @@ clientTrafficPolicies:
         sectionName: http-1
       conditions:
       - lastTransitionTime: null
-        message: BufferLimit value 100000000000 out of range
+        message: BufferLimit value 100G is out of range
         reason: Invalid
         status: "False"
         type: Accepted

@@ -703,7 +703,7 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 			return fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
 		}
 		if bufferLimit < 0 || bufferLimit > math.MaxUint32 {
-			return fmt.Errorf("BufferLimit value %d out of range", bufferLimit)
+			return fmt.Errorf("BufferLimit value %s is out of range", connection.BufferLimit.String())
 		}
 		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
 	}
