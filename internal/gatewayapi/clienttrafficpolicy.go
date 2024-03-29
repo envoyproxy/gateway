@@ -124,7 +124,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				// It must exist since we've already finished processing the gateways
 				gwXdsIR := xdsIR[irKey]
 				if string(l.Name) == section {
-					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR)
+					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
 					if err == nil {
 						err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 					}
@@ -234,7 +234,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				irKey := t.getIRKey(l.gateway)
 				// It must exist since we've already finished processing the gateways
 				gwXdsIR := xdsIR[irKey]
-				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR); err != nil {
+				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
 					errs = errors.Join(errs, err)
 				} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 					errs = errors.Join(errs, err)
@@ -312,7 +312,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 	return gateway.GatewayContext, nil
 }
 
-func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds) error {
+func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, attachedToGateway bool) error {
 	// Find Listener IR
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
@@ -328,8 +328,29 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds) 
 
 	// IR must exist since we're past validation
 	if httpIR != nil {
+		// Get a list of all other non-TLS listeners on this Gateway that share a port with
+		// the listener in question.
 		if sameListeners := listenersWithSameHTTPPort(xds, httpIR); len(sameListeners) != 0 {
-			return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
+			if attachedToGateway {
+				// If this policy is attached to an entire gateway and the mergeGateways feature
+				// is turned on, validate that all the listeners affected by this policy originated
+				// from the same Gateway resource. The name of the Gateway from which this listener
+				// originated is part of the listener's name by construction.
+				gatewayName := irListenerName[0:strings.LastIndex(irListenerName, "/")]
+				conflictingListeners := []string{}
+				for _, currName := range sameListeners {
+					if strings.Index(currName, gatewayName) != 0 {
+						conflictingListeners = append(conflictingListeners, currName)
+					}
+				}
+				if len(conflictingListeners) != 0 {
+					return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(conflictingListeners, ", "))
+				}
+			} else {
+				// If this policy is attached to a specific listener, any other listeners in the list
+				// would be affected by this policy but should not be, so this policy can't be accepted.
+				return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(sameListeners, ", "))
+			}
 		}
 	}
 	return nil
@@ -524,7 +545,8 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		return
 	}
 	httpIR.Headers = &ir.HeaderSettings{
-		EnableEnvoyHeaders: ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
 	}
 }
 
