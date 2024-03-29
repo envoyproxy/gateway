@@ -23,10 +23,6 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		return errors.New("infra proxy ir is nil")
 	}
 
-	if len(infra.Proxy.Listeners) == 0 {
-		return errors.New("infra proxy listeners ir is nil")
-	}
-
 	r := proxy.NewResourceRender(i.Namespace, infra.GetProxyInfra())
 	return i.createOrUpdate(ctx, r)
 }
