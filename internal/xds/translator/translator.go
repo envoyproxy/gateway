@@ -271,9 +271,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// Check if an extension want to modify the route we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 			if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
-				if err != nil {
-					errs = errors.Join(errs, err)
-				}
+				errs = errors.Join(errs, err)
 			}
 
 			if enabledHTTP3 {
