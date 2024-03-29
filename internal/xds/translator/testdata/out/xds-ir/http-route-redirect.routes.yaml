@@ -7,10 +7,26 @@
     routes:
     - match:
         prefix: /
-      name: redirect-route
+      name: redirect-route-1
       redirect:
         hostRedirect: redirected.com
         portRedirect: 8443
         prefixRewrite: /redirected
         responseCode: FOUND
         schemeRedirect: https
+    - match:
+        pathSeparatedPrefix: /redirect
+      name: redirect-route-2
+      redirect:
+        regexRewrite:
+          pattern:
+            regex: ^/redirect\/*
+          substitution: /
+    - match:
+        pathSeparatedPrefix: /redirect
+      name: redirect-route-3
+      redirect:
+        regexRewrite:
+          pattern:
+            regex: ^/redirect/\/*
+          substitution: /

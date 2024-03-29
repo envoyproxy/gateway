@@ -20,11 +20,11 @@ spec:
     accessLog:
       settings:
         - format:
-          type: JSON
-          json:
-            status: "%RESPONSE_CODE%"
-            message: "%LOCAL_REPLY_BODY%"
-      sinks:
-        - type: File
-          file:
-            path: /dev/stdout
+            type: JSON
+            json:
+              status: "%RESPONSE_CODE%"
+              message: "%LOCAL_REPLY_BODY%"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
