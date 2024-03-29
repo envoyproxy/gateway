@@ -44,9 +44,8 @@ func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 
 func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
-		name                        string
-		EnvoyPatchPolicyEnabled     bool
-		EnvoyExtensionPolicyEnabled bool
+		name                    string
+		EnvoyPatchPolicyEnabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
