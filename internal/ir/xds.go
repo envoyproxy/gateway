@@ -1806,8 +1806,11 @@ type TLSUpstreamConfig struct {
 // Connection settings for downstream connections
 // +k8s:deepcopy-gen=true
 type Connection struct {
-	// Limit for number of connections
-	Limit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+	//
+	// ConnectionLimit is the limit of number of connections
+	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
+	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
 }
 
 // ConnectionLimit contains settings for downstream connection limits

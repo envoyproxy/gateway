@@ -133,14 +133,15 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.Connection, accesslog *ir.AccessLog) *listenerv3.Listener {
 	socketOptions := buildTCPSocketOptions(keepalive)
 	al := buildXdsAccessLog(accesslog, true)
+	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	return &listenerv3.Listener{
 		Name:                          name,
 		AccessLog:                     al,
 		SocketOptions:                 socketOptions,
-		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes),
+		PerConnectionBufferLimitBytes: bufferLimitBytes,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -156,6 +157,13 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
+}
+
+func buildPerConnectionBufferLimitBytes(connection *ir.Connection) *wrapperspb.UInt32Value {
+	if connection != nil && connection.BufferLimitBytes != nil {
+		return wrapperspb.UInt32(*connection.BufferLimitBytes)
+	}
+	return wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes)
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
@@ -266,7 +274,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 
 	var filters []*listenerv3.Filter
 
-	if connection != nil && connection.Limit != nil {
+	if connection != nil && connection.ConnectionLimit != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
@@ -382,7 +390,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 
 	var filters []*listenerv3.Filter
 
-	if connection != nil && connection.Limit != nil {
+	if connection != nil && connection.ConnectionLimit != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
@@ -423,11 +431,11 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 func buildConnectionLimitFilter(statPrefix string, connection *ir.Connection) *connection_limitv3.ConnectionLimit {
 	cl := &connection_limitv3.ConnectionLimit{
 		StatPrefix:     statPrefix,
-		MaxConnections: wrapperspb.UInt64(*connection.Limit.Value),
+		MaxConnections: wrapperspb.UInt64(*connection.ConnectionLimit.Value),
 	}
 
-	if connection.Limit.CloseDelay != nil {
-		cl.Delay = durationpb.New(connection.Limit.CloseDelay.Duration)
+	if connection.ConnectionLimit.CloseDelay != nil {
+		cl.Delay = durationpb.New(connection.ConnectionLimit.CloseDelay.Duration)
 	}
 	return cl
 }
