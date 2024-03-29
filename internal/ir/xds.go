@@ -1601,6 +1601,7 @@ type RateLimitValue struct {
 type AccessLog struct {
 	Text          []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
 	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
+	ALS           []*ALSAccessLog           `json:"als,omitempty" yaml:"als,omitempty"`
 	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
 }
 
@@ -1616,6 +1617,25 @@ type TextAccessLog struct {
 type JSONAccessLog struct {
 	JSON map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
 	Path string            `json:"path" yaml:"path"`
+}
+
+// ALSAccessLog holds the configuration for gRPC ALS access logging.
+// +k8s:deepcopy-gen=true
+type ALSAccessLog struct {
+	LogName     string                            `json:"name" yaml:"name"`
+	Destination RouteDestination                  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Type        egv1a1.ALSEnvoyProxyAccessLogType `json:"type" yaml:"type"`
+	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	HTTP        *ALSAccessLogHTTP                 `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// ALSAccessLogHTTP holds the configuration for HTTP ALS access logging.
+// +k8s:deepcopy-gen=true
+type ALSAccessLogHTTP struct {
+	RequestHeaders   []string `json:"requestHeaders,omitempty" yaml:"requestHeaders,omitempty"`
+	ResponseHeaders  []string `json:"responseHeaders,omitempty" yaml:"responseHeaders,omitempty"`
+	ResponseTrailers []string `json:"responseTrailers,omitempty" yaml:"responseTrailers,omitempty"`
 }
 
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.

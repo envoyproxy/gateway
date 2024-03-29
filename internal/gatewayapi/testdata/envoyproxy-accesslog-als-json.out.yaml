@@ -103,13 +103,11 @@ infraIR:
             accessLog:
               settings:
               - format:
-                  text: |
-                    [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-                  type: Text
+                  json:
+                    attr1: val1
+                    attr2: val2
+                  type: JSON
                 sinks:
-                - file:
-                    path: /dev/stdout
-                  type: File
                 - als:
                     backendRefs:
                     - name: envoy-als
@@ -132,12 +130,6 @@ infraIR:
                       port: 9000
                     type: TCP
                   type: ALS
-                - openTelemetry:
-                    host: otel-collector.monitoring.svc.cluster.local
-                    port: 4317
-                    resources:
-                      k8s.cluster.name: cluster-1
-                  type: OpenTelemetry
         status: {}
       listeners:
       - address: null
@@ -156,7 +148,10 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       als:
-      - destination:
+      - attributes:
+          attr1: val1
+          attr2: val2
+        destination:
           name: accesslog-0
           settings:
           - addressType: IP
@@ -172,10 +167,11 @@ xdsIR:
           responseTrailers:
           - expires
         name: accesslog
-        text: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
         type: HTTP
-      - destination:
+      - attributes:
+          attr1: val1
+          attr2: val2
+        destination:
           name: accesslog-0
           settings:
           - addressType: IP
@@ -184,27 +180,7 @@ xdsIR:
               port: 9090
             protocol: GRPC
         name: envoy-gateway-system/test
-        text: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
         type: TCP
-      openTelemetry:
-      - authority: otel-collector.monitoring.svc.cluster.local
-        destination:
-          name: accesslog-0
-          settings:
-          - endpoints:
-            - host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
-            protocol: GRPC
-            weight: 1
-        resources:
-          k8s.cluster.name: cluster-1
-        text: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-      text:
-      - format: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-        path: /dev/stdout
     http:
     - address: 0.0.0.0
       hostnames:

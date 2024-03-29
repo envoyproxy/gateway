@@ -260,6 +260,50 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
+			case egv1a1.ProxyAccessLogSinkTypeALS:
+				if sink.ALS == nil {
+					continue
+				}
+
+				var logName string
+				if sink.ALS.LogName != nil {
+					logName = *sink.ALS.LogName
+				} else {
+					logName = fmt.Sprintf("%s/%s", envoyproxy.Namespace, envoyproxy.Name)
+				}
+
+				// TODO: how to get authority from the backendRefs?
+				ds, err := t.processBackendRefs(sink.ALS.BackendRefs, envoyproxy.Namespace, resources)
+				if err != nil {
+					return nil, err
+				}
+
+				al := &ir.ALSAccessLog{
+					LogName: logName,
+					Destination: ir.RouteDestination{
+						Name:     fmt.Sprintf("accesslog-%d", idx), // TODO: rename this, so that we can share backend with tracing?
+						Settings: ds,
+					},
+					Type: sink.ALS.Type,
+				}
+
+				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP {
+					http := &ir.ALSAccessLogHTTP{
+						RequestHeaders:   sink.ALS.HTTP.RequestHeaders,
+						ResponseHeaders:  sink.ALS.HTTP.ResponseHeaders,
+						ResponseTrailers: sink.ALS.HTTP.ResponseTrailers,
+					}
+					al.HTTP = http
+				}
+
+				switch accessLog.Format.Type {
+				case egv1a1.ProxyAccessLogFormatTypeJSON:
+					al.Attributes = accessLog.Format.JSON
+				case egv1a1.ProxyAccessLogFormatTypeText:
+					al.Text = accessLog.Format.Text
+				}
+
+				irAccessLog.ALS = append(irAccessLog.ALS, al)
 			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
 				if sink.OpenTelemetry == nil {
 					continue

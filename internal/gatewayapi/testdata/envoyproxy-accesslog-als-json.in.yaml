@@ -9,13 +9,11 @@ envoyproxy:
       accessLog:
         settings:
         - format:
-            type: Text
-            text: |
-              [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+            type: JSON
+            json:
+              attr1: val1
+              attr2: val2
           sinks:
-          - type: File
-            file:
-              path: /dev/stdout
           - type: ALS
             als:
               logName: accesslog
@@ -38,12 +36,6 @@ envoyproxy:
                 namespace: monitoring
                 port: 9000
               type: TCP
-          - type: OpenTelemetry
-            openTelemetry:
-              host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
-              resources:
-                k8s.cluster.name: "cluster-1"
     provider:
       type: Kubernetes
       kubernetes:

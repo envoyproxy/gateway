@@ -108,6 +108,7 @@ infraIR:
                   type: Text
                 sinks:
                 - type: File
+                - type: ALS
                 - type: OpenTelemetry
         status: {}
       listeners:
