@@ -59,6 +59,16 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 
+		if !httpRoute.IsHTTP2 {
+			// Allow websocket upgrades for HTTP 1.1
+			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
+				{
+					UpgradeType: "websocket",
+				},
+			}
+		}
+
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
 		var routeAction *routev3.RouteAction
