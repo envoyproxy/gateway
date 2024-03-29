@@ -263,6 +263,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "fault-injection",
 		},
 		{
+			name: "headers-with-underscores-action",
+		},
+		{
 			name: "tls-with-ciphers-versions-alpn",
 		},
 		{
