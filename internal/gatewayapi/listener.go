@@ -24,8 +24,8 @@ type ListenersTranslator interface {
 }
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
-	// Infra IR proxy ports must be unique across merged gateways.
-	var mergedGatewayPorts []*protocolPort
+	// Infra IR proxy ports must be unique.
+	mergedGatewayPorts := make(map[string][]*protocolPort)
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
@@ -37,8 +37,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
 	for _, gateway := range gateways {
-		// Infra IR proxy ports must be unique.
-		var gatewayPorts []*protocolPort
 		irKey := t.getIRKey(gateway.Gateway)
 
 		if resources.EnvoyProxy != nil {
@@ -121,18 +119,17 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			}
 
-			conflictedPorts := t.processPorts(servicePort, gatewayPorts, mergedGatewayPorts)
-			if !conflictedPorts {
+			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
+			// (TCP or UDP).
+			if !containsPort(mergedGatewayPorts[irKey], servicePort) {
 				t.processInfraIRListener(listener, infraIR, irKey, servicePort)
-				gatewayPorts = append(gatewayPorts, servicePort)
-				mergedGatewayPorts = append(mergedGatewayPorts, servicePort)
+				mergedGatewayPorts[irKey] = append(mergedGatewayPorts[irKey], servicePort)
 			}
 		}
 	}
 }
+
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR InfraIRMap, irKey string, servicePort *protocolPort) {
-	// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
-	// (TCP or UDP).
 	var proto ir.ProtocolType
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType:
@@ -164,14 +161,6 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 	}
 
 	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
-}
-
-func (t *Translator) processPorts(servicePort *protocolPort, gatewayPorts, mergedGatewayPorts []*protocolPort) bool {
-	conflictedPorts := containsPort(gatewayPorts, servicePort)
-	if t.MergeGateways {
-		conflictedPorts = containsPort(mergedGatewayPorts, servicePort)
-	}
-	return conflictedPorts
 }
 
 func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
