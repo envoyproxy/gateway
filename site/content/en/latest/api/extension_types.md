@@ -386,6 +386,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection. For example, 20Mi, 1Gi, 256Ki etc. Note that when the suffix is not provided, the value is interpreted as bytes. Default: 32768 bytes. |
 
 
 #### ConnectionLimit
@@ -532,6 +533,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `priority` | _integer_ |  false  | Priority of the EnvoyExtensionPolicy. If multiple EnvoyExtensionPolices are applied to the same TargetRef, extensions will execute in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
+| `wasm` | _[Wasm](#wasm) array_ |  false  | WASM is a list of Wasm extensions to be loaded by the Gateway. Order matters, as the extensions will be loaded in the order they are defined in this list. |
 
 
 #### EnvoyGateway
@@ -1312,6 +1314,20 @@ _Appears in:_
 | `maxConnectionDuration` | _[Duration](#duration)_ |  false  | The maximum duration of an HTTP connection. Default: unlimited. |
 
 
+#### HTTPWasmCodeSource
+
+
+
+HTTPWasmCodeSource defines the HTTP URL containing the wasm code.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `url` | _string_ |  true  | URL is the URL containing the wasm code. |
+
+
 
 
 #### HeaderMatchType
@@ -1353,6 +1369,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
+
+
+#### ImageWasmCodeSource
+
+
+
+ImageWasmCodeSource defines the OCI image containing the wasm code.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `url` | _string_ |  true  | URL is the URL of the OCI image. |
+| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
 
 
 #### InfrastructureProviderType
@@ -2611,6 +2642,51 @@ TriggerEnum specifies the conditions that trigger retries.
 
 _Appears in:_
 - [RetryOn](#retryon)
+
+
+
+#### Wasm
+
+
+
+Wasm defines a wasm extension. 
+ Note: at the moment, Envoy Gateway does not support configuring Wasm runtime. v8 is used as the VM runtime for the Wasm extensions.
+
+_Appears in:_
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  true  | Name is a unique name for this Wasm extension. It is used to identify the Wasm extension if multiple extensions are handled by the same vm_id and root_id. It's also used for logging/debugging. |
+| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
+| `config` | _[JSON](#json)_ |  true  | Config is the configuration for the Wasm extension. This configuration will be passed as a JSON string to the Wasm extension. |
+| `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a fatal error occurs during the initialization or the execution of the Wasm extension. If FailOpen is set to true, the system bypasses the Wasm extension and allows the traffic to pass through. Otherwise, if it is set to false or not set (defaulting to false), the system blocks the traffic and returns an HTTP 5xx error. |
+
+
+#### WasmCodeSource
+
+
+
+WasmCodeSource defines the source of the wasm code.
+
+_Appears in:_
+- [Wasm](#wasm)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code. Valid WasmCodeSourceType values are "HTTP" or "Image". |
+| `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code. <br /><br /> Note that the HTTP server must be accessible from the Envoy proxy. |
+| `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code. <br /><br /> Note that the image must be accessible from the Envoy Gateway. |
+
+
+#### WasmCodeSourceType
+
+_Underlying type:_ _string_
+
+WasmCodeSourceType specifies the types of sources for the wasm code.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
 
 
 
