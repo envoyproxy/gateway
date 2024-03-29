@@ -241,8 +241,14 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		Tracing: hcmTracing,
 	}
 
-	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil && irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
-		mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
+	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
+		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
+			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
+		}
+
+		if irListener.Timeout != nil && irListener.Timeout.HTTP != nil && irListener.Timeout.HTTP.IdleTimeout != nil {
+			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
+		}
 	}
 
 	// Add the proxy protocol filter if needed

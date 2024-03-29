@@ -467,22 +467,36 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 			if err != nil {
 				return err
 			}
-			switch {
-			case httpIR.Timeout == nil:
-				httpIR.Timeout = &ir.ClientTimeout{}
-				fallthrough
-
-			case httpIR.Timeout.HTTP == nil:
-				httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
-			}
-
+			setHTTPTimeout(httpIR)
 			httpIR.Timeout.HTTP.RequestReceivedTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+
+		if clientTimeout.HTTP.IdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.IdleTimeout))
+			if err != nil {
+				return err
+			}
+			setHTTPTimeout(httpIR)
+			httpIR.Timeout.HTTP.IdleTimeout = &metav1.Duration{
 				Duration: d,
 			}
 		}
 	}
 
 	return nil
+}
+
+func setHTTPTimeout(httpIR *ir.HTTPListener) {
+	switch {
+	case httpIR.Timeout == nil:
+		httpIR.Timeout = &ir.ClientTimeout{}
+		fallthrough
+
+	case httpIR.Timeout.HTTP == nil:
+		httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
+	}
 }
 
 func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {
