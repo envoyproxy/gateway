@@ -55,6 +55,13 @@ type EnvoyExtensionPolicySpec struct {
 	//
 	// +optional
 	Priority int32 `json:"priority,omitempty"`
+
+	// WASM is a list of Wasm extensions to be loaded by the Gateway.
+	// Order matters, as the extensions will be loaded in the order they are
+	// defined in this list.
+	//
+	// +optional
+	WASM []Wasm `json:"wasm,omitempty"`
 }
 
 //+kubebuilder:object:root=true
