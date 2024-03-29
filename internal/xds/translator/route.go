@@ -318,7 +318,6 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatchReplace string) bool {
 	return pathMatch != nil &&
 		pathMatch.Prefix != nil &&
-		*pathMatch.Prefix != "/" &&
 		(prefixMatchReplace == "" || prefixMatchReplace == "/")
 }
 
