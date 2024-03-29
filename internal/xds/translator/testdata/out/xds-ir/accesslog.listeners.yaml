@@ -30,6 +30,32 @@
       responseFlagFilter:
         flags:
         - NR
+    name: envoy.access_loggers.http_grpc
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+      additionalRequestHeadersToLog:
+      - x-client-ip-address
+      additionalResponseHeadersToLog:
+      - cache-control
+      additionalResponseTrailersToLog:
+      - expires
+      commonConfig:
+        grpcService:
+          envoyGrpc:
+            clusterName: accesslog/monitoring/envoy-als/port/9000
+          initialMetadata:
+          - key: x-accesslog-text
+            value: '[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%
+              %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT%
+              %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%"
+              "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"'
+          - key: x-accesslog-attr
+            value: '{"attr1":"value1","attr2":"value2"}'
+        transportApiVersion: V3
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
     name: envoy.access_loggers.open_telemetry
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
@@ -88,6 +114,29 @@
                 response_code: '%RESPONSE_CODE%'
                 start_time: '%START_TIME%'
             path: /dev/stdout
+        - name: envoy.access_loggers.http_grpc
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+            additionalRequestHeadersToLog:
+            - x-client-ip-address
+            additionalResponseHeadersToLog:
+            - cache-control
+            additionalResponseTrailersToLog:
+            - expires
+            commonConfig:
+              grpcService:
+                envoyGrpc:
+                  clusterName: accesslog/monitoring/envoy-als/port/9000
+                initialMetadata:
+                - key: x-accesslog-text
+                  value: '[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%
+                    %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED%
+                    %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%
+                    "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%"
+                    "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"'
+                - key: x-accesslog-attr
+                  value: '{"attr1":"value1","attr2":"value2"}'
+              transportApiVersion: V3
         - name: envoy.access_loggers.open_telemetry
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig

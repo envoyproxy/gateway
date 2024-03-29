@@ -173,6 +173,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "ratelimit-sourceip",
 		},
 		{
+			name: "accesslog-als-tcp",
+		},
+		{
 			name: "accesslog",
 		},
 		{

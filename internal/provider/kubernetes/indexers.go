@@ -28,6 +28,7 @@ const (
 	gatewayUDPRouteIndex       = "gatewayUDPRouteIndex"
 	secretGatewayIndex         = "secretGatewayIndex"
 	targetRefGrantRouteIndex   = "targetRefGrantRouteIndex"
+	backendEnvoyProxyIndex     = "backendEnvoyProxyIndex"
 	backendHTTPRouteIndex      = "backendHTTPRouteIndex"
 	backendGRPCRouteIndex      = "backendGRPCRouteIndex"
 	backendTLSRouteIndex       = "backendTLSRouteIndex"
@@ -52,6 +53,40 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 	return nil
+}
+
+func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.EnvoyProxy{}, backendEnvoyProxyIndex, backendEnvoyProxyIndexFunc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func backendEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	envoyproxy := rawObj.(*v1alpha1.EnvoyProxy)
+	var backendRefs []string
+
+	if envoyproxy.Spec.Telemetry != nil && envoyproxy.Spec.Telemetry.AccessLog != nil {
+		for _, settings := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+			for _, sink := range settings.Sinks {
+				if sink.ALS != nil {
+					backend := sink.ALS.BackendRef
+					if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+						// If an explicit Backend namespace is not provided, use the EnvoyProxy namespace to
+						// lookup the provided Gateway Name.
+						backendRefs = append(backendRefs,
+							types.NamespacedName{
+								Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, envoyproxy.Namespace),
+								Name:      string(backend.Name),
+							}.String(),
+						)
+					}
+				}
+			}
+		}
+	}
+
+	return backendRefs
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.

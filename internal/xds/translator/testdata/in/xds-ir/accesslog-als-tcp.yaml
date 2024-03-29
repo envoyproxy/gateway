@@ -1,0 +1,23 @@
+name: "accesslog"
+accesslog:
+  json:
+  - json:
+      start_time: "%START_TIME%"
+      method: "%REQ(:METHOD)%"
+      path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+      protocol: "%PROTOCOL%"
+      response_code: "%RESPONSE_CODE%"
+  als:
+  - destination:
+      name: accesslog/monitoring/envoy-als/port/9000
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 1.1.1.1
+          port: 9000
+        protocol: GRPC
+        weight: 1
+    attributes:
+      attr1: value1
+      attr2: value2
+    type: TCP
