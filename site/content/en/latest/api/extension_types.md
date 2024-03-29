@@ -1353,6 +1353,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests and responses. |
+| `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores is encountered. The default action is to reject the request. |
 
 
 #### HealthCheck
@@ -2686,6 +2687,17 @@ WasmCodeSourceType specifies the types of sources for the wasm code.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
+
+
+
+#### WithUnderscoresAction
+
+_Underlying type:_ _string_
+
+WithUnderscoresAction configures the action to take when an HTTP header with underscores is encountered.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
 
 
 
