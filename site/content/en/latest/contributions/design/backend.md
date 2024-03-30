@@ -10,7 +10,7 @@ of a K8s `Service` resource.
 Common use cases for non-Service backends in the K8s and Envoy ecosystem include:
 - Cluster-external endpoints, which are currently second-class citizens in Gateway-API 
   (supported using [Services and FQDN endpoints][]).
-- Host-local endpoints, such as sidecars or daemons that listen on unix domain sockets, 
+- Host-local endpoints, such as sidecars or daemons that listen on [unix domain sockets][] or envoy [internal listeners][], 
   that cannot be represented by a K8s service at all.
 
 Several projects currently support backends that are not registered in the infrastructure-specific service registry. 
@@ -32,7 +32,8 @@ Several projects currently support backends that are not registered in the infra
 The `Backend` resource is an implementation-specific Gateway-API [BackendObjectReference Extension][]. 
 
 ### Example
-Here is an example highlighting how a user can configure this API for the External Processing extension.
+Here is an example highlighting how a user can configure a route that forwards traffic to both a Service and a local
+unix domain socket.
 
 ```yaml
 apiVersion: v1
@@ -81,10 +82,9 @@ spec:
     - "www.example.com"
   rules:
     - backendRefs:
-        - group: "gateway.envoyproxy.io"
+        - group: gateway.envoyproxy.io
           kind: Backend
           name: backend-uds
-          port: 3000
           weight: 1
         - group: ""
           kind: Service
@@ -100,18 +100,25 @@ spec:
 
 ## Design Decisions
 * All existing and future `BackendObjectReference` in Envoy Gateway MUST support the `Backend` kind. 
-* Gateway-API and Envoy Gateway policies that attach to Services ([BackendTLSPolicy][https://gateway-api.sigs.k8s.io/geps/gep-1897/], [BackendLBPolicy][https://gateway-api.sigs.k8s.io/geps/gep-1619/]) MUST support `Backend` attachment. 
-* The `Backend` API SHOULD support other Gateway-API backend features, such as [Backend Protocol Selection][].
-* This API resource MUST be part of same namespace as the targetRef resource. The `Backend` API MUST be subject to the same cross-namespace reference restriction as referenced `Service` resources.   
-* To limit the overall maintenance effort, the `Backend` API SHOULD support multiple generic address types 
-  (UDS, FQDN, IP). The `Backend` API MUST NOT support vendor-specific backend types.
+* Gateway-API and Envoy Gateway policies that attach to Services ([BackendTLSPolicy][], [BackendLBPolicy][]) 
+  MUST support attachment to the `Backend` resource in Envoy Gateway. 
+* The `Backend` API SHOULD support other Gateway-API backend features, such as [Backend Protocol Selection][]. 
+  Translation of explicit upstream application protocol setting MUST be consistent with the existing implementation for
+  `Service` resources. 
+* This API resource MUST be part of same namespace as the targetRef resource. The `Backend` API MUST be subject to 
+  the same cross-namespace reference restriction as referenced `Service` resources.    
+* The `Backend` resource translation MUST NOT modify Infrastructure. Any change to infrastructure that is required to 
+  achieve connectivity to a backend (mounting a socket, adding a sidecar container, modifying a network policy, ...) 
+  MUST be implemented with an appropriate infrastructure patch in the [EnvoyProxy][] API. 
+* To limit the overall maintenance effort related to supporting of non-Service backends, the `Backend` API SHOULD 
+  support multiple generic address types (UDS, FQDN, IPv4, IPv6), and MUST NOT support vendor-specific backend types.
 * Both `Backend` and `Service` resources may appear in the same `BackendRefs` list.
-* The Optional `Port` field is not evaluated when referencing a `Backend`.  
+* The Optional `Port` field SHOULD NOT be evaluated when referencing a `Backend`.  
 * Referenced `Backend` resources MUST be translated to envoy endpoints, similar to the current `Service` translation.
 * Certain combinations of `Backend` and `Service` are incompatible. For example, a Unix Domain Socket and a FQDN service
   require different cluster service discovery types (Static/EDS and Strict-DNS accordingly).
-* If a Backend that is references by a route cannot be translated, the `Route` resource will have an `Accepted=False` 
-  condition with a `RouteReasonUnsupportedValue` reason. 
+* If a Backend that is referenced by a route cannot be translated, the `Route` resource will have an `Accepted=False` 
+  condition with a `UnsupportedValue` reason. 
   
 ## Alternatives
 * The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
@@ -119,6 +126,8 @@ spec:
   and route configuration. However, these features require a high level of envoy expertise, investment and maintenance. 
 
 [BackendObjectReference Extension]: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/?h=extensi#approach-to-extensibility
+[internal listeners]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/internal_listener
+[unix domain sockets]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#envoy-v3-api-msg-config-core-v3-pipe
 [Resource Backends]: https://kubernetes.io/docs/concepts/services-networking/ingress/#resource-backend
 [Services and FQDN endpoints]: https://gateway.envoyproxy.io/latest/user/traffic/routing-outside-kubernetes/
 [Service Entry]: https://istio.io/latest/docs/reference/config/networking/service-entry/
@@ -126,7 +135,8 @@ spec:
 [External Services]: https://developer.hashicorp.com/consul/tutorials/developer-mesh/terminating-gateways-connect-external-services
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/geps/gep-1897/
 [BackendLBPolicy]: https://gateway-api.sigs.k8s.io/geps/gep-1619/
+[Backend Protocol Selection]: https://gateway-api.sigs.k8s.io/geps/gep-1911/
+[EnvoyProxy]: ../../api/extension_types#envoyproxy
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[Envoy Gateway]: ../../api/extension_types#envoygateway
 [Envoy Patch Policy]: ../../api/extension_types#envoypatchpolicy
 [Envoy Extension Manager]: ./extending-envoy-gateway
