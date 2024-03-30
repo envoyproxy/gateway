@@ -5,11 +5,13 @@ go 1.21
 require (
 	fortio.org/fortio v1.63.5
 	fortio.org/log v1.12.1
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.12.1-0.20240322155512-db0b36a50fa8
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.9.0
+	github.com/fatih/color v1.15.0
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
@@ -61,7 +63,6 @@ require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
@@ -76,7 +77,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
