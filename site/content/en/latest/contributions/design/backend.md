@@ -51,25 +51,17 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: backend-uds
+  name: backend-mixed-ip-uds
 spec:
   addresses:
     - unixDomainSocketAddress:
         path: /var/run/backend.sock
       applicationProtocol: HTTP2
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: backend-ips
-spec:
-  addresses:
+      name: uds-be
     - socketAddress:
         address: 10.244.0.28
         port: 3000
-    - socketAddress:
-        address: 10.244.0.29
-        port: 3000        
+      name: ip-be
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -84,7 +76,7 @@ spec:
     - backendRefs:
         - group: gateway.envoyproxy.io
           kind: Backend
-          name: backend-uds
+          name: backend-mixed-ip-uds
           weight: 1
         - group: ""
           kind: Service
@@ -95,13 +87,30 @@ spec:
         - path:
             type: PathPrefix
             value: /
-
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+spec:
+  targetRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: backend-mixed-ip-uds
+    sectionName: uds-be
+  tls:
+    caCertRefs:
+      - name: backend-tls-checks-certificate
+        group: ''
+        kind: ConfigMap
+    hostname: example.com
 ```
 
 ## Design Decisions
 * All existing and future `BackendObjectReference` in Envoy Gateway MUST support the `Backend` kind. 
 * Gateway-API and Envoy Gateway policies that attach to Services ([BackendTLSPolicy][], [BackendLBPolicy][]) 
-  MUST support attachment to the `Backend` resource in Envoy Gateway. 
+  MUST support attachment to the `Backend` resource in Envoy Gateway. Policies may attach to a named 
+  section of the `Backend` resource (the `backendAddress.name` field). 
 * The `Backend` API SHOULD support other Gateway-API backend features, such as [Backend Protocol Selection][]. 
   Translation of explicit upstream application protocol setting MUST be consistent with the existing implementation for
   `Service` resources. 

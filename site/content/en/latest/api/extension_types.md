@@ -164,6 +164,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `name` | _string_ |  true  | Name is the unique name of the backend address |
 | `socketAddress` | _[SocketAddress](#socketaddress)_ |  true  | SocketAddress is a [FQDN\|IP]:[Port] address |
 | `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  true  | UnixDomainSocketAddress is a unix domain socket path |
 | `applicationProtocol` | _[ApplicationProtocolType](#applicationprotocoltype)_ |  true  | ApplicationProtocol determines the application protocol to be used, e.g. HTTP2. |
@@ -180,7 +181,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `Addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
+| `addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
 
 
 
