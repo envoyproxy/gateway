@@ -4,7 +4,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: envoy-gateway
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -17,7 +17,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: envoy-gateway-config
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -165,14 +165,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/infra-manager-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: eg-gateway-helm-infra-manager
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -214,7 +214,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: eg-gateway-helm-leader-election-role
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -259,7 +259,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: eg-gateway-helm-infra-manager
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -273,14 +273,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/leader-election-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: eg-gateway-helm-leader-election-rolebinding
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -294,14 +294,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/envoy-gateway-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: envoy-gateway
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -330,7 +330,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -423,7 +423,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: eg-gateway-helm-certgen
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -438,7 +438,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: eg-gateway-helm-certgen
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -462,7 +462,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: eg-gateway-helm-certgen
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -478,14 +478,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'eg-gateway-helm-certgen'
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/certgen.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: eg-gateway-helm-certgen
-  namespace: 'default'
+  namespace: 'envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm

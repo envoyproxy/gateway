@@ -32,12 +32,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extAuthFilter + "-route1"),
 			},
 			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(wellknown.Fault),
 				httpFilterForTest(wellknown.CORS),
 				httpFilterForTest(extAuthFilter + "-route1"),
 				httpFilterForTest(basicAuthFilter + "-route1"),
 				httpFilterForTest(oauth2Filter + "-route1"),
 				httpFilterForTest(jwtAuthn),
-				httpFilterForTest(wellknown.Fault),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
 			},
