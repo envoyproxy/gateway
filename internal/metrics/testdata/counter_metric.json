@@ -25,7 +25,7 @@
       "Metrics": [
         {
           "Name": "ir_updates_total",
-          "Description": "Number of IR updates, by ir type",
+          "Description": "Total Number of IR updates, by ir type",
           "Unit": "1",
           "Data": {
             "DataPoints": [
@@ -50,7 +50,7 @@
         },
         {
           "Name": "watchable_subscribed_total",
-          "Description": "Number of IR updates, by ir type",
+          "Description": "Total Number of IR updates, by ir type",
           "Unit": "1",
           "Data": {
             "DataPoints": [

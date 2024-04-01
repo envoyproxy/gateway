@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,7 +48,7 @@ func TestCounter(t *testing.T) {
 	metricsFunc := []func(){
 		func() {
 			metricName := "ir_updates_total"
-			description := "Number of IR updates, by ir type"
+			description := "Total Number of IR updates, by ir type"
 
 			irCounter := NewCounter(
 				metricName,
@@ -61,7 +62,7 @@ func TestCounter(t *testing.T) {
 		},
 		func() {
 			name := "watchable_subscribed_total"
-			description := "Number of IR updates, by ir type"
+			description := "Total Number of IR updates, by ir type"
 
 			subCounter := NewCounter(
 				name,
@@ -96,6 +97,7 @@ func TestGauge(t *testing.T) {
 	gaugeProvider, err := newTestMetricsProvider("Gauge", writer)
 	require.NoError(t, err)
 
+	// simulate a function that builds an indicator and changes its value
 	metricsFunc := []func(){
 		func() {
 			metricName := "current_irs_queue_num"
@@ -138,6 +140,7 @@ func TestHistogram(t *testing.T) {
 	histogramProvider, err := newTestMetricsProvider("Histogram", writer)
 	require.NoError(t, err)
 
+	// simulate a function that builds an indicator and changes its value
 	metricsFunc := []func(){
 		func() {
 			metricName := "sent_bytes_total"
@@ -167,6 +170,7 @@ func TestHistogram(t *testing.T) {
 	loadMetricsFile(t, name, writer)
 }
 
+// newTestMetricsProvider Create an OTEL Metrics Provider for testing use only
 func newTestMetricsProvider(metricType string, writer io.Writer) (*metric.MeterProvider, error) {
 	enc := json.NewEncoder(writer)
 	enc.SetIndent("", "  ")
@@ -202,11 +206,11 @@ func loadMetricsFile(t *testing.T, name string, reader io.Reader) {
 		f, err := os.ReadFile(fname)
 		require.NoError(t, err)
 
-		buf := bytes.NewBuffer(nil)
-		_, err = buf.ReadFrom(reader)
-		require.NoError(t, err)
+		actual := reader.(*bytes.Buffer).String()
+		// we set the json encoder indent, so we need to remove the "\r" from the read file
+		expect := strings.ReplaceAll(string(f), "\r", "")
 
-		require.Equal(t, string(f), buf.String())
+		require.Equal(t, expect, actual)
 	}
 }
 
@@ -237,6 +241,11 @@ func (enc *jsonEncoderWithoutTime) Encode(v any) error {
 		return fmt.Errorf("object of type %T is not ResourceMetrics", data)
 	}
 
+	// Since to the presence of time information in metrics, it prevents us from performing comparisons.
+	// In practice, when testing whether metrics are output as expected,
+	// we are not overly concerned with the value of time,
+	// but rather focus on the attributes and values of the metrics.
+	// In serialization, we always set the Time/StartTime fields to zero value.
 	for _, sm := range data.ScopeMetrics {
 		for _, m := range sm.Metrics {
 			val := reflect.ValueOf(m.Data).FieldByName("DataPoints")
