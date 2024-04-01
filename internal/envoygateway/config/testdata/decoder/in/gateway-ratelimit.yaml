@@ -10,10 +10,10 @@ provider:
         type: RollingUpdate
       container:
         env:
-        - name: env_a
-          value: env_a_value
-        - name: env_b
-          value: env_b_value
+          - name: env_a
+            value: env_a_value
+          - name: env_b
+            value: env_b_value
         image: envoyproxy/ratelimit:latest
         resources:
           requests:

@@ -3,5 +3,5 @@ kind: EnvoyGateway
 provider:
   type: Kubernetes
   kubernetes:
-   leaderElection:
-    LeaseDuration:
+    leaderElection:
+      LeaseDuration:
