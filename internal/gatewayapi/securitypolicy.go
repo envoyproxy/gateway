@@ -134,12 +134,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			err := validatePortOverlapForSecurityPolicyRoute(xdsIR, targetedRoute)
-			if err == nil {
-				err = t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
-			}
-
-			if err != nil {
+			if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
 					t.GatewayControllerName,
@@ -191,15 +186,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			irKey := t.getIRKey(targetedGateway.Gateway)
-			// Should exist since we've validated this
-			xds := xdsIR[irKey]
-			err := validatePortOverlapForSecurityPolicyGateway(xds)
-			if err == nil {
-				err = t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR)
-			}
-
-			if err != nil {
+			if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
 					t.GatewayControllerName,
@@ -413,23 +400,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	return errs
 }
 
-func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext) error {
-	var errs error
-	prefix := irRoutePrefix(route)
-	for _, ir := range xds {
-		for _, http := range ir.HTTP {
-			for _, r := range http.Routes {
-				if strings.HasPrefix(r.Name, prefix) {
-					if sameListeners := listenersWithSameHTTPPort(ir, http); len(sameListeners) != 0 {
-						errs = errors.Join(errs, fmt.Errorf("affects multiple listeners: %s", strings.Join(sameListeners, ", ")))
-					}
-				}
-			}
-		}
-	}
-	return errs
-}
-
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
 	resources *Resources, xdsIR XdsIRMap) error {
@@ -526,20 +496,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 	return errs
-}
-
-func validatePortOverlapForSecurityPolicyGateway(xds *ir.Xds) error {
-	affectedListeners := []string{}
-	for _, http := range xds.HTTP {
-		if sameListeners := listenersWithSameHTTPPort(xds, http); len(sameListeners) != 0 {
-			affectedListeners = append(affectedListeners, sameListeners...)
-		}
-	}
-
-	if len(affectedListeners) > 0 {
-		return fmt.Errorf("affects multiple listeners: %s", strings.Join(affectedListeners, ", "))
-	}
-	return nil
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
@@ -664,6 +620,7 @@ func (t *Translator) buildOIDC(
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
 		Scopes:       scopes,
+		Resources:    oidc.Resources,
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,

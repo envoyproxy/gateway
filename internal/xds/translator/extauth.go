@@ -147,8 +147,12 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	var (
 		uri              string
 		headersToBackend []*matcherv3.StringMatcher
-		service          = new(extauthv3.HttpService)
+		service          *extauthv3.HttpService
 	)
+
+	service = &extauthv3.HttpService{
+		PathPrefix: http.Path,
+	}
 
 	u := url.URL{
 		// scheme should be decided by the TLS setting, but we don't have that info now.
@@ -198,15 +202,9 @@ func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
 
 // routeContainsExtAuth returns true if ExtAuth exists for the provided route.
 func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
-	if irRoute != nil &&
-		irRoute.ExtAuth != nil {
+	if irRoute != nil && irRoute.ExtAuth != nil {
 		return true
 	}
-
 	return false
 }
 

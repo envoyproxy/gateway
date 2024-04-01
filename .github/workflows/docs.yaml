@@ -6,12 +6,14 @@ on:
     - "release/v*"
     paths:
     - 'site/**'
+    - 'tools/make/docs.mk'
   pull_request:
     branches:
     - "main"
     - "release/v*"
     paths:
     - 'site/**'
+    - 'tools/make/docs.mk'
 
 permissions:
   contents: read
@@ -24,6 +26,8 @@ jobs:
       uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633  # v4.1.2
       with:
         ref: ${{ github.event.pull_request.head.sha }}
+
+    - uses: ./tools/github-actions/setup-deps
 
     - name: Run markdown linter
       uses: nosborn/github-action-markdown-cli@9b5e871c11cc0649c5ac2526af22e23525fa344d  # v3.3.0
@@ -48,6 +52,8 @@ jobs:
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
+
+    - uses: ./tools/github-actions/setup-deps
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@16361eb4acea8698b220b76c0d4e84e1fd22c61d  # v2.6.0

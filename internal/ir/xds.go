@@ -230,6 +230,8 @@ type HTTPListener struct {
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
+	// Connection settings
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -359,6 +361,14 @@ type PathSettings struct {
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
 
+type WithUnderscoresAction egv1a1.WithUnderscoresAction
+
+const (
+	WithUnderscoresActionAllow         = WithUnderscoresAction(egv1a1.WithUnderscoresActionAllow)
+	WithUnderscoresActionRejectRequest = WithUnderscoresAction(egv1a1.WithUnderscoresActionRejectRequest)
+	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
+)
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
@@ -392,6 +402,11 @@ type HeaderSettings struct {
 	// The default is to suppress these headers.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
+
+	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+	// is encountered. The default action is to reject the request.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
+	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -541,6 +556,10 @@ type OIDC struct {
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+
+	// The OIDC resources to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	Resources []string `json:"resources,omitempty" yaml:"resources,omitempty"`
 
 	// The redirect URL to be used in the OIDC
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -1094,6 +1113,18 @@ type TCPListener struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// Connection settings for clients
+	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// load balancer policy to use when routing to the backend endpoints.
+	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
+	// Request and connection timeout settings
+	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// Retry settings
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
+	// HealthCheck defines the configuration for health checking on the upstream.
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
+	// Proxy Protocol Settings
+	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1168,6 +1199,10 @@ type UDPListener struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// Destination associated with UDP traffic to the service.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
+	// load balancer policy to use when routing to the backend endpoints.
+	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
+	// Request and connection timeout settings
+	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -1766,4 +1801,23 @@ type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+}
+
+// Connection settings for downstream connections
+// +k8s:deepcopy-gen=true
+type Connection struct {
+	// Limit for number of connections
+	Limit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+}
+
+// ConnectionLimit contains settings for downstream connection limits
+// +k8s:deepcopy-gen=true
+type ConnectionLimit struct {
+	// Value of the maximum concurrent connections limit.
+	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
+	Value *uint64 `json:"value,omitempty" yaml:"value,omitempty"`
+
+	// CloseDelay defines the delay to use before closing connections that are rejected
+	// once the limit value is reached.
+	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }
