@@ -19,7 +19,7 @@ Gateway API 资源用于动态配置和管理 Envoy 代理。
 
 ---
 
-Envoy Gateway 项目的高级目标是通过支持多种入口及 L7/L4 流量路由用例的富有表现力、可扩展性、面向角色的 API 来降低使用障碍，
+Envoy Gateway 的目标是通过支持多种 Ingress 和 L7/L4 流量路由用例的 API 来降低 Envoy 的使用障碍，这种富有表现力、可扩展、面向角色的 API 可以吸引更多用户使用 Envoy。
 从而吸引更多用户使用 Envoy，并为供应商构建增值产品提供共同基础，而无需对基本交互进行重新设计。
 
 {{% /blocks/section %}}
