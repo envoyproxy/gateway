@@ -1,7 +1,7 @@
 {
   "Resource": [
     {
-      "Key": "metric-type",
+      "Key": "metric.type",
       "Value": {
         "Type": "STRING",
         "Value": "Counter"
@@ -39,8 +39,8 @@
                     }
                   }
                 ],
-                "StartTime": "2024-03-27T21:54:18.820255+08:00",
-                "Time": "2024-03-27T21:54:18.8202957+08:00",
+                "StartTime": "0001-01-01T00:00:00Z",
+                "Time": "0001-01-01T00:00:00Z",
                 "Value": 3
               }
             ],
@@ -50,7 +50,7 @@
         },
         {
           "Name": "watchable_subscribed_total",
-          "Description": "Total number of subscribed watchable.",
+          "Description": "Number of IR updates, by ir type",
           "Unit": "1",
           "Data": {
             "DataPoints": [
@@ -64,8 +64,8 @@
                     }
                   }
                 ],
-                "StartTime": "2024-03-27T21:54:18.8202957+08:00",
-                "Time": "2024-03-27T21:54:18.8202957+08:00",
+                "StartTime": "0001-01-01T00:00:00Z",
+                "Time": "0001-01-01T00:00:00Z",
                 "Value": 7
               }
             ],
@@ -77,4 +77,3 @@
     }
   ]
 }
-
