@@ -361,6 +361,14 @@ type PathSettings struct {
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
 
+type WithUnderscoresAction egv1a1.WithUnderscoresAction
+
+const (
+	WithUnderscoresActionAllow         = WithUnderscoresAction(egv1a1.WithUnderscoresActionAllow)
+	WithUnderscoresActionRejectRequest = WithUnderscoresAction(egv1a1.WithUnderscoresActionRejectRequest)
+	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
+)
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
@@ -394,6 +402,11 @@ type HeaderSettings struct {
 	// The default is to suppress these headers.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
+
+	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+	// is encountered. The default action is to reject the request.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
+	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
