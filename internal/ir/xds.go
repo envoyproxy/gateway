@@ -1553,7 +1553,7 @@ type ActiveHealthCheck struct {
 }
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
-	if h.Active != nil && h.Active.HTTP != nil && h.Active.HTTP.Host == "" {
+	if h != nil && h.Active != nil && h.Active.HTTP != nil && h.Active.HTTP.Host == "" {
 		h.Active.HTTP.Host = host
 	}
 }

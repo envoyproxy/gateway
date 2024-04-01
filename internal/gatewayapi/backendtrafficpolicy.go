@@ -375,6 +375,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.LoadBalancer = lb
 					r.ProxyProtocol = pp
 					r.HealthCheck = hc
+					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+					r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
 					r.TCPKeepalive = ka
@@ -386,11 +388,6 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 							return errors.Wrap(err, "Timeout")
 						}
 						r.Timeout = to
-					}
-
-					// See issue #3033.
-					if r.HealthCheck != nil {
-						r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 					}
 				}
 			}
@@ -537,7 +534,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.HealthCheck == nil {
 				r.HealthCheck = hc
+				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+				r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 			}
+
 			if r.CircuitBreaker == nil {
 				r.CircuitBreaker = cb
 			}
@@ -559,14 +559,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 				if r.Timeout == nil {
 					r.Timeout = ct
 				}
-			}
-
-			// We need to explicitly set the HTTP host for the HTTP health checker.
-			// If left empty, the cluster name will be used as the Host header in the HTTP health checking request.
-			// However, the cluster name is not a valid host header, resulting in a Bad Request for the HTTP health checking request.
-			// See issue #3033
-			if r.HealthCheck != nil {
-				r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 			}
 		}
 	}
