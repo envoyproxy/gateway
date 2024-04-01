@@ -10,3 +10,8 @@ coverage:
         target: 60%
         threshold: 5%
         if_ci_failed: error
+ignore:
+  - "gateway/proto/extension"
+  - "gateway/test"
+  - "gateway/cmd"
+  - "**/zz_generated.deepcopy.go"
