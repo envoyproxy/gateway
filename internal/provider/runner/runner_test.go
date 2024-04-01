@@ -42,7 +42,7 @@ func TestStart(t *testing.T) {
 				},
 				Logger: logger,
 			},
-			expect: false,
+			expect: true,
 		},
 	}
 

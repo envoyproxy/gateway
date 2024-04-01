@@ -68,11 +68,65 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "unsupported provider",
+			name: "supported file provider",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Gateway:  v1alpha1.DefaultGateway(),
-					Provider: &v1alpha1.EnvoyGatewayProvider{Type: v1alpha1.ProviderTypeFile},
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeFile,
+						Custom: &v1alpha1.EnvoyGatewayCustomProvider{
+							Resource: v1alpha1.EnvoyGatewayResourceProvider{
+								Type: v1alpha1.ResourceProviderTypeFile,
+								File: &v1alpha1.EnvoyGatewayFileResourceProvider{},
+							},
+							Infrastructure: v1alpha1.EnvoyGatewayInfrastructureProvider{
+								Type: v1alpha1.InfrastructureProviderTypeHost,
+								Host: &v1alpha1.EnvoyGatewayHostInfrastructureProvider{},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "file provider without file resource",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeFile,
+						Custom: &v1alpha1.EnvoyGatewayCustomProvider{
+							Resource: v1alpha1.EnvoyGatewayResourceProvider{
+								Type: v1alpha1.ResourceProviderTypeFile,
+							},
+							Infrastructure: v1alpha1.EnvoyGatewayInfrastructureProvider{
+								Type: v1alpha1.InfrastructureProviderTypeHost,
+								Host: &v1alpha1.EnvoyGatewayHostInfrastructureProvider{},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "file provider without host infrastructure",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeFile,
+						Custom: &v1alpha1.EnvoyGatewayCustomProvider{
+							Resource: v1alpha1.EnvoyGatewayResourceProvider{
+								Type: v1alpha1.ResourceProviderTypeFile,
+								File: &v1alpha1.EnvoyGatewayFileResourceProvider{},
+							},
+							Infrastructure: v1alpha1.EnvoyGatewayInfrastructureProvider{
+								Type: v1alpha1.InfrastructureProviderTypeHost,
+							},
+						},
+					},
 				},
 			},
 			expect: false,

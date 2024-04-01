@@ -124,7 +124,7 @@ func setupRunners(cfg *config.Server) error {
 	pResources := new(message.ProviderResources)
 	// Start the Provider Service
 	// It fetches the resources from the configured provider type
-	// and publishes it
+	// and publishes it.
 	// It also subscribes to status resources and once it receives
 	// a status resource back, it writes it out.
 	providerRunner := providerrunner.New(&providerrunner.Config{
