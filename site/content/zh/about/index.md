@@ -31,7 +31,7 @@ Envoy Gateway 项目的高级目标是通过支持多种入口及 L7/L4 流量�
 Envoy Gateway 项目将公开一个简单且富有表现力的 API，并为许多能力设置推荐的默认值。
 
 该 API 将是 Kubernetes 原生的 [Gateway API](https://gateway-api.sigs.k8s.io)，
-加上 Envoy 特定的扩展和扩展点。这种富有表现力且熟悉的 API 将使更多用户（尤其是应用程序开发人员）可以使用 Envoy，
+加上 Envoy 特定的扩展和扩展点。这种富有表现力且广为人知的 API 将使更多用户（尤其是应用程序开发人员）可以使用 Envoy，
 并使 Envoy 成为与其他代理相比更强大的“入门”选择。应用程序开发人员将使用开箱即用的 API，
 无需深入了解 Envoy 代理的概念或使用 OSS 包装器。该 API 将使用[用户](#personas)可以理解并熟悉的名词。
 
@@ -100,7 +100,7 @@ Envoy Proxy、xDS 或 go-control-plane 的用户使用模式。
 
 ## 用户模型 {#personas}
 
-**按顺序优先**
+**按优先级顺序**
 
 ---
 
