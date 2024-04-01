@@ -74,7 +74,9 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 
 // newOrderedHTTPFilter gives each HTTP filter a rational order.
 // This is needed because the order of the filters is important.
-// For example, the cors filter should be put at the first to avoid unnecessary
+// For example, the fault filter should be placed in the first position because
+// it doesn't rely on the functionality of other filters, and rejecting early can save computation costs
+// for the remaining filters, the cors filter should be put at the second to avoid unnecessary
 // processing of other filters for unauthorized cross-region access.
 // The router filter must be the last one since it's a terminal filter.
 //
@@ -86,18 +88,20 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	order := 50
 
 	// Set a rational order for all the filters.
+	// When the fault filter is configured to be at the first, the computation of
+	// the remaining filters is skipped when rejected early
 	switch {
-	case filter.Name == wellknown.CORS:
-		order = 1
-	case isFilterType(filter, extAuthFilter):
-		order = 2
-	case isFilterType(filter, basicAuthFilter):
-		order = 3
-	case isFilterType(filter, oauth2Filter):
-		order = 4
-	case filter.Name == jwtAuthn:
-		order = 5
 	case filter.Name == wellknown.Fault:
+		order = 1
+	case filter.Name == wellknown.CORS:
+		order = 2
+	case isFilterType(filter, extAuthFilter):
+		order = 3
+	case isFilterType(filter, basicAuthFilter):
+		order = 4
+	case isFilterType(filter, oauth2Filter):
+		order = 5
+	case filter.Name == jwtAuthn:
 		order = 6
 	case filter.Name == localRateLimitFilter:
 		order = 7
