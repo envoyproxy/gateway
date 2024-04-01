@@ -33,7 +33,7 @@ func setEnv(t *testing.T, key, value string) {
 		}
 	})
 }
-	
+
 func TestConfig_EnvOverrides(t *testing.T) {
 	setEnv(t, "ENVOY_GATEWAY_LEADER_ELECTION_ENABLED", "false")
 	cfg, err := New()
