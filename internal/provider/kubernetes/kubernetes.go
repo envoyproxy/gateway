@@ -10,14 +10,16 @@ import (
 	"fmt"
 
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/status"
 )
@@ -31,16 +33,24 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
+
 	mgrOpts := manager.Options{
-		Scheme:                 envoygateway.GetScheme(),
-		Logger:                 svr.Logger.Logger,
-		LeaderElection:         false,
-		HealthProbeBindAddress: ":8081",
-		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
+		Scheme:                  envoygateway.GetScheme(),
+		Logger:                  svr.Logger.Logger,
+		HealthProbeBindAddress:  ":8081",
+		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
+		LeaderElectionNamespace: svr.Namespace,
 	}
 
+	if svr.EnvoyGateway.LeaderElection != nil {
+		mgrOpts.LeaderElection = true
+		mgrOpts.LeaseDuration = svr.EnvoyGateway.LeaderElection.LeaseDuration
+		mgrOpts.RetryPeriod = svr.EnvoyGateway.LeaderElection.RetryPeriod
+		mgrOpts.RenewDeadline = svr.EnvoyGateway.LeaderElection.RenewDeadline
+		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
+	}
 	if svr.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
@@ -72,6 +82,12 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
+
+	// Emit elected & continue with deployment of infra resources
+	go func() {
+		<-mgr.Elected()
+		close(svr.Elected)
+	}()
 
 	return &Provider{
 		manager: mgr,

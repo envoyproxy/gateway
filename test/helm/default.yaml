@@ -358,6 +358,9 @@ spec:
         - server
         - --config-path=/config/envoy-gateway.yaml
         env:
+        - name: ENVOY_GATEWAY_LEADER_ELECTION_ENABLED
+          value: "true"
+        - name: ENVOY_GATEWAY_LEADER_ELECTION_LEASE_DURATION
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
             fieldRef:

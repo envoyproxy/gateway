@@ -6,6 +6,8 @@
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -88,6 +90,20 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// LeaderElection defines the settings related to leader election
+	// +optional
+	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
+}
+
+// LeaderElection defines the desired leader election settings.
+type LeaderElection struct {
+	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
+	LeaseDuration *time.Duration `json:"leaseDuration,omitempty"`
+	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.
+	RenewDeadline *time.Duration `json:"renewDeadline,omitempty"`
+	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.
+	RetryPeriod *time.Duration `json:"retryPeriod,omitempty"`
 }
 
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.

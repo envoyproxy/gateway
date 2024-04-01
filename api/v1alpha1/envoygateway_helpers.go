@@ -19,11 +19,12 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:   DefaultGateway(),
-			Provider:  DefaultEnvoyGatewayProvider(),
-			Logging:   DefaultEnvoyGatewayLogging(),
-			Admin:     DefaultEnvoyGatewayAdmin(),
-			Telemetry: DefaultEnvoyGatewayTelemetry(),
+			Gateway:        DefaultGateway(),
+			Provider:       DefaultEnvoyGatewayProvider(),
+			Logging:        DefaultEnvoyGatewayLogging(),
+			Admin:          DefaultEnvoyGatewayAdmin(),
+			Telemetry:      DefaultEnvoyGatewayTelemetry(),
+			LeaderElection: DefaultLeaderElection(),
 		},
 	}
 }
@@ -83,6 +84,11 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 		e.Provider.Kubernetes.Watch != nil &&
 		e.Provider.Kubernetes.Watch.Type == KubernetesWatchModeTypeNamespaces &&
 		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
+}
+
+// DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
+func DefaultLeaderElection() *LeaderElection {
+	return &LeaderElection{}
 }
 
 // DefaultGateway returns a new Gateway with default configuration parameters.

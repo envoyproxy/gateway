@@ -1,5 +1,7 @@
 deployment:
   envoyGateway:
+    leaderElection:
+      enabled: true
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'

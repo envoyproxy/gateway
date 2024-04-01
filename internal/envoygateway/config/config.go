@@ -7,6 +7,7 @@ package config
 
 import (
 	"errors"
+	"os"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -36,17 +37,28 @@ type Server struct {
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
 	Logger logging.Logger
+	// Elected chan is used to signal what a leader is elected
+	Elected chan struct{}
 }
 
 // New returns a Server with default parameters.
 func New() (*Server, error) {
+	eg := v1alpha1.DefaultEnvoyGateway()
+	applyConfigOverrides(eg)
 	return &Server{
-		EnvoyGateway: v1alpha1.DefaultEnvoyGateway(),
+		EnvoyGateway: eg,
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		// the default logger
-		Logger: logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		Logger:  logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		Elected: make(chan struct{}),
 	}, nil
+}
+
+func applyConfigOverrides(eg *v1alpha1.EnvoyGateway) {
+	if os.Getenv("ENVOY_GATEWAY_LEADER_ELECTION_ENABLED") == "false" {
+		eg.LeaderElection = nil
+	}
 }
 
 // Validate validates a Server config.
