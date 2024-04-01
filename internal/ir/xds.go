@@ -490,8 +490,8 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
-	// EnvoyExtensionFeatures
-	EnvoyExtensionFeatures *EnvoyExtensionFeatures `json:"envoyExtensionFeatures,omitempty" yaml:"envoyExtensionFeatures,omitempty"`
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1831,13 +1831,6 @@ type ExtProc struct {
 	// The xds translator only generates one ExtProc filter for each unique name.
 	Name string `json:"name" yaml:"name"`
 
-	// Service contains the details of the ExtProc service.
-	Service ExtProcService `json:"service" yaml:"service"`
-}
-
-// ExtProcService defines the HTTP External Processing service
-// +k8s:deepcopy-gen=true
-type ExtProcService struct {
 	// Destination defines the destination for the gRPC External Processing service.
 	Destination RouteDestination `json:"destination"`
 

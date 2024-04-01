@@ -52,7 +52,7 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		for _, ep := range route.EnvoyExtensionFeatures.ExtProc {
+		for _, ep := range route.ExtProcs {
 			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
 				continue
 			}
@@ -101,7 +101,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 	config := &extprocv3.ExternalProcessor{
 		GrpcService: &corev3.GrpcService{
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
-				EnvoyGrpc: grpcExtProcService(extProc.Service),
+				EnvoyGrpc: grpcExtProcService(extProc),
 			},
 			Timeout: &duration.Duration{
 				Seconds: defaultExtServiceRequestTimeout,
@@ -112,20 +112,20 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 	return config
 }
 
-func grpcExtProcService(grpc ir.ExtProcService) *corev3.GrpcService_EnvoyGrpc {
+func grpcExtProcService(extProc ir.ExtProc) *corev3.GrpcService_EnvoyGrpc {
 	return &corev3.GrpcService_EnvoyGrpc{
-		ClusterName: grpc.Destination.Name,
-		Authority:   grpc.Authority,
+		ClusterName: extProc.Destination.Name,
+		Authority:   extProc.Authority,
 	}
 }
 
-// routeContainsExtProc returns true if ExtProc exists for the provided route.
+// routeContainsExtProc returns true if ExtProcs exists for the provided route.
 func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 	if irRoute == nil {
 		return false
 	}
 
-	return irRoute.EnvoyExtensionFeatures != nil && len(irRoute.EnvoyExtensionFeatures.ExtProc) > 0
+	return len(irRoute.ExtProcs) > 0
 }
 
 // patchResources patches the cluster resources for the external auth services.
@@ -141,10 +141,10 @@ func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		for i := range route.EnvoyExtensionFeatures.ExtProc {
-			ep := route.EnvoyExtensionFeatures.ExtProc[i]
+		for i := range route.ExtProcs {
+			ep := route.ExtProcs[i]
 			if err := createExtServiceXDSCluster(
-				&ep.Service.Destination, tCtx); err != nil && !errors.Is(
+				&ep.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -164,11 +164,8 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.EnvoyExtensionFeatures == nil {
-		return nil
-	}
 
-	for _, ep := range irRoute.EnvoyExtensionFeatures.ExtProc {
+	for _, ep := range irRoute.ExtProcs {
 		filterName := extProcFilterName(ep)
 		if err := enableFilterOnRoute(route, filterName); err != nil {
 			return err

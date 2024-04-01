@@ -26,10 +26,10 @@ func init() {
 	ConformanceTests = append(ConformanceTests, ExtProcTest)
 }
 
-// ExtProcTest tests ExtProc authentication for an http route with ExtProc configured.
+// ExtProcTest tests ExtProcs authentication for an http route with ExtProcs configured.
 var ExtProcTest = suite.ConformanceTest{
-	ShortName:   "ExtProc",
-	Description: "Test ExtProc service that adds request and response headers",
+	ShortName:   "ExtProcs",
+	Description: "Test ExtProcs service that adds request and response headers",
 	Manifests:   []string{"testdata/ext-proc-service.yaml", "testdata/ext-proc-envoyextensionpolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with ext proc", func(t *testing.T) {

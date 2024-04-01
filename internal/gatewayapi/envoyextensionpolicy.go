@@ -300,9 +300,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
-					if policyFeatures, err := t.buildEnvoyExtensionFeatures(policy, resources); err == nil {
-						// since multiple policies can attach to a route, aggregate features from each policy
-						r.EnvoyExtensionFeatures = policyFeatures
+					if extProcs, err := t.buildExtProcs(policy, resources); err == nil {
+						r.ExtProcs = extProcs
 					} else {
 						return err
 					}
@@ -314,8 +313,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 	return nil
 }
 
-func (t *Translator) buildEnvoyExtensionFeatures(policy *egv1a1.EnvoyExtensionPolicy,
-	resources *Resources) (*ir.EnvoyExtensionFeatures, error) {
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources) ([]ir.ExtProc, error) {
 	var extProcIRList []ir.ExtProc
 
 	if policy == nil {
@@ -332,10 +330,7 @@ func (t *Translator) buildEnvoyExtensionFeatures(policy *egv1a1.EnvoyExtensionPo
 			extProcIRList = append(extProcIRList, *extProcIR)
 		}
 	}
-
-	return &ir.EnvoyExtensionFeatures{
-		ExtProc: extProcIRList,
-	}, nil
+	return extProcIRList, nil
 }
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.EnvoyExtensionPolicy,
@@ -350,7 +345,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		string(policy.Spec.TargetRef.Name),
 	)
 
-	policyFeatures, err := t.buildEnvoyExtensionFeatures(policy, resources)
+	extProcs, err := t.buildExtProcs(policy, resources)
 	if err != nil {
 		return err
 	}
@@ -365,8 +360,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
 			// if already set - there's a route level policy, so skip
-			if r.EnvoyExtensionFeatures == nil {
-				r.EnvoyExtensionFeatures = policyFeatures
+			if r.ExtProcs == nil {
+				r.ExtProcs = extProcs
 			}
 		}
 	}
@@ -418,11 +413,9 @@ func (t *Translator) buildExtProc(
 	}
 
 	extProcIR := &ir.ExtProc{
-		Name: name,
-		Service: ir.ExtProcService{
-			Destination: rd,
-			Authority:   authority,
-		},
+		Name:        name,
+		Destination: rd,
+		Authority:   authority,
 	}
 
 	return extProcIR, err

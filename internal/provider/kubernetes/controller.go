@@ -1448,7 +1448,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 
 // processEnvoyExtensionPolicyObjectRefs adds the referenced resources in EnvoyExtensionPolicies
 // to the resourceTree
-// - BackendRefs for ExtProc
+// - BackendRefs for ExtProcs
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
 	// we don't return errors from this method, because we want to continue reconciling

@@ -585,7 +585,6 @@ xdsIR:
           valid: 0
         directResponse:
           statusCode: 500
-        envoyExtensionFeatures: {}
         hostname: '*'
         isHTTP2: false
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
@@ -613,7 +612,6 @@ xdsIR:
           valid: 0
         directResponse:
           statusCode: 500
-        envoyExtensionFeatures: {}
         headerMatches:
         - distinct: false
           exact: foo
