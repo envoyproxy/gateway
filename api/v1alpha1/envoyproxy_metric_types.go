@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 type MetricSinkType string
 
 const (
@@ -47,16 +49,27 @@ type ProxyMetricSink struct {
 	OpenTelemetry *ProxyOpenTelemetrySink `json:"openTelemetry,omitempty"`
 }
 
+// ProxyOpenTelemetrySink defines the configuration for OpenTelemetry sink.
+//
+// +kubebuilder:validation:XValidation:message="BackendRef only support Service Kind.",rule="!has(self.backendRef) || !has(self.backendRef.kind) || self.backendRef.kind == 'Service'"
 type ProxyOpenTelemetrySink struct {
 	// Host define the service hostname.
+	// Deprecated: Use BackendRef instead.
 	Host string `json:"host"`
 	// Port defines the port the service is exposed on.
+	// Deprecated: Use BackendRef instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// BackendRef references a Kubernetes object that represents the
+	// backend server to which the metric will be sent.
+	// Only service Kind is supported for now.
+	//
+	// +optional
+	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
 	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
 }

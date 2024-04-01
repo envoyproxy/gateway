@@ -400,141 +400,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "ProxyMetricSink-with-TypeOpenTelemetry-but-no-openTelemetry",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Telemetry: &egv1a1.ProxyTelemetry{
-						Metrics: &egv1a1.ProxyMetrics{
-							Sinks: []egv1a1.ProxyMetricSink{
-								{
-									Type: egv1a1.MetricSinkTypeOpenTelemetry,
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"If MetricSink type is OpenTelemetry, openTelemetry field needs to be set"},
-		},
-		{
-			desc: "ProxyMetrics-sinks-pass",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Telemetry: &egv1a1.ProxyTelemetry{
-						Metrics: &egv1a1.ProxyMetrics{
-							Sinks: []egv1a1.ProxyMetricSink{
-								{
-									Type: egv1a1.MetricSinkTypeOpenTelemetry,
-									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										Host: "0.0.0.0",
-										Port: 3217,
-									},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "ProxyHpa-maxReplicas-is-required",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"spec.provider.kubernetes.envoyHpa.maxReplicas: Required value"},
-		},
-		{
-			desc: "ProxyHpa-minReplicas-less-than-0",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-								MinReplicas: ptr.To[int32](-1),
-								MaxReplicas: ptr.To[int32](2),
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"minReplicas must be greater than 0"},
-		},
-		{
-			desc: "ProxyHpa-maxReplicas-less-than-0",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-								MaxReplicas: ptr.To[int32](-1),
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"maxReplicas must be greater than 0"},
-		},
-		{
-			desc: "ProxyHpa-maxReplicas-less-than-minReplicas",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-								MinReplicas: ptr.To[int32](5),
-								MaxReplicas: ptr.To[int32](2),
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"maxReplicas cannot be less than minReplicas"},
-		},
-		{
-			desc: "ProxyHpa-maxReplicas-equals-to-minReplicas",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-								MinReplicas: ptr.To[int32](2),
-								MaxReplicas: ptr.To[int32](2),
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "ProxyHpa-valid",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-								MinReplicas: ptr.To[int32](5),
-								MaxReplicas: ptr.To[int32](10),
-							},
-						},
-					},
-				}
-			},
-		},
-		{
 			desc: "accesslog-OpenTelemetry",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -655,6 +520,115 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
+			desc: "ProxyMetricSink-with-TypeOpenTelemetry-but-no-openTelemetry",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If MetricSink type is OpenTelemetry, openTelemetry field needs to be set"},
+		},
+		{
+			desc: "ProxyMetrics-sinks-pass",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										Host: "0.0.0.0",
+										Port: 3217,
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyMetrics-sinks-backendref",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendRef: &gwapiv1.BackendObjectReference{
+											Name: "fake-service",
+											Kind: ptr.To(gwapiv1.Kind("Service")),
+											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyMetrics-sinks-backendref-empty-kind",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendRef: &gwapiv1.BackendObjectReference{
+											Name: "fake-service",
+											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyMetrics-sinks-invalid-backendref",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendRef: &gwapiv1.BackendObjectReference{
+											Name: "fake-service",
+											Kind: ptr.To(gwapiv1.Kind("foo")),
+											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"BackendRef only support Service Kind."},
+		},
+		{
 			desc: "invalid-tracing-backendref",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -674,6 +648,24 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"BackendRef only support Service Kind."},
 		},
 		{
+			desc: "tracing-backendref-empty-kind",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendRef: &gwapiv1.BackendObjectReference{
+									Name: "fake-service",
+									Port: ptr.To(gwapiv1.PortNumber(8080)),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
 			desc: "tracing-backendref",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -686,6 +678,103 @@ func TestEnvoyProxyProvider(t *testing.T) {
 									Kind: ptr.To(gwapiv1.Kind("Service")),
 									Port: ptr.To(gwapiv1.PortNumber(8080)),
 								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-is-required",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.provider.kubernetes.envoyHpa.maxReplicas: Required value"},
+		},
+		{
+			desc: "ProxyHpa-minReplicas-less-than-0",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](-1),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"minReplicas must be greater than 0"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-less-than-0",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MaxReplicas: ptr.To[int32](-1),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"maxReplicas must be greater than 0"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-less-than-minReplicas",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"maxReplicas cannot be less than minReplicas"},
+		},
+		{
+			desc: "ProxyHpa-maxReplicas-equals-to-minReplicas",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](2),
+								MaxReplicas: ptr.To[int32](2),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyHpa-valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](10),
 							},
 						},
 					},
