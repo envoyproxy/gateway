@@ -31,4 +31,4 @@ helm-generate:
 
 helm-template: ## Template envoy gateway helm chart.
 	@$(LOG_TARGET)
-	helm template eg charts/gateway-helm --set deployment.envoyGateway.image.tag=latest > ./test/helm/default.yaml
+	helm template eg charts/gateway-helm --set deployment.envoyGateway.image.tag=latest > ./test/helm/default.yaml --namespace=envoy-gateway-system
