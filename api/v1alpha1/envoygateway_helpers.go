@@ -19,12 +19,11 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:        DefaultGateway(),
-			Provider:       DefaultEnvoyGatewayProvider(),
-			Logging:        DefaultEnvoyGatewayLogging(),
-			Admin:          DefaultEnvoyGatewayAdmin(),
-			Telemetry:      DefaultEnvoyGatewayTelemetry(),
-			LeaderElection: DefaultLeaderElection(),
+			Gateway:   DefaultGateway(),
+			Provider:  DefaultEnvoyGatewayProvider(),
+			Logging:   DefaultEnvoyGatewayLogging(),
+			Admin:     DefaultEnvoyGatewayAdmin(),
+			Telemetry: DefaultEnvoyGatewayTelemetry(),
 		},
 	}
 }
@@ -154,6 +153,9 @@ func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
 func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return &EnvoyGatewayProvider{
 		Type: ProviderTypeKubernetes,
+		Kubernetes: &EnvoyGatewayKubernetesProvider{
+			LeaderElection: DefaultLeaderElection(),
+		},
 	}
 }
 

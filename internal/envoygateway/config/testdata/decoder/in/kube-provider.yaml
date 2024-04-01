@@ -2,3 +2,6 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 provider:
   type: Kubernetes
+  kubernetes:
+   leaderElection:
+    LeaseDuration:

@@ -57,7 +57,7 @@ func New() (*Server, error) {
 
 func applyConfigOverrides(eg *v1alpha1.EnvoyGateway) {
 	if os.Getenv("ENVOY_GATEWAY_LEADER_ELECTION_ENABLED") == "false" {
-		eg.LeaderElection = nil
+		eg.Provider.Kubernetes.LeaderElection = nil
 	}
 }
 

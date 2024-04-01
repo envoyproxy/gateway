@@ -44,11 +44,11 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		LeaderElectionNamespace: svr.Namespace,
 	}
 
-	if svr.EnvoyGateway.LeaderElection != nil {
+	if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection != nil {
 		mgrOpts.LeaderElection = true
-		mgrOpts.LeaseDuration = svr.EnvoyGateway.LeaderElection.LeaseDuration
-		mgrOpts.RetryPeriod = svr.EnvoyGateway.LeaderElection.RetryPeriod
-		mgrOpts.RenewDeadline = svr.EnvoyGateway.LeaderElection.RenewDeadline
+		mgrOpts.LeaseDuration = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration
+		mgrOpts.RetryPeriod = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod
+		mgrOpts.RenewDeadline = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
 	}
 	if svr.EnvoyGateway.NamespaceMode() {

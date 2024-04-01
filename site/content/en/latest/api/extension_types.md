@@ -566,7 +566,6 @@ EnvoyGateway is the schema for the envoygateways API.
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
-| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection defines the settings related to leader election |
 
 
 #### EnvoyGatewayAdmin
@@ -671,6 +670,7 @@ _Appears in:_
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
+| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection defines the settings related to leader election |
 
 
 #### EnvoyGatewayLogComponent
@@ -811,7 +811,6 @@ _Appears in:_
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
-| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection defines the settings related to leader election |
 
 
 #### EnvoyGatewayTelemetry
@@ -1681,8 +1680,7 @@ _Appears in:_
 LeaderElection defines the desired leader election settings.
 
 _Appears in:_
-- [EnvoyGateway](#envoygateway)
-- [EnvoyGatewaySpec](#envoygatewayspec)
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |

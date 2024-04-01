@@ -38,7 +38,7 @@ func TestConfig_EnvOverrides(t *testing.T) {
 	setEnv(t, "ENVOY_GATEWAY_LEADER_ELECTION_ENABLED", "false")
 	cfg, err := New()
 	require.NoError(t, err)
-	require.Nil(t, cfg.EnvoyGateway.LeaderElection, "leader election should be disabled by env var")
+	require.Nil(t, cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection, "leader election should be disabled by env var")
 }
 
 func TestValidate(t *testing.T) {

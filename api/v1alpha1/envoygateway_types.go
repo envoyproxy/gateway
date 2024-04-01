@@ -90,10 +90,6 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
-
-	// LeaderElection defines the settings related to leader election
-	// +optional
-	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -214,6 +210,9 @@ type EnvoyGatewayKubernetesProvider struct {
 	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
 	// +optional
 	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
+	// LeaderElection defines the settings related to leader election
+	// +optional
+	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
 }
 
 const (
