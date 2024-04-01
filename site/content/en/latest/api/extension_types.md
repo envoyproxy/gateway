@@ -2067,15 +2067,16 @@ _Appears in:_
 
 
 
-
+ProxyOpenTelemetrySink defines the configuration for OpenTelemetry sink.
 
 _Appears in:_
 - [ProxyMetricSink](#proxymetricsink)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the service hostname. |
-| `port` | _integer_ |  false  | Port defines the port the service is exposed on. |
+| `host` | _string_ |  true  | Host define the service hostname.<br />Deprecated: Use BackendRef instead. |
+| `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRef instead. |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
 
 
 #### ProxyPrometheusProvider
