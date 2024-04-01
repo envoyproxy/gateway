@@ -40,6 +40,60 @@ _Appears in:_
 
 
 
+#### ALSEnvoyProxyAccessLog
+
+
+
+ALSEnvoyProxyAccessLog defines the gRPC Access Log Service (ALS) sink.
+The service must implement the Envoy gRPC Access Log Service streaming API:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto
+Access log format information is passed in the form of gRPC metadata when the
+stream is established. Specifically, the following metadata is passed:
+
+
+- `x-accesslog-text` - The access log format string when a Text format is used.
+
+
+- `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
+
+_Appears in:_
+- [ProxyAccessLogSink](#proxyaccesslogsink)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the gRPC service to which<br />the access logs will be sent. Currently only Service is supported. |
+| `logName` | _string_ |  false  | LogName defines the friendly name of the access log to be returned in<br />StreamAccessLogsMessage.Identifier. This allows the access log server<br />to differentiate between different access logs coming from the same Envoy. |
+| `type` | _[ALSEnvoyProxyAccessLogType](#alsenvoyproxyaccesslogtype)_ |  true  | Type defines the type of accesslog. Supported types are "HTTP" and "TCP". Defaults to "HTTP" when not specified. |
+| `http` | _[ALSEnvoyProxyHTTPAccessLogConfig](#alsenvoyproxyhttpaccesslogconfig)_ |  false  | HTTP defines additional configuration specific to HTTP access logs. |
+
+
+#### ALSEnvoyProxyAccessLogType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
+
+
+
+#### ALSEnvoyProxyHTTPAccessLogConfig
+
+
+
+
+
+_Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `requestHeaders` | _string array_ |  false  | RequestHeaders defines request headers to include in log entries sent to the access log service. |
+| `responseHeaders` | _string array_ |  false  | ResponseHeaders defines response headers to include in log entries sent to the access log service. |
+| `responseTrailers` | _string array_ |  false  | ResponseTrailers defines response trailers to include in log entries sent to the access log service. |
+
+
 #### ActiveHealthCheck
 
 
@@ -1974,6 +2028,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[ProxyAccessLogSinkType](#proxyaccesslogsinktype)_ |  true  | Type defines the type of accesslog sink. |
+| `als` | _[ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)_ |  false  | ALS defines the gRPC Access Log Service (ALS) sink. |
 | `file` | _[FileEnvoyProxyAccessLog](#fileenvoyproxyaccesslog)_ |  false  | File defines the file accesslog sink. |
 | `openTelemetry` | _[OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)_ |  false  | OpenTelemetry defines the OpenTelemetry accesslog sink. |
 
