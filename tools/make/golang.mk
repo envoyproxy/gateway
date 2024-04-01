@@ -61,6 +61,13 @@ go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" \
 		go test ./... --tags=integration,celvalidation -race -coverprofile=coverage.xml -covermode=atomic
 
+.PHONY: go.test.validate
+go.test.validate: manifests $(tools/setup-envtest)
+	@$(LOG_TARGET)
+	go clean -testcache # Ensure we're not using cached test results
+	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" \
+		go test ./test/cel-validation --tags=celvalidation -race
+
 .PHONY: go.clean
 go.clean: ## Clean the building output files
 	@$(LOG_TARGET)
