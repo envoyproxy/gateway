@@ -28,7 +28,7 @@ func TestCounter(t *testing.T) {
 	writer := os.Stdout
 	if true {
 		// nolint:gosec
-		f, err := os.OpenFile("testdata/counter_metric.yaml", os.O_CREATE|os.O_RDWR, 0644)
+		f, err := os.OpenFile("testdata/counter_metric.json", os.O_CREATE|os.O_RDWR, 0644)
 		require.NoError(t, err)
 		writer = f
 	}
