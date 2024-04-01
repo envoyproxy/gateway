@@ -44,7 +44,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		LeaderElectionNamespace: svr.Namespace,
 	}
 
-	if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection != nil {
+	if svr.EnvoyGateway.Provider.Kubernetes != nil && svr.EnvoyGateway.Provider.Kubernetes.LeaderElection != nil {
 		mgrOpts.LeaderElection = true
 		mgrOpts.LeaseDuration = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration
 		mgrOpts.RetryPeriod = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod
@@ -57,7 +57,6 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
 	}
-
 	mgr, err := ctrl.NewManager(cfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)

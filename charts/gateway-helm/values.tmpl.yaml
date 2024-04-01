@@ -1,7 +1,5 @@
 deployment:
   envoyGateway:
-    leaderElection:
-      enabled: true
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
@@ -38,6 +36,8 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
+      kubernetes:
+        leaderElection: {}
     logging:
       level:
         default: info

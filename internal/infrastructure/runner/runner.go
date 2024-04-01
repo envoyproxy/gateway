@@ -54,7 +54,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
 	// to avoid multiple EG instances processing envoy proxy infra resources.
-	if r.EnvoyGateway.Provider.Kubernetes.LeaderElection != nil {
+	if r.EnvoyGateway.Provider.Kubernetes != nil && r.EnvoyGateway.Provider.Kubernetes.LeaderElection != nil {
 		go func() {
 			select {
 			case <-ctx.Done():

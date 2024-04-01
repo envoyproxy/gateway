@@ -6,7 +6,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,26 +19,6 @@ var (
 	TLSSecretKind       = v1.Kind("Secret")
 	TLSUnrecognizedKind = v1.Kind("Unrecognized")
 )
-
-func setEnv(t *testing.T, key, value string) {
-	t.Helper() // Marks the function as a test helper function.
-	prevValue, isSet := os.LookupEnv(key)
-	require.NoError(t, os.Setenv(key, value))
-	t.Cleanup(func() {
-		if isSet {
-			require.NoError(t, os.Setenv(key, prevValue))
-		} else {
-			require.NoError(t, os.Unsetenv(key))
-		}
-	})
-}
-
-func TestConfig_EnvOverrides(t *testing.T) {
-	setEnv(t, "ENVOY_GATEWAY_LEADER_ELECTION_ENABLED", "false")
-	cfg, err := New()
-	require.NoError(t, err)
-	require.Nil(t, cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection, "leader election should be disabled by env var")
-}
 
 func TestValidate(t *testing.T) {
 	cfg, err := New()
