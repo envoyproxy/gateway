@@ -89,7 +89,7 @@ func validateEnvoyGatewayKubernetesProvider(provider *v1alpha1.EnvoyGatewayKuber
 
 func validateEnvoyGatewayFileProvider(provider *v1alpha1.EnvoyGatewayCustomProvider) error {
 	if provider == nil {
-		return nil
+		return fmt.Errorf("empty custom provider settings for file provider")
 	}
 
 	rType, iType := provider.Resource.Type, provider.Infrastructure.Type
@@ -101,11 +101,13 @@ func validateEnvoyGatewayFileProvider(provider *v1alpha1.EnvoyGatewayCustomProvi
 		return fmt.Errorf("field 'file' should be specified when resource type is 'File'")
 	}
 
+	if len(provider.Resource.File.Paths) == 0 {
+		return fmt.Errorf("no paths were assigned for file resource provider to watch")
+	}
+
 	if provider.Infrastructure.Host == nil {
 		return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
 	}
-
-	// TODO(sh2): add more validations for infra.host
 
 	return nil
 }
