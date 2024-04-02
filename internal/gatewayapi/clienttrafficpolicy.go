@@ -482,26 +482,33 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 		return nil
 	}
 
+	irClientTimeout := &ir.ClientTimeout{}
+
 	if clientTimeout.HTTP != nil {
+		irHTTPTimeout := &ir.HTTPClientTimeout{}
 		if clientTimeout.HTTP.RequestReceivedTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestReceivedTimeout))
 			if err != nil {
 				return err
 			}
-			switch {
-			case httpIR.Timeout == nil:
-				httpIR.Timeout = &ir.ClientTimeout{}
-				fallthrough
-
-			case httpIR.Timeout.HTTP == nil:
-				httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
-			}
-
-			httpIR.Timeout.HTTP.RequestReceivedTimeout = &metav1.Duration{
+			irHTTPTimeout.RequestReceivedTimeout = &metav1.Duration{
 				Duration: d,
 			}
 		}
+
+		if clientTimeout.HTTP.IdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.IdleTimeout))
+			if err != nil {
+				return err
+			}
+			irHTTPTimeout.IdleTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+		irClientTimeout.HTTP = irHTTPTimeout
 	}
+
+	httpIR.Timeout = irClientTimeout
 
 	return nil
 }

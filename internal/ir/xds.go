@@ -423,6 +423,8 @@ type HTTPClientTimeout struct {
 	// The duration envoy waits for the complete request reception. This timer starts upon request
 	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
+	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
