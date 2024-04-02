@@ -52,8 +52,6 @@ stream is established. Specifically, the following metadata is passed:
 
 
 - `x-accesslog-text` - The access log format string when a Text format is used.
-
-
 - `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
 
 _Appears in:_

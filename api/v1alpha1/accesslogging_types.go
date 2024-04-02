@@ -112,7 +112,6 @@ const (
 // stream is established. Specifically, the following metadata is passed:
 //
 // - `x-accesslog-text` - The access log format string when a Text format is used.
-//
 // - `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
 //
 // +kubebuilder:validation:XValidation:message="BackendRef only supports Service Kind.",rule="!has(self.backendRef.kind) || self.backendRef.kind == 'Service'"
@@ -126,12 +125,10 @@ type ALSEnvoyProxyAccessLog struct {
 	// to differentiate between different access logs coming from the same Envoy.
 	// +optional
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:default="accesslog"
-	LogName string `json:"logName,omitempty"`
+	LogName *string `json:"logName,omitempty"`
 	// Type defines the type of accesslog. Supported types are "HTTP" and "TCP". Defaults to "HTTP" when not specified.
 	// +kubebuilder:validation:Enum=HTTP;TCP
 	// +unionDiscriminator
-	// +kubebuilder:default="HTTP"
 	Type ALSEnvoyProxyAccessLogType `json:"type,omitempty"`
 	// HTTP defines additional configuration specific to HTTP access logs.
 	// +optional

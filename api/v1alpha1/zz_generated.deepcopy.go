@@ -23,6 +23,11 @@ import (
 func (in *ALSEnvoyProxyAccessLog) DeepCopyInto(out *ALSEnvoyProxyAccessLog) {
 	*out = *in
 	in.BackendRef.DeepCopyInto(&out.BackendRef)
+	if in.LogName != nil {
+		in, out := &in.LogName, &out.LogName
+		*out = new(string)
+		**out = **in
+	}
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
 		*out = new(ALSEnvoyProxyHTTPAccessLogConfig)

@@ -5995,7 +5995,6 @@ spec:
                                             type: array
                                         type: object
                                       logName:
-                                        default: accesslog
                                         description: |-
                                           LogName defines the friendly name of the access log to be returned in
                                           StreamAccessLogsMessage.Identifier. This allows the access log server
@@ -6003,7 +6002,6 @@ spec:
                                         minLength: 1
                                         type: string
                                       type:
-                                        default: HTTP
                                         description: Type defines the type of accesslog.
                                           Supported types are "HTTP" and "TCP". Defaults
                                           to "HTTP" when not specified.
