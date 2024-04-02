@@ -1851,9 +1851,3 @@ type ExtProc struct {
 	// Authority is the hostname:port of the HTTP External Processing service.
 	Authority string `json:"authority"`
 }
-
-// EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
-// +k8s:deepcopy-gen=true
-type EnvoyExtensionFeatures struct {
-	ExtProc []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
-}
