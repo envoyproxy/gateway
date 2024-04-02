@@ -17,6 +17,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -163,6 +164,15 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				},
 			})
 		}
+
+		if route.JWT.AllowMissing {
+			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
+					AllowMissing: &emptypb.Empty{},
+				},
+			})
+		}
+
 		if len(reqs) == 1 {
 			reqMap[route.Name] = reqs[0]
 		} else {
