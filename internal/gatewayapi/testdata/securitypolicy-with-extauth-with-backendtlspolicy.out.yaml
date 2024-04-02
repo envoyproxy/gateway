@@ -27,7 +27,7 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: BackendTLSPolicy is Accepted
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
@@ -59,7 +59,7 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: BackendTLSPolicy is Accepted
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
@@ -207,6 +207,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: true
       grpc:
         backendRef:
           name: grpc-backend
@@ -220,12 +221,20 @@ securityPolicies:
       name: httproute-1
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -234,6 +243,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: false
       http:
         backendRef:
           name: http-backend
@@ -249,18 +259,25 @@ securityPolicies:
       name: gateway-1
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-    - lastTransitionTime: null
-      message: 'This policy is being overridden by other securityPolicies for these
-        routes: [default/httproute-1]'
-      reason: Overridden
-      status: "True"
-      type: Overridden
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [default/httproute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:
@@ -290,10 +307,11 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: true
           grpc:
             authority: grpc-backend.default:9000
             destination:
-              name: securitypolicy/default/policy-for-http-route/grpc-backend
+              name: securitypolicy/default/policy-for-http-route/default/grpc-backend
               settings:
               - addressType: IP
                 endpoints:
@@ -309,6 +327,7 @@ xdsIR:
           headersToExtAuth:
           - header1
           - header2
+          name: securitypolicy/default/policy-for-http-route
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -329,10 +348,11 @@ xdsIR:
             protocol: HTTP
             weight: 1
         extAuth:
+          failOpen: false
           http:
             authority: http-backend.envoy-gateway:80
             destination:
-              name: securitypolicy/default/policy-for-gateway/http-backend
+              name: securitypolicy/default/policy-for-gateway/envoy-gateway/http-backend
               settings:
               - addressType: IP
                 endpoints:
@@ -349,6 +369,7 @@ xdsIR:
             - header1
             - header2
             path: /auth
+          name: securitypolicy/default/policy-for-gateway
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com

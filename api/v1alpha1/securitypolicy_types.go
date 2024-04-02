@@ -31,7 +31,7 @@ type SecurityPolicy struct {
 	Spec SecurityPolicySpec `json:"spec"`
 
 	// Status defines the current status of SecurityPolicy.
-	Status SecurityPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // SecurityPolicySpec defines the desired state of SecurityPolicy.

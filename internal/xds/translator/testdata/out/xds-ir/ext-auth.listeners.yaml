@@ -15,22 +15,7 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.ext_authz_httproute/default/httproute-1/rule/0/match/0/www_example_com
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-            httpService:
-              authorizationResponse:
-                allowedUpstreamHeaders:
-                  patterns:
-                  - exact: header1
-                  - exact: header2
-              serverUri:
-                cluster: securitypolicy/default/policy-for-first-route/http-backend
-                timeout: 10s
-                uri: http://http-backend.envoy-gateway:80/auth
-            transportApiVersion: V3
-        - disabled: true
-          name: envoy.filters.http.ext_authz_httproute/default/httproute-2/rule/0/match/0/www_example_com
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             allowedHeaders:
@@ -40,8 +25,25 @@
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
-                clusterName: securitypolicy/default/policy-for-second-route/grpc-backend
+                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
               timeout: 10s
+            transportApiVersion: V3
+        - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-gateway-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            failureModeAllow: true
+            httpService:
+              authorizationResponse:
+                allowedUpstreamHeaders:
+                  patterns:
+                  - exact: header1
+                  - exact: header2
+              pathPrefix: /auth
+              serverUri:
+                cluster: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                timeout: 10s
+                uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
@@ -54,10 +56,10 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: first-listener
+          routeConfigName: default/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
   drainType: MODIFY_ONLY
-  name: first-listener
+  name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

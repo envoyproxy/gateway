@@ -207,15 +207,12 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, gateways, routes, resources, xdsIR)
 
-	backendTLSPolicies := t.ProcessBackendTLSPoliciesAncestorRef(
-		resources.BackendTLSPolicies, gateways)
-
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
-		securityPolicies, backendTLSPolicies, xdsIR, infraIR)
+		securityPolicies, resources.BackendTLSPolicies, xdsIR, infraIR)
 
 }
 
@@ -255,8 +252,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 		annotations := infrastructureAnnotations(gateway.Gateway)
 		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
 
-		if isMergeGatewaysEnabled(resources) {
-			t.MergeGateways = true
+		if t.MergeGateways {
 			irKey = string(t.GatewayClassName)
 
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))

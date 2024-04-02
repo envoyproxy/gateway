@@ -18,3 +18,5 @@
           pattern:
             regex: ^/origin/\/*
           substitution: /
+        upgradeConfigs:
+        - upgradeType: websocket
