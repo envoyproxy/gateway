@@ -83,6 +83,11 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 				}
 			} else {
 				// Manage the proxy infra.
+				if len(val.Proxy.Listeners) == 0 {
+					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					return
+				}
+
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to create new infra")
 					errChan <- err
