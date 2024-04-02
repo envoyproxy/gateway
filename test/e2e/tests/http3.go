@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	retryv1 "github.com/avast/retry-go"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/quic-go/quic-go/qlog"
@@ -43,7 +42,7 @@ var HTTP3Test = suite.ConformanceTest{
 	Manifests:   []string{"testdata/http3.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Send http3 request", func(t *testing.T) {
-			namespace := "gateway-conformance-https"
+			namespace := "gateway-conformance-http3"
 			routeNN := types.NamespacedName{Name: "http3-route", Namespace: namespace}
 			gwNN := types.NamespacedName{Name: "http3-gateway", Namespace: namespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
@@ -66,7 +65,7 @@ var HTTP3Test = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expectedResponse, server, "HTTPS", "https")
 			req.CertPem = []byte("-----BEGIN CERTIFICATE-----\nMIIDOzCCAiOgAwIBAgIUZTLKDkhVrxfgt9megu5uiSRwRxswDQYJKoZIhvcNAQEL\nBQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv\nbTAeFw0yNDAzMDIxNDU3MTJaFw0yNTAzMDIxNDU3MTJaMC0xFTATBgNVBAoMDGV4\nYW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQDJBSwf0XJkglooQbzQ6Io/M7gwmbhTjpQPX7P2/ZV6\ncdFsXBUF0X91wABtCtibv+x4if+yvPhHzBERzhjwwQitKZiewhOFoSz5ZyKT8HXd\n+Y06iRzWEnGi2i/98YiBFsG1xc5mHTLgyi6PjJDzGVdsNrL7pE8aM3R9sGrkG4PZ\n5ZWFlpbxX9eUz9dplLfLX7jKETbyKsiwcHihXAY4mdpuaUVifz35tSpnQ3P/RoNw\nNl7/gvRKqSK1a5ByYqVANV/c+O1R9MaR8kG9Cmj2PZPZm4vW/bJIs2R7z6ygGiDx\n4GyMT4MA52pk/dDkV2EtvFk5JFXoMjNPcNRGjuusRe17AgMBAAGjUzBRMB0GA1Ud\nDgQWBBQXeg9HF7TIRHUWOsF5dd0m68zbxTAfBgNVHSMEGDAWgBQXeg9HF7TIRHUW\nOsF5dd0m68zbxTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCS\nO7hTBUp3MjsOBGXmuuDPatz0eR05Dq4O6Etsn9KVRND0o8iULqYGPMsozkueRc0y\n/Ra1aTbNXm0n5gwNBgJeSOIOfLN0r0L5uBFSMjTPAo6qPkDzK5gXHfzpoxgDYCEy\nSuzYOIHliWoG6K2ldfMx7psMe3ZiR9SA5evOv3VKJDrrhO57niRmDhZKsADWDUFH\nyyximSiPKjFJLJ+7B4N+7TAmxDjMd2vre7qfRL/AFTc7zIkQBG+JoXbusOw1yGcm\n8IV50ZroyupxND625FgawISPYUelwS39x4jA7QNH0Tzgzp+Ao0N8Ck9H4waNcJt8\njk27Qn0mC7RsIqb981eH\n-----END CERTIFICATE-----")
 			req.Server = server
-			cReq, cResp, err := http3CaptureRoundTrip(req, gwAddr)
+			cReq, cResp, err := http3CaptureRoundTrip(t, req, gwAddr)
 			if err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
@@ -78,12 +77,12 @@ var HTTP3Test = suite.ConformanceTest{
 	},
 }
 
-func http3CaptureRoundTrip(request roundtripper.Request, gwAddr string) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+func http3CaptureRoundTrip(t *testing.T, request roundtripper.Request, gwAddr string) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	transport, err := http3Transport(request, gwAddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	return http3DefaultRoundTrip(request, transport)
+	return http3DefaultRoundTrip(t, request, transport)
 }
 
 func http3Transport(request roundtripper.Request, gwAddr string) (*http3.RoundTripper, error) {
@@ -129,7 +128,7 @@ func http3TlsClientConfig(server string, certPem []byte) (*tls.Config, error) {
 	}, nil
 }
 
-func http3DefaultRoundTrip(request roundtripper.Request, transport *http3.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+func http3DefaultRoundTrip(t *testing.T, request roundtripper.Request, transport *http3.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	client := &httpv1.Client{}
 
 	if request.UnfollowRedirect {
@@ -170,15 +169,14 @@ func http3DefaultRoundTrip(request roundtripper.Request, transport *http3.RoundT
 	fmt.Printf("Sending Request:\n%s\n\n", formatDump(dumpReq, "<? "))
 
 	var resp *httpv1.Response
-	err = retryv1.Do(
-		func() error {
-			resp, err = client.Do(req)
-			return err
-		},
-		retryv1.Delay(time.Second*5),
-		retryv1.Attempts(3),
-		retryv1.DelayType(retryv1.FixedDelay),
-	)
+	http.AwaitConvergence(t, 3, time.Second*5, func(elapsed time.Duration) bool {
+		resp, err = client.Do(req)
+		if err != nil {
+			t.Logf("Request failed, not read yet: %v (after %v)", err.Error(), elapsed)
+			return false
+		}
+		return true
+	})
 	if err != nil {
 		return nil, nil, err
 	}

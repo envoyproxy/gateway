@@ -731,7 +731,7 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: gateway-conformance-https
+  name: gateway-conformance-http3
   labels:
     gateway-conformance: http3
 ---
@@ -739,7 +739,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: http3-secret
-  namespace: gateway-conformance-https
+  namespace: gateway-conformance-http3
 type: kubernetes.io/tls
 data:
   tls.crt: |
@@ -800,7 +800,7 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: http3-gateway
-  namespace: gateway-conformance-https
+  namespace: gateway-conformance-http3
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
@@ -812,7 +812,7 @@ spec:
       certificateRefs:
       - kind: Secret
         name: http3-secret
-        namespace: gateway-conformance-https
+        namespace: gateway-conformance-http3
   - name: http
     protocol: HTTP
     port: 80
@@ -821,13 +821,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: http3-backend
-  namespace: gateway-conformance-https
+  namespace: gateway-conformance-http3
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: http3-backend
-  namespace: gateway-conformance-https
+  namespace: gateway-conformance-http3
   labels:
     service: http3-backend
     app: http3-backend
@@ -843,7 +843,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: http3-backend
-  namespace: gateway-conformance-https
+  namespace: gateway-conformance-http3
 spec:
   replicas: 1
   selector:
@@ -872,3 +872,38 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-http3
+  namespace: gateway-conformance-http3
+spec:
+  http3: {}
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: http3-gateway
+    namespace: gateway-conformance-http3
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http3-route
+  namespace: gateway-conformance-http3
+spec:
+  parentRefs:
+    - name: http3-gateway
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - kind: Service
+          name: http3-backend
+          port: 3000
+          group: ""
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
