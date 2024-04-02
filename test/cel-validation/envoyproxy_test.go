@@ -449,6 +449,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 													Name: "fake-service",
 													Port: ptr.To(gwapiv1.PortNumber(9000)),
 												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
 											},
 										},
 									},
