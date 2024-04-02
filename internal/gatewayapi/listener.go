@@ -25,7 +25,7 @@ type ListenersTranslator interface {
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 	// Infra IR proxy ports must be unique.
-	mergedGatewayPorts := make(map[string][]*protocolPort)
+	foundPorts := make(map[string][]*protocolPort)
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
@@ -121,9 +121,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
 			// (TCP or UDP).
-			if !containsPort(mergedGatewayPorts[irKey], servicePort) {
+			if !containsPort(foundPorts[irKey], servicePort) {
 				t.processInfraIRListener(listener, infraIR, irKey, servicePort)
-				mergedGatewayPorts[irKey] = append(mergedGatewayPorts[irKey], servicePort)
+				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
 		}
 	}
