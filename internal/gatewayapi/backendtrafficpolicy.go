@@ -350,6 +350,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.LoadBalancer = lb
 					r.ProxyProtocol = pp
 					r.HealthCheck = hc
+					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+					r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
 					r.TCPKeepalive = ka
@@ -459,7 +461,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.HealthCheck == nil {
 				r.HealthCheck = hc
+				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+				r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 			}
+
 			if r.CircuitBreaker == nil {
 				r.CircuitBreaker = cb
 			}
