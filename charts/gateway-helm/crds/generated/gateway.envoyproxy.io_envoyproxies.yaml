@@ -6003,8 +6003,7 @@ spec:
                                         type: string
                                       type:
                                         description: Type defines the type of accesslog.
-                                          Supported types are "HTTP" and "TCP". Defaults
-                                          to "HTTP" when not specified.
+                                          Supported types are "HTTP" and "TCP".
                                         enum:
                                         - HTTP
                                         - TCP

@@ -126,7 +126,7 @@ type ALSEnvoyProxyAccessLog struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	LogName *string `json:"logName,omitempty"`
-	// Type defines the type of accesslog. Supported types are "HTTP" and "TCP". Defaults to "HTTP" when not specified.
+	// Type defines the type of accesslog. Supported types are "HTTP" and "TCP".
 	// +kubebuilder:validation:Enum=HTTP;TCP
 	Type ALSEnvoyProxyAccessLogType `json:"type"`
 	// HTTP defines additional configuration specific to HTTP access logs.
@@ -137,13 +137,13 @@ type ALSEnvoyProxyAccessLog struct {
 type ALSEnvoyProxyHTTPAccessLogConfig struct {
 	// RequestHeaders defines request headers to include in log entries sent to the access log service.
 	// +optional
-	RequestHeaders []string `json:"requestHeaders,omitempty" yaml:"requestHeaders,omitempty"`
+	RequestHeaders []string `json:"requestHeaders,omitempty"`
 	// ResponseHeaders defines response headers to include in log entries sent to the access log service.
 	// +optional
-	ResponseHeaders []string `json:"responseHeaders,omitempty" yaml:"responseHeaders,omitempty"`
+	ResponseHeaders []string `json:"responseHeaders,omitempty"`
 	// ResponseTrailers defines response trailers to include in log entries sent to the access log service.
 	// +optional
-	ResponseTrailers []string `json:"responseTrailers,omitempty" yaml:"responseTrailers,omitempty"`
+	ResponseTrailers []string `json:"responseTrailers,omitempty"`
 }
 
 type FileEnvoyProxyAccessLog struct {

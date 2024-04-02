@@ -61,7 +61,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  true  | BackendRef references a Kubernetes object that represents the gRPC service to which<br />the access logs will be sent. Currently only Service is supported. |
 | `logName` | _string_ |  false  | LogName defines the friendly name of the access log to be returned in<br />StreamAccessLogsMessage.Identifier. This allows the access log server<br />to differentiate between different access logs coming from the same Envoy. |
-| `type` | _[ALSEnvoyProxyAccessLogType](#alsenvoyproxyaccesslogtype)_ |  true  | Type defines the type of accesslog. Supported types are "HTTP" and "TCP". Defaults to "HTTP" when not specified. |
+| `type` | _[ALSEnvoyProxyAccessLogType](#alsenvoyproxyaccesslogtype)_ |  true  | Type defines the type of accesslog. Supported types are "HTTP" and "TCP". |
 | `http` | _[ALSEnvoyProxyHTTPAccessLogConfig](#alsenvoyproxyhttpaccesslogconfig)_ |  false  | HTTP defines additional configuration specific to HTTP access logs. |
 
 
