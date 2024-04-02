@@ -174,6 +174,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
+		// Add all EnvoyProxies to the resourceTree
+		if err = r.processEnvoyProxies(ctx, managedGC, gwcResource, resourceMappings); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// Add all EnvoyPatchPolicies to the resourceTree
 		if err = r.processEnvoyPatchPolicies(ctx, gwcResource); err != nil {
 			return reconcile.Result{}, err
@@ -217,26 +222,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 
 			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
-		}
-
-		// Process the parametersRef of the accepted GatewayClass.
-		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
-			if err := r.processParamsRef(ctx, managedGC, gwcResource); err != nil {
-				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
-					r.log.Error(err, "unable to update GatewayClass status")
-				}
-				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
-				return reconcile.Result{}, err
-			}
-		}
-
-		if gwcResource.EnvoyProxy != nil && gwcResource.EnvoyProxy.Spec.MergeGateways != nil {
-			if *gwcResource.EnvoyProxy.Spec.MergeGateways {
-				r.mergeGateways.Insert(managedGC.Name)
-			} else {
-				r.mergeGateways.Delete(managedGC.Name)
-			}
 		}
 
 		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
@@ -774,6 +759,64 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	return nil
 }
 
+// processEnvoyProxies adds EnvoyProxies to the resourceTree
+func (r *gatewayAPIReconciler) processEnvoyProxies(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	// Process the parametersRef of the accepted GatewayClass.
+	if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+		if err := r.processParamsRef(ctx, managedGC, resourceTree); err != nil {
+			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+			if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
+				r.log.Error(err, "unable to update GatewayClass status")
+			}
+			r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
+			return err
+		}
+	}
+
+	if resourceTree.EnvoyProxy != nil && resourceTree.EnvoyProxy.Spec.MergeGateways != nil {
+		if *resourceTree.EnvoyProxy.Spec.MergeGateways {
+			r.mergeGateways.Insert(managedGC.Name)
+		} else {
+			r.mergeGateways.Delete(managedGC.Name)
+		}
+	}
+
+	// Add the referenced Resources in EnvoyProxies to the resourceTree
+	r.processEnvoyProxyObjectRefs(resourceTree, resourceMap)
+
+	return nil
+}
+
+// processEnvoyProxyObjectRefs adds the referenced resources in EnvoyProxies
+// to the resourceTree
+// - BackendRefs for AccessLog
+func (r *gatewayAPIReconciler) processEnvoyProxyObjectRefs(resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	if resourceTree.EnvoyProxy == nil {
+		return
+	}
+	envoyproxy := resourceTree.EnvoyProxy
+
+	if envoyproxy.Spec.Telemetry != nil && envoyproxy.Spec.Telemetry.AccessLog != nil {
+
+		// Add the referenced BackendRefs in AccessLog to Maps for later processing
+		accessLog := envoyproxy.Spec.Telemetry.AccessLog
+		for _, settings := range accessLog.Settings {
+			for _, sink := range settings.Sinks {
+				if sink.ALS != nil {
+					backendRef := sink.ALS.BackendRef
+					backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyproxy.Namespace)
+					resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+						Group:     backendRef.Group,
+						Kind:      backendRef.Kind,
+						Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+						Name:      backendRef.Name,
+					}] = struct{}{}
+				}
+			}
+		}
+	}
+}
+
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
 func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, resourceTree *gatewayapi.Resources) error {
 	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
@@ -924,6 +967,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		epPredicates...,
 	); err != nil {
+		return err
+	}
+	if err := addEnvoyProxyIndexers(ctx, mgr); err != nil {
 		return err
 	}
 

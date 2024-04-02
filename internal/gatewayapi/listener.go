@@ -8,7 +8,9 @@ package gatewayapi
 import (
 	"fmt"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -43,7 +45,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
 		}
 
-		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)
+		xdsIR[irKey].AccessLog = t.processAccessLog(infraIR[irKey].Proxy.Config, gateway.Gateway, resources)
 		xdsIR[irKey].Tracing = processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config)
 		xdsIR[irKey].Metrics = processMetrics(infraIR[irKey].Proxy.Config)
 
@@ -160,7 +162,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	}
 }
 
-func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
+func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, gw *gwapiv1.Gateway, resources *Resources) *ir.AccessLog {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
@@ -208,6 +210,52 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
+			case egv1a1.ProxyAccessLogSinkTypeALS:
+				if sink.ALS == nil {
+					continue
+				}
+
+				var logName string
+				if sink.ALS.LogName != nil {
+					logName = *sink.ALS.LogName
+				} else {
+					logName = fmt.Sprintf("accesslog/%s/%s", gw.Namespace, gw.Name)
+				}
+
+				clusterName := fmt.Sprintf("accesslog/%s/%s/port/%d",
+					NamespaceDerefOr(sink.ALS.BackendRef.Namespace, envoyproxy.Namespace),
+					string(sink.ALS.BackendRef.Name),
+					*sink.ALS.BackendRef.Port,
+				)
+
+				al := &ir.ALSAccessLog{
+					LogName: logName,
+					Destination: ir.RouteDestination{
+						Name: clusterName,
+						Settings: []*ir.DestinationSetting{
+							t.processServiceDestination(sink.ALS.BackendRef, ir.GRPC, envoyproxy, resources),
+						},
+					},
+					Type: sink.ALS.Type,
+				}
+
+				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP {
+					http := &ir.ALSAccessLogHTTP{
+						RequestHeaders:   sink.ALS.HTTP.RequestHeaders,
+						ResponseHeaders:  sink.ALS.HTTP.ResponseHeaders,
+						ResponseTrailers: sink.ALS.HTTP.ResponseTrailers,
+					}
+					al.HTTP = http
+				}
+
+				switch accessLog.Format.Type {
+				case egv1a1.ProxyAccessLogFormatTypeJSON:
+					al.Attributes = accessLog.Format.JSON
+				case egv1a1.ProxyAccessLogFormatTypeText:
+					al.Text = accessLog.Format.Text
+				}
+
+				irAccessLog.ALS = append(irAccessLog.ALS, al)
 			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
 				if sink.OpenTelemetry == nil {
 					continue
@@ -232,6 +280,47 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	}
 
 	return irAccessLog
+}
+
+func (t *Translator) processServiceDestination(backendRef gwapiv1.BackendObjectReference, protocol ir.AppProtocol, envoyproxy *egv1a1.EnvoyProxy, resources *Resources) *ir.DestinationSetting {
+	var (
+		endpoints   []*ir.DestinationEndpoint
+		addrType    *ir.DestinationAddressType
+		servicePort v1.ServicePort
+		backendTLS  *ir.TLSUpstreamConfig
+	)
+
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, envoyproxy.Namespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	if servicePort.AppProtocol != nil &&
+		*servicePort.AppProtocol == "kubernetes.io/h2c" {
+		protocol = ir.HTTP2
+	}
+
+	// Route to endpoints by default
+	if !t.EndpointRoutingDisabled {
+		endpointSlices := resources.GetEndpointSlicesForBackend(serviceNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port))
+		endpoints = append(endpoints, ep)
+	}
+
+	return &ir.DestinationSetting{
+		Weight:      ptr.To(uint32(1)),
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+		TLS:         backendTLS,
+	}
 }
 
 func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {

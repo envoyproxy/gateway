@@ -103,13 +103,33 @@ infraIR:
             accessLog:
               settings:
               - format:
-                  text: |
-                    [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-                  type: Text
+                  json:
+                    attr1: val1
+                    attr2: val2
+                  type: JSON
                 sinks:
-                - type: File
-                - type: ALS
-                - type: OpenTelemetry
+                - als:
+                    backendRef:
+                      name: envoy-als
+                      namespace: monitoring
+                      port: 9000
+                    http:
+                      requestHeaders:
+                      - x-client-ip-address
+                      responseHeaders:
+                      - cache-control
+                      responseTrailers:
+                      - expires
+                    logName: accesslog
+                    type: HTTP
+                  type: ALS
+                - als:
+                    backendRef:
+                      name: envoy-als
+                      namespace: monitoring
+                      port: 9000
+                    type: TCP
+                  type: ALS
         status: {}
       listeners:
       - address: null
@@ -126,7 +146,43 @@ infraIR:
       name: envoy-gateway/gateway-1
 xdsIR:
   envoy-gateway/gateway-1:
-    accessLog: {}
+    accessLog:
+      als:
+      - attributes:
+          attr1: val1
+          attr2: val2
+        destination:
+          name: accesslog/monitoring/envoy-als/port/9000
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+            weight: 1
+        http:
+          requestHeaders:
+          - x-client-ip-address
+          responseHeaders:
+          - cache-control
+          responseTrailers:
+          - expires
+        name: accesslog
+        type: HTTP
+      - attributes:
+          attr1: val1
+          attr2: val2
+        destination:
+          name: accesslog/monitoring/envoy-als/port/9000
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+            weight: 1
+        name: accesslog/envoy-gateway/gateway-1
+        type: TCP
     http:
     - address: 0.0.0.0
       hostnames:

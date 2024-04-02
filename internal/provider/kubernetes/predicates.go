@@ -247,11 +247,29 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	nsName := utils.NamespacedName(svc)
-	if r.isRouteReferencingBackend(&nsName) {
+
+	switch {
+	case r.isRouteReferencingBackend(&nsName):
+		return true
+	case r.isEnvoyProxyReferencingBackend(&nsName):
+		return true
+	case r.isSecurityPolicyReferencingBackend(&nsName):
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	return false
+}
+
+func (r *gatewayAPIReconciler) isEnvoyProxyReferencingBackend(nsName *types.NamespacedName) bool {
+	epList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), epList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendEnvoyProxyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyProxy")
+		return false
+	}
+
+	return len(epList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
@@ -335,7 +353,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 }
 
 // validateEndpointSliceForReconcile returns true if the endpointSlice references
-// a service that is referenced by a xRoute
+// a service that is referenced by an xRoute, EnvoyProxy, or SecurityPolicy.
 func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Object) bool {
 	ep, ok := obj.(*discoveryv1.EndpointSlice)
 	if !ok {
@@ -359,11 +377,16 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		nsName.Name = multiClusterSvcName
 	}
 
-	if r.isRouteReferencingBackend(&nsName) {
+	switch {
+	case r.isRouteReferencingBackend(&nsName):
+		return true
+	case r.isEnvoyProxyReferencingBackend(&nsName):
+		return true
+	case r.isSecurityPolicyReferencingBackend(&nsName):
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	return false
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment

@@ -6,8 +6,10 @@
 package translator
 
 import (
+	"encoding/json"
 	"errors"
 	"sort"
+	"strings"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	cfgcore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -21,6 +23,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"k8s.io/utils/ptr"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -132,6 +135,74 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			},
 		})
 	}
+	// handle ALS access logs
+	for _, als := range al.ALS {
+		cc := &grpcaccesslog.CommonGrpcAccessLogConfig{
+			LogName: als.LogName,
+			GrpcService: &cfgcore.GrpcService{
+				TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &cfgcore.GrpcService_EnvoyGrpc{
+						ClusterName: als.Destination.Name,
+					},
+				},
+			},
+			TransportApiVersion: cfgcore.ApiVersion_V3,
+		}
+
+		// include text and json format as metadata when initiating stream
+		md := make([]*cfgcore.HeaderValue, 0, 2)
+
+		if als.Text != nil && *als.Text != "" {
+			md = append(md, &cfgcore.HeaderValue{
+				Key:   "x-accesslog-text",
+				Value: strings.ReplaceAll(strings.Trim(*als.Text, "\x00\n\r"), "\x00\n\r", " "),
+			})
+		}
+
+		if len(als.Attributes) > 0 {
+			if attr, err := json.Marshal(als.Attributes); err == nil {
+				md = append(md, &cfgcore.HeaderValue{
+					Key:   "x-accesslog-attr",
+					Value: string(attr),
+				})
+			}
+		}
+
+		cc.GrpcService.InitialMetadata = md
+
+		switch als.Type {
+		case v1alpha1.ALSEnvoyProxyAccessLogTypeHTTP:
+			al := &grpcaccesslog.HttpGrpcAccessLogConfig{
+				CommonConfig: cc,
+			}
+
+			if als.HTTP != nil {
+				al.AdditionalRequestHeadersToLog = als.HTTP.RequestHeaders
+				al.AdditionalResponseHeadersToLog = als.HTTP.ResponseHeaders
+				al.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
+			}
+
+			accesslogAny, _ := anypb.New(al)
+			accessLogs = append(accessLogs, &accesslog.AccessLog{
+				Name: "envoy.access_loggers.http_grpc",
+				ConfigType: &accesslog.AccessLog_TypedConfig{
+					TypedConfig: accesslogAny,
+				},
+			})
+		case v1alpha1.ALSEnvoyProxyAccessLogTypeTCP:
+			al := &grpcaccesslog.TcpGrpcAccessLogConfig{
+				CommonConfig: cc,
+			}
+
+			accesslogAny, _ := anypb.New(al)
+			accessLogs = append(accessLogs, &accesslog.AccessLog{
+				Name: "envoy.access_loggers.tcp_grpc",
+				ConfigType: &accesslog.AccessLog_TypedConfig{
+					TypedConfig: accesslogAny,
+				},
+			})
+		}
+	}
 	// handle open telemetry access logs
 	for _, otel := range al.OpenTelemetry {
 		al := &otelaccesslog.OpenTelemetryAccessLogConfig{
@@ -238,6 +309,19 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 		return nil
 	}
 
+	// add clusters for ALS access logs
+	for _, als := range al.ALS {
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
+			name:         als.Destination.Name,
+			settings:     als.Destination.Settings,
+			tSocket:      nil,
+			endpointType: EndpointTypeStatic,
+		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			return err
+		}
+	}
+
+	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
 		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
 
