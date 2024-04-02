@@ -1,7 +1,7 @@
 {
   "Resource": [
     {
-      "Key": "metric-type",
+      "Key": "metric.type",
       "Value": {
         "Type": "STRING",
         "Value": "Gauge"
@@ -40,7 +40,7 @@
                   }
                 ],
                 "StartTime": "0001-01-01T00:00:00Z",
-                "Time": "2024-03-27T21:54:18.8562259+08:00",
+                "Time": "0001-01-01T00:00:00Z",
                 "Value": 2
               }
             ]
