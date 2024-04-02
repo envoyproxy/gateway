@@ -119,7 +119,7 @@ const (
 type ALSEnvoyProxyAccessLog struct {
 	// BackendRef references a Kubernetes object that represents the gRPC service to which
 	// the access logs will be sent. Currently only Service is supported.
-	BackendRef gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
+	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
 	// LogName defines the friendly name of the access log to be returned in
 	// StreamAccessLogsMessage.Identifier. This allows the access log server
 	// to differentiate between different access logs coming from the same Envoy.
@@ -128,8 +128,7 @@ type ALSEnvoyProxyAccessLog struct {
 	LogName *string `json:"logName,omitempty"`
 	// Type defines the type of accesslog. Supported types are "HTTP" and "TCP". Defaults to "HTTP" when not specified.
 	// +kubebuilder:validation:Enum=HTTP;TCP
-	// +unionDiscriminator
-	Type ALSEnvoyProxyAccessLogType `json:"type,omitempty"`
+	Type ALSEnvoyProxyAccessLogType `json:"type"`
 	// HTTP defines additional configuration specific to HTTP access logs.
 	// +optional
 	HTTP *ALSEnvoyProxyHTTPAccessLogConfig `json:"http,omitempty"`

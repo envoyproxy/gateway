@@ -6009,6 +6009,9 @@ spec:
                                         - HTTP
                                         - TCP
                                         type: string
+                                    required:
+                                    - backendRef
+                                    - type
                                     type: object
                                     x-kubernetes-validations:
                                     - message: BackendRef only supports Service Kind.
