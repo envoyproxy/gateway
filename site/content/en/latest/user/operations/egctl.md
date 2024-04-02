@@ -860,3 +860,48 @@ http://localhost:19000
 ```
 
 the Envoy admin dashboard will automatically open in your default web browser. This eliminates the need to manually locate and expose the admin port.
+
+
+## egctl experimental install
+
+This subcommand can be used to install envoy-gateway.
+
+```bash
+egctl x install
+```
+
+By default, this will install both the envoy-gateway workload resource and the required gateway-api and envoy-gatewayCRDs.
+
+We can specify to install only workload resources via `--skip-crds`
+
+```bash
+egctl x install --skip-crds
+```
+
+We can specify to install only CRDs resources via `--only-crds`
+
+```bash
+egctl x install --only-crds
+```
+
+We can specify `--release-name` and `--namespace` to install envoy-gateway in different places to support multi-tenant mode.
+> Note: If CRDs are already installed, then we need to specify `--skip-crds` to avoid repeated installation of CRDs resources.
+
+```bash
+egctl x install --release-name shop-backend --namespace shop
+```
+
+
+## egctl experimental uninstall
+
+This subcommand can be used to uninstall envoy-gateway.
+
+```bash
+egctl x uninstall
+```
+
+By default, this will only uninstall the envoy-gateway workload resource, if we want to also uninstall CRDs, we need to specify `--with-crds`
+
+```bash
+egctl x uninstall --with-crds
+```

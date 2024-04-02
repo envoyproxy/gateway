@@ -1,0 +1,347 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mfqjpuycbgjrtdww
+      namespace: default
+    timeout:
+      http:
+        requestReceivedTimeout: 5s
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: mfqjpuycbgjrtdww
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: ClientTrafficPolicy is being applied to multiple http (non https)
+          listeners (default/gateway-1/http) on the same port, which is not allowed
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: '*.192.168.0.15.nip.io'
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: mfqjpuycbgjrtdww
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - hostname: qccbahgo.qccbahgo
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: bdkzlmibsivuiqav
+    namespace: default
+  spec:
+    hostnames:
+    - ntjxuedx.192.168.0.15.nip.io
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: mfqjpuycbgjrtdww
+    namespace: default
+  spec:
+    hostnames:
+    - qccbahgo.qccbahgo
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mfqjpuycbgjrtdww
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: mfqjpuycbgjrtdww
+        namespace: default
+        sectionName: http
+infraIR:
+  envoy-gateway-class:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeGateways: true
+        status: {}
+      listeners:
+      - address: null
+        name: default/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: default/gateway-1/http
+          protocol: HTTP
+          servicePort: 80
+      - address: null
+        name: default/mfqjpuycbgjrtdww/http
+        ports:
+        - containerPort: 10080
+          name: default/mfqjpuycbgjrtdww/http
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+      name: envoy-gateway-class
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: cors-example
+    namespace: default
+  spec:
+    cors:
+      allowCredentials: true
+      allowMethods:
+      - PUT
+      - GET
+      - POST
+      - DELETE
+      - PATCH
+      - OPTIONS
+      allowOrigins:
+      - http://*.foo.com
+      maxAge: 10m0s
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mfqjpuycbgjrtdww
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: mfqjpuycbgjrtdww
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+xdsIR:
+  envoy-gateway-class:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*.192.168.0.15.nip.io'
+      isHTTP2: false
+      name: default/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/default/bdkzlmibsivuiqav/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: ntjxuedx.192.168.0.15.nip.io
+        isHTTP2: false
+        name: httproute/default/bdkzlmibsivuiqav/rule/0/match/0/ntjxuedx_192_168_0_15_nip_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+    - address: 0.0.0.0
+      hostnames:
+      - qccbahgo.qccbahgo
+      isHTTP2: false
+      name: default/mfqjpuycbgjrtdww/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        cors:
+          allowCredentials: true
+          allowMethods:
+          - PUT
+          - GET
+          - POST
+          - DELETE
+          - PATCH
+          - OPTIONS
+          allowOrigins:
+          - distinct: false
+            name: ""
+            safeRegex: http://.*\.foo\.com
+          maxAge: 10m0s
+        destination:
+          name: httproute/default/mfqjpuycbgjrtdww/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: qccbahgo.qccbahgo
+        isHTTP2: false
+        name: httproute/default/mfqjpuycbgjrtdww/rule/0/match/0/qccbahgo_qccbahgo
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /

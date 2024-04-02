@@ -15,7 +15,7 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.oauth2_first-route
+          name: envoy.filters.http.oauth2/securitypolicy/default/policy-for-first-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
@@ -34,12 +34,12 @@
                   oauthHmac: OauthHMAC-5F93C2E4
                   refreshToken: RefreshToken-5F93C2E4
                 hmacSecret:
-                  name: first-route/oauth2/hmac_secret
+                  name: oauth2/hmac_secret/securitypolicy/default/policy-for-first-route
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
                 tokenSecret:
-                  name: first-route/oauth2/client_secret
+                  name: oauth2/client_secret/securitypolicy/default/policy-for-first-route
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
@@ -48,6 +48,8 @@
                 path:
                   exact: /foo/oauth2/callback
               redirectUri: https://www.example.com/foo/oauth2/callback
+              resources:
+              - api
               signoutPath:
                 path:
                   exact: /foo/logout
@@ -56,7 +58,7 @@
                 timeout: 10s
                 uri: https://oauth.foo.com/token
         - disabled: true
-          name: envoy.filters.http.oauth2_second-route
+          name: envoy.filters.http.oauth2/securitypolicy/default/policy-for-second-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
             config:
@@ -75,12 +77,12 @@
                   oauthHmac: OauthHMAC-5f93c2e4
                   refreshToken: RefreshToken-5f93c2e4
                 hmacSecret:
-                  name: second-route/oauth2/hmac_secret
+                  name: oauth2/hmac_secret/securitypolicy/default/policy-for-second-route
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
                 tokenSecret:
-                  name: second-route/oauth2/client_secret
+                  name: oauth2/client_secret/securitypolicy/default/policy-for-second-route
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
@@ -89,6 +91,8 @@
                 path:
                   exact: /bar/oauth2/callback
               redirectUri: https://www.example.com/bar/oauth2/callback
+              resources:
+              - api
               signoutPath:
                 path:
                   exact: /bar/logout

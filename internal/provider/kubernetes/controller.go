@@ -785,7 +785,7 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 
 		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 	}
@@ -804,7 +804,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
 	}
 
@@ -824,7 +824,7 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.BackendTrafficPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
 	}
 	return nil
@@ -842,7 +842,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.SecurityPolicyStatus{}
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
 	}
 
@@ -866,7 +866,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		policy := policy
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		policy.Status = gwapiv1a2.PolicyStatus{} // todo ?
+		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
 	}
 

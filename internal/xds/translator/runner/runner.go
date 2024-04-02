@@ -7,6 +7,7 @@ package runner
 
 import (
 	"context"
+	"reflect"
 
 	ktypes "k8s.io/apimachinery/pkg/types"
 
@@ -104,7 +105,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						Name:      e.Name,
 						Namespace: e.Namespace,
 					}
-					r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					// Skip updating status for policies with empty status
+					// They may have been skipped in this translation because
+					// their target is not found (not relevant)
+					if !(reflect.ValueOf(e.Status).IsZero()) {
+						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					}
 					delete(statusesToDelete, key)
 				}
 				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint

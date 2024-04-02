@@ -31,10 +31,9 @@ type ClientTrafficPolicy struct {
 	Spec ClientTrafficPolicySpec `json:"spec"`
 
 	// Status defines the current status of ClientTrafficPolicy.
-	Status ClientTrafficPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="has(self.http3) && has(self.tls) && has(self.tls.alpnProtocols) ? self.tls.alpnProtocols.size() == 0 : true",message="alpn protocols can't be set if HTTP/3 is enabled"
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -88,6 +87,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Timeout *ClientTimeout `json:"timeout,omitempty"`
+	// Connection includes client connection settings.
+	//
+	// +optional
+	Connection *Connection `json:"connection,omitempty"`
 }
 
 // HeaderSettings providess configuration options for headers on the listener.
@@ -96,7 +99,29 @@ type HeaderSettings struct {
 	// and responses.
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
+
+	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+	// is encountered. The default action is to reject the request.
+	// +optional
+	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
 }
+
+// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+// is encountered.
+// +kubebuilder:validation:Enum=Allow;RejectRequest;DropHeader
+type WithUnderscoresAction string
+
+const (
+	// WithUnderscoresActionAllow allows headers with underscores to be passed through.
+	WithUnderscoresActionAllow WithUnderscoresAction = "Allow"
+	// WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with
+	// the 400 status. HTTP/2 requests end with the stream reset.
+	WithUnderscoresActionRejectRequest WithUnderscoresAction = "RejectRequest"
+	// WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header
+	// is dropped before the filter chain is invoked and as such filters will not see
+	// dropped headers.
+	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
+)
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
@@ -173,17 +198,6 @@ type HTTP10Settings struct {
 	// it will be rejected.
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
-}
-
-// ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy
-type ClientTrafficPolicyStatus struct {
-	// Conditions describe the current conditions of the ClientTrafficPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 const (

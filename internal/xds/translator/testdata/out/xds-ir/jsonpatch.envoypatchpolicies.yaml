@@ -1,9 +1,16 @@
 - name: first-policy
   namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: successfully applied patches.
-      reason: Programmed
-      status: "True"
-      type: Programmed
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: foobar
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Patches have been successfully applied.
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      controllerName: ""

@@ -1,0 +1,525 @@
+---
+# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: envoy-gateway
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: gateway-helm/templates/envoy-gateway-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    logging:
+      level:
+        default: info
+    provider:
+      type: Kubernetes
+---
+# Source: gateway-helm/templates/envoy-gateway-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: eg-gateway-helm-envoy-gateway-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses/status
+  verbs:
+  - update
+- apiGroups:
+  - multicluster.x-k8s.io
+  resources:
+  - serviceimports
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.envoyproxy.io
+  resources:
+  - envoyproxies
+  - envoypatchpolicies
+  - clienttrafficpolicies
+  - backendtrafficpolicies
+  - securitypolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.envoyproxy.io
+  resources:
+  - envoypatchpolicies/status
+  - clienttrafficpolicies/status
+  - backendtrafficpolicies/status
+  - securitypolicies/status
+  verbs:
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways
+  - grpcroutes
+  - httproutes
+  - referencegrants
+  - tcproutes
+  - tlsroutes
+  - udproutes
+  - backendtlspolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways/status
+  - grpcroutes/status
+  - httproutes/status
+  - tcproutes/status
+  - tlsroutes/status
+  - udproutes/status
+  - backendtlspolicies/status
+  verbs:
+  - update
+---
+# Source: gateway-helm/templates/envoy-gateway-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eg-gateway-helm-envoy-gateway-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: eg-gateway-helm-envoy-gateway-role
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: 'envoy-gateway-system'
+---
+# Source: gateway-helm/templates/infra-manager-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: eg-gateway-helm-infra-manager
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - get
+  - delete
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - get
+  - delete
+  - patch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - delete
+  - patch
+---
+# Source: gateway-helm/templates/leader-election-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: eg-gateway-helm-leader-election-role
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+# Source: gateway-helm/templates/infra-manager-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eg-gateway-helm-infra-manager
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: 'eg-gateway-helm-infra-manager'
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: 'envoy-gateway-system'
+---
+# Source: gateway-helm/templates/leader-election-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eg-gateway-helm-leader-election-rolebinding
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: 'eg-gateway-helm-leader-election-role'
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: 'envoy-gateway-system'
+---
+# Source: gateway-helm/templates/envoy-gateway-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-gateway
+  namespace: 'envoy-gateway-system'
+  labels:
+    control-plane: envoy-gateway
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    control-plane: envoy-gateway
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+  ports:
+  - name: grpc
+    port: 18000
+    targetPort: 18000
+  - name: ratelimit
+    port: 18001
+    targetPort: 18001
+  - name: metrics
+    port: 19001
+    targetPort: 19001
+---
+# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-gateway
+  namespace: 'envoy-gateway-system'
+  labels:
+    control-plane: envoy-gateway
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+      app.kubernetes.io/name: gateway-helm
+      app.kubernetes.io/instance: eg
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "19001"
+        prometheus.io/scrape: "true"
+      labels:
+        control-plane: envoy-gateway
+        app.kubernetes.io/name: gateway-helm
+        app.kubernetes.io/instance: eg
+    spec:
+      containers:
+      - args:
+        - server
+        - --config-path=/config/envoy-gateway.yaml
+        env:
+        - name: ENVOY_GATEWAY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: cluster.local
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: envoy-gateway
+        ports:
+        - containerPort: 18000
+          name: grpc
+        - containerPort: 18001
+          name: ratelimit
+        - containerPort: 19001
+          name: metrics
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /config
+          name: envoy-gateway-config
+          readOnly: true
+        - mountPath: /certs
+          name: certs
+          readOnly: true
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: envoy-gateway
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: envoy-gateway-config
+        name: envoy-gateway-config
+      - name: certs
+        secret:
+          secretName: envoy-gateway
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eg-gateway-helm-certgen
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: eg-gateway-helm-certgen
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - update
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eg-gateway-helm-certgen
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: 'eg-gateway-helm-certgen'
+subjects:
+- kind: ServiceAccount
+  name: 'eg-gateway-helm-certgen'
+  namespace: 'envoy-gateway-system'
+---
+# Source: gateway-helm/templates/certgen.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: eg-gateway-helm-certgen
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: eg
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+spec:
+  backoffLimit: 1
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: certgen
+    spec:
+      containers:
+      - command:
+        - envoy-gateway
+        - certgen
+        env:
+        - name: ENVOY_GATEWAY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: cluster.local
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
+        name: envoy-gateway-certgen
+      restartPolicy: Never
+      securityContext:
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccountName: eg-gateway-helm-certgen
+  ttlSecondsAfterFinished: 0
