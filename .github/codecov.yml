@@ -10,3 +10,7 @@ coverage:
         target: 60%
         threshold: 5%
         if_ci_failed: error
+ignore:
+  - "cmd"
+  - "**/*.pb.go"
+  - "**/zz_generated.deepcopy.go"

@@ -333,6 +333,7 @@ xdsIR:
             expectedStatuses:
             - 200
             - 300
+            host: ""
             method: GET
             path: /healthz
           interval: 3s
