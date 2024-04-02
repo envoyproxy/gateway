@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 type ProxyAccessLog struct {
 	// Disable disables access logging for managed proxies if set to true.
 	Disable bool `json:"disable,omitempty"`
@@ -92,16 +94,26 @@ type FileEnvoyProxyAccessLog struct {
 	Path string `json:"path,omitempty"`
 }
 
-// TODO: consider reuse ExtensionService?
+// OpenTelemetryEnvoyProxyAccessLog defines the OpenTelemetry access log sink.
+//
+// +kubebuilder:validation:XValidation:message="BackendRef only support Service Kind.",rule="!has(self.backendRef) || !has(self.backendRef.kind) || self.backendRef.kind == 'Service'"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	// Host define the extension service hostname.
+	// Deprecated: Use BackendRef instead.
 	Host string `json:"host"`
 	// Port defines the port the extension service is exposed on.
+	// Deprecated: Use BackendRef instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// BackendRef references a Kubernetes object that represents the
+	// backend server to which the accesslog will be sent.
+	// Only service Kind is supported for now.
+	//
+	// +optional
+	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional
