@@ -7,10 +7,10 @@ package v1alpha1
 
 import (
 	"fmt"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
@@ -95,9 +95,9 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{
-		RenewDeadline: ptr.To(time.Second * 10),
-		RetryPeriod:   ptr.To(time.Second * 2),
-		LeaseDuration: ptr.To(time.Second * 15),
+		RenewDeadline: ptr.To(gwapiv1.Duration("10s")),
+		RetryPeriod:   ptr.To(gwapiv1.Duration("2s")),
+		LeaseDuration: ptr.To(gwapiv1.Duration("15s")),
 		Disable:       ptr.To(false),
 	}
 }
@@ -165,6 +165,9 @@ func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
 func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return &EnvoyGatewayProvider{
 		Type: ProviderTypeKubernetes,
+		Kubernetes: &EnvoyGatewayKubernetesProvider{
+			LeaderElection: DefaultLeaderElection(),
+		},
 	}
 }
 
@@ -216,6 +219,10 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 			r.Kubernetes.LeaderElection = DefaultLeaderElection()
 		}
 		return r.Kubernetes
+	}
+
+	if r.Kubernetes.LeaderElection == nil {
+		r.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {

@@ -335,7 +335,10 @@ func TestDecode(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							LeaderElection: &v1alpha1.LeaderElection{
-								Disable: ptr.To(true),
+								Disable:       ptr.To(true),
+								LeaseDuration: ptr.To(gwapiv1.Duration("1s")),
+								RenewDeadline: ptr.To(gwapiv1.Duration("2s")),
+								RetryPeriod:   ptr.To(gwapiv1.Duration("3s")),
 							},
 						},
 					},

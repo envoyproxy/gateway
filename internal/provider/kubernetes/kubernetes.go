@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
@@ -46,9 +47,29 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 
 	if !ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
-		mgrOpts.LeaseDuration = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration
-		mgrOpts.RetryPeriod = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod
-		mgrOpts.RenewDeadline = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline
+		if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {
+			ld, err := time.ParseDuration(string(*svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration))
+			if err != nil {
+				return nil, err
+			}
+			mgrOpts.LeaseDuration = ptr.To(ld)
+		}
+
+		if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
+			rp, err := time.ParseDuration(string(*svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod))
+			if err != nil {
+				return nil, err
+			}
+			mgrOpts.LeaseDuration = ptr.To(rp)
+		}
+
+		if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
+			rd, err := time.ParseDuration(string(*svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline))
+			if err != nil {
+				return nil, err
+			}
+			mgrOpts.LeaseDuration = ptr.To(rd)
+		}
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
 	}
 

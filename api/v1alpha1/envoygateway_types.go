@@ -6,8 +6,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -96,13 +94,13 @@ type EnvoyGatewaySpec struct {
 type LeaderElection struct {
 	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
 	// Default is 15 seconds.
-	LeaseDuration *time.Duration `json:"leaseDuration,omitempty"`
+	LeaseDuration *gwapiv1.Duration `json:"leaseDuration,omitempty"`
 	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.
 	// Default is 10 seconds.
-	RenewDeadline *time.Duration `json:"renewDeadline,omitempty"`
+	RenewDeadline *gwapiv1.Duration `json:"renewDeadline,omitempty"`
 	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.
 	// Default is 2 seconds.
-	RetryPeriod *time.Duration `json:"retryPeriod,omitempty"`
+	RetryPeriod *gwapiv1.Duration `json:"retryPeriod,omitempty"`
 	// Disable allows to disable leader election (enabled by default)
 	Disable *bool `json:"disable,omitempty"`
 }
