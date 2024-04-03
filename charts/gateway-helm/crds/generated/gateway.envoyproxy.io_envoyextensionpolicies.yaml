@@ -169,34 +169,26 @@ spec:
                       properties:
                         forwardingNamespaces:
                           description: metadata namespaces forwarded to external processor
-                          items:
-                            description: MetadataNamespaces defines metadata namespaces
-                              that can be used to forward or receive dynamic metadata
-                            properties:
-                              untyped:
-                                description: |-
-                                  Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service
-                                  as an opaque protobuf::Struct.
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          type: array
+                          properties:
+                            untyped:
+                              description: |-
+                                Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service
+                                as an opaque protobuf::Struct.
+                              items:
+                                type: string
+                              type: array
+                          type: object
                         receivingNamespaces:
                           description: metadata namespaces updatable by external processor
-                          items:
-                            description: MetadataNamespaces defines metadata namespaces
-                              that can be used to forward or receive dynamic metadata
-                            properties:
-                              untyped:
-                                description: |-
-                                  Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service
-                                  as an opaque protobuf::Struct.
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          type: array
+                          properties:
+                            untyped:
+                              description: |-
+                                Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service
+                                as an opaque protobuf::Struct.
+                              items:
+                                type: string
+                              type: array
+                          type: object
                       type: object
                     processingMode:
                       description: |-

@@ -83,12 +83,12 @@ type ExtProcMetadataOptions struct {
 	// metadata namespaces forwarded to external processor
 	//
 	// +optional
-	ForwardingNamespaces []MetadataNamespaces `json:"forwardingNamespaces,omitempty"`
+	ForwardingNamespaces MetadataNamespaces `json:"forwardingNamespaces,omitempty"`
 
 	// metadata namespaces updatable by external processor
 	//
 	// +optional
-	ReceivingNamespaces []MetadataNamespaces `json:"receivingNamespaces,omitempty"`
+	ReceivingNamespaces MetadataNamespaces `json:"receivingNamespaces,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.group) || self.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"

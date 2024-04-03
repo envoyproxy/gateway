@@ -1094,8 +1094,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `forwardingNamespaces` | _[MetadataNamespaces](#metadatanamespaces) array_ |  false  | metadata namespaces forwarded to external processor |
-| `receivingNamespaces` | _[MetadataNamespaces](#metadatanamespaces) array_ |  false  | metadata namespaces updatable by external processor |
+| `forwardingNamespaces` | _[MetadataNamespaces](#metadatanamespaces)_ |  false  | metadata namespaces forwarded to external processor |
+| `receivingNamespaces` | _[MetadataNamespaces](#metadatanamespaces)_ |  false  | metadata namespaces updatable by external processor |
 
 
 #### ExtProcProcessingMode
