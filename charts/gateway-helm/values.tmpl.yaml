@@ -4,7 +4,7 @@ deployment:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
     imagePullPolicy: Always
-    imagePullSecrets: [ ]
+    imagePullSecrets: []
     resources:
       limits:
         cpu: 500m
@@ -46,9 +46,9 @@ kubernetesClusterDomain: cluster.local
 
 certgen:
   job:
-    annotations: { }
-    resources: { }
+    annotations: {}
+    resources: {}
     ttlSecondsAfterFinished: 0
   rbac:
-    annotations: { }
-    labels: { }
+    annotations: {}
+    labels: {}

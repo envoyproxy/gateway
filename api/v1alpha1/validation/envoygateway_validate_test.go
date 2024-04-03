@@ -646,6 +646,7 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.NotNil(t, envoyGateway.Provider)
 
 	envoyGatewayProvider := envoyGateway.GetEnvoyGatewayProvider()
+	assert.Nil(t, envoyGatewayProvider.Kubernetes)
 	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
 
 	envoyGatewayProvider.Kubernetes = v1alpha1.DefaultEnvoyGatewayKubeProvider()

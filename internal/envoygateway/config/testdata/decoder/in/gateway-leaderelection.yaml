@@ -7,6 +7,3 @@ provider:
   kubernetes:
     leaderElection:
       disabled: true
-      retryPeriod: 1s
-      renewDeadline: 2s
-      leaseDuration: 3s

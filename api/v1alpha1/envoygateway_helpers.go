@@ -95,9 +95,9 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{
-		LeaseDuration: ptr.To(time.Second * 15),
 		RenewDeadline: ptr.To(time.Second * 10),
 		RetryPeriod:   ptr.To(time.Second * 2),
+		LeaseDuration: ptr.To(time.Second * 15),
 		Disabled:      ptr.To(false),
 	}
 }
