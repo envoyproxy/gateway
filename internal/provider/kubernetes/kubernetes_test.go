@@ -54,8 +54,6 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	// disable leader election for testenv, leader is not getting elected in this mode.
-	svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable = ptr.To(true)
 	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
@@ -1262,9 +1260,6 @@ func TestNamespacedProvider(t *testing.T) {
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
-	// disable leader election for testenv, leader is not getting elected in this mode.
-	svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable = ptr.To(true)
-
 	resources := new(message.ProviderResources)
 	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
@@ -1325,8 +1320,6 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
-	// disable leader election for testenv, leader is not getting elected in this mode.
-	svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable = ptr.To(true)
 	resources := new(message.ProviderResources)
 	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)

@@ -60,7 +60,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.LeaseDuration = ptr.To(rp)
+			mgrOpts.RetryPeriod = ptr.To(rp)
 		}
 
 		if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
@@ -68,7 +68,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.LeaseDuration = ptr.To(rd)
+			mgrOpts.RenewDeadline = ptr.To(rd)
 		}
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
 	}
