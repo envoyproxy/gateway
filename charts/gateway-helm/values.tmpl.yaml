@@ -36,9 +36,6 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
-      kubernetes:
-        leaderElection:
-          disabled: false
     logging:
       level:
         default: info
