@@ -24,11 +24,11 @@ deployment:
       targetPort: 19001
   replicas: 1
   pod:
-    affinity: { }
+    affinity: {}
     annotations:
       prometheus.io/scrape: 'true'
       prometheus.io/port: '19001'
-    labels: { }
+    labels: {}
 
 config:
   envoyGateway:
