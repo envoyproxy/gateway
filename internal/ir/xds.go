@@ -493,6 +493,8 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1834,4 +1836,18 @@ type ConnectionLimit struct {
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
+}
+
+// ExtProc holds the information associated with the ExtProc extensions.
+// +k8s:deepcopy-gen=true
+type ExtProc struct {
+	// Name is a unique name for an ExtProc configuration.
+	// The xds translator only generates one ExtProc filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
+	// Destination defines the destination for the gRPC External Processing service.
+	Destination RouteDestination `json:"destination"`
+
+	// Authority is the hostname:port of the HTTP External Processing service.
+	Authority string `json:"authority"`
 }
