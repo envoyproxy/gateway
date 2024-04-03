@@ -6,4 +6,4 @@ provider:
   type: Kubernetes
   kubernetes:
     leaderElection:
-      disabled: true
+      disable: true

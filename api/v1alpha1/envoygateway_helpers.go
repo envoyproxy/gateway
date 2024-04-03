@@ -98,7 +98,7 @@ func DefaultLeaderElection() *LeaderElection {
 		RenewDeadline: ptr.To(time.Second * 10),
 		RetryPeriod:   ptr.To(time.Second * 2),
 		LeaseDuration: ptr.To(time.Second * 15),
-		Disabled:      ptr.To(false),
+		Disable:       ptr.To(false),
 	}
 }
 

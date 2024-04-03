@@ -2507,8 +2507,8 @@ func (in *LeaderElection) DeepCopyInto(out *LeaderElection) {
 		*out = new(timex.Duration)
 		**out = **in
 	}
-	if in.Disabled != nil {
-		in, out := &in.Disabled, &out.Disabled
+	if in.Disable != nil {
+		in, out := &in.Disable, &out.Disable
 		*out = new(bool)
 		**out = **in
 	}

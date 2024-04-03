@@ -1687,7 +1687,7 @@ _Appears in:_
 | `leaseDuration` | _[Duration](#duration)_ |  true  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.<br />Default is 15 seconds. |
 | `renewDeadline` | _[Duration](#duration)_ |  true  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.<br />Default is 10 seconds. |
 | `retryPeriod` | _[Duration](#duration)_ |  true  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.<br />Default is 2 seconds. |
-| `disabled` | _boolean_ |  true  | Disabled allows to disable leader election (enabled by default) |
+| `disable` | _boolean_ |  true  | Disable allows to disable leader election (enabled by default) |
 
 
 #### LiteralCustomTag

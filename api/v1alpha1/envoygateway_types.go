@@ -103,8 +103,8 @@ type LeaderElection struct {
 	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.
 	// Default is 2 seconds.
 	RetryPeriod *time.Duration `json:"retryPeriod,omitempty"`
-	// Disabled allows to disable leader election (enabled by default)
-	Disabled *bool `json:"disabled,omitempty"`
+	// Disable allows to disable leader election (enabled by default)
+	Disable *bool `json:"disable,omitempty"`
 }
 
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.

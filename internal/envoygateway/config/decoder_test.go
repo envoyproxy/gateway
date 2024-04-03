@@ -335,7 +335,7 @@ func TestDecode(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							LeaderElection: &v1alpha1.LeaderElection{
-								Disabled: ptr.To(true),
+								Disable: ptr.To(true),
 							},
 						},
 					},
