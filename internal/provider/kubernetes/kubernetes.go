@@ -44,8 +44,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		LeaderElectionNamespace: svr.Namespace,
 	}
 
-	if svr.EnvoyGateway.Provider.Kubernetes != nil && svr.EnvoyGateway.Provider.Kubernetes.LeaderElection != nil ||
-		!ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disabled, false) {
+	if !ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disabled, false) {
 		mgrOpts.LeaderElection = true
 		mgrOpts.LeaseDuration = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration
 		mgrOpts.RetryPeriod = svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod

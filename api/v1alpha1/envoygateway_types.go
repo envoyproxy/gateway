@@ -101,7 +101,7 @@ type LeaderElection struct {
 	// Default is 10 seconds.
 	RenewDeadline *time.Duration `json:"renewDeadline,omitempty"`
 	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.
-	// Default is 15 seconds.
+	// Default is 2 seconds.
 	RetryPeriod *time.Duration `json:"retryPeriod,omitempty"`
 	// Disabled allows to disable leader election (enabled by default)
 	Disabled *bool `json:"disabled,omitempty"`

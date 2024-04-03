@@ -8,5 +8,5 @@ provider:
     leaderElection:
       disabled: true
       retryPeriod: 1s
-      RenewDeadline: 2s
-      LeaseDuration: 3s
+      renewDeadline: 2s
+      leaseDuration: 3s
