@@ -199,6 +199,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
+		// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
+		if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// Add the referenced services, ServiceImports, and EndpointSlices in
 		// the collected BackendRefs to the resourceTree.
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
@@ -1243,6 +1248,24 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// Watch EnvoyExtensionPolicy
+	eepPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
+	if r.namespaceLabel != nil {
+		eepPredicates = append(eepPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	// Watch EnvoyExtensionPolicy CRUDs
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.EnvoyExtensionPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		eepPredicates...,
+	); err != nil {
+		return err
+	}
+	if err := addEnvoyExtensionPolicyIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
@@ -1404,6 +1427,81 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyConfigMapRefs(ctx context.
 							"failed to process CACertificateRef for BackendTLSPolicy",
 							"policy", policy, "caCertificateRef", caCertRef.Name)
 					}
+				}
+			}
+		}
+	}
+}
+
+// processEnvoyExtensionPolicies adds EnvoyExtensionPolicies and their referenced resources to the resourceTree
+func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	envoyExtensionPolicies := egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(ctx, &envoyExtensionPolicies); err != nil {
+		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
+	}
+
+	for _, policy := range envoyExtensionPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = gwapiv1a2.PolicyStatus{}
+		resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &policy)
+	}
+
+	// Add the referenced Resources in EnvoyExtensionPolicies to the resourceTree
+	r.processEnvoyExtensionPolicyObjectRefs(ctx, resourceTree, resourceMap)
+
+	return nil
+}
+
+// processEnvoyExtensionPolicyObjectRefs adds the referenced resources in EnvoyExtensionPolicies
+// to the resourceTree
+// - BackendRefs for ExtProcs
+func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	// we don't return errors from this method, because we want to continue reconciling
+	// the rest of the EnvoyExtensionPolicies despite that one reference is invalid. This
+	// allows Envoy Gateway to continue serving traffic even if some EnvoyExtensionPolicies
+	// are invalid.
+	//
+	// This EnvoyExtensionPolicy will be marked as invalid in its status when translating
+	// to IR because the referenced service can't be found.
+	for _, policy := range resourceTree.EnvoyExtensionPolicies {
+		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
+		for _, ep := range policy.Spec.ExtProc {
+			backendRef := ep.BackendRef.BackendObjectReference
+
+			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
+			resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				Group:     backendRef.Group,
+				Kind:      backendRef.Kind,
+				Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+				Name:      backendRef.Name,
+			}] = struct{}{}
+
+			if backendNamespace != policy.Namespace {
+				from := ObjectKindNamespacedName{
+					kind:      gatewayapi.KindHTTPRoute,
+					namespace: policy.Namespace,
+					name:      policy.Name,
+				}
+				to := ObjectKindNamespacedName{
+					kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+					namespace: backendNamespace,
+					name:      string(backendRef.Name),
+				}
+				refGrant, err := r.findReferenceGrant(ctx, from, to)
+				switch {
+				case err != nil:
+					r.log.Error(err, "failed to find ReferenceGrant")
+				case refGrant == nil:
+					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+				default:
+					resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+					r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+						"name", refGrant.Name)
 				}
 			}
 		}

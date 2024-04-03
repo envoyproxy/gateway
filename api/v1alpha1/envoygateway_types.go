@@ -168,10 +168,6 @@ type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
-
-	// EnableEnvoyExtensionPolicy enables Envoy Gateway to
-	// reconcile and implement the EnvoyExtensionPolicy resources.
-	EnableEnvoyExtensionPolicy bool `json:"enableEnvoyExtensionPolicy"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
