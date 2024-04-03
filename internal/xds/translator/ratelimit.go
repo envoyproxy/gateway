@@ -306,8 +306,10 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 		return nil
 	}
 
+	domain := getRateLimitDomain(irListener)
 	return &rlsconfv3.RateLimitConfig{
-		Domain:      getRateLimitDomain(irListener),
+		Name:        domain,
+		Domain:      domain,
 		Descriptors: pbDescriptors,
 	}
 }
