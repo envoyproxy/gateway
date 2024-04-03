@@ -5,8 +5,8 @@ gateway:
 provider:
   type: Kubernetes
   kubernetes:
-    watch:
-      type: Namespaces
-      namespaces:
-      - ns-a
-      - ns-b
+    leaderElection:
+      disabled: true
+      retryPeriod: 1s
+      RenewDeadline: 2s
+      LeaseDuration: 3s

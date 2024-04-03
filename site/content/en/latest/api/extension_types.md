@@ -670,7 +670,7 @@ _Appears in:_
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
-| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection defines the settings related to leader election |
+| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection defines the settings related to leader election<br />if not configured leader election is enabled with default k8s settings |
 
 
 #### EnvoyGatewayLogComponent
@@ -1684,9 +1684,10 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `leaseDuration` | _[Duration](#duration)_ |  true  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds. |
-| `renewDeadline` | _[Duration](#duration)_ |  true  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds. |
-| `retryPeriod` | _[Duration](#duration)_ |  true  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds. |
+| `leaseDuration` | _[Duration](#duration)_ |  true  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.<br />Default is 15 seconds. |
+| `renewDeadline` | _[Duration](#duration)_ |  true  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.<br />Default is 10 seconds. |
+| `retryPeriod` | _[Duration](#duration)_ |  true  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.<br />Default is 15 seconds. |
+| `disabled` | _boolean_ |  true  | Disabled allows to disable leader election (enabled by default) |
 
 
 #### LiteralCustomTag

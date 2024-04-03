@@ -153,9 +153,6 @@ func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
 func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return &EnvoyGatewayProvider{
 		Type: ProviderTypeKubernetes,
-		Kubernetes: &EnvoyGatewayKubernetesProvider{
-			LeaderElection: DefaultLeaderElection(),
-		},
 	}
 }
 
@@ -206,6 +203,9 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		return r.Kubernetes
 	}
 
+	if r.Kubernetes.LeaderElection == nil {
+		r.Kubernetes.LeaderElection = DefaultLeaderElection()
+	}
 	if r.Kubernetes.RateLimitDeployment == nil {
 		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(DefaultRateLimitImage)
 	}

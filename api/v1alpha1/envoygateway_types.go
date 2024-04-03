@@ -95,11 +95,16 @@ type EnvoyGatewaySpec struct {
 // LeaderElection defines the desired leader election settings.
 type LeaderElection struct {
 	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
+	// Default is 15 seconds.
 	LeaseDuration *time.Duration `json:"leaseDuration,omitempty"`
 	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.
+	// Default is 10 seconds.
 	RenewDeadline *time.Duration `json:"renewDeadline,omitempty"`
 	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.
+	// Default is 15 seconds.
 	RetryPeriod *time.Duration `json:"retryPeriod,omitempty"`
+	// Disabled allows to disable leader election (enabled by default)
+	Disabled *bool `json:"disabled,omitempty"`
 }
 
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.
@@ -211,6 +216,8 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
 	// LeaderElection defines the settings related to leader election
+	// if not configured leader election is enabled with default k8s settings
+	//
 	// +optional
 	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
 }

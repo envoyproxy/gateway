@@ -34,8 +34,6 @@ data:
       level:
         default: info
     provider:
-      kubernetes:
-        leaderElection: {}
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml

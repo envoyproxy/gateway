@@ -8,6 +8,7 @@ package config
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -321,6 +322,30 @@ func TestDecode(t *testing.T) {
 		{
 			in:     inPath + "invalid-gateway-version.yaml",
 			expect: false,
+		},
+		{
+			in: inPath + "gateway-leaderelection.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							LeaderElection: &v1alpha1.LeaderElection{
+								Disabled:      ptr.To(true),
+								RetryPeriod:   ptr.To(time.Second),
+								RenewDeadline: ptr.To(time.Second * 2),
+								LeaseDuration: ptr.To(time.Second * 3),
+							},
+						},
+					},
+				},
+			},
+			expect: true,
 		},
 	}
 

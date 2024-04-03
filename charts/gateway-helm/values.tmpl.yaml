@@ -4,7 +4,7 @@ deployment:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
     imagePullPolicy: Always
-    imagePullSecrets: []
+    imagePullSecrets: [ ]
     resources:
       limits:
         cpu: 500m
@@ -24,11 +24,11 @@ deployment:
       targetPort: 19001
   replicas: 1
   pod:
-    affinity: {}
-    annotations: 
+    affinity: { }
+    annotations:
       prometheus.io/scrape: 'true'
       prometheus.io/port: '19001'
-    labels: {}
+    labels: { }
 
 config:
   envoyGateway:
@@ -37,7 +37,8 @@ config:
     provider:
       type: Kubernetes
       kubernetes:
-        leaderElection: {}
+        leaderElection:
+          disabled: false
     logging:
       level:
         default: info
@@ -48,9 +49,9 @@ kubernetesClusterDomain: cluster.local
 
 certgen:
   job:
-    annotations: {}
-    resources: {}
+    annotations: { }
+    resources: { }
     ttlSecondsAfterFinished: 0
   rbac:
-    annotations: {}
-    labels: {}
+    annotations: { }
+    labels: { }

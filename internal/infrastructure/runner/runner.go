@@ -8,6 +8,8 @@ package runner
 import (
 	"context"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
@@ -54,7 +56,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
 	// to avoid multiple EG instances processing envoy proxy infra resources.
-	if r.EnvoyGateway.Provider.Kubernetes != nil && r.EnvoyGateway.Provider.Kubernetes.LeaderElection != nil {
+	if !ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disabled, false) {
 		go func() {
 			select {
 			case <-ctx.Done():

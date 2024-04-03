@@ -901,7 +901,9 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1.Gat
 
 // watchResources watches gateway api resources.
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller) error {
-	// trigger a reconcile after getting elected
+	// // Upon leader election, we retrigger the reconciliation process to allow the elected leader to
+	//process status updates and infrastructure changes. This step is crucial for synchronizing resources
+	//that may have been altered or introduced while there was no elected leader.
 	if err := c.Watch(
 		NewWatchAndReconcileSource(mgr.Elected(), &gwapiv1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass)); err != nil {
