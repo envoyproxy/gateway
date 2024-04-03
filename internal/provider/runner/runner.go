@@ -62,7 +62,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return fmt.Errorf("unsupported provider type %v", r.EnvoyGateway.Provider.Type)
 	}
 
-	r.Logger.Info("Using provider", "type", p.Type())
+	r.Logger.Info("Running provider", "type", p.Type())
 	go func() {
 		if err = p.Start(ctx); err != nil {
 			r.Logger.Error(err, "unable to start provider")
