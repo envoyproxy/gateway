@@ -127,7 +127,6 @@ Here is a list of features that can be included in this API
 * Extensions that only support HTTP extensibility (Ext-Proc, LUA) can only be attached to HTTP/GRPC Routes.  
 * A user-defined extension that is added to the request processing flow can have a significant impact on security,
   resilience and performance of the proxy. Gateway Operators can restrict access to the extensibility policy using K8s RBAC. 
-* Extensibility will be disabled by default, and can be enabled using [Envoy Gateway][] API. 
 * Users may need to customize the order of extension and built-in filters. This will be addressed in a separate issue.  
 * Gateway operators may need to include multiple extensions (e.g. WASM modules developed by different teams and distributed separately). 
   This API will support attachment of multiple policies. Extension will execute in an order defined by the priority field.
@@ -159,7 +158,6 @@ Here is a list of features that can be included in this API
 [Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Gateway API Route Filters]: https://gateway-api.sigs.k8s.io/api-types/httproute/#filters-optional
-[Envoy Gateway]: ../../api/extension_types#envoygateway
 [Envoy Patch Policy]: ../../api/extension_types#envoypatchpolicy
 [Envoy Extension Manager]: ./extending-envoy-gateway
 [Alternatives]: #Alternatives

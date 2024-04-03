@@ -304,6 +304,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "listener-connection-limit",
 		},
+		{
+			name: "ext-proc",
+		},
 	}
 
 	for _, tc := range testCases {

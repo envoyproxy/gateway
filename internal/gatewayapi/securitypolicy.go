@@ -805,9 +805,11 @@ func (t *Translator) buildExtAuth(
 		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
 		*backendRef.Port)
 
+	pnn := utils.NamespacedName(policy)
 	if ds, err = t.processExtServiceDestination(
 		backendRef,
-		policy,
+		pnn,
+		KindSecurityPolicy,
 		protocol,
 		resources); err != nil {
 		return nil, err
@@ -837,77 +839,6 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 	return extAuth, nil
-}
-
-// TODO: zhaohuabing combine this function with the one in the route translator
-func (t *Translator) processExtServiceDestination(
-	backendRef *gwapiv1.BackendObjectReference,
-	policy *egv1a1.SecurityPolicy,
-	protocol ir.AppProtocol,
-	resources *Resources) (*ir.DestinationSetting, error) {
-	var (
-		endpoints   []*ir.DestinationEndpoint
-		addrType    *ir.DestinationAddressType
-		servicePort v1.ServicePort
-		backendTLS  *ir.TLSUpstreamConfig
-	)
-
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-	service := resources.GetService(serviceNamespace, string(backendRef.Name))
-	for _, port := range service.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) {
-			servicePort = port
-			break
-		}
-	}
-
-	if servicePort.AppProtocol != nil &&
-		*servicePort.AppProtocol == "kubernetes.io/h2c" {
-		protocol = ir.HTTP2
-	}
-
-	// Route to endpoints by default
-	if !t.EndpointRoutingDisabled {
-		endpointSlices := resources.GetEndpointSlicesForBackend(
-			serviceNamespace, string(backendRef.Name), KindService)
-		endpoints, addrType = getIREndpointsFromEndpointSlices(
-			endpointSlices, servicePort.Name, servicePort.Protocol)
-	} else {
-		// Fall back to Service ClusterIP routing
-		ep := ir.NewDestEndpoint(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port))
-		endpoints = append(endpoints, ep)
-	}
-
-	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
-		return nil, errors.New(
-			"mixed endpointslice address type for the same backendRef is not supported")
-	}
-
-	backendTLS = t.processBackendTLSPolicy(
-		*backendRef,
-		serviceNamespace,
-		// Gateway is not the appropriate parent reference here because the owner
-		// of the BackendRef is the security policy, and there is no hierarchy
-		// relationship between the security policy and a gateway.
-		// The owner security policy of the BackendRef is used as the parent reference here.
-		gwv1a2.ParentReference{
-			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
-			Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindSecurityPolicy)),
-			Namespace: ptr.To(gwapiv1.Namespace(policy.Namespace)),
-			Name:      gwapiv1.ObjectName(policy.Name),
-		},
-		resources)
-
-	return &ir.DestinationSetting{
-		Weight:      ptr.To(uint32(1)),
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		TLS:         backendTLS,
-	}, nil
 }
 
 func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwapiv1.BackendObjectReference) string {

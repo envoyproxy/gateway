@@ -1,0 +1,70 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-ext-proc
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /processor
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-without-ext-proc
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /no-processor
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-test
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-ext-proc
+  extProc:
+  - backendRef:
+      name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: grpc-ext-proc-btls
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: ''
+    kind: Service
+    name: grpc-ext-proc
+    sectionName: "9002"
+  tls:
+    caCertRefs:
+    - name: grpc-ext-proc-ca
+      group: ''
+      kind: ConfigMap
+    hostname: grpc-ext-proc
