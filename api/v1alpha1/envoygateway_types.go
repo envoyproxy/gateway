@@ -92,16 +92,16 @@ type EnvoyGatewaySpec struct {
 
 // LeaderElection defines the desired leader election settings.
 type LeaderElection struct {
-	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership. It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
-	// Default is 15 seconds.
+	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.
+	// It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
 	LeaseDuration *gwapiv1.Duration `json:"leaseDuration,omitempty"`
-	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership status before relinquishing its position. The default setting is 10 seconds.
-	// Default is 10 seconds.
+	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership
+	// status before relinquishing its position. The default setting is 10 seconds.
 	RenewDeadline *gwapiv1.Duration `json:"renewDeadline,omitempty"`
-	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries. The default setting is 2 seconds.
-	// Default is 2 seconds.
+	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.
+	// The default setting is 2 seconds.
 	RetryPeriod *gwapiv1.Duration `json:"retryPeriod,omitempty"`
-	// Disable allows to disable leader election (enabled by default)
+	// Disable provides the option to turn off leader election, which is enabled by default.
 	Disable *bool `json:"disable,omitempty"`
 }
 
@@ -209,9 +209,9 @@ type EnvoyGatewayKubernetesProvider struct {
 	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
 	// +optional
 	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
-	// LeaderElection defines the settings related to leader election
-	// if not configured leader election is enabled with default k8s settings
 	//
+	// LeaderElection specifies the configuration for leader election.
+	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
 	// +optional
 	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
 }
