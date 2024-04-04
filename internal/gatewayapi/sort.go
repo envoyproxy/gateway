@@ -21,15 +21,11 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	// Exact > RegularExpression > PathPrefix
 	if x[i].PathMatch != nil && x[i].PathMatch.Exact != nil {
 		if x[j].PathMatch != nil {
-			if x[j].PathMatch.Prefix != nil || x[j].PathMatch.SafeRegex != nil {
+			if x[j].PathMatch.SafeRegex != nil {
 				return false
 			}
-		}
-	}
-	if x[i].PathMatch != nil && x[i].PathMatch.Prefix != nil {
-		if x[j].PathMatch != nil {
-			if x[j].PathMatch.Exact != nil || x[j].PathMatch.SafeRegex != nil {
-				return true
+			if x[j].PathMatch.Prefix != nil {
+				return false
 			}
 		}
 	}
@@ -42,6 +38,15 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 				return false
 			}
 		}
+	}
+	if x[i].PathMatch != nil && x[i].PathMatch.Prefix != nil {
+		if x[j].PathMatch != nil {
+			if x[j].PathMatch.Exact != nil {
+				return true
+			}
+			if x[j].PathMatch.SafeRegex != nil {
+				return true
+			}
 	}
 	// Equal case
 
