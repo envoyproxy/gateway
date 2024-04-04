@@ -47,6 +47,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 			if x[j].PathMatch.SafeRegex != nil {
 				return true
 			}
+		}
 	}
 	// Equal case
 
