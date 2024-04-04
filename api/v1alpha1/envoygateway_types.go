@@ -209,7 +209,6 @@ type EnvoyGatewayKubernetesProvider struct {
 	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
 	// +optional
 	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
-	//
 	// LeaderElection specifies the configuration for leader election.
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
 	// +optional
