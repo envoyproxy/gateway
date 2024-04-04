@@ -218,6 +218,9 @@ type ShutdownConfig struct {
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"
+// +kubebuilder:validation:XValidation:rule="((has(self.envoyHpa) && !has(self.envoyDaemonSet)) || (!has(self.envoyHpa) && has(self.envoyDaemonSet))) || (!has(self.envoyHpa) && !has(self.envoyDaemonSet))",message="cannot use envoyHpa if envoyDaemonSet is used"
+//
 // EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource
 // provider.
 type EnvoyProxyKubernetesProvider struct {
@@ -227,6 +230,12 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
+
+	// EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.
+	// Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet
+	//
+	// +optional
+	EnvoyDaemonSet *KubernetesDaemonSetSpec `json:"envoyDaemonSet,omitempty"`
 
 	// EnvoyService defines the desired state of the Envoy service resource.
 	// If unspecified, default settings for the managed Envoy service resource

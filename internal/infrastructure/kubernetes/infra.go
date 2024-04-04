@@ -26,6 +26,7 @@ type ResourceRender interface {
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
+	DaemonSet() (*appsv1.DaemonSet, error)
 	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
 }
 
@@ -66,6 +67,10 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 		return fmt.Errorf("failed to create or update deployment %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
+	if err := i.createOrUpdateDaemonSet(ctx, r); err != nil {
+		return fmt.Errorf("failed to create or update daemonset %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
 	if err := i.createOrUpdateService(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update service %s/%s: %w", i.Namespace, r.Name(), err)
 	}
@@ -89,6 +94,10 @@ func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 
 	if err := i.deleteDeployment(ctx, r); err != nil {
 		return fmt.Errorf("failed to delete deployment %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
+	if err := i.deleteDaemonSet(ctx, r); err != nil {
+		return fmt.Errorf("failed to delete daemonset %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.deleteService(ctx, r); err != nil {

@@ -70,11 +70,20 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 		return r.Kubernetes
 	}
 
-	if r.Kubernetes.EnvoyDeployment == nil {
+	// if EnvoyDeployment and EnvoyDaemonSet are both nil, use EnvoyDeployment
+	if r.Kubernetes.EnvoyDeployment == nil && r.Kubernetes.EnvoyDaemonSet == nil {
 		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
 	}
 
-	r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+	// if use EnvoyDeployment, set default values
+	if r.Kubernetes.EnvoyDeployment != nil {
+		r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+	}
+
+	// if use EnvoyDaemonSet, set default values
+	if r.Kubernetes.EnvoyDaemonSet != nil {
+		r.Kubernetes.EnvoyDaemonSet.defaultKubernetesDaemonSetSpec(DefaultEnvoyProxyImage)
+	}
 
 	if r.Kubernetes.EnvoyService == nil {
 		r.Kubernetes.EnvoyService = DefaultKubernetesService()
