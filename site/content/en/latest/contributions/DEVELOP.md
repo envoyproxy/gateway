@@ -140,24 +140,24 @@ There are many other endpoints on the [Envoy admin interface][] that may be help
 ### JWT Testing
 
 An example [JSON Web Token (JWT)][jwt] and [JSON Web Key Set (JWKS)][jwks] are used for the [request authentication][]
-user guide. The JWT was created by the [JWT Debugger][], using the `RS256` algorithm. The public key from the JWTs
+task. The JWT was created by the [JWT Debugger][], using the `RS256` algorithm. The public key from the JWTs
 verify signature was copied to [JWK Creator][] for generating the JWK. The JWK Creator was configured with matching
 settings, i.e. `Signing` public key use and the `RS256` algorithm. The generated JWK was wrapped in a JWKS structure
 and is hosted in the repo.
 
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/latest/user/quickstart.md
+[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/latest/tasks/quickstart.md
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows
 [Kind]: https://kind.sigs.k8s.io/
 [conformance homepage]: https://gateway-api.sigs.k8s.io/concepts/conformance/
-[directly exposing]: https://kind.sigs.k8s.io/docs/user/loadbalancer/
+[directly exposing]: https://kind.sigs.k8s.io/docs/tasks/loadbalancer/
 [Kubernetes support]: https://docs.docker.com/desktop/kubernetes/
 [gateway-dev]: https://hub.docker.com/r/envoyproxy/gateway-dev/tags
 [mac_connect]: https://github.com/chipmk/docker-mac-net-connect
 [Envoy admin interface]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin#operations-admin-interface
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
-[request authentication]: ../user/security/jwt-authentication
+[request authentication]: ../tasks/security/jwt-authentication
 [JWT Debugger]: https://jwt.io/
 [JWK Creator]: https://russelldavies.github.io/jwk-creator/

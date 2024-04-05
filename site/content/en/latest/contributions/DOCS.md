@@ -54,7 +54,7 @@ make docs-release TAG=v0.6.0
 This will update the VERSION file at the project root, which records current release version,
 and it will be used in the pages version context and binary version output. Also, this will generate
 new dir `site/content/en/v0.6.0`, which contains docs at v0.6.0 and updates artifact links to `v0.6.0`
-in all files under `site/content/en/v0.6.0/user`, like `quickstart.md`, `http-routing.md` and etc.
+in all files under `site/content/en/v0.6.0/tasks`, like `quickstart.md`, `http-routing.md` and etc.
 
 ## Publishing Docs
 
