@@ -134,7 +134,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		var quicXDSListener *listenerv3.Listener
 		enabledHTTP3 := httpListener.HTTP3 != nil
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, accessLog)
+			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, httpListener.Connection, accessLog)
 			if enabledHTTP3 {
 				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
 				if err := tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
@@ -399,7 +399,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, accesslog)
+			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, tcpListener.Connection, accesslog)
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				// skip this listener if failed to add xds listener to the
 				errs = errors.Join(errs, err)
