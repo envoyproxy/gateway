@@ -46,6 +46,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 			LeaderElection: DefaultLeaderElection(),
 		}
 	}
+	if e.Provider.Kubernetes.LeaderElection == nil {
+		e.Provider.Kubernetes.LeaderElection = DefaultLeaderElection()
+	}
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
