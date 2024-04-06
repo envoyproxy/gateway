@@ -114,10 +114,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				TypedConfig: ocAny,
 			},
 		},
-		CustomTags: tags,
-		SpawnUpstreamSpan: &wrapperspb.BoolValue{
-			Value: true,
-		},
+		CustomTags:        tags,
+		SpawnUpstreamSpan: wrapperspb.Bool(true),
 	}, nil
 }
 
