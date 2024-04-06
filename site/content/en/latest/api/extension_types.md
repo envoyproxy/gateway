@@ -713,6 +713,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `type` | _[MetricSinkType](#metricsinktype)_ |  true  | Type defines the metric sink type.<br />EG control plane currently supports OpenTelemetry. |
 | `openTelemetry` | _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ |  true  | OpenTelemetry defines the configuration for OpenTelemetry sink.<br />It's required if the sink type is OpenTelemetry. |
+| `exporterInterval` | _[ExporterDuration](#exporterduration)_ |  true  | ExporterInterval configures the intervening time between exports for a<br />Sink. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_INTERVAL environment variable.<br />If ExporterInterval is less than or equal to zero, 60 seconds<br />is used as the default. |
+| `exporterTimeout` | _[ExporterDuration](#exporterduration)_ |  true  | ExporterTimeout configures the time a Sink waits for an export to<br />complete before canceling it. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_TIMEOUT environment variable.<br />If ExporterTimeout is less than or equal to zero, 30 seconds<br />is used as the default. |
 
 
 #### EnvoyGatewayMetrics
@@ -987,6 +989,20 @@ EnvoyResourceType specifies the type URL of the Envoy resource.
 
 _Appears in:_
 - [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
+
+
+
+#### ExporterDuration
+
+_Underlying type:_ _string_
+
+ExporterDuration is used to represent the duration of the exporter.
+It is used to represent duration as a string and parsed by time.ParseDuration function.
+This type uses the time format in Go.
+example: "1h30m" means a duration of 1 hour and 30 minutes, "10s" means a duration of 10 seconds.
+
+_Appears in:_
+- [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
 
 
 

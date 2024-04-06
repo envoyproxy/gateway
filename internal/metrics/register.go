@@ -32,7 +32,11 @@ const (
 
 // Init initializes and registers the global metrics server.
 func Init(cfg *config.Server) error {
-	options := newOptions(cfg)
+	options, err := newOptions(cfg)
+	if err != nil {
+		return err
+	}
+
 	handler, err := registerForHandler(options)
 	if err != nil {
 		return err
@@ -72,7 +76,7 @@ func start(address string, handler http.Handler) error {
 	return nil
 }
 
-func newOptions(svr *config.Server) registerOptions {
+func newOptions(svr *config.Server) (registerOptions, error) {
 	newOpts := registerOptions{}
 	newOpts.address = net.JoinHostPort(v1alpha1.GatewayMetricsHost, fmt.Sprint(v1alpha1.GatewayMetricsPort))
 
@@ -85,14 +89,37 @@ func newOptions(svr *config.Server) registerOptions {
 	}
 
 	for _, config := range svr.EnvoyGateway.GetEnvoyGatewayTelemetry().Metrics.Sinks {
-		newOpts.pushOptions.sinks = append(newOpts.pushOptions.sinks, metricsSink{
+		sink := metricsSink{
 			host:     config.OpenTelemetry.Host,
 			port:     config.OpenTelemetry.Port,
 			protocol: config.OpenTelemetry.Protocol,
-		})
+		}
+
+		// we do not explicitly set default values for ExporterInterval and ExporterTimeout
+		// instead, let the upstream repository set default values for it
+		if config.ExporterInterval != nil && len(*config.ExporterInterval) != 0 {
+			interval, err := time.ParseDuration(string(*config.ExporterInterval))
+			if err != nil {
+				metricsLogger.Error(err, "failed to parse exporter interval time format")
+				return newOpts, err
+			}
+
+			sink.exporterInterval = interval
+		}
+		if config.ExporterTimeout != nil && len(*config.ExporterTimeout) != 0 {
+			timeout, err := time.ParseDuration(string(*config.ExporterTimeout))
+			if err != nil {
+				metricsLogger.Error(err, "failed to parse exporter timeout time format")
+				return newOpts, err
+			}
+
+			sink.exporterTimeout = timeout
+		}
+
+		newOpts.pushOptions.sinks = append(newOpts.pushOptions.sinks, sink)
 	}
 
-	return newOpts
+	return newOpts, nil
 }
 
 // registerForHandler sets the global metrics registry to the provided Prometheus registerer.
@@ -156,7 +183,15 @@ func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) e
 				return err
 			}
 
-			otelreader := metric.NewPeriodicReader(httpexporter)
+			periodOpts := []metric.PeriodicReaderOption{}
+			if sink.exporterInterval != 0 {
+				periodOpts = append(periodOpts, metric.WithInterval(sink.exporterInterval))
+			}
+			if sink.exporterTimeout != 0 {
+				periodOpts = append(periodOpts, metric.WithTimeout(sink.exporterTimeout))
+			}
+
+			otelreader := metric.NewPeriodicReader(httpexporter, periodOpts...)
 			*otelOpts = append(*otelOpts, metric.WithReader(otelreader))
 			metricsLogger.Info("initialized otel http metrics push endpoint", "address", address)
 		}
@@ -179,7 +214,15 @@ func registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) e
 				return err
 			}
 
-			otelreader := metric.NewPeriodicReader(httpexporter)
+			periodOpts := []metric.PeriodicReaderOption{}
+			if sink.exporterInterval != 0 {
+				periodOpts = append(periodOpts, metric.WithInterval(sink.exporterInterval))
+			}
+			if sink.exporterTimeout != 0 {
+				periodOpts = append(periodOpts, metric.WithTimeout(sink.exporterTimeout))
+			}
+
+			otelreader := metric.NewPeriodicReader(httpexporter, periodOpts...)
 			*otelOpts = append(*otelOpts, metric.WithReader(otelreader))
 			metricsLogger.Info("initialized otel grpc metrics push endpoint", "address", address)
 		}
@@ -201,7 +244,9 @@ type registerOptions struct {
 }
 
 type metricsSink struct {
-	protocol string
-	host     string
-	port     int32
+	protocol         string
+	host             string
+	port             int32
+	exporterTimeout  time.Duration
+	exporterInterval time.Duration
 }
