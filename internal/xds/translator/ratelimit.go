@@ -268,7 +268,16 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 	enc.SetIndent(2)
 	// Translate pb config to yaml
 	yamlRoot := config.ConfigXdsProtoToYaml(pbCfg)
-	err := enc.Encode(*yamlRoot)
+	rateLimitConfig := &struct {
+		Name        string
+		Domain      string
+		Descriptors []config.YamlDescriptor
+	}{
+		Name:        pbCfg.Name,
+		Domain:      yamlRoot.Domain,
+		Descriptors: yamlRoot.Descriptors,
+	}
+	err := enc.Encode(rateLimitConfig)
 	return buf.String(), err
 }
 
