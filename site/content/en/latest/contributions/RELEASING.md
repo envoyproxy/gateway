@@ -242,7 +242,7 @@ It's important that the world knows about the release. Use the following steps t
 
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/tasks/quickstart.md
+[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
 [Build and Test]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/build_and_test.yaml
 [release GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/release.yaml
 [release workflow]: https://github.com/envoyproxy/gateway/actions/workflows/release.yaml
