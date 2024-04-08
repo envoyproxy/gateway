@@ -96,11 +96,14 @@ type FileEnvoyProxyAccessLog struct {
 
 // OpenTelemetryEnvoyProxyAccessLog defines the OpenTelemetry access log sink.
 //
-// +kubebuilder:validation:XValidation:message="BackendRef only support Service Kind.",rule="!has(self.backendRef) || !has(self.backendRef.kind) || self.backendRef.kind == 'Service'"
+// +kubebuilder:validation:XValidation:message="host or backendRef needs to be set",rule="has(self.host) || has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="backendRef only support Service Kind.",rule="!has(self.backendRef) || self.backendRef.kind == 'Service'"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	// Host define the extension service hostname.
 	// Deprecated: Use BackendRef instead.
-	Host string `json:"host"`
+	//
+	// +optional
+	Host *string `json:"host"`
 	// Port defines the port the extension service is exposed on.
 	// Deprecated: Use BackendRef instead.
 	//

@@ -15,6 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -216,10 +217,18 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 					continue
 				}
 
+				// TODO: remove support for Host/Port in v1.2
 				al := &ir.OpenTelemetryAccessLog{
 					Port:      uint32(sink.OpenTelemetry.Port),
-					Host:      sink.OpenTelemetry.Host,
 					Resources: sink.OpenTelemetry.Resources,
+				}
+
+				if sink.OpenTelemetry.Host != nil {
+					al.Host = *sink.OpenTelemetry.Host
+				}
+
+				if sink.OpenTelemetry.BackendRef != nil {
+					al.Host, al.Port = net.BackendHostAndPort(*sink.OpenTelemetry.BackendRef, envoyproxy.Namespace)
 				}
 
 				switch accessLog.Format.Type {
@@ -243,10 +252,29 @@ func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Trac
 		envoyproxy.Spec.Telemetry.Tracing == nil {
 		return nil
 	}
+	tracing := envoyproxy.Spec.Telemetry.Tracing
+
+	// TODO: remove support for Host/Port in v1.2
+	var host string
+	var port uint32
+	if tracing.Provider.Host != nil {
+		host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
+	}
+	if tracing.Provider.BackendRef != nil {
+		host, port = net.BackendHostAndPort(*tracing.Provider.BackendRef, gw.Namespace)
+	}
+
+	samplingRate := 100.0
+	if tracing.SamplingRate != nil {
+		samplingRate = float64(*tracing.SamplingRate)
+	}
 
 	return &ir.Tracing{
 		ServiceName:  naming.ServiceName(utils.NamespacedName(gw)),
-		ProxyTracing: *envoyproxy.Spec.Telemetry.Tracing,
+		Host:         host,
+		Port:         port,
+		SamplingRate: samplingRate,
+		CustomTags:   tracing.CustomTags,
 	}
 }
 

@@ -32,7 +32,8 @@ const (
 
 // TracingProvider defines the tracing provider configuration.
 //
-// +kubebuilder:validation:XValidation:message="BackendRef only support Service Kind.",rule="!has(self.backendRef) || !has(self.backendRef.kind) || self.backendRef.kind == 'Service'"
+// +kubebuilder:validation:XValidation:message="host or backendRef needs to be set",rule="has(self.host) || has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="backendRef only support Service Kind.",rule="!has(self.backendRef) || self.backendRef.kind == 'Service'"
 type TracingProvider struct {
 	// Type defines the tracing provider type.
 	// EG currently only supports OpenTelemetry.
@@ -41,7 +42,9 @@ type TracingProvider struct {
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
 	// Deprecated: Use BackendRef instead.
-	Host string `json:"host"`
+	//
+	// +optional
+	Host *string `json:"host"`
 	// Port defines the port the provider service is exposed on.
 	// Deprecated: Use BackendRef instead.
 	//

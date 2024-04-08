@@ -5998,13 +5998,13 @@ spec:
                                           Resources is a set of labels that describe the source of a log entry, including envoy node info.
                                           It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
                                         type: object
-                                    required:
-                                    - host
                                     type: object
                                     x-kubernetes-validations:
-                                    - message: BackendRef only support Service Kind.
-                                      rule: '!has(self.backendRef) || !has(self.backendRef.kind)
-                                        || self.backendRef.kind == ''Service'''
+                                    - message: host or backendRef needs to be set
+                                      rule: has(self.host) || has(self.backendRef)
+                                    - message: backendRef only support Service Kind.
+                                      rule: '!has(self.backendRef) || self.backendRef.kind
+                                        == ''Service'''
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -6185,13 +6185,13 @@ spec:
                                   maximum: 65535
                                   minimum: 0
                                   type: integer
-                              required:
-                              - host
                               type: object
                               x-kubernetes-validations:
-                              - message: BackendRef only support Service Kind.
-                                rule: '!has(self.backendRef) || !has(self.backendRef.kind)
-                                  || self.backendRef.kind == ''Service'''
+                              - message: host or backendRef needs to be set
+                                rule: has(self.host) || has(self.backendRef)
+                              - message: backendRef only support Service Kind.
+                                rule: '!has(self.backendRef) || self.backendRef.kind
+                                  == ''Service'''
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -6383,13 +6383,14 @@ spec:
                             - OpenTelemetry
                             type: string
                         required:
-                        - host
                         - type
                         type: object
                         x-kubernetes-validations:
-                        - message: BackendRef only support Service Kind.
-                          rule: '!has(self.backendRef) || !has(self.backendRef.kind)
-                            || self.backendRef.kind == ''Service'''
+                        - message: host or backendRef needs to be set
+                          rule: has(self.host) || has(self.backendRef)
+                        - message: backendRef only support Service Kind.
+                          rule: '!has(self.backendRef) || self.backendRef.kind ==
+                            ''Service'''
                       samplingRate:
                         default: 100
                         description: |-
