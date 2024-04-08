@@ -22,8 +22,10 @@ backend has the ability to delay responses; we use it as the backend to control 
 ### request timeout
 We configure the backend to delay responses by 3 seconds, then we set the request timeout to 4 seconds. Envoy Gateway will successfully respond to the request.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -48,7 +50,6 @@ spec:
         value: /
     timeouts:
       request: "4s"
-EOF
 ```
 
 ```shell
@@ -65,8 +66,10 @@ content-length: 480
 
 Then we set the request timeout to 2 seconds. In this case, Envoy Gateway will respond with a timeout.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -91,7 +94,6 @@ spec:
         value: /
     timeouts:
       request: "2s"
-EOF
 ```
 
 ```shell

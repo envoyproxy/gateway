@@ -17,8 +17,8 @@ We use Cert-Manager to manage the certificates. You can install it by following 
 
    *You should not use the self-signed issuer in production, you should use a real CA issuer.*
 
-   ```shell
-   cat <<EOF | kubectl apply -f -
+   ```yaml
+   ---
    apiVersion: cert-manager.io/v1
    kind: Issuer
    metadata:
@@ -56,13 +56,12 @@ We use Cert-Manager to manage the certificates. You can install it by following 
    spec:
      ca:
        secretName: envoy-gateway-ca
-   EOF
    ```
 
-2. Create a cert for envoy gateway controller, the cert will be stored in secret `envoy-gatewy`.
+2. Create a cert for envoy gateway controller, the cert will be stored in secret `envoy-gateway`.
 
-   ```shell
-   cat<<EOF | kubectl apply -f -
+   ```yaml
+   ---
    apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
@@ -86,13 +85,12 @@ We use Cert-Manager to manage the certificates. You can install it by following 
      - "key encipherment"
      - "content commitment"
      secretName: envoy-gateway
-   EOF
    ```
 
 3. Create a cert for envoy proxy, the cert will be stored in secret `envoy`.
 
-   ```shell
-   cat<<EOF | kubectl apply -f -
+   ```yaml
+   ---
    apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
@@ -113,13 +111,12 @@ We use Cert-Manager to manage the certificates. You can install it by following 
      - "key encipherment"
      - "content commitment"
      secretName: envoy
-   EOF
    ```
 
 4. Create a cert for rate limit, the cert will be stored in secret `envoy-rate-limit`.
 
-   ```shell
-   cat<<EOF | kubectl apply -f -
+   ```yaml
+   ---
    apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
@@ -140,7 +137,6 @@ We use Cert-Manager to manage the certificates. You can install it by following 
      - "key encipherment"
      - "content commitment"
      secretName: envoy-rate-limit
-   EOF
    ```
 
 5. Now you can follow the helm chart [installation guide](../install-helm) to install envoy gateway with custom certs.

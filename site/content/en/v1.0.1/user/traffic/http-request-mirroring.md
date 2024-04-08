@@ -16,8 +16,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 Next, create a new `Deployment` and `Service` to mirror requests to. The following example will use
 a second instance of the application deployed in the quickstart.
 
-```shell
-kubectl apply -f - <<EOF
+```yaml
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -71,14 +70,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-EOF
 ```
 
 Then create an `HTTPRoute` that uses a `HTTPRequestMirrorFilter` to send requests to the original
 service from the quickstart, and mirror request to the service that was just deployed.
 
-```shell
-kubectl apply -f - <<EOF
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -105,7 +103,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
@@ -164,8 +161,10 @@ Echoing back request made to /get to client (10.42.0.10:45096)
 
 When an `HTTPRoute` has multiple `backendRefs` and an `HTTPRequestMirrorFilter`, traffic splitting will still behave the same as it normally would for the main `backendRefs` while the `backendRef` of the `HTTPRequestMirrorFilter` will continue receiving mirrored copies of the incoming requests.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -196,15 +195,16 @@ spec:
       kind: Service
       name: backend-3
       port: 3000
-EOF
 ```
 
 ## Multiple HTTPRequestMirrorFilters
 
 Multiple `HTTPRequestMirrorFilters` are not supported on the same `HTTPRoute` `rule`. When attempting to do so, the admission webhook will reject the configuration.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -237,7 +237,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 ```console

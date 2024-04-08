@@ -22,8 +22,10 @@ In addition to that the entire origin (with or without specifying a scheme) can 
 
 The below example defines a SecurityPolicy that allows CORS for all HTTP requests originating from `www.foo.com`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -46,7 +48,6 @@ spec:
     exposeHeaders:
     - "x-header-3"
     - "x-header-4"
-EOF
 ```
 
 Verify the SecurityPolicy configuration:

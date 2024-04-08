@@ -131,8 +131,10 @@ For this feature to work please make sure
 * you have a fallback route rule defined, the backend for this route rule can be invalid.
 * The SecurityPolicy is applied to both the fallback route as well as the route with the claim header matches, to avoid spoofing.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -192,7 +194,6 @@ spec:
         - path:
             type: PathPrefix
             value: /
-EOF
 ```
 
 Get the JWT used for testing request authentication:

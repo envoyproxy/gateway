@@ -171,8 +171,10 @@ Before proceeding, ensure you can query the HTTPS backend service from the [Test
 To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default"
 namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
-```console
-$ cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: ReferenceGrant
 metadata:
@@ -186,7 +188,6 @@ spec:
   to:
   - group: ""
     kind: Secret
-EOF
 ```
 
 Delete the previously created Secret:
@@ -210,8 +211,10 @@ kubectl create secret tls example-cert -n envoy-gateway-system --key=www.example
 
 Update the Gateway HTTPS listener with `namespace: envoy-gateway-system`, for example:
 
-```console
-$ cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -232,7 +235,6 @@ spec:
             group: ""
             name: example-cert
             namespace: envoy-gateway-system
-EOF
 ```
 
 The Gateway HTTPS listener status should now surface the `Ready: True` condition and you should once again be able to

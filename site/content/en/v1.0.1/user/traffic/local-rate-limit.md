@@ -36,8 +36,10 @@ Before proceeding, you should be able to query the example backend using HTTP.
 Here is an example of a rate limit implemented by the application developer to limit a specific user by matching on a custom `x-user-id` header
 with a value set to `one`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
 metadata:
@@ -59,13 +61,14 @@ spec:
         limit:
           requests: 3
           unit: Hour
-EOF
 ```
 
 ### HTTPRoute
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -85,7 +88,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
@@ -186,8 +188,10 @@ server: envoy
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
 metadata:
@@ -205,13 +209,14 @@ spec:
       - limit:
           requests: 3
           unit: Hour
-EOF
 ```
 
 ### HTTPRoute
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -231,7 +236,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 ```shell

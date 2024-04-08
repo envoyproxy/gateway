@@ -23,8 +23,10 @@ TCPRoutes, note that the protocol set for the listeners on the Gateway is TCP:
 
 Install the GatewayClass and a `tcp-gateway` Gateway first.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
+---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
@@ -51,13 +53,12 @@ spec:
     allowedRoutes:
       kinds:
       - kind: TCPRoute
-EOF
 ```
 
 Install two services `foo` and `bar`, which are binded to `backend-1` and `backend-2`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -153,13 +154,12 @@ spec:
                   fieldPath: metadata.namespace
             - name: SERVICE_NAME
               value: bar
-EOF
 ```
 
 Install two TCPRoutes `tcp-app-1` and `tcp-app-2` with different `sectionName`:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
 metadata:
@@ -185,13 +185,12 @@ spec:
   - backendRefs:
     - name: bar
       port: 3002
-EOF
 ```
 
 In the above example we separate the traffic for the two separate backend TCP Services by using the sectionName field in
 the parentRefs:
 
-``` yaml
+```yaml
 spec:
   parentRefs:
   - name: tcp-gateway
@@ -200,7 +199,7 @@ spec:
 
 This corresponds directly with the name in the listeners in the Gateway:
 
-``` yaml
+```yaml
   listeners:
   - name: foo
     protocol: TCP

@@ -60,10 +60,10 @@ kubectl patch gateway eg --type=json --patch '[{
 }]'
 ```
 
-Apply the following ClientTrafficPolicy to enable HTTP3
+Apply the following ClientTrafficPolicy to enable HTTP3:
 
-```shell
-kubectl apply -f - <<EOF
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -75,7 +75,6 @@ spec:
     kind: Gateway
     name: eg
     namespace: default
-EOF
 ```
 
 Verify the Gateway status:

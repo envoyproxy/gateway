@@ -24,8 +24,10 @@ does not have the header configured by the filter, then that header will be adde
 has the header configured by the filter, then the value of the header in the filter will be appended to the value of the
 header in the request.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -52,7 +54,6 @@ spec:
         add:
         - name: "add-header"
           value: "foo"
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
@@ -107,8 +108,10 @@ will be added, but unlike [adding request headers](#adding-request-headers) whic
 the request already contains it, setting a header will cause the value to be replaced by the value configured in the
 filter.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -135,7 +138,6 @@ spec:
         set:
         - name: "set-header"
           value: "foo"
-EOF
 ```
 
 Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
@@ -178,8 +180,10 @@ will be added, but unlike [adding request headers](#adding-request-headers) whic
 the request already contains it, setting a header will cause the value to be replaced by the value configured in the
 filter.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -204,7 +208,6 @@ spec:
       requestHeaderModifier:
         remove:
         - "remove-header"
-EOF
 ```
 
 Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
@@ -243,8 +246,10 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --head
 
 Headers can be added/set/removed in a single filter on the same HTTPRoute and they will all perform as expected
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -276,7 +281,6 @@ spec:
           value: "bar"
         remove:
         - "removed-header"
-EOF
 ```
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

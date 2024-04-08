@@ -29,8 +29,10 @@ This guide demonstrates the configuration of OIDC at the HTTPRoute level.
 
 Let's create an HTTPRoute that represents an application protected by OIDC.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -47,7 +49,6 @@ spec:
     backendRefs:
     - name: backend
       port: 3000
-EOF
 ```
 
 Verify the HTTPRoute status:
@@ -93,8 +94,10 @@ by the OAuth2 filter on that HTTPRoute.
 
 Note: please replace the ${CLIENT_ID} in the below yaml snippet with the actual Client ID that you got from the OIDC provider.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -112,7 +115,6 @@ spec:
       name: "my-app-client-secret"
     redirectURL: "http://www.example.com:8080/myapp/oauth2/callback"
     logoutPath: "/myapp/logout"
-EOF
 ```
 
 Verify the SecurityPolicy configuration:

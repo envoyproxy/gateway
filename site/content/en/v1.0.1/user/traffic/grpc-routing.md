@@ -96,8 +96,10 @@ It supports two match types: `Exact` and `RegularExpression`.
 The following example shows how to match a request based on the service and method names for `grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`,
 as well as a match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: GRPCRoute
 metadata:
@@ -122,7 +124,6 @@ spec:
           name: yages
           port: 9000
           weight: 1
-EOF
 ```
 
 Verify the GRPCRoute status:
@@ -143,8 +144,8 @@ The following example shows how to match a request based on the service and meth
 with match type `RegularExpression`. It matches all the services and methods with pattern
 `/.*.Echo/Pin.+`, which matches `yages.Echo/Ping` in our deployment.
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: GRPCRoute
 metadata:
@@ -171,7 +172,6 @@ spec:
           name: yages
           port: 9000
           weight: 1
-EOF
 ```
 
 Verify the GRPCRoute status:

@@ -34,8 +34,10 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/exa
 
 Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.  
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -53,7 +55,6 @@ spec:
     backendRefs:
     - name: backend
       port: 3000   
-EOF
 ```
 
 Verify the HTTPRoute status:
@@ -69,8 +70,10 @@ Create a new SecurityPolicy resource to configure the external authorization. Th
 authorization. The `headersToBackend` field specifies the headers that will be sent to the backend service if the request
 is successfully authorized.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -86,7 +89,6 @@ spec:
         name: http-ext-auth
         port: 9002
       headersToBackend: ["x-current-user"]
-EOF
 ```
 
 Verify the SecurityPolicy configuration:
@@ -162,8 +164,10 @@ not created the HTTPRoute, you can create it now.
 
 Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -181,7 +185,6 @@ spec:
     backendRefs:
     - name: backend
       port: 3000   
-EOF
 ```
 
 Verify the HTTPRoute status:
@@ -195,8 +198,10 @@ kubectl get httproute/myapp -o yaml
 Update the SecurityPolicy that was created in the previous section to use the gRPC external authorization service.
 It calls the gRPC external authorization service "grpc-ext-auth" on port 9002 for authorization. 
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -211,7 +216,6 @@ spec:
       backendRef:
         name: grpc-ext-auth
         port: 9002
-EOF
 ```
 
 Verify the SecurityPolicy configuration:
@@ -223,8 +227,10 @@ kubectl get securitypolicy/ext-auth-example -o yaml
 Because the gRPC external authorization service is enabled with TLS, a BackendTLSConfig needs to be created to configure
 the communication between the Envoy proxy and the gRPC auth service.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: BackendTLSPolicy
 metadata:
@@ -241,7 +247,6 @@ spec:
       group: ''
       kind: ConfigMap
     hostname: grpc-ext-auth
-EOF
 ```
 
 Verify the BackendTLSPolicy configuration:

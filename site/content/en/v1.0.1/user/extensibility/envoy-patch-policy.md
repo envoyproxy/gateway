@@ -27,14 +27,15 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Enable EnvoyPatchPolicy
 
-* By default [EnvoyPatchPolicy][] is disabled. Lets enable it in the [EnvoyGateway][] startup configuration
+* By default [EnvoyPatchPolicy][] is disabled. Let's enable it in the [EnvoyGateway][] startup configuration
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and attaches it
 using a `ConfigMap`. In the next step, we will update this resource to enable EnvoyPatchPolicy.
 
+Apply the following resource to your cluster:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -50,7 +51,6 @@ data:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
       enableEnvoyPatchPolicy: true
-EOF
 ```
 
 * After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
@@ -63,13 +63,13 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 
 ### Customize Response
 
-* Lets use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
+* Use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
 the status code is `404`
 
-* Lets apply the configuration
+* Apply the configuration to your cluster:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
@@ -101,14 +101,15 @@ spec:
             status_code: 406
             body:
               inline_string: "could not find what you are looking for"
-EOF
 ```
 
 When mergeGateways is enabled, there will be one Envoy deployment for all Gateways in the cluster.
 Then the EnvoyPatchPolicy should target a specific GatewayClass.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
@@ -140,10 +141,9 @@ spec:
             status_code: 406
             body:
               inline_string: "could not find what you are looking for"
-EOF
 ```
 
-* Lets edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
+* Edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
 
 ```
 kubectl patch httproute backend --type=json --patch '[{
@@ -153,7 +153,7 @@ kubectl patch httproute backend --type=json --patch '[{
 }]'
 ```
 
-* Lets test it out by specifying a path apart from `/get`
+* Test it out by specifying a path apart from `/get`
 
 ```
 $ curl --header "Host: www.example.com" http://localhost:8888/find

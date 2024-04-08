@@ -44,7 +44,7 @@ and **creates** managed data plane resources such as EnvoyProxy `Deployment` in 
 each `tenant` deploy their own Envoy Gateway controller in their respective `namespace`. Below is an example of deploying Envoy Gateway
 by the `marketing` and `product` teams in separate namespaces.
 
-* Lets deploy Envoy Gateway in the `marketing` namespace and also watch resources only in this namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
+* Deploy Envoy Gateway in the `marketing` namespace and also watch resources only in this namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
 
 ```shell
 helm install \
@@ -55,10 +55,12 @@ eg-marketing oci://docker.io/envoyproxy/gateway-helm \
 --version v0.0.0-latest -n marketing --create-namespace
 ```
 
-Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
+Create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
@@ -155,7 +157,6 @@ spec:
         - path:
             type: PathPrefix
             value: /
-EOF
 ```
 
 Lets port forward to the generated envoy proxy service in the `marketing` namespace and send a request to it.
@@ -233,10 +234,10 @@ eg-product oci://docker.io/envoyproxy/gateway-helm \
 --version v0.0.0-latest -n product --create-namespace
 ```
 
-Lets create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
+Create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
@@ -333,10 +334,9 @@ spec:
         - path:
             type: PathPrefix
             value: /
-EOF
 ```
 
-Lets port forward to the generated envoy proxy service in the `product` namespace and send a request to it.
+Port-forward to the generated envoy proxy service in the `product` namespace and send a request to it.
 
 ```shell
 export ENVOY_SERVICE=$(kubectl get svc -n product --selector=gateway.envoyproxy.io/owning-gateway-namespace=product,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
@@ -606,10 +606,10 @@ Install the GatewayClass, Gateway, HTTPRoute and example app from [Quickstart][]
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
 ```
 
-Lets create also and additional `Gateway` linked to the GatewayClass and `backend` application from Quickstart example.
+Create an additional `Gateway` linked to the GatewayClass and `backend` application from Quickstart example.
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -643,7 +643,6 @@ spec:
         - path:
             type: PathPrefix
             value: /
-EOF
 ```
 
 Verify that Gateways are deployed and programmed

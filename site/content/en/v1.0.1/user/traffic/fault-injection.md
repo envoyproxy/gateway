@@ -26,8 +26,10 @@ Allow requests with a valid faultInjection by creating an [BackendTrafficPolicy]
 
 ### HTTPRoute
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -96,8 +98,6 @@ spec:
     - path:
         type: PathPrefix
         value: /bar
-
-EOF
 ```
 
 Two HTTPRoute has been created, one for `/foo` and another for `/bar`.  `fault-injection-abort` BackendTrafficPolicy has been created and targeted HTTPRoute foo to abort requests for `/foo`. `fault-injection-delay` BackendTrafficPolicy has been created and targeted HTTPRoute foo to delay `2s` requests for `/bar`. 
@@ -118,8 +118,10 @@ kubectl get backendtrafficpolicy/fault-injection-delay -o yaml
 
 ### GRPCRoute
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -151,7 +153,6 @@ spec:
       name: yages
       port: 9000
       weight: 1
-EOF
 ```
 
 A BackendTrafficPolicy has been created and targeted GRPCRoute yages to abort requests for `yages` service..

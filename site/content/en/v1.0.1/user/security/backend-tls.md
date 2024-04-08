@@ -103,8 +103,10 @@ kubectl patch deployment backend --type=json --patch '[
 
 Create a service that exposes port 443 on the backend service. 
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -121,13 +123,14 @@ spec:
     port: 443
     protocol: TCP
     targetPort: 8443
-EOF
 ```
 
 Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS connection with the backend and validate the backend certificate is issued by a trusted CA and contains an appropriate DNS SAN.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: BackendTLSPolicy
 metadata:
@@ -145,7 +148,6 @@ spec:
         group: ''
         kind: ConfigMap
     hostname: www.example.com
-EOF
 ```
 
 Patch the HTTPRoute's backend reference, so that it refers to the new TLS-enabled service:

@@ -59,8 +59,8 @@ kubectl get gateway/eg -o yaml
 
 Create a UDPRoute resource to route UDP traffic received on Gateway port 5300 to the CoredDNS backend.
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
@@ -73,7 +73,6 @@ spec:
     - backendRefs:
         - name: coredns
           port: 53
-EOF
 ```
 
 Verify the UDPRoute status:

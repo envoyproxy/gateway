@@ -81,8 +81,10 @@ kubectl get gateway/eg -o yaml
 
 Create a [ClientTrafficPolicy][] to enforce client validation using the CA Certificate as a trusted anchor.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -100,7 +102,6 @@ spec:
       - kind: "Secret"
         group: ""
         name: "example-ca-cert"
-EOF
 ```
 
 ## Testing

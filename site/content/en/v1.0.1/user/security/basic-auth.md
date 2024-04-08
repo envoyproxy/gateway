@@ -103,8 +103,10 @@ kubectl create secret generic basic-auth --from-file=.htpasswd
 The below example defines a SecurityPolicy that authenticates requests against the user list in the kubernetes
 secret generated in the previous step.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -117,7 +119,6 @@ spec:
   basicAuth:
     users:
       name: "basic-auth"
-EOF
 ```
 
 Verify the SecurityPolicy configuration:

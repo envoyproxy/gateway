@@ -23,8 +23,10 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Support TCP keepalive for downstream client
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -40,7 +42,6 @@ spec:
     idleTime: 20m
     interval: 60s
     probes: 3
-EOF
 ```
 
 Verify that ClientTrafficPolicy is Accepted:
@@ -176,8 +177,10 @@ You can see keepalive connection marked by the output in:
 
 This example configures Proxy Protocol for downstream clients.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -190,7 +193,6 @@ spec:
     name: eg
     namespace: default
   enableProxyProtocol: true
-EOF
 ```
 
 Verify that ClientTrafficPolicy is Accepted:
@@ -289,8 +291,10 @@ You should now expect 200 response status and also see that source IP was preser
 
 This example configures the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address and determines whether or not `x-forwarded-proto` headers will be trusted. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for details.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -305,7 +309,6 @@ spec:
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
-EOF
 ```
 
 Verify that ClientTrafficPolicy is Accepted:
@@ -415,8 +418,10 @@ Handling connection for 8888
 This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
 This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -429,7 +434,6 @@ spec:
   timeout:
     http:
       requestReceivedTimeout: 2s
-EOF
 ```
 
 Curl the example app through Envoy proxy:

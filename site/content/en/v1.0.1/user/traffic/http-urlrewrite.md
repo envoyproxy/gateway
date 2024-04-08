@@ -15,8 +15,10 @@ Before proceeding, you should be able to query the example backend using HTTP.
 You can configure to rewrite the prefix in the url like below. In this example, any curls to
 `http://${GATEWAY_HOST}/get/xxx` will be rewritten to `http://${GATEWAY_HOST}/replace/xxx`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -39,7 +41,6 @@ spec:
       backendRefs:
       - name: backend
         port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
@@ -114,8 +115,10 @@ You can configure to rewrite the fullpath in the url like below. In this example
 `http://${GATEWAY_HOST}/get/origin/path/xxxx` will be rewritten to
 `http://${GATEWAY_HOST}/force/replace/fullpath`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -139,7 +142,6 @@ spec:
       backendRefs:
       - name: backend
         port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
@@ -208,8 +210,10 @@ You can see that the `X-Envoy-Original-Path` is `/get/origin/path/extra`, but th
 You can configure to rewrite the hostname like below. In this example, any requests sent to
 `http://${GATEWAY_HOST}/get` with `--header "Host: path.rewrite.example"` will rewrite host into `envoygateway.io`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -231,7 +235,6 @@ spec:
       backendRefs:
       - name: backend
         port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.

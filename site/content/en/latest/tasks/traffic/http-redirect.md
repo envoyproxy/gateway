@@ -19,8 +19,10 @@ Redirects return HTTP 3XX responses to a client, instructing it to retrieve a di
 For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `requestRedirect.statusCode=301` and
 `requestRedirect.scheme="https"`:
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -38,7 +40,6 @@ spec:
           statusCode: 301
           hostname: www.example.com
           port: 443
-EOF
 ```
 
 __Note:__ `301` (default) and `302` are the only supported statusCodes.
@@ -104,8 +105,10 @@ kubectl create secret tls example-com --key=tls.key --cert=tls.crt
 
 Define a https listener on the existing gateway
 
-```shell
-cat <<EOF | kubectl apply -n default -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -126,7 +129,6 @@ spec:
       certificateRefs:
       - kind: Secret
         name: example-com
-EOF
 ```
 
 Check for any TLS certificate issues on the gateway.
@@ -137,9 +139,10 @@ kubectl -n default describe gateway eg
 
 Create two HTTPRoutes and attach them to the HTTP and HTTPS listeners using the [sectionName][] field.
 
+Apply the following resources to your cluster:
 
-```shell
-cat <<EOF | kubectl apply -n default -f -
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -178,7 +181,6 @@ spec:
         - path:
             type: PathPrefix
             value: /
-EOF
 ```
 
 Curl the example app through http listener:
@@ -200,8 +202,10 @@ curl -v -H 'Host:www.example.com' --resolve "www.example.com:443:$GATEWAY_HOST" 
 Path redirects use an HTTP Path Modifier to replace either entire paths or path prefixes. For example, the HTTPRoute
 below will issue a 302 redirect to all `path.redirect.example` requests whose path begins with `/get` to `/status/200`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -226,7 +230,6 @@ spec:
       backendRefs:
       - name: backend
         port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.

@@ -57,8 +57,10 @@ There are no connection limits, and so all 100 requests succeed.
 
 Next, we apply a limit of 5 connections. 
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -73,7 +75,6 @@ spec:
   connection:
     connectionLimit:
       value: 5    
-EOF
 ```
 
 Execute the load simulation again.

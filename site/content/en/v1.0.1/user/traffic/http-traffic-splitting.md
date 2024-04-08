@@ -15,8 +15,10 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 When a single backendRef is configured in a HTTPRoute, it will receive 100% of the traffic.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -36,7 +38,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
@@ -87,8 +88,9 @@ configured.
 
 First, create a second instance of the example app from the quickstart:
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -142,13 +144,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-EOF
 ```
 
 Then create an HTTPRoute that uses both the app from the quickstart and the second instance that was just created
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -172,7 +175,6 @@ spec:
       kind: Service
       name: backend-2
       port: 3000
-EOF
 ```
 
 Querying `backends.example/get` should result in `200` responses from the example Gateway and the output from the
@@ -217,8 +219,10 @@ HTTPRoute. The weight is not a percentage and the sum of all weights does not ne
 The HTTPRoute below will configure the gateway to send 80% of the traffic to the backend service, and 20% to the
 backend-2 service.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -244,7 +248,6 @@ spec:
       name: backend-2
       port: 3000
       weight: 2
-EOF
 ```
 
 ## Invalid backendRefs
@@ -263,8 +266,10 @@ Modifying the above example to make the backend-2 backendRef invalid by using a 
 will result in 80% of the traffic being sent to the backend service, and 20% of the traffic receiving an HTTP response
 with status code `500`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -290,7 +295,6 @@ spec:
       name: backend-2
       port: 9000
       weight: 2
-EOF
 ```
 
 Querying `backends.example/get` should result in `200` responses 80% of the time, and `500` responses 20% of the time.

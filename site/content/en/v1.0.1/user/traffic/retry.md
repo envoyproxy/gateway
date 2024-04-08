@@ -46,8 +46,10 @@ Let's create a `BackendTrafficPolicy` with a retry setting.
 
 The request will be retried 5 times with a 100ms base interval and a 10s maximum interval.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -71,7 +73,6 @@ spec:
       triggers:
         - connect-failure
         - retriable-status-codes
-EOF
 ```
 
 Execute the test again.

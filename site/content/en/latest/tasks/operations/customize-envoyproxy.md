@@ -15,8 +15,10 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Config:
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
@@ -28,15 +30,14 @@ spec:
     kind: EnvoyProxy
     name: custom-proxy-config
     namespace: envoy-gateway-system
-EOF
 ```
 
 ## Customize EnvoyProxy Deployment Replicas
 
 You can customize the EnvoyProxy Deployment Replicas via EnvoyProxy Config like:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -48,13 +49,12 @@ spec:
     kubernetes:
       envoyDeployment:
         replicas: 2
-EOF
 ```
 
 After you apply the config, you should see the replicas of envoyproxy changes to 2.
 And also you can dynamically change the value.
 
-``` shell
+```shell
 kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg -n envoy-gateway-system
 ```
 
@@ -62,8 +62,8 @@ kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg -n envoy-
 
 You can customize the EnvoyProxy Image via EnvoyProxy Config like:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -76,7 +76,6 @@ spec:
       envoyDeployment:
         container:
           image: envoyproxy/envoy:v1.25-latest
-EOF
 ```
 
 After applying the config, you can get the deployment image, and see it has changed.
@@ -85,8 +84,8 @@ After applying the config, you can get the deployment image, and see it has chan
 
 You can customize the EnvoyProxy Pod Annotations via EnvoyProxy Config like:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -101,7 +100,6 @@ spec:
           annotations:
             custom1: deploy-annotation1
             custom2: deploy-annotation2
-EOF
 ```
 
 After applying the config, you can get the envoyproxy pods, and see new annotations has been added.
@@ -110,8 +108,8 @@ After applying the config, you can get the envoyproxy pods, and see new annotati
 
 You can customize the EnvoyProxy Deployment Resources via EnvoyProxy Config like:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -130,15 +128,14 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-EOF
 ```
 
 ## Customize EnvoyProxy Deployment Env
 
 You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -155,7 +152,6 @@ spec:
             value: env_a_value
           - name: env_b
             value: env_b_value
-EOF
 ```
 
 > Envoy Gateway has provided two initial `env` `ENVOY_GATEWAY_NAMESPACE` and `ENVOY_POD_NAME` for envoyproxy container.
@@ -166,8 +162,8 @@ After applying the config, you can get the envoyproxy deployment, and see resour
 
 You can customize the EnvoyProxy Deployment Volumes or VolumeMounts via EnvoyProxy Config like:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -188,7 +184,6 @@ spec:
           - name: certs
             secret:
               secretName: envoy-cert
-EOF
 ```
 
 After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
@@ -197,8 +192,8 @@ After applying the config, you can get the envoyproxy deployment, and see resour
 
 You can customize the EnvoyProxy Service Annotations via EnvoyProxy Config like:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -212,8 +207,6 @@ spec:
         annotations:
           custom1: svc-annotation1
           custom2: svc-annotation2
-
-EOF
 ```
 
 After applying the config, you can get the envoyproxy service, and see annotations has been added.
@@ -226,8 +219,8 @@ There are two ways to customize it:
 * Replace: the whole bootstrap config will be replaced by the config you provided.
 * Merge: the config you provided will be merged into the default bootstrap config.
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -307,7 +300,6 @@ spec:
               ads: {}
               resource_api_version: V3
             name: runtime-0
-EOF
 ```
 
 You can use [egctl translate][]
@@ -323,8 +315,8 @@ You can enable [Horizontal Pod Autoscaler](https://github.com/envoyproxy/gateway
 
 Once confirmed, you can apply it via EnvoyProxy Config as shown below:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -344,7 +336,6 @@ spec:
                 averageUtilization: 60
                 type: Utilization
             type: Resource
-EOF
 ```
 
 After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is generated. However, upon activating the EnvoyProxy's HPA, the Envoy Gateway will no longer reference the `replicas` field specified in the `envoyDeployment`, as outlined [here](#customize-envoyproxy-deployment-replicas).
@@ -354,8 +345,8 @@ After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is gen
 You can customize the EnvoyProxy Command line options via `spec.extraArgs` in EnvoyProxy Config.
 For example, the following configuration will add `--disable-extensions` arg in order to disable `envoy.access_loggers/envoy.access_loggers.wasm` extension:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -364,7 +355,6 @@ metadata:
 spec:
   extraArgs:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
-EOF
 ```
 
 ## Customize EnvoyProxy with Patches
@@ -373,8 +363,8 @@ You can customize the EnvoyProxy using patches.
 
 For example, the following configuration will add resource limits to the `envoy` and the `shutdown-manager` containers in the `envoyproxy` deployment:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -402,7 +392,6 @@ spec:
                       limits:
                         cpu: 200m
                         memory: 1024Mi
-EOF
 ```
 
 After applying the configuration, you will see the change in both containers in the `envoyproxy` deployment.

@@ -35,8 +35,10 @@ Before proceeding, you should be able to query the example backend using HTTP.
 * The global rate limit feature is based on [Envoy Ratelimit][] which requires a Redis instance as its caching layer.
 Lets install a Redis deployment in the `redis-system` namespce.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
+---
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -87,9 +89,6 @@ spec:
     targetPort: 6379
   selector:
     app: redis
----
-
-EOF
 ```
 
 ### Enable Global Rate limit in Envoy Gateway
@@ -98,9 +97,10 @@ EOF
 using a `ConfigMap`. In the next step, we will update this resource to enable rate limit in Envoy Gateway
 as well as configure the URL for the Redis instance used for Global rate limiting.
 
+Apply the following resource to your cluster:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -119,7 +119,6 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
-EOF
 ```
 
 * After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
@@ -134,8 +133,10 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 Here is an example of a rate limit implemented by the application developer to limit a specific user by matching on a custom `x-user-id` header
 with a value set to `one`.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
 metadata:
@@ -157,13 +158,14 @@ spec:
         limit:
           requests: 3
           unit: Hour
-EOF
 ```
 
 ### HTTPRoute
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -183,7 +185,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
@@ -286,8 +287,10 @@ Here is an example of a rate limit implemented by the application developer to l
 value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
 and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`).
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
 metadata:
@@ -309,13 +312,14 @@ spec:
         limit:
           requests: 3
           unit: Hour
-EOF
 ```
 
 ### HTTPRoute
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -335,7 +339,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 Lets run the same command again with the header `x-user-id` and value `one` set in the request. We should the first 3 requests succeeding and
@@ -421,8 +424,10 @@ transfer-encoding: chunked
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
 metadata:
@@ -440,13 +445,14 @@ spec:
       - limit:
           requests: 3
           unit: Hour
-EOF
 ```
 
 ### HTTPRoute
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -466,7 +472,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 ```shell
@@ -515,8 +520,10 @@ Note: EG supports two kinds of rate limit for the IP address: exact and distinct
 * exact means that all IP addresses within the specified Source IP CIDR share the same rate limit bucket.
 * distinct means that each IP address within the specified Source IP CIDR has its own rate limit bucket.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy 
 metadata:
@@ -558,7 +565,6 @@ spec:
       kind: Service
       name: backend
       port: 3000
-EOF
 ```
 
 ```shell
@@ -602,8 +608,10 @@ transfer-encoding: chunked
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the value of the Jwt claims carried.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resources to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -663,7 +671,6 @@ spec:
     - path:
         type: PathPrefix
         value: /foo
-EOF
 ```
 
 Get the JWT used for testing request authentication:
@@ -767,8 +774,10 @@ like container `image`, `securityContext`, `env` and pod `annotations` and `secu
 
 * `tls.certificateRef` set the client certificate for redis server TLS connections.
 
-```shell
-cat <<EOF | kubectl apply -f -
+Apply the following resource to your cluster:
+
+```yaml
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -814,7 +823,6 @@ data:
           tls:
             certificateRef:
               name: ratelimit-cert
-EOF
 ```
 
 * After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
