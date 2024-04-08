@@ -9,8 +9,11 @@
 package tests
 
 import (
+	"fmt"
+	"net"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -22,6 +25,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests, RateLimitCIDRMatchTest)
 	ConformanceTests = append(ConformanceTests, RateLimitHeaderMatchTest)
 	ConformanceTests = append(ConformanceTests, RateLimitBasedJwtClaimsTest)
+	ConformanceTests = append(ConformanceTests, RateLimitMultipleListenersTest)
 }
 
 var RateLimitCIDRMatchTest = suite.ConformanceTest{
@@ -281,6 +285,65 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
+		})
+	},
+}
+
+var RateLimitMultipleListenersTest = suite.ConformanceTest{
+	ShortName:   "RateLimitMultipleListeners",
+	Description: "Limit requests on multiple listeners",
+	Manifests:   []string{"testdata/ratelimit-multiple-listeners.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("block all ips on listener 80 and 8080", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwIP, _, err := net.SplitHostPort(gwAddr)
+			require.NoError(t, err)
+
+			gwPorts := []string{"80", "8080"}
+			for _, port := range gwPorts {
+				gwAddr = fmt.Sprintf("%s:%s", gwIP, port)
+
+				ratelimitHeader := make(map[string]string)
+				expectOkResp := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/",
+					},
+					Response: http.Response{
+						StatusCode: 200,
+						Headers:    ratelimitHeader,
+					},
+					Namespace: ns,
+				}
+				expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+				expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+				expectLimitResp := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/",
+					},
+					Response: http.Response{
+						StatusCode: 429,
+					},
+					Namespace: ns,
+				}
+				expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+
+				// should just send exactly 4 requests, and expect 429
+
+				// keep sending requests till get 200 first, that will cost one 200
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+				// fire the rest of requests
+				if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+					t.Errorf("failed to get expected response for the first three requests: %v", err)
+				}
+				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+					t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+				}
+			}
 		})
 	},
 }
