@@ -91,7 +91,8 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-dns-cluster",
 		},
 		{
-			name: "http-route-with-tls-system-truststore",
+			name:           "http-route-with-tls-system-truststore",
+			requireSecrets: true,
 		},
 		{
 			name:           "http-route-with-tlsbundle",
@@ -286,6 +287,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "retry-partial-invalid",
+		},
+		{
+			name: "multiple-listeners-same-port-with-different-filters",
 		},
 	}
 

@@ -16,15 +16,18 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -168,6 +171,20 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			if enabledHTTP3 {
 				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
 					return err
+				}
+			}
+		} else {
+			// When the DefaultFilterChain is shared by multiple Gateway HTTP
+			// Listeners, we need to add the HTTP filters associated with the
+			// HTTPListener to the HCM if they have not yet been added.
+			if err := t.addHTTPFiltersToHCM(xdsListener.DefaultFilterChain, httpListener); err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			if enabledHTTP3 {
+				if err := t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+					errs = errors.Join(errs, err)
+					continue
 				}
 			}
 		}
@@ -317,6 +334,52 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	}
 
 	return errs
+}
+
+func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
+	var (
+		hcm *hcmv3.HttpConnectionManager
+		err error
+	)
+
+	if hcm, err = findHCMinFilterChain(filterChain); err != nil {
+		return err // should not happen
+	}
+
+	// Add http filters to the HCM if they have not yet been added.
+	if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
+		return err
+	}
+
+	for i, filter := range filterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			var mgrAny *anypb.Any
+			if mgrAny, err = protocov.ToAnyWithError(hcm); err != nil {
+				return err
+			}
+
+			filterChain.Filters[i] = &listenerv3.Filter{
+				Name: wellknown.HTTPConnectionManager,
+				ConfigType: &listenerv3.Filter_TypedConfig{
+					TypedConfig: mgrAny,
+				},
+			}
+		}
+	}
+	return nil
+}
+
+func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConnectionManager, error) {
+	for _, filter := range filterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			hcm := &hcmv3.HttpConnectionManager{}
+			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, proto.UnmarshalOptions{}); err != nil {
+				return nil, err
+			}
+			return hcm, nil
+		}
+	}
+	return nil, errors.New("http connection manager not found")
 }
 
 func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
@@ -520,12 +583,14 @@ func processTLSSocket(tlsConfig *ir.TLSUpstreamConfig, tCtx *types.ResourceVersi
 	if tlsConfig == nil {
 		return nil, nil
 	}
-	CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
-	if CaSecret != nil {
+	// Create a secret for the CA certificate only if it's not using the system trust store
+	if !tlsConfig.UseSystemTrustStore {
+		CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
 		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
 			return nil, err
 		}
 	}
+
 	// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
 	// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
 	tlsSocket, err := buildXdsUpstreamTLSSocketWthCert(tlsConfig)
@@ -573,9 +638,12 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
-			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
-			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-				return err
+			// Create a secret for the CA certificate only if it's not using the system trust store
+			if !ds.TLS.UseSystemTrustStore {
+				secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -601,6 +669,7 @@ const (
 
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	// Build the tls secret
+	// It's just a sanity check, we shouldn't call this function if the system trust store is used
 	if tlsConfig.UseSystemTrustStore {
 		return nil
 	}

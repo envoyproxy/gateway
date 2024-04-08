@@ -53,6 +53,7 @@ var (
 	ErrHealthCheckUnhealthyThresholdInvalid    = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
 	ErrHealthCheckHealthyThresholdInvalid      = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
 	ErrHealthCheckerInvalid                    = errors.New("health checker setting is invalid, only one health checker can be set")
+	ErrHCHTTPHostInvalid                       = errors.New("field HTTPHealthChecker.Host should be specified")
 	ErrHCHTTPPathInvalid                       = errors.New("field HTTPHealthChecker.Path should be specified")
 	ErrHCHTTPMethodInvalid                     = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid           = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
@@ -1495,6 +1496,12 @@ type ActiveHealthCheck struct {
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 }
 
+func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
+	if h != nil && h.Active != nil && h.Active.HTTP != nil && h.Active.HTTP.Host == "" {
+		h.Active.HTTP.Host = host
+	}
+}
+
 // Validate the fields within the HealthCheck structure.
 func (h *HealthCheck) Validate() error {
 	var errs error
@@ -1551,6 +1558,8 @@ func (h *HealthCheck) Validate() error {
 // HTTPHealthChecker defines the settings of http health check.
 // +k8s:deepcopy-gen=true
 type HTTPHealthChecker struct {
+	// Host defines the value of the host header in the HTTP health check request.
+	Host string `json:"host" yaml:"host"`
 	// Path defines the HTTP path that will be requested during health checking.
 	Path string `json:"path" yaml:"path"`
 	// Method defines the HTTP method used for health checking.
@@ -1564,6 +1573,9 @@ type HTTPHealthChecker struct {
 // Validate the fields within the HTTPHealthChecker structure.
 func (c *HTTPHealthChecker) Validate() error {
 	var errs error
+	if c.Host == "" {
+		errs = errors.Join(errs, ErrHCHTTPHostInvalid)
+	}
 	if c.Path == "" {
 		errs = errors.Join(errs, ErrHCHTTPPathInvalid)
 	}

@@ -18,6 +18,7 @@
         start: "200"
       - end: "301"
         start: "300"
+      host: '*'
       path: /healthz
       receive:
       - text: 6f6b
@@ -53,6 +54,7 @@
       expectedStatuses:
       - end: "202"
         start: "200"
+      host: '*'
       path: /healthz
       receive:
       - binary: cG9uZw==
