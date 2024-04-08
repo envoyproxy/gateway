@@ -171,7 +171,7 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 				Namespace:     gatewayObjMeta.Namespace,
 			})
 			require.NoError(t, err)
-			require.Len(t, gatewayDeploymentList.Items, 0)
+			require.Empty(t, gatewayDeploymentList.Items)
 		})
 	},
 }

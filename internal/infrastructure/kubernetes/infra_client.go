@@ -31,27 +31,6 @@ func (cli *InfraClient) ServerSideApply(ctx context.Context, obj client.Object) 
 	}
 
 	return nil
-
-	// return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-	// 	if err := cli.Client.Get(ctx, key, current); err != nil {
-	// 		if kerrors.IsNotFound(err) {
-	// 			// Create if it does not exist.
-	// 			if err := cli.Client.Patch(ctx, specific, client.Apply, opts...); err != nil {
-	// 				return fmt.Errorf("for Create: %w", err)
-	// 			}
-	// 		}
-	// 	} else {
-	// 		// Since the client.Object does not have a specific Spec field to compare
-	// 		// just perform an update for now.
-	// 		if updateChecker() {
-	// 			if err := cli.Client.Patch(ctx, specific, client.Apply, opts...); err != nil {
-	// 				return fmt.Errorf("for Update: %w", err)
-	// 			}
-	// 		}
-	// 	}
-
-	// 	return nil
-	// })
 }
 
 func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error {
