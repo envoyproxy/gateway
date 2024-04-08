@@ -27,6 +27,8 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
+    - uses: ./tools/github-actions/setup-deps
+
     - name: Run markdown linter
       uses: nosborn/github-action-markdown-cli@9b5e871c11cc0649c5ac2526af22e23525fa344d  # v3.3.0
       with:
@@ -34,7 +36,7 @@ jobs:
         config_file: ".github/markdown_lint_config.json"
 
     - name: Install linkinator
-      run: npm install -g linkinator
+      run: npm install -g linkinator@6.0.4
 
     - name: Check links
       run: make docs docs-check-links
@@ -50,6 +52,8 @@ jobs:
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
+
+    - uses: ./tools/github-actions/setup-deps
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@16361eb4acea8698b220b76c0d4e84e1fd22c61d  # v2.6.0

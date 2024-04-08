@@ -38,8 +38,8 @@ func (cli *InfraClient) CreateOrUpdate(ctx context.Context, key client.ObjectKey
 			// Since the client.Object does not have a specific Spec field to compare
 			// just perform an update for now.
 			if updateChecker() {
-				specific.SetUID(current.GetUID())
-				if err := cli.Client.Update(ctx, specific); err != nil {
+				opts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("envoy-gateway")}
+				if err := cli.Client.Patch(ctx, specific, client.Apply, opts...); err != nil {
 					return fmt.Errorf("for Update: %w", err)
 				}
 			}
