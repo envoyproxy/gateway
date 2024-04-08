@@ -232,7 +232,9 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
 	var volumes []corev1.Volume
 
-	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
+	if rateLimit.Backend.Redis != nil &&
+		rateLimit.Backend.Redis.TLS != nil &&
+		rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumes = append(volumes, corev1.Volume{
 			Name: "redis-certs",
 			VolumeSource: corev1.VolumeSource{
@@ -275,14 +277,6 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
 func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
-		{
-			Name:  RedisSocketTypeEnvVar,
-			Value: "tcp",
-		},
-		{
-			Name:  RedisURLEnvVar,
-			Value: rateLimit.Backend.Redis.URL,
-		},
 		{
 			Name:  RuntimeRootEnvVar,
 			Value: "/data",
@@ -357,7 +351,20 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		},
 	}
 
-	if rateLimit.Backend.Redis.TLS != nil {
+	if rateLimit.Backend.Redis != nil {
+		env = append(env, []corev1.EnvVar{
+			{
+				Name:  RedisSocketTypeEnvVar,
+				Value: "tcp",
+			},
+			{
+				Name:  RedisURLEnvVar,
+				Value: rateLimit.Backend.Redis.URL,
+			},
+		}...)
+	}
+
+	if rateLimit.Backend.Redis != nil && rateLimit.Backend.Redis.TLS != nil {
 		env = append(env, corev1.EnvVar{
 			Name:  RedisTLSEnvVar,
 			Value: "true",
@@ -382,7 +389,9 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 
 // Validate the ratelimit tls secret validating.
 func Validate(ctx context.Context, client client.Client, gateway *egv1a1.EnvoyGateway, namespace string) error {
-	if gateway.RateLimit.Backend.Redis.TLS != nil && gateway.RateLimit.Backend.Redis.TLS.CertificateRef != nil {
+	if gateway.RateLimit.Backend.Redis != nil &&
+		gateway.RateLimit.Backend.Redis.TLS != nil &&
+		gateway.RateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		certificateRef := gateway.RateLimit.Backend.Redis.TLS.CertificateRef
 		_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, certificateRef, namespace)
 		return err
