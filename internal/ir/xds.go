@@ -54,6 +54,7 @@ var (
 	ErrHealthCheckUnhealthyThresholdInvalid    = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
 	ErrHealthCheckHealthyThresholdInvalid      = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
 	ErrHealthCheckerInvalid                    = errors.New("health checker setting is invalid, only one health checker can be set")
+	ErrHCHTTPHostInvalid                       = errors.New("field HTTPHealthChecker.Host should be specified")
 	ErrHCHTTPPathInvalid                       = errors.New("field HTTPHealthChecker.Path should be specified")
 	ErrHCHTTPMethodInvalid                     = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid           = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
@@ -422,6 +423,8 @@ type HTTPClientTimeout struct {
 	// The duration envoy waits for the complete request reception. This timer starts upon request
 	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
+	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
@@ -490,6 +493,8 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1551,6 +1556,12 @@ type ActiveHealthCheck struct {
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 }
 
+func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
+	if h != nil && h.Active != nil && h.Active.HTTP != nil && h.Active.HTTP.Host == "" {
+		h.Active.HTTP.Host = host
+	}
+}
+
 // Validate the fields within the HealthCheck structure.
 func (h *HealthCheck) Validate() error {
 	var errs error
@@ -1607,6 +1618,8 @@ func (h *HealthCheck) Validate() error {
 // HTTPHealthChecker defines the settings of http health check.
 // +k8s:deepcopy-gen=true
 type HTTPHealthChecker struct {
+	// Host defines the value of the host header in the HTTP health check request.
+	Host string `json:"host" yaml:"host"`
 	// Path defines the HTTP path that will be requested during health checking.
 	Path string `json:"path" yaml:"path"`
 	// Method defines the HTTP method used for health checking.
@@ -1620,6 +1633,9 @@ type HTTPHealthChecker struct {
 // Validate the fields within the HTTPHealthChecker structure.
 func (c *HTTPHealthChecker) Validate() error {
 	var errs error
+	if c.Host == "" {
+		errs = errors.Join(errs, ErrHCHTTPHostInvalid)
+	}
 	if c.Path == "" {
 		errs = errors.Join(errs, ErrHCHTTPPathInvalid)
 	}
@@ -1806,8 +1822,11 @@ type TLSUpstreamConfig struct {
 // Connection settings for downstream connections
 // +k8s:deepcopy-gen=true
 type Connection struct {
-	// Limit for number of connections
-	Limit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+	//
+	// ConnectionLimit is the limit of number of connections
+	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
+	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
+	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
 }
 
 // ConnectionLimit contains settings for downstream connection limits
@@ -1820,4 +1839,18 @@ type ConnectionLimit struct {
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
+}
+
+// ExtProc holds the information associated with the ExtProc extensions.
+// +k8s:deepcopy-gen=true
+type ExtProc struct {
+	// Name is a unique name for an ExtProc configuration.
+	// The xds translator only generates one ExtProc filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
+	// Destination defines the destination for the gRPC External Processing service.
+	Destination RouteDestination `json:"destination"`
+
+	// Authority is the hostname:port of the HTTP External Processing service.
+	Authority string `json:"authority"`
 }

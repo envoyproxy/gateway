@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -482,26 +483,33 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 		return nil
 	}
 
+	irClientTimeout := &ir.ClientTimeout{}
+
 	if clientTimeout.HTTP != nil {
+		irHTTPTimeout := &ir.HTTPClientTimeout{}
 		if clientTimeout.HTTP.RequestReceivedTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestReceivedTimeout))
 			if err != nil {
 				return err
 			}
-			switch {
-			case httpIR.Timeout == nil:
-				httpIR.Timeout = &ir.ClientTimeout{}
-				fallthrough
-
-			case httpIR.Timeout.HTTP == nil:
-				httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
-			}
-
-			httpIR.Timeout.HTTP.RequestReceivedTimeout = &metav1.Duration{
+			irHTTPTimeout.RequestReceivedTimeout = &metav1.Duration{
 				Duration: d,
 			}
 		}
+
+		if clientTimeout.HTTP.IdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.IdleTimeout))
+			if err != nil {
+				return err
+			}
+			irHTTPTimeout.IdleTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+		irClientTimeout.HTTP = irHTTPTimeout
 	}
+
+	httpIR.Timeout = irClientTimeout
 
 	return nil
 }
@@ -693,7 +701,18 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
 		}
 
-		irConnection.Limit = irConnectionLimit
+		irConnection.ConnectionLimit = irConnectionLimit
+	}
+
+	if connection.BufferLimit != nil {
+		bufferLimit, ok := connection.BufferLimit.AsInt64()
+		if !ok {
+			return fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
+		}
+		if bufferLimit < 0 || bufferLimit > math.MaxUint32 {
+			return fmt.Errorf("BufferLimit value %s is out of range", connection.BufferLimit.String())
+		}
+		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
 	}
 
 	httpIR.Connection = irConnection

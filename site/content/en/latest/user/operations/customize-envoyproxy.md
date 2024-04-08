@@ -55,7 +55,7 @@ After you apply the config, you should see the replicas of envoyproxy changes to
 And also you can dynamically change the value.
 
 ``` shell
-kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg
+kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg -n envoy-gateway-system
 ```
 
 ## Customize EnvoyProxy Image
