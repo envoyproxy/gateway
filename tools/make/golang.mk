@@ -56,7 +56,7 @@ go.testdata.complete: ## Override test ouputdata
 	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi --override-testdata=true
 
 .PHONY: go.test.coverage
-go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in GitHub Actions
+go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" \
 		go test ./... --tags=integration,celvalidation -race -coverprofile=coverage.xml -covermode=atomic
@@ -64,9 +64,12 @@ go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in
 .PHONY: go.test.cel
 go.test.cel: manifests $(tools/setup-envtest) # Run the CEL validation tests
 	@$(LOG_TARGET)
-	go clean -testcache # Ensure we're not using cached test results
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" \
-		go test ./test/cel-validation --tags=celvalidation -race
+	@for ver in $(ENVTEST_K8S_VERSIONS); do \
+  		echo "Run CEL Validation on k8s $$ver"; \
+        go clean -testcache; \
+        KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $$ver -p path)" \
+         go test ./test/cel-validation --tags celvalidation -race; \
+    done
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files
