@@ -225,7 +225,7 @@ enable = true
     name = "Documentation"
     weight = -102
     pre = "<i class='fas fa-book pr-2'></i>"
-    url = "/v1.0.0"
+    url = "/v1.0.1"
 
 [[params.versions]]
   version = "latest"
@@ -252,5 +252,5 @@ enable = true
   url = "/v0.6.0"
 
 [[params.versions]]
-  version = "v1.0.0"
-  url = "/v1.0.0"
+  version = "v1.0.1"
+  url = "/v1.0.1"

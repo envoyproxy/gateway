@@ -31,6 +31,13 @@ jobs:
         files: site/content/*
         config_file: ".github/markdown_lint_config.json"
 
+    - name: Install linkinator
+      run: npm install -g linkinator@6.0.4
+
+    - name: Check links
+      run: make docs docs-check-links
+      continue-on-error: true
+
   docs-build:
     runs-on: ubuntu-latest
     needs: docs-lint
