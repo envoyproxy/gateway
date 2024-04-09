@@ -36,4 +36,4 @@ Refer to the [Developer Guide](/latest/contributions/develop) to learn more.
 
 2. Next Steps
 
-   Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](/latest/user).
+   Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](/latest/tasks).
