@@ -4,6 +4,12 @@ Add styles or override variables from the theme here.
 
 */
 
+@import "reset";
+@import "skin";
+
+@import "base";
+
+
 $primary: #280C53;
 $secondary: #802A78;
 $dark: #280C53;
