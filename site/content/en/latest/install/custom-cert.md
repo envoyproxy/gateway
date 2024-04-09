@@ -5,7 +5,7 @@ weight: -70
 
 Envoy Gateway establishes a secure TLS connection for control plane communication between Envoy Gateway pods and the Envoy Proxy fleet. The TLS Certificates used here are self signed and generated using a job that runs before envoy gateway is created, and these certs and mounted on to the envoy gateway and envoy proxy pods. 
 
-In this guide, we'll walk you through configuring custom certs for control plane auth.
+This task will walk you through configuring custom certs for control plane auth.
 
 ## Before you begin
 
@@ -13,7 +13,7 @@ We use Cert-Manager to manage the certificates. You can install it by following 
 
 ## Configure custom certs for control plane
 
-1. First you need to set up the CA issuer, in this guide, we use the `selfsigned-issuer` as an example.
+1. First you need to set up the CA issuer, in this task, we use the `selfsigned-issuer` as an example.
 
    *You should not use the self-signed issuer in production, you should use a real CA issuer.*
 

@@ -172,5 +172,5 @@ patches will work.
 [EnvoyGateway]: ../../api/extension_types#envoygateway
 [Extending the Control Plane]: ./extending-envoy-gateway
 [EnvoyFilter]: https://istio.io/latest/docs/reference/config/networking/envoy-filter
-[egctl x translate]: ../../user/operations/egctl#egctl-experimental-translate
-[Bootstrap configuration using EnvoyProxy API]: ../../user/operations/customize-envoyproxy#customize-envoyproxy-bootstrap-config
+[egctl x translate]: ../../tasks/operations/egctl#egctl-experimental-translate
+[Bootstrap configuration using EnvoyProxy API]: ../../tasks/operations/customize-envoyproxy#customize-envoyproxy-bootstrap-config

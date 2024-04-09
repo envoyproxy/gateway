@@ -10,7 +10,7 @@ weight: -80
 {{% /alert %}}
 
 
-This guide shows how to install the egctl CLI. egctl can be installed either from source, or from pre-built binary releases.
+This task shows how to install the egctl CLI. egctl can be installed either from source, or from pre-built binary releases.
 
 ### From The Envoy Gateway Project
 
@@ -52,6 +52,6 @@ curl -fsSL https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash
 
 {{% alert title="Next Steps" color="warning" %}}
 
-You can refer to [User Guides](../user/operations/egctl) to more details about egctl.
+You can refer to the [Use egctl task](../tasks/operations/egctl) for more details about egctl.
 
 {{% /alert %}}
