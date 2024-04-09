@@ -140,5 +140,5 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 | Heath Check  | 0.0.0.0     | 19001   |
 
 {{% alert title="Next Steps" color="warning" %}}
-Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../user).
+Envoy Gateway should now be successfully installed and running.  To experience more abilities of Envoy Gateway, refer to [Tasks](../tasks).
 {{% /alert %}}
