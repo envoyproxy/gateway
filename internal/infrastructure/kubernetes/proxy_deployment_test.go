@@ -136,7 +136,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 }
 
 func TestDeleteProxyDeployment(t *testing.T) {
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects().
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
 	cfg, err := config.New()
 	require.NoError(t, err)
 
