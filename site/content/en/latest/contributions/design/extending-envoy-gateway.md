@@ -316,7 +316,7 @@ Extending Envoy Gateway by using an external extension server which makes use of
 [Envoy specific configuration (xDS)]: https://www.envoyproxy.io/docs/envoy/v1.25.1/configuration/configuration
 [v1]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1
 [rate limiting]: ./rate-limit
-[authentication]: ../../user/security/jwt-authentication
+[authentication]: ../../tasks/security/jwt-authentication
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
 [EnvoyGateway config]: ../../api/extension_types/#envoygateway

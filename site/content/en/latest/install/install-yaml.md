@@ -3,7 +3,7 @@ title = "Install with Kubernetes YAML"
 weight = -99
 +++
 
-In this guide, we'll walk you through installing Envoy Gateway in your Kubernetes cluster.
+This task walks you through installing Envoy Gateway in your Kubernetes cluster.
 
 The manual install process does not allow for as much control over configuration
 as the [Helm install method](./install-helm), so if you need more control over your Envoy Gateway
@@ -36,4 +36,4 @@ Refer to the [Developer Guide](/latest/contributions/develop) to learn more.
 
 2. Next Steps
 
-   Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](/latest/user).
+   Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [Tasks](/latest/tasks).
