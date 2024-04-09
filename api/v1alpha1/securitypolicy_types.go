@@ -70,6 +70,11 @@ type SecurityPolicySpec struct {
 	//
 	// +optional
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
+
+	// Authorization defines the configuration for authorization.
+	//
+	// +optional
+	Authorization *Authorization `json:"authorization
 }
 
 // SecurityPolicyStatus defines the state of SecurityPolicy
