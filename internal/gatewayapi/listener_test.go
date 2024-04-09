@@ -79,6 +79,21 @@ func TestProcessMetrics(t *testing.T) {
 				EnableVirtualHostStats: true,
 			},
 		},
+		{
+			name: "peer endpoint stats enabled",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Metrics: &egcfgv1a1.ProxyMetrics{
+							EnablePerEndpointStats: true,
+						},
+					},
+				},
+			},
+			expected: &ir.Metrics{
+				EnablePerEndpointStats: true,
+			},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

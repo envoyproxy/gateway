@@ -29,6 +29,9 @@ type ProxyMetrics struct {
 
 	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
+
+	// EnablePerEndpointStats enables envoy stats metrics for peer endpoint
+	EnablePerEndpointStats bool `json:"enablePerEndpointStats,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.

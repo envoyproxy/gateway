@@ -6034,6 +6034,10 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      enablePerEndpointStats:
+                        description: EnablePerEndpointStats enables envoy stats metrics
+                          for peer endpoint
+                        type: boolean
                       enableVirtualHostStats:
                         description: EnableVirtualHostStats enables envoy stat metrics
                           for virtual hosts.
