@@ -9,7 +9,7 @@ changes:
   - area: translator
     change: |
       Fixed nil secret in resourceversiontable
-      Fixed add missing http filters to the http filter chain
+      Add missing http filters to the http filter chain when ClientTrafficPolicy and MergeGateways is enabled
       Allow websockets when url rewrite is enabled
       Set the Host header for http health checker
       Fixed double slashes in redirect URL
