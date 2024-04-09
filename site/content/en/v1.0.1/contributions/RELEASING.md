@@ -6,7 +6,10 @@ description: "This section tells the release process of Envoy Gateway."
 This document guides maintainers through the process of creating an Envoy Gateway release.
 
 - [Release Candidate](#release-candidate)
+  - [Prerequisites](#prerequisites)
+  - [Setup cherry picker action](#setup-cherry-picker-action)
 - [Minor Release](#minor-release)
+  - [Prerequisites](#prerequisites-1)
 - [Announce the Release](#announce-the-release)
 
 ## Release Candidate
@@ -65,7 +68,7 @@ export GITHUB_REMOTE=origin
 13. Confirm that the [release workflow][] completed successfully.
 14. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
 15. Confirm that the [release][] was created.
-16. Note that the [Quickstart Guide][] references are __not__ updated for release candidates. However, test
+16. Note that the [Quickstart][] references are __not__ updated for release candidates. However, test
     the quickstart steps using the release candidate by manually updating the links.
 17. [Generate][] the GitHub changelog.
 18. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
@@ -203,7 +206,7 @@ export GITHUB_REMOTE=origin
 10. Confirm that the [release workflow][] completed successfully.
 11. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
 12. Confirm that the [release][] was created.
-13. Confirm that the steps in the [Quickstart Guide][] work as expected.
+13. Confirm that the steps in the [Quickstart][] work as expected.
 14. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
 
    ```console
@@ -239,7 +242,7 @@ It's important that the world knows about the release. Use the following steps t
 
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
-[Quickstart Guide]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
+[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
 [Build and Test]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/build_and_test.yaml
 [release GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/release.yaml
 [release workflow]: https://github.com/envoyproxy/gateway/actions/workflows/release.yaml
