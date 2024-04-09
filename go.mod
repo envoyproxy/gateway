@@ -3,8 +3,8 @@ module github.com/envoyproxy/gateway
 go 1.22
 
 require (
-	fortio.org/fortio v1.63.5
-	fortio.org/log v1.12.1
+	fortio.org/fortio v1.63.7
+	fortio.org/log v1.12.2
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
@@ -36,9 +36,9 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.24.0
 	go.opentelemetry.io/proto/otlp v1.1.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81
+	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
 	golang.org/x/sys v0.18.0
-	google.golang.org/grpc v1.62.1
+	google.golang.org/grpc v1.63.0
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.14.3
@@ -171,7 +171,7 @@ require (
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/net v0.22.0
+	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
@@ -180,9 +180,9 @@ require (
 	golang.org/x/tools v0.19.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto v0.0.0-20240123012728-ef4313101c80 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240123012728-ef4313101c80 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
+	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/component-base v0.29.3 // indirect
