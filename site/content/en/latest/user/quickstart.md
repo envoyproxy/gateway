@@ -20,7 +20,7 @@ so the `Gateway` resource has an Address associated with it. We recommend using 
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.0 -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
@@ -32,7 +32,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v1.0.0/quickstart.yaml -n default
 ```
 
 **Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
@@ -43,14 +43,20 @@ unprivileged port, so that Envoy Gateway doesn't need additional privileges.
 It's important to be aware of this mapping, since you may need to take it into
 consideration when debugging.
 
-[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/v1.0.0/quickstart.yaml
 
 ## Testing the Configuration
+
+{{< tabs name="tabs_test_the_configuration" >}}
+{{% tab name="Test Configuration" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
 ```shell
-export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+export ENVOY_SERVICE= \ 
+    $(kubectl get svc -n envoy-gateway-system \
+    --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg \
+    -o jsonpath='{.items[0].metadata.name}')
 ```
 
 Port forward to the Envoy service:
@@ -65,7 +71,10 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-### External LoadBalancer Support
+{{% /tab %}}
+
+{{% tab name="External LoadBalancer Support" %}}
+Get the name of the Envoy service created the by the example Gateway:
 
 You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
 Envoy service, run:
@@ -83,14 +92,16 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
-## Clean-Up
+{{% /tab %}}
+
+{{% tab name="Clean-Up" %}}
 
 Use the steps in this section to uninstall everything from the quickstart guide.
 
 Delete the GatewayClass, Gateway, HTTPRoute and Example App:
 
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml --ignore-not-found=true
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v1.0.0/quickstart.yaml --ignore-not-found=true
 ```
 
 Delete the Gateway API CRDs and Envoy Gateway:
@@ -98,6 +109,9 @@ Delete the Gateway API CRDs and Envoy Gateway:
 ```shell
 helm uninstall eg -n envoy-gateway-system
 ```
+
+{{% /tab %}}
+{{< /tabs >}}
 
 ## Next Steps
 
