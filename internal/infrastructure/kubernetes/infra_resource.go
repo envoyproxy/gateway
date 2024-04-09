@@ -7,18 +7,11 @@ package kubernetes
 
 import (
 	"context"
-	"reflect"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
-	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // createOrUpdateServiceAccount creates a ServiceAccount in the kube api server based on the
@@ -29,14 +22,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		return err
 	}
 
-	current := &corev1.ServiceAccount{}
-	key := utils.NamespacedName(sa)
-
-	return i.Client.CreateOrUpdate(ctx, key, current, sa, func() bool {
-		// the service account never changed, does not need to update
-		// fixes https://github.com/envoyproxy/gateway/issues/1604
-		return false
-	})
+	return i.Client.ServerSideApply(ctx, sa)
 }
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
@@ -50,15 +36,8 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) e
 	if cm == nil {
 		return nil
 	}
-	current := &corev1.ConfigMap{}
-	key := types.NamespacedName{
-		Namespace: cm.Namespace,
-		Name:      cm.Name,
-	}
 
-	return i.Client.CreateOrUpdate(ctx, key, current, cm, func() bool {
-		return !reflect.DeepEqual(cm.Data, current.Data)
-	})
+	return i.Client.ServerSideApply(ctx, cm)
 }
 
 // createOrUpdateDeployment creates a Deployment in the kube api server based on the provided
@@ -69,25 +48,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		return err
 	}
 
-	current := &appsv1.Deployment{}
-	key := types.NamespacedName{
-		Namespace: deployment.Namespace,
-		Name:      deployment.Name,
-	}
-
-	hpa, err := r.HorizontalPodAutoscaler()
-	if err != nil {
-		return err
-	}
-
-	var opts cmp.Options
-	if hpa != nil {
-		opts = append(opts, cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "Replicas"))
-	}
-
-	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
-		return !cmp.Equal(current.Spec, deployment.Spec, opts...)
-	})
+	return i.Client.ServerSideApply(ctx, deployment)
 }
 
 // createOrUpdateHPA creates HorizontalPodAutoscaler object in the kube api server based on
@@ -105,15 +66,7 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) error {
 		return i.deleteHPA(ctx, r)
 	}
 
-	current := &autoscalingv2.HorizontalPodAutoscaler{}
-	key := types.NamespacedName{
-		Namespace: hpa.Namespace,
-		Name:      hpa.Name,
-	}
-
-	return i.Client.CreateOrUpdate(ctx, key, current, hpa, func() bool {
-		return !cmp.Equal(hpa.Spec, current.Spec)
-	})
+	return i.Client.ServerSideApply(ctx, hpa)
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided ResourceRender,
@@ -124,15 +77,7 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 		return err
 	}
 
-	current := &corev1.Service{}
-	key := types.NamespacedName{
-		Namespace: svc.Namespace,
-		Name:      svc.Name,
-	}
-
-	return i.Client.CreateOrUpdate(ctx, key, current, svc, func() bool {
-		return !resource.CompareSvc(svc, current)
-	})
+	return i.Client.ServerSideApply(ctx, svc)
 }
 
 // deleteServiceAccount deletes the ServiceAccount in the kube api server, if it exists.
