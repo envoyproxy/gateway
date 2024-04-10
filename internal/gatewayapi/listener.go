@@ -260,8 +260,8 @@ func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Trac
 	if tracing.Provider.Host != nil {
 		host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 	}
-	if tracing.Provider.BackendRef != nil {
-		host, port = net.BackendHostAndPort(*tracing.Provider.BackendRef, gw.Namespace)
+	if len(tracing.Provider.BackendRefs) > 0 {
+		host, port = net.BackendHostAndPort(tracing.Provider.BackendRefs[0].BackendObjectReference, gw.Namespace)
 	}
 
 	samplingRate := 100.0

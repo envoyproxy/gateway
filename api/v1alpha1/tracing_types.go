@@ -5,8 +5,6 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
 type ProxyTracing struct {
 	// SamplingRate controls the rate at which traffic will be
 	// selected for tracing if no prior sampling decision has been made.
@@ -32,8 +30,7 @@ const (
 
 // TracingProvider defines the tracing provider configuration.
 //
-// +kubebuilder:validation:XValidation:message="host or backendRef needs to be set",rule="has(self.host) || has(self.backendRef)"
-// +kubebuilder:validation:XValidation:message="backendRef only support Service Kind.",rule="!has(self.backendRef) || self.backendRef.kind == 'Service'"
+// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type TracingProvider struct {
 	// Type defines the tracing provider type.
 	// EG currently only supports OpenTelemetry.
@@ -52,12 +49,14 @@ type TracingProvider struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-	// BackendRef references a Kubernetes object that represents the
+	// BackendRefs references a Kubernetes object that represents the
 	// backend server to which the accesslog will be sent.
 	// Only service Kind is supported for now.
 	//
 	// +optional
-	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef"`
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	BackendRefs []BackendRef `json:"backendRefs"`
 }
 
 type CustomTagType string

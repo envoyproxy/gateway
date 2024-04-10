@@ -88,9 +88,13 @@ func TestProcessTracing(t *testing.T) {
 							Provider: egcfgv1a1.TracingProvider{
 								Host: ptr.To("fake-host"),
 								Port: 4317,
-								BackendRef: &gwapiv1.BackendObjectReference{
-									Name: "fake-name",
-									Port: PortNumPtr(4317),
+								BackendRefs: []egcfgv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "fake-name",
+											Port: PortNumPtr(4317),
+										},
+									},
 								},
 							},
 						},
@@ -120,9 +124,13 @@ func TestProcessTracing(t *testing.T) {
 					Telemetry: &egcfgv1a1.ProxyTelemetry{
 						Tracing: &egcfgv1a1.ProxyTracing{
 							Provider: egcfgv1a1.TracingProvider{
-								BackendRef: &gwapiv1.BackendObjectReference{
-									Name: "fake-name",
-									Port: PortNumPtr(4317),
+								BackendRefs: []egcfgv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "fake-name",
+											Port: PortNumPtr(4317),
+										},
+									},
 								},
 							},
 						},

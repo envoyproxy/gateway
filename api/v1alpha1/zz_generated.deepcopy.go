@@ -3830,10 +3830,12 @@ func (in *TracingProvider) DeepCopyInto(out *TracingProvider) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.BackendRef != nil {
-		in, out := &in.BackendRef, &out.BackendRef
-		*out = new(v1.BackendObjectReference)
-		(*in).DeepCopyInto(*out)
+	if in.BackendRefs != nil {
+		in, out := &in.BackendRefs, &out.BackendRefs
+		*out = make([]BackendRef, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 
