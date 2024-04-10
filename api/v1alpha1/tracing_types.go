@@ -56,7 +56,7 @@ type TracingProvider struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	BackendRefs []BackendRef `json:"backendRefs"`
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 }
 
 type CustomTagType string
