@@ -239,6 +239,11 @@ enable = true
 
 [menu]
   [[menu.main]]
+    name = "Contributions"
+    weight = -98
+    pre = "<i class='fas fa-rss pr-2'></i>"
+    url = "/contributions"
+  [[menu.main]]
     name = "Blog"
     weight = -99
     pre = "<i class='fas fa-rss pr-2'></i>"
