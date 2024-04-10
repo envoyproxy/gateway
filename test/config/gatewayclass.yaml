@@ -22,10 +22,10 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            backendRef:
-              name: otel-collector
-              namespace: monitoring
-              port: 4317
+            backendRefs:
+              - name: otel-collector
+                namespace: monitoring
+                port: 4317
     accessLog:
       settings:
         - format:
@@ -38,18 +38,18 @@ spec:
                 path: /dev/stdout
             - type: OpenTelemetry
               openTelemetry:
-                backendRef:
-                  name: otel-collector
-                  namespace: monitoring
-                  port: 4317
+                backendRefs:
+                  - name: otel-collector
+                    namespace: monitoring
+                    port: 4317
                 resources:
                   k8s.cluster.name: "envoy-gateway"
     tracing:
       provider:
-        backendRef:
-          name: otel-collector
-          namespace: monitoring
-          port: 4317
+        backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4317
       customTags:
         "k8s.cluster.name":
           type: Literal
@@ -92,4 +92,3 @@ spec:
     kubernetes:
       envoyDeployment:
         replicas: 2
-
