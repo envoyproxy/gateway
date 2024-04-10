@@ -1023,8 +1023,6 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 
 
-
-
 #### ExtProcBackendRef
 
 
@@ -1043,32 +1041,6 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
-
-
-#### ExtProcBodyProcessingMode
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [ProcessingModeOptions](#processingmodeoptions)
-
-
-
-#### ExtProcHeaderProcessingMode
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [ProcessingModeOptions](#processingmodeoptions)
-
-
-
-
-
 
 
 #### ExtensionAPISettings
@@ -1822,20 +1794,6 @@ _Appears in:_
 
 
 
-#### MetadataNamespaces
-
-
-
-MetadataNamespaces defines metadata namespaces that can be used to forward or receive dynamic metadata
-
-_Appears in:_
-- [ExtProcMetadataOptions](#extprocmetadataoptions)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `untyped` | _string array_ |  false  | Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service<br />as an opaque protobuf::Struct. |
-
-
 #### MetricSinkType
 
 _Underlying type:_ _string_
@@ -1986,21 +1944,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout is the timeout per retry attempt. |
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
-
-
-#### ProcessingModeOptions
-
-
-
-ProcessingModeOptions defines if headers or body should be processed by the external service
-
-_Appears in:_
-- [ExtProcProcessingMode](#extprocprocessingmode)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `headers` | _[ExtProcHeaderProcessingMode](#extprocheaderprocessingmode)_ |  false  | Defines header processing mode |
-| `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
 
 
 #### ProviderType
