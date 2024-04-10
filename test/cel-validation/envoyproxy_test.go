@@ -498,6 +498,49 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
+			desc: "multi-accesslog-backendref",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Kind: ptr.To(gwapiv1.Kind("Service")),
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Kind: ptr.To(gwapiv1.Kind("Service")),
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"must have at most 1 items"},
+		},
+		{
 			desc: "accesslog-backendref-empty-kind",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -641,6 +684,39 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "ProxyMetrics-sinks-multi-backendref",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendRefs: []egv1a1.BackendRef{
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name: "fake-service",
+													Port: ptr.To(gwapiv1.PortNumber(8080)),
+												},
+											},
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name: "fake-service",
+													Port: ptr.To(gwapiv1.PortNumber(8080)),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"must have at most 1 items"},
+		},
+		{
 			desc: "ProxyMetrics-sinks-backendref-empty-kind",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -762,6 +838,37 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
+		},
+		{
+			desc: "tracing-multi-backendref",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "fake-service",
+											Kind: ptr.To(gwapiv1.Kind("Service")),
+											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										},
+									},
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "fake-service",
+											Kind: ptr.To(gwapiv1.Kind("Service")),
+											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"must have at most 1 items"},
 		},
 		{
 			desc: "tracing-empty-backend",
