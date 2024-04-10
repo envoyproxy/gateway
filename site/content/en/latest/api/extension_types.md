@@ -123,6 +123,7 @@ BackendRef defines how an ObjectReference that is specific to BackendRef.
 
 _Appears in:_
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
+- [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -2145,7 +2146,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `host` | _string_ |  false  | Host define the service hostname.<br />Deprecated: Use BackendRef instead. |
 | `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
 
 
 #### ProxyPrometheusProvider

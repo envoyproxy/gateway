@@ -611,7 +611,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"host or backendRef needs to be set"},
+			wantErrors: []string{"host or backendRefs needs to be set"},
 		},
 		{
 			desc: "ProxyMetrics-sinks-backendref",
@@ -623,10 +623,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRef: &gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Kind: ptr.To(gwapiv1.Kind("Service")),
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										BackendRefs: []egv1a1.BackendRef{
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name: "fake-service",
+													Port: ptr.To(gwapiv1.PortNumber(8080)),
+												},
+											},
 										},
 									},
 								},
@@ -647,9 +650,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRef: &gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										BackendRefs: []egv1a1.BackendRef{
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name: "fake-service",
+													Port: ptr.To(gwapiv1.PortNumber(8080)),
+												},
+											},
 										},
 									},
 								},
@@ -670,10 +677,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRef: &gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Kind: ptr.To(gwapiv1.Kind("foo")),
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										BackendRefs: []egv1a1.BackendRef{
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name: "fake-service",
+													Kind: ptr.To(gwapiv1.Kind("foo")),
+													Port: ptr.To(gwapiv1.PortNumber(8080)),
+												},
+											},
 										},
 									},
 								},
