@@ -227,8 +227,8 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 					al.Host = *sink.OpenTelemetry.Host
 				}
 
-				if sink.OpenTelemetry.BackendRef != nil {
-					al.Host, al.Port = net.BackendHostAndPort(*sink.OpenTelemetry.BackendRef, envoyproxy.Namespace)
+				if len(sink.OpenTelemetry.BackendRefs) > 0 {
+					al.Host, al.Port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, envoyproxy.Namespace)
 				}
 
 				switch accessLog.Format.Type {

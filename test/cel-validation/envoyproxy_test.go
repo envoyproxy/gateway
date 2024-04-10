@@ -443,9 +443,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRef: &gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Kind: ptr.To(gwapiv1.Kind("foo")),
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Kind: ptr.To(gwapiv1.Kind("foo")),
+														},
+													},
 												},
 											},
 										},
@@ -456,7 +460,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"backendRef only support Service Kind."},
+			wantErrors: []string{"only support Service Kind."},
 		},
 		{
 			desc: "accesslog-backendref",
@@ -474,10 +478,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRef: &gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Kind: ptr.To(gwapiv1.Kind("Service")),
-													Port: ptr.To(gwapiv1.PortNumber(8080)),
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Kind: ptr.To(gwapiv1.Kind("Service")),
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
 												},
 											},
 										},
@@ -505,9 +513,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRef: &gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Port: ptr.To(gwapiv1.PortNumber(8080)),
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
 												},
 											},
 										},
@@ -543,7 +555,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"host or backendRef needs to be set"},
+			wantErrors: []string{"host or backendRefs needs to be set"},
 		},
 		{
 			desc: "ProxyMetricSink-with-TypeOpenTelemetry-but-no-openTelemetry",
@@ -670,7 +682,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"backendRef only support Service Kind."},
+			wantErrors: []string{"only support Service Kind."},
 		},
 		{
 			desc: "invalid-tracing-backendref-invalid-kind",

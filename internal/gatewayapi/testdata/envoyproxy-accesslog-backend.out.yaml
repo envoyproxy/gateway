@@ -111,8 +111,8 @@ infraIR:
                     path: /dev/stdout
                   type: File
                 - openTelemetry:
-                    backendRef:
-                      name: otel-collector
+                    backendRefs:
+                    - name: otel-collector
                       namespace: monitoring
                       port: 4317
                     host: null

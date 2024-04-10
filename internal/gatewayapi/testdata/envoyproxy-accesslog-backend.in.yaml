@@ -18,8 +18,8 @@ envoyproxy:
               path: /dev/stdout
           - type: OpenTelemetry
             openTelemetry:
-              backendRef:
-                name: otel-collector
+              backendRefs:
+              - name: otel-collector
                 namespace: monitoring
                 port: 4317
               resources:
