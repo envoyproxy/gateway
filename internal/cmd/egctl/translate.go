@@ -6,9 +6,11 @@
 package egctl
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
@@ -170,6 +172,23 @@ func getValidResourceTypesStr() string {
 	return fmt.Sprintf("Valid types are %v.", validResourceTypes())
 }
 
+func getInputBytes(inFile string) ([]byte, error) {
+	// Get input from stdin
+	if inFile == "-" {
+		scanner := bufio.NewScanner(os.Stdin)
+		var input string
+		for {
+			if !scanner.Scan() {
+				break
+			}
+			input += scanner.Text() + "\n"
+		}
+		return []byte(input), nil
+	}
+	// Get input from file
+	return os.ReadFile(inFile)
+}
+
 func validate(inFile, inType string, outTypes []string, resourceType string) error {
 	if !isValidInputType(inType) {
 		return fmt.Errorf("%s is not a valid input type. %s", inType, getValidInputTypesStr())
@@ -193,7 +212,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		return err
 	}
 
-	inBytes, err := gatewayapi.ReadKubernetesYAMLBytes(inFile)
+	inBytes, err := getInputBytes(inFile)
 	if err != nil {
 		return fmt.Errorf("unable to read input file: %w", err)
 	}

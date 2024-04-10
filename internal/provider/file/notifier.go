@@ -47,7 +47,7 @@ func NewNotifier(logger logr.Logger) (*Notifier, error) {
 	}
 
 	return &Notifier{
-		Events:                    make(chan fsnotify.Event, 0),
+		Events:                    make(chan fsnotify.Event),
 		filesWatcher:              fw,
 		dirsWatcher:               dw,
 		cleanUpRemoveEventsPeriod: defaultCleanUpRemoveEventsPeriod,

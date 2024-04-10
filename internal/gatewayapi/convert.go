@@ -6,9 +6,7 @@
 package gatewayapi
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 
@@ -25,23 +23,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
-
-func ReadKubernetesYAMLBytes(filePath string) ([]byte, error) {
-	// Get input from stdin
-	if filePath == "-" {
-		scanner := bufio.NewScanner(os.Stdin)
-		var input string
-		for {
-			if !scanner.Scan() {
-				break
-			}
-			input += scanner.Text() + "\n"
-		}
-		return []byte(input), nil
-	}
-	// Get input from file
-	return os.ReadFile(filePath)
-}
 
 // ConvertKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources
 func ConvertKubernetesYAMLToResources(str string, addMissingResources bool) (*Resources, error) {
