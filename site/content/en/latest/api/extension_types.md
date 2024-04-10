@@ -2354,6 +2354,48 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
+| `tracing` | _[RateLimitTracing](#ratelimittracing)_ |  true  | Tracing defines traces configuration for RateLimit. |
+
+
+#### RateLimitTracing
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `Provider` | _[RateLimitTracingProvider](#ratelimittracingprovider)_ |  true  | Provider defines the rateLimit tracing provider.<br />Only OpenTelemetry is supported currently. |
+
+
+#### RateLimitTracingProvider
+
+
+
+RateLimitTracingProvider defines the tracing provider configuration of RateLimit
+
+_Appears in:_
+- [RateLimitTracing](#ratelimittracing)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[RateLimitTracingProviderType](#ratelimittracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported |
+| `url` | _string_ |  true  | URL is the endpoint of the trace collector that supports the OTLP protocol |
+
+
+#### RateLimitTracingProviderType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [RateLimitTracingProvider](#ratelimittracingprovider)
+
 
 
 #### RateLimitType

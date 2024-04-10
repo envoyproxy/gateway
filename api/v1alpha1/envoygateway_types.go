@@ -354,6 +354,9 @@ type RateLimit struct {
 type RateLimitTelemetry struct {
 	// Metrics defines metrics configuration for RateLimit.
 	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+
+	// Tracing defines traces configuration for RateLimit.
+	Tracing *RateLimitTracing `json:"tracing,omitempty"`
 }
 
 type RateLimitMetrics struct {
@@ -364,6 +367,34 @@ type RateLimitMetrics struct {
 type RateLimitMetricsPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
+}
+
+type RateLimitTracing struct {
+	// SamplingRate controls the rate at which traffic will be
+	// selected for tracing if no prior sampling decision has been made.
+	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+	// +optional
+	SamplingRate *uint32 `json:"samplingRate,omitempty"`
+
+	// Provider defines the rateLimit tracing provider.
+	// Only OpenTelemetry is supported currently.
+	Provider *RateLimitTracingProvider
+}
+
+type RateLimitTracingProviderType string
+
+const (
+	RateLimitTracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+)
+
+// RateLimitTracingProvider defines the tracing provider configuration of RateLimit
+type RateLimitTracingProvider struct {
+	// Type defines the tracing provider type.
+	// Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported
+	Type RateLimitTracingProviderType `json:"type"`
+
+	// URL is the endpoint of the trace collector that supports the OTLP protocol
+	URL string `json:"url"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

@@ -79,6 +79,18 @@ const (
 	ConfigGrpcXdsServerURLEnvVar = "CONFIG_GRPC_XDS_SERVER_URL"
 	// ConfigGrpcXdsNodeIDEnvVar is the id of ratelimit node.
 	ConfigGrpcXdsNodeIDEnvVar = "CONFIG_GRPC_XDS_NODE_ID"
+	// TracingEnabledVar is enabled the tracing feature
+	TracingEnabledVar = "TRACING_ENABLED"
+	// TracingServiceNameVar is service name appears in tracing span
+	TracingServiceNameVar = "TRACING_SERVICE_NAME"
+	// TracingServiceNamespaceVar is service namespace appears in tracing span
+	TracingServiceNamespaceVar = "TRACING_SERVICE_NAMESPACE"
+	// TracingServiceInstanceIDVar is service instance id appears in tracing span
+	TracingServiceInstanceIDVar = "TRACING_SERVICE_INSTANCE_ID"
+	// TracingSamplingRateVar is trace sampling rate
+	TracingSamplingRateVar = "TRACING_SAMPLING_RATE"
+	// OTELExporterOTLPTraceEndpointVar is target url to which the trace exporter is going to send
+	OTELExporterOTLPTraceEndpointVar = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
 
 	// InfraName is the name for rate-limit resources.
 	InfraName = "envoy-ratelimit"
@@ -125,7 +137,8 @@ func rateLimitLabels() map[string]string {
 }
 
 // expectedRateLimitContainers returns expected rateLimit containers.
-func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) []corev1.Container {
+func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
+	namespace string) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "grpc",
@@ -142,7 +155,7 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			Command: []string{
 				"/bin/ratelimit",
 			},
-			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment),
+			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace),
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
 			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
@@ -275,7 +288,8 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 }
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
-func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
+func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
+	namespace string) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  RuntimeRootEnvVar,
@@ -384,6 +398,54 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		}
 	}
 
+	if enableTracing(rateLimit) {
+		var sampleRate = 1.0
+		if rateLimit.Telemetry.Tracing.SamplingRate != nil {
+			sampleRate = float64(*rateLimit.Telemetry.Tracing.SamplingRate) / 100.0
+		}
+
+		traceEndpoint := checkTraceEndpointScheme(rateLimit.Telemetry.Tracing.Provider.URL)
+		tracingEnvs := []corev1.EnvVar{
+			{
+				Name:  TracingEnabledVar,
+				Value: "true",
+			},
+			{
+				Name:  TracingServiceNameVar,
+				Value: InfraName,
+			},
+			{
+				Name:  TracingServiceNamespaceVar,
+				Value: namespace,
+			},
+			{
+				// By default, this is a random instanceID,
+				// we use the RateLimit pod name as the trace service instanceID.
+				Name: TracingServiceInstanceIDVar,
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "metadata.name",
+					},
+				},
+			},
+			{
+				Name: TracingSamplingRateVar,
+				// The api is configured with [0,100], but sampling can only be [0,1].
+				// doc: https://github.com/envoyproxy/ratelimit?tab=readme-ov-file#tracing
+				// You will lose precision during the conversion process, but don't worry,
+				// this follows the rounding rule and won't make the expected sampling rate too different
+				// from the actual sampling rate
+				Value: strconv.FormatFloat(sampleRate, 'f', 1, 64),
+			},
+			{
+				Name:  OTELExporterOTLPTraceEndpointVar,
+				Value: traceEndpoint,
+			},
+		}
+		env = append(env, tracingEnvs...)
+	}
+
 	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
@@ -398,4 +460,32 @@ func Validate(ctx context.Context, client client.Client, gateway *egv1a1.EnvoyGa
 	}
 
 	return nil
+}
+
+func enableTracing(rl *egv1a1.RateLimit) bool {
+	// Other fields can use the default values,
+	// but we have to make sure the user has the Provider.URL
+	if rl != nil && rl.Telemetry != nil &&
+		rl.Telemetry.Tracing != nil &&
+		rl.Telemetry.Tracing.Provider != nil &&
+		len(rl.Telemetry.Tracing.Provider.URL) != 0 {
+		return true
+	}
+
+	return false
+}
+
+// checkTraceEndpointScheme Check the scheme prefix in the trace url
+func checkTraceEndpointScheme(url string) string {
+	// Since the OTLP collector needs to configure the scheme prefix,
+	// we need to check if the user has configured this
+	// TODO: It is currently assumed to be a normal connection,
+	//  	 and a TLS connection will be added later.
+	httpScheme := "http://"
+	exist := strings.HasPrefix(url, httpScheme)
+	if exist {
+		return url
+	}
+
+	return fmt.Sprintf("%s%s", httpScheme, url)
 }
