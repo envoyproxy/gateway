@@ -10,8 +10,8 @@ This guide show you how to config RateLimit observability, includes traces.
 Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
 Before proceeding, you should be able to query the example backend using HTTP. Follow the steps from the [Global Rate Limit](../traffic/global-rate-limit) to install RateLimit.
 
-
 [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) offers a vendor-agnostic implementation of how to receive, process and export telemetry data.
+
 Install OTel-Collector:
 
 ```shell
@@ -29,10 +29,8 @@ RateLimit uses the OpenTelemetry Exporter to export traces to the collector.
 You can configure a collector that supports the OTLP protocol, which includes but is not limited to: OpenTelemetry Collector, Jaeger, Zipkin, and so on.
 
 ***Note:***
-* By default, the Envoy Gateway configures a 100% sampling rate for RateLimit, which may lead to performance issues.
-* The Envoy Gateway constructs the Kubernetes FQDN using the value of `BackendObjectReference`, which serves as the target endpoint for
-  the RateLimit trace collector. The `BackendObjectReference` is configured through the collector Service. Please note, the configuration of collector Service
-  using `Service.type=ExternalName` is currently not supported.
+
+* By default, the Envoy Gateway configures a `100%` sampling rate for RateLimit, which may lead to performance issues.
 
 Assuming the OpenTelemetry Collector is running in the `observability` namespace, and it has a service named `otel-svc`,
 we only want to sample `50%` of the trace data. We would configure it as follows:
@@ -60,13 +58,12 @@ data:
       telemetry:
         tracing:
           sampleRate: 50
-          backendRef:
-            name: otel-svc
-            namespace: observability
+          provider:
+            url: otel-svc.observability.svc.cluster.local:4318
 EOF
 ```
 
-After updating the ConfigMap, you will need to restart the envoy-gateway deployment so the configuration kicks in
+After updating the ConfigMap, you will need to restart the envoy-gateway deployment so the configuration kicks in:
 
 ```shell
 kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
