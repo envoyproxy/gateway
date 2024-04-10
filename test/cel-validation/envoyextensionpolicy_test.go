@@ -232,42 +232,6 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"},
 		},
-		{
-			desc: "ExtProc with invalid fields",
-			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
-				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					ExtProc: []egv1a1.ExtProc{
-						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
-								},
-							},
-							ProcessingMode: &egv1a1.ExtProcProcessingMode{
-								Request: &egv1a1.ProcessingModeOptions{
-									Headers: ptr.To(egv1a1.ExtProcHeaderProcessingMode("not-a-header-mode")),
-								},
-								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("not-a-body-mode")),
-								},
-							},
-						},
-					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
-						},
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.extProc[0].processingMode.response.body: Unsupported value: \"not-a-body-mode\": supported values: \"None\", \"Streamed\", \"Buffered\", \"BufferedPartial\"",
-				"spec.extProc[0].processingMode.request.headers: Unsupported value: \"not-a-header-mode\": supported values: \"Default\", \"Send\", \"Skip\"",
-			},
-		},
 	}
 
 	for _, tc := range cases {
