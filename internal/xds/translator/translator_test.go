@@ -263,6 +263,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "fault-injection",
 		},
 		{
+			name: "headers-with-underscores-action",
+		},
+		{
 			name: "tls-with-ciphers-versions-alpn",
 		},
 		{
@@ -293,6 +296,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "client-timeout",
 		},
 		{
+			name: "client-buffer-limit",
+		},
+		{
 			name: "retry-partial-invalid",
 		},
 		{
@@ -300,6 +306,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "listener-connection-limit",
+		},
+		{
+			name: "ext-proc",
 		},
 	}
 

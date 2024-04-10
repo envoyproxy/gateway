@@ -36,6 +36,8 @@ type Server struct {
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
 	Logger logging.Logger
+	// Elected chan is used to signal what a leader is elected
+	Elected chan struct{}
 }
 
 // New returns a Server with default parameters.
@@ -45,7 +47,8 @@ func New() (*Server, error) {
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		// the default logger
-		Logger: logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		Logger:  logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		Elected: make(chan struct{}),
 	}, nil
 }
 

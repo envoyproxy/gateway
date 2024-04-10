@@ -178,16 +178,11 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 
 // routeContainsOIDC returns true if OIDC exists for the provided route.
 func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
 	if irRoute != nil &&
 		irRoute.Security != nil &&
 		irRoute.Security.OIDC != nil {
 		return true
 	}
-
 	return false
 }
 

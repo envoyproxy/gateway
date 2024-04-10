@@ -39,10 +39,6 @@ spec:
       - command:
         - /bin/ratelimit
         env:
-        - name: REDIS_SOCKET_TYPE
-          value: tcp
-        - name: REDIS_URL
-          value: redis.redis.svc:6379
         - name: RUNTIME_ROOT
           value: /data
         - name: RUNTIME_SUBDIRECTORY
@@ -79,6 +75,10 @@ spec:
           value: /certs/ca.crt
         - name: FORCE_START_WITHOUT_INITIAL_CONFIG
           value: "true"
+        - name: REDIS_SOCKET_TYPE
+          value: tcp
+        - name: REDIS_URL
+          value: redis.redis.svc:6379
         - name: env_a
           value: env_a_value
         - name: env_b

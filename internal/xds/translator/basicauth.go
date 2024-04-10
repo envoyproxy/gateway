@@ -108,16 +108,11 @@ func basicAuthConfig(basicAuth *ir.BasicAuth) *basicauthv3.BasicAuth {
 
 // routeContainsBasicAuth returns true if BasicAuth exists for the provided route.
 func routeContainsBasicAuth(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
 	if irRoute != nil &&
 		irRoute.Security != nil &&
 		irRoute.Security.BasicAuth != nil {
 		return true
 	}
-
 	return false
 }
 
