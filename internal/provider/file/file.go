@@ -14,13 +14,22 @@ import (
 )
 
 type Provider struct {
-	watcher *watcher
+	paths     []string
+	notifier  *Notifier
+	resources *message.ProviderResources
 }
 
-func New(svr *config.Server, resources *message.ProviderResources) *Provider {
-	return &Provider{
-		watcher: newWatcher(svr.EnvoyGateway.Provider.Custom.Resource.File.Paths),
+func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
+	notifier, err := NewNotifier(svr.Logger.Logger)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Provider{
+		paths:     svr.EnvoyGateway.Provider.Custom.Resource.File.Paths,
+		notifier:  notifier,
+		resources: resources,
+	}, nil
 }
 
 func (p *Provider) Type() v1alpha1.ProviderType {
@@ -28,15 +37,22 @@ func (p *Provider) Type() v1alpha1.ProviderType {
 }
 
 func (p *Provider) Start(ctx context.Context) error {
-	errChan := make(chan error)
-	go func() {
-		errChan <- p.watcher.Watch(ctx)
-	}()
-
-	select {
-	case <-ctx.Done():
-		return nil
-	case err := <-errChan:
+	dirs, files, err := getDirsAndFilesForWatcher(p.paths)
+	if err != nil {
 		return err
+	}
+
+	// TODO: initial load for resources-store
+
+	p.notifier.Watch(ctx, dirs, files)
+	defer p.notifier.Close()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-p.notifier.Events:
+			// TODO: ask resources-store to update according to the recv event
+		}
 	}
 }

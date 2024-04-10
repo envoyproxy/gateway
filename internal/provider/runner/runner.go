@@ -55,7 +55,10 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		}
 
 	case v1alpha1.ProviderTypeFile:
-		p = file.New(&r.Config.Server, r.ProviderResources)
+		p, err = file.New(&r.Config.Server, r.ProviderResources)
+		if err != nil {
+			return fmt.Errorf("failed to create provider %s: %w", v1alpha1.ProviderTypeFile, err)
+		}
 
 	default:
 		// Unsupported provider.
