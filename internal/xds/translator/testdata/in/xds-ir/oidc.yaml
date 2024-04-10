@@ -22,6 +22,7 @@ http:
       name: securitypolicy/default/policy-for-first-route
       clientID: client.oauth.foo.com
       clientSecret: Y2xpZW50MTpzZWNyZXQK
+      hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
       provider:
         authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
         tokenEndpoint: https://oauth.foo.com/token
@@ -29,6 +30,8 @@ http:
       - openid
       - email
       - profile
+      resources:
+      - api
       redirectURL: "https://www.example.com/foo/oauth2/callback"
       redirectPath: "/foo/oauth2/callback"
       logoutPath: "/foo/logout"
@@ -47,6 +50,7 @@ http:
       name: securitypolicy/default/policy-for-second-route
       clientID: client.oauth.bar.com
       clientSecret: Y2xpZW50MTpzZWNyZXQK
+      hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
       provider:
         authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
         tokenEndpoint: https://oauth.bar.com/token
@@ -54,6 +58,8 @@ http:
       - openid
       - email
       - profile
+      resources:
+      - api
       redirectURL: "https://www.example.com/bar/oauth2/callback"
       redirectPath: "/bar/oauth2/callback"
       logoutPath: "/bar/logout"

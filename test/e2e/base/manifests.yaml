@@ -549,7 +549,7 @@ metadata:
 data:
   go.mod: |
          module srvr
-         go 1.21.3
+         go 1.22
          require (
          	github.com/andybalholm/brotli v1.0.5 // indirect
          	github.com/klauspost/compress v1.17.0 // indirect
@@ -619,7 +619,7 @@ spec:
         - sh
         - "-c"
         - "cp -a /app /app-live && cd /app-live && go  run . "
-        image: golang:1.21.3-alpine
+        image: golang:1.22.1-alpine
         ports:
         - containerPort: 8000
         volumeMounts:
@@ -711,3 +711,19 @@ spec:
         resources:
           requests:
             cpu: 10m
+
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: connection-limit-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same

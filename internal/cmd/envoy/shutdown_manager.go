@@ -108,7 +108,7 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 			time.Sleep(1 * time.Second)
 		case err != nil:
 			logger.Error(err, "error checking for shutdown readiness")
-		case err == nil:
+		default:
 			logger.Info("shutdown readiness detected")
 			return
 		}
