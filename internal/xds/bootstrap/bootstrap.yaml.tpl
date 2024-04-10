@@ -8,6 +8,33 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
+{{- if .StatsMatcher  }}
+stats_config:
+  stats_matcher:
+    inclusion_list:
+      patterns:
+      {{- range $_, $item := .StatsMatcher.Exacts }}
+      - exact: {{$item}}
+      {{- end}}
+      {{- range $_, $item := .StatsMatcher.Prefixs }}
+      - prefix: {{$item}}
+      {{- end}}
+      {{- range $_, $item := .StatsMatcher.Suffixs }}
+      - suffix: {{$item}}
+      {{- end}}
+      {{- range $_, $item := .StatsMatcher.RegularExpressions }}
+      - safe_regex:
+          google_re2: {}
+          regex: {{js $item}}
+      {{- end}}
+{{- end }}
+layered_runtime:
+  layers:
+  - name: global_config
+    static_layer:
+      envoy.restart_features.use_eds_cache_for_ads: true
+      re2.max_program_size.error_level: 4294967295
+      re2.max_program_size.warn_level: 1000
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC
@@ -112,8 +139,10 @@ static_resources:
     load_assignment:
       cluster_name: xds_cluster
       endpoints:
-      - lb_endpoints:
-        - endpoint:
+      - load_balancing_weight: 1
+        lb_endpoints:
+        - load_balancing_weight: 1
+          endpoint:
             address:
               socket_address:
                 address: {{ .XdsServer.Address }}
@@ -122,13 +151,12 @@ static_resources:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
         explicit_http_config:
-          http2_protocol_options: {}
+          http2_protocol_options:
+            connection_keepalive:
+              interval: 30s
+              timeout: 5s
     name: xds_cluster
     type: STRICT_DNS
-    http2_protocol_options:
-      connection_keepalive:
-        interval: 30s
-        timeout: 5s
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:
@@ -148,11 +176,27 @@ static_resources:
               path_config_source:
                 path: "/sds/xds-trusted-ca.json"
               resource_api_version: V3
-layered_runtime:
-  layers:
-  - name: runtime-0
-    rtds_layer:
-      rtds_config:
-        ads: {}
-        resource_api_version: V3
-      name: runtime-0
+overload_manager:
+  refresh_interval: 0.25s
+  resource_monitors:
+  - name: "envoy.resource_monitors.global_downstream_max_connections"
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+      max_active_downstream_connections: 50000
+  {{- with .OverloadManager.MaxHeapSizeBytes }}
+  - name: "envoy.resource_monitors.fixed_heap"
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.resource_monitors.fixed_heap.v3.FixedHeapConfig
+      max_heap_size_bytes: {{ . }}
+  actions:
+  - name: "envoy.overload_actions.shrink_heap"
+    triggers:
+    - name: "envoy.resource_monitors.fixed_heap"
+      threshold:
+        value: 0.95
+  - name: "envoy.overload_actions.stop_accepting_requests"
+    triggers:
+    - name: "envoy.resource_monitors.fixed_heap"
+      threshold:
+        value: 0.98
+  {{- end }}

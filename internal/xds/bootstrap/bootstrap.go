@@ -14,7 +14,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 const (
@@ -23,10 +24,10 @@ const (
 	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
-	// envoyAdminAddress is the listening address of the envoy admin interface.
-	envoyAdminAddress = "127.0.0.1"
-	// envoyAdminPort is the port used to expose admin interface.
-	envoyAdminPort = 19000
+	// EnvoyAdminAddress is the listening address of the envoy admin interface.
+	EnvoyAdminAddress = "127.0.0.1"
+	// EnvoyAdminPort is the port used to expose admin interface.
+	EnvoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
 	envoyAdminAccessLogPath = "/dev/null"
 
@@ -63,6 +64,13 @@ type bootstrapParameters struct {
 	EnablePrometheus bool
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
+	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
+	EnableStatConfig bool
+	// StatsMatcher is to control creation of custom Envoy stats with prefix,
+	// suffix, and regex expressions match on the name of the stats.
+	StatsMatcher *StatsMatcherParameters
+	// OverloadManager defines the configuration of the Envoy overload manager.
+	OverloadManager overloadManagerParameters
 }
 
 type xdsServerParameters struct {
@@ -97,11 +105,27 @@ type readyServerParameters struct {
 	ReadinessPath string
 }
 
+type StatsMatcherParameters struct {
+	Exacts             []string
+	Prefixs            []string
+	Suffixs            []string
+	RegularExpressions []string
+}
+
+type overloadManagerParameters struct {
+	MaxHeapSizeBytes uint64
+}
+
+type RenderBootsrapConfigOptions struct {
+	ProxyMetrics     *egv1a1.ProxyMetrics
+	MaxHeapSizeBytes uint64
+}
+
 // render the stringified bootstrap config in yaml format.
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
 	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
-		return fmt.Errorf("failed to render bootstrap config: %v", err)
+		return fmt.Errorf("failed to render bootstrap config: %w", err)
 	}
 	b.rendered = buf.String()
 
@@ -109,15 +133,18 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, error) {
+func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, error) {
 	var (
-		enablePrometheus bool
+		enablePrometheus = true
 		metricSinks      []metricSink
+		StatsMatcher     StatsMatcherParameters
 	)
 
-	if proxyMetrics != nil {
+	if opts != nil && opts.ProxyMetrics != nil {
+		proxyMetrics := opts.ProxyMetrics
+
 		if proxyMetrics.Prometheus != nil {
-			enablePrometheus = true
+			enablePrometheus = !proxyMetrics.Prometheus.Disable
 		}
 
 		addresses := sets.NewString()
@@ -138,6 +165,30 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 				Port:    sink.OpenTelemetry.Port,
 			})
 		}
+
+		if proxyMetrics.Matches != nil {
+			// Add custom envoy proxy stats
+			for _, match := range proxyMetrics.Matches {
+				// matchType default to exact
+				matchType := egv1a1.StringMatchExact
+				if match.Type != nil {
+					matchType = *match.Type
+				}
+				switch matchType {
+				case egv1a1.StringMatchExact:
+					StatsMatcher.Exacts = append(StatsMatcher.Exacts, match.Value)
+				case egv1a1.StringMatchPrefix:
+					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
+				case egv1a1.StringMatchSuffix:
+					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
+				case egv1a1.StringMatchRegularExpression:
+					if err := regex.Validate(match.Value); err != nil {
+						return "", err
+					}
+					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
+				}
+			}
+		}
 	}
 
 	cfg := &bootstrapConfig{
@@ -147,8 +198,8 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 				Port:    DefaultXdsServerPort,
 			},
 			AdminServer: adminServerParameters{
-				Address:       envoyAdminAddress,
-				Port:          envoyAdminPort,
+				Address:       EnvoyAdminAddress,
+				Port:          EnvoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
 			ReadyServer: readyServerParameters{
@@ -159,6 +210,13 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			EnablePrometheus: enablePrometheus,
 			OtelMetricSinks:  metricSinks,
 		},
+	}
+	if opts != nil && opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {
+		cfg.parameters.StatsMatcher = &StatsMatcher
+	}
+
+	if opts != nil {
+		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
 	}
 
 	if err := cfg.render(); err != nil {

@@ -1,4 +1,10 @@
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 provider:
   type: Kubernetes
+  kubernetes:
+    leaderElection:
+      leaseDuration: 15s
+      renewDeadline: 10s
+      retryPeriod: 2s
+      disable: false

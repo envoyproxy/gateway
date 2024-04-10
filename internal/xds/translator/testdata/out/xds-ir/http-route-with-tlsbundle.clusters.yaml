@@ -1,0 +1,32 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/envoy-gateway/httproute-btls/rule/0
+  lbPolicy: LEAST_REQUEST
+  name: httproute/envoy-gateway/httproute-btls/rule/0
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  transportSocketMatches:
+  - match:
+      name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
+    name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          validationContextSdsSecretConfig:
+            name: policy-btls/policies-ca
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        sni: example.com
+  type: EDS

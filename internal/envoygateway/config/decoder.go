@@ -11,7 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 

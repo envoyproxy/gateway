@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -28,11 +28,11 @@ gateways:
         mode: Terminate
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
-          be unique, matched cerificate FQDN [foo.bar.com] has a conficting algorithm
+          be unique, matched certificate FQDN [foo.bar.com] has a conflicting algorithm
           [ECDSA].
         reason: InvalidCertificateRef
         status: "False"
@@ -49,7 +49,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -86,8 +86,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      listeners:
-      - address: ""
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1

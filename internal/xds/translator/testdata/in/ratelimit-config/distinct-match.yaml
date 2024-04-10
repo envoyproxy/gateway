@@ -3,6 +3,9 @@ address: "0.0.0.0"
 port: 10080
 hostnames:
 - "*"
+path:
+  mergeSlashes: true
+  escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
   rateLimit:
@@ -16,6 +19,9 @@ routes:
           unit: second
   pathMatch:
     exact: "foo/bar"
-  destinations:
-  - host: "1.2.3.4"
-    port: 50000
+  destination:
+    name: "first-route-dest"
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000

@@ -1,0 +1,47 @@
+name: "first-listener"
+address: "0.0.0.0"
+port: 10080
+hostnames:
+- "*"
+path:
+  mergeSlashes: true
+  escapedSlashesAction: UnescapeAndRedirect
+routes:
+- name: "first-route"
+  rateLimit:
+    global:
+      rules:
+      - cidrMatch:
+          cidr: "192.168.0.10/32"
+          ipv6: false
+          maskLen: 32
+        limit:
+          requests: 15
+          unit: Hour
+  pathMatch:
+    exact: "foo/bar"
+  destination:
+    name: "first-route-dest"
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+- name: "second-route"
+  rateLimit:
+    global:
+      rules:
+      - cidrMatch:
+          cidr: "192.168.0.10/32"
+          ipv6: false
+          maskLen: 32
+        limit:
+          requests: 300
+          unit: Hour
+  pathMatch:
+    exact: "foo/bar"
+  destination:
+    name: "second-route-dest"
+    settings:
+    - endpoints:
+      - host: "4.5.6.7"
+        port: 50001

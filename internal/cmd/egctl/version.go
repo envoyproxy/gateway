@@ -11,7 +11,6 @@ import (
 	"io"
 	"sort"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/cmd/options"
 	"github.com/envoyproxy/gateway/internal/cmd/version"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -95,20 +95,18 @@ func versions(w io.Writer, containerName, output string, remote bool) error {
 
 	pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
 	if err != nil {
-		return errors.Wrap(err, "list EG pods failed")
+		return fmt.Errorf("list EG pods failed: %w", err)
 	}
 
 	for _, pod := range pods.Items {
+		pod := pod
 		if pod.Status.Phase != "Running" {
 
 			fmt.Fprintf(w, "WARN: pod %s/%s is not running, skipping it.", pod.Namespace, pod.Name)
 			continue
 		}
 
-		nn := types.NamespacedName{
-			Namespace: pod.Namespace,
-			Name:      pod.Name,
-		}
+		nn := utils.NamespacedName(&pod)
 		stdout, _, err := c.PodExec(nn, containerName, "envoy-gateway version -ojson")
 		if err != nil {
 			return fmt.Errorf("pod exec on %s/%s failed: %w", nn.Namespace, nn.Name, err)

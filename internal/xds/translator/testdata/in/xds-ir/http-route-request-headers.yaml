@@ -5,14 +5,18 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "request-header-route"
     hostname: "*"
     destination:
       name: "request-header-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     addRequestHeaders:
     - name: "some-header"
       value: "some-value"

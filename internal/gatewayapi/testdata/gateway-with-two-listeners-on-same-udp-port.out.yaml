@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -34,11 +34,16 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: UDPRoute
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Only one UDP listener is allowed in a given port
@@ -50,6 +55,11 @@ gateways:
         reason: Invalid
         status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp2
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -58,7 +68,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/udp1
         ports:
         - containerPort: 10162
           name: udp1
@@ -109,9 +120,13 @@ xdsIR:
     udp:
     - address: 0.0.0.0
       destination:
-        endpoints:
-        - host: 7.7.7.7
-          port: 8162
         name: udproute/default/udproute-1/rule/-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.7.7.7
+            port: 8162
+          protocol: UDP
+          weight: 1
       name: envoy-gateway/gateway-1/udp1/udproute-1
       port: 10162

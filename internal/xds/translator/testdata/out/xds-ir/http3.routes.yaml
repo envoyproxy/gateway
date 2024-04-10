@@ -1,0 +1,19 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/tls
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-1/tls/*
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/*
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket

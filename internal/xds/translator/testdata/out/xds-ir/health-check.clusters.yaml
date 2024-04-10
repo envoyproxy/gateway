@@ -1,0 +1,141 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: first-route-dest
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      - end: "301"
+        start: "300"
+      host: '*'
+      path: /healthz
+      receive:
+      - text: 6f6b
+    interval: 3s
+    timeout: 0.500s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: first-route-dest
+  outlierDetection:
+    baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    interval: 2s
+    maxEjectionPercent: 100
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: second-route-dest
+  healthChecks:
+  - healthyThreshold: 3
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "202"
+        start: "200"
+      host: '*'
+      path: /healthz
+      receive:
+      - binary: cG9uZw==
+    interval: 5s
+    timeout: 1s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: second-route-dest
+  outlierDetection:
+    baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    interval: 1s
+    maxEjectionPercent: 100
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: third-route-dest
+  healthChecks:
+  - healthyThreshold: 3
+    interval: 5s
+    tcpHealthCheck:
+      receive:
+      - text: 706f6e67
+      send:
+        text: "70696e67"
+    timeout: 1s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: third-route-dest
+  outlierDetection:
+    baseEjectionTime: 160s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    interval: 1s
+    maxEjectionPercent: 100
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fourth-route-dest
+  healthChecks:
+  - healthyThreshold: 3
+    interval: 5s
+    tcpHealthCheck:
+      receive:
+      - binary: cG9uZw==
+      send:
+        binary: cGluZw==
+    timeout: 1s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: fourth-route-dest
+  outlierDetection:
+    baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    interval: 1s
+    maxEjectionPercent: 90
+    splitExternalLocalOriginErrors: true
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

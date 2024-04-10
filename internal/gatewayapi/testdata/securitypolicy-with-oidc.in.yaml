@@ -1,0 +1,128 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: client1-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: client2-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: client3-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway-system
+    name: envoy-oidc-hmac
+  data:
+    hmac-secret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway  # This policy should attach httproute-2
+    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+    oidc:
+      provider:
+        issuer: "https://accounts.google.com"
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client1-secret"
+      redirectURL: "https://www.example.com/bar/oauth2/callback"
+      logoutPath: "/bar/logout"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route   # This policy should attach httproute-1
+    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+    oidc:
+      provider:
+        issuer: "https://oauth.foo.com"
+        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.foo.com/token"
+      clientID: "client2.oauth.foo.com"
+      clientSecret:
+        name: "client2-secret"
+      scopes: ["openid", "email", "profile"]
+      resources: ["api"]
+      redirectURL: "https://www.example.com/foo/oauth2/callback"
+      logoutPath: "/foo/logout"

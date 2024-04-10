@@ -12,14 +12,19 @@
         cluster: first-route-dest
         rateLimits:
         - actions:
+          - genericKey:
+              descriptorKey: first-route
+              descriptorValue: first-route
           - headerValueMatch:
-              descriptorKey: first-route-key-rule-0-match-0
-              descriptorValue: first-route-value-rule-0-match-0
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
               expectMatch: true
               headers:
               - name: x-user-id
                 stringMatch:
                   exact: one
+        upgradeConfigs:
+        - upgradeType: websocket
     - match:
         path: example
       name: second-route
@@ -27,9 +32,14 @@
         cluster: second-route-dest
         rateLimits:
         - actions:
+          - genericKey:
+              descriptorKey: second-route
+              descriptorValue: second-route
           - requestHeaders:
-              descriptorKey: second-route-key-rule-0-match-0
+              descriptorKey: rule-0-match-0
               headerName: x-user-id
+        upgradeConfigs:
+        - upgradeType: websocket
     - match:
         path: test
       name: third-route
@@ -38,5 +48,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: third-route-key-rule-0-match--1
-              descriptorValue: third-route-value-rule-0-match--1
+              descriptorKey: third-route
+              descriptorValue: third-route
+          - genericKey:
+              descriptorKey: rule-0-match--1
+              descriptorValue: rule-0-match--1
+        upgradeConfigs:
+        - upgradeType: websocket

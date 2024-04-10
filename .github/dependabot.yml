@@ -5,16 +5,48 @@
 
 version: 2
 updates:
+  - package-ecosystem: docker
+    directory: /tools/docker/envoy-gateway/
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /site
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # skip to update retest, because it won't work with the latest version
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+      # skip until https://github.com/codecov/feedback/issues/112 is resolved
+      - dependency-name: "codecov/codecov-action"
+  - package-ecosystem: github-actions
+    directory: /tools/github-actions/setup-deps
     schedule:
       interval: weekly
   - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly
+    groups:
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
+      go.opentelemetry.io:
+        patterns:
+          - "go.opentelemetry.io/*"
   - package-ecosystem: pip
     directory: /tools/src/codespell
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/helm-docs
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/buf
     schedule:
       interval: weekly
   - package-ecosystem: gomod
@@ -23,10 +55,6 @@ updates:
       interval: weekly
   - package-ecosystem: gomod
     directory: /tools/src/kind
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/kustomize
     schedule:
       interval: weekly
   - package-ecosystem: gomod

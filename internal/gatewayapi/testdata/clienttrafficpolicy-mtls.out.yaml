@@ -1,0 +1,287 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: envoy-gateway
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      namespace: envoy-gateway
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - group: null
+          kind: ConfigMap
+          name: ca-configmap
+          namespace: envoy-gateway
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-1
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: envoy-gateway
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-2
+      port: 8080
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-2
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-1
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: envoy-gateway
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/http-1
+        ports:
+        - containerPort: 10443
+          name: http-1
+          protocol: HTTPS
+          servicePort: 443
+      - address: null
+        name: envoy-gateway/gateway-1/http-2
+        ports:
+        - containerPort: 8080
+          name: http-2
+          protocol: HTTP
+          servicePort: 8080
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+  envoy-gateway/gateway-2:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-2/http-1
+        ports:
+        - containerPort: 10443
+          name: http-1
+          protocol: HTTPS
+          servicePort: 443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-2
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-2
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        caCertificate:
+          certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURPekNDQWlPZ0F3SUJBZ0lVYzQxa3BFOXdLK05IZ1JHdkJJZ3c4U0Nhei84d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5EQXhNall5TXpFMU16RmFGdzB5TlRBeE1qVXlNekUxTXpGYU1DMHhGVEFUQmdOVkJBb01ER1Y0CllXMXdiR1VnU1c1akxqRVVNQklHQTFVRUF3d0xaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUURDTGhaNURuQ1ZFNUpKOTd5T29jcFJ3Y2xibDBVd1gzY0krMVpaTmx0bApXNmpSZ3kxR3VONlZyN0NCbUkvbVB0Z0dzOVQ3RE5STWw1Z0pKa05IU1pvbUk2R2p1UDFLVWh1dmxmYlpQV05vCnA0NVQyMzVaODJHZzhPUkpIVDVtbjFRUksrYno5cnVKZnlsZE1NbGljVUp2L1lmdDZ6TlVSeFE3QlU5Y2lHZTEKdE0rVU1TeGtvcDNkb3ZWcHRFTG5rVERKU3d0NWRuK25qNmovR3I5NXo5MC9lMmdqZlZUdG1BckFHM3hoLzJCMQovRDZOWGh3UE16WXJwbG5NM2xPcHh6ZmxPVmdqTVVsb0wxb0k3c202YysyQTE0TmVCclcvb2ZCOVJEN0RXQkhkCjc2aitoY0FXRnN4WW1zSG81T3gvdEZlVGs3R1Jka0hFRUxMV0ZCdllHMEJUQWdNQkFBR2pVekJSTUIwR0ExVWQKRGdRV0JCU3JMYmNRUHBFeCtEdCtoWUUveXJqdDZyT1Y2VEFmQmdOVkhTTUVHREFXZ0JTckxiY1FQcEV4K0R0KwpoWUUveXJqdDZyT1Y2VEFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUNGCjRqbHRxeFZhS1phVk1MN0hOUVN3ZWd5K2daMXhhbHltTU5vN0lwYzh6T3lVVUk0N3dlRWYvcCtua3E4b3hpL20KbUxab2VNU2RYZytnZWJZTU1jVVJndGw5UWZ1RjBhWUNCM0FsQ3hscGRINExrM3VYTlRMUVhKaUxRUlROc0J1LwpMSjZVWXZMRktQd29kdlJLTDhLV0tFZ0xWSm1yVGUzZzhpTDNTU253MDBoV2lldUNkU3N4TmwvNDdUaGdZWHJnCnUxUFJCVXQ1ZytYb1dwVVNPQ01PRldsQkpxd0pZS2ZSQTNFNmZmNDRJVUpzYjdxVUhIQWUxd2ExWURmdUQrVDUKQXQ5L20rTTdHeVc5b0ViU1FzUFRHZllxUDU5UUUrMWllaTZxaUcrN2tuNGlSeEpxaGdtNU41bzg2UVNrME1hegpDejRqVEVLZE52WFlWRmZoNlpxcgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway/target-gateway-1/ca.crt
+        certificates:
+        - name: envoy-gateway/tls-secret-1
+          privateKey: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQzc3aHZBUEFlRlJucS8KdHBHVmRKTmVjYWFqSzZrUXlDalk1ci9wWHhOQmE5dldWUUhVbkNXVk95bHBFZGg2T2ZZbUdnb0phdE1UVFlBWAorVml2TFM5WHBIOG5QQ1lhWm9CZGkyUDQxZGtuazJSekZabWwvWFI1SFp0RFpqZURPM3d2Qkpvbm0rTXhQN0JrCjVMZ2U5aEZIUndqRWJMY1k3dys3enE4QkRBeUlIdjdPSjNhN3g5L2pYMlJaRnU3TzVyNXlmRVE2RnNLY3pURG8Kb0N4ZFVrTklndHBWQ29ETEt2Ykw2MW5kTnVsZTMvbURtL3YyU3lUSHVkMVM1ZHFzcDhrSmR1OFhVUmZjMllFbApGS1d2QnRuamgvanJMTVhGY2FoVi9veEpyQ0h1dC9QQ0xiQlRBalRldVNEYXVTN09IYkpSREt3bUg3b1Z2eUlDCmFJeWFZY1pOQWdNQkFBRUNnZ0VBSG1McVd4NHZCbk9ybHFLMGVNLzM5c1lLOEVpTTlra0c5eHRJWGVSTGxCWnIKM2dTeUNSTStXRzk2ZGZkaFkxSDFPa1ZDUGpJOFNEQzRkMzA2Ymw0Ris2RW93TXFrUytjcTlrcDYzYTg3aE5TbQpOMGdxSnl3TGV5YzRXdll2ZFA2c25scnd6MXE3Vk5QbXpQUXJ6b1hIQVc2N2tpeHA1cFF3OG1oVzVQcHlidkp5Clo2TERCZGRSZkVma2ZXVnZUUk5YWUVDUEllUStST05jR3JvVzZ5RXRrbk1BWUJjdjRlNUhCQkkrcHdyYmsrOVMKY2FQYUVjdm4vS0lyT3NpVW1FT2wwb3JXVnhkbjRmMy9MNmlFZFgyZHhIdXlwYkFiL0Qwak1MSzBwb3kyaXYyTApyOGI5VUQrRVZFNmFTVnp0MFRHbVpJYUdRVVZDQnVDTDhodlYwSU9PV1FLQmdRRGplL3JXdmk4Rndia3BRNDA0CnFQcitBaEFwaG1pV3l1a1B1VmJLN2Q5ZkdURzRHOW9Bd2wzYlFoRGVUNHhjMzd0cjlkcCtpamJuWnpKWHczL1cKcm5xTDlGWkZsVXZCYXN6c05VK1lRNmJVOE9zTXl6cURSdGJaaytVWEowUEx6QzZKWHFkNTFZdVVDM3NwL2lmNwpqWEZrME55aHcrdkY3VU51N0ZFSzVuWEUwd0tCZ1FEVGZOT0RLYmZyalNkZEhkV05iOHhkN2pGMlZSY3hTTnRUCit0L0FmbkRjZG8zK1NBUnJaRi9TM0hZWUxxL0l4dmZ5ZHdIblUxdC9INkxDZjBnQ2RXS2NXL1hway93ZUo1QXYKWmdaZjBPTXZsOXF0THJhTU44OG1HblV4K2IxdHZLWm4xQVcySFNuYXd2Z0kvMWVjSldNRUJiYkREbkx4cUpMegowTHJhT2pYVVh3S0JnRGlBbE44OXdjUTJSOTFkNy9mQTBRYkNVRzFmK3g1cEs5WkIvTExPdm9xS1lYVVBSZWltClhsV1ZaVWN5anZTS2hhemRGZllVTW1ycmtPK0htWHNqUDBELzRXWExIVlBmU1NMcVl1aTQ5UGt6RmM3SnM3RGoKcVgzRlpFT0o5eWJwZ2kyUW14eUIwL2RqbXFYbGdOelVWdlBwaE1PUlBFQ2ZHLzZ6SjdZRFpBRU5Bb0dBSElVcQo2UGRKVEVTKzJEbmJ3TFVnOUZIWTdjSlAzRitjNUZoaXNFemMzMzVGYTlNK2RWVVY3eE80QVU3YWVkTUxRUEYzCm1rQ05pRGsxODlEQ1gwS0JSK0RHNnZiLyt2a080clY1aXBaYTdPSW5wVTgxWXZkcndoR3pXRWY3bWI3bEdmOW4KdmNWMURZRlpmYTBoblhjVlFVZWIrL1lJM2pvRGgwblF5UGtzcFRVQ2dZRUF0NERNajdZbStRS2J2bTJXaWNlcAo1Q2s3YWFMSUxuVHZqbGRLMkdjM2loOGVGRlE2Vy9pcUc1UUEzeHMwem8xVnhlUkhPWGkrK01xWjVWTVZMZFRWCjMxWXZOeUdPbVByTitZemVINmlTYXd5VXo2dW1UN1ZkMXRuUEJ1SmdPMFM3RnRlb01BckE3TGtDcUVhMDc4bS8KRXNxNzZjYW1WdW5kRXFTRWhGMllYNkU9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+          serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM0RENDQWNnQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5EQXhNall5TXpFMU16RmFGdzB5TlRBeApNalV5TXpFMU16RmFNRDh4R1RBWEJnTlZCQU1NRUdWa1oyVXVaWGhoYlhCc1pTNWpiMjB4SWpBZ0JnTlZCQW9NCkdXVmtaMlVnWlhoaGJYQnNaU0J2Y21kaGJtbDZZWFJwYjI0d2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFDNzdodkFQQWVGUm5xL3RwR1ZkSk5lY2Fhaks2a1F5Q2pZNXIvcFh4TkJhOXZXVlFIVQpuQ1dWT3lscEVkaDZPZlltR2dvSmF0TVRUWUFYK1ZpdkxTOVhwSDhuUENZYVpvQmRpMlA0MWRrbmsyUnpGWm1sCi9YUjVIWnREWmplRE8zd3ZCSm9ubStNeFA3Qms1TGdlOWhGSFJ3akViTGNZN3crN3pxOEJEQXlJSHY3T0ozYTcKeDkvalgyUlpGdTdPNXI1eWZFUTZGc0tjelREb29DeGRVa05JZ3RwVkNvRExLdmJMNjFuZE51bGUzL21EbS92MgpTeVRIdWQxUzVkcXNwOGtKZHU4WFVSZmMyWUVsRktXdkJ0bmpoL2pyTE1YRmNhaFYvb3hKckNIdXQvUENMYkJUCkFqVGV1U0RhdVM3T0hiSlJES3dtSDdvVnZ5SUNhSXlhWWNaTkFnTUJBQUV3RFFZSktvWklodmNOQVFFTEJRQUQKZ2dFQkFHeW5yNGNPMWFZbjRNQk90aVJ2WHFJdllHNnpxZXNrNGpQbU96TjdiUTdyRzdNUngzSVQ2SW4zVFI4RApHbFAxVE54TTg5cXZRcXp4VERsdER3bXluTlV1SEdEUW4yV1Z1OFEyK0RqRnFoc3B1WHp0NnhVK2RoVVBxUnV1Ckt6c1l4TDNpMVlWZ2pDQWtBUmp4SGhMWHYwdkFUWUVRMlJ6Uko5c2ZGcWVCMHVxSk5WL0lHamJFSzQ2eTQ5QU0KNzU4TUY4T0R6cVR2Q3hMRjJYd3BScjdjSDFuZ2J4eUJ6cEdlbkpsVTI2Q2hJT1BMZUV1NTUyUVJYVGwrU2JlQQpXUzNpS01Pb3F5NGV0b0ExNWFueW43Zm01YnpINEcyZ3Yxd1pWYlBkT1dNQWRZU2I5NDIvR09CSWUzSnIyVHo3CjRJdDRROWFERnF1aG9iOTVQMUhHQkxSQ2Y5QT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        maxVersion: "1.3"
+        minVersion: "1.2"
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      name: envoy-gateway/gateway-1/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+  envoy-gateway/gateway-2:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      name: envoy-gateway/gateway-2/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        caCertificate:
+          certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURPekNDQWlPZ0F3SUJBZ0lVYzQxa3BFOXdLK05IZ1JHdkJJZ3c4U0Nhei84d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5EQXhNall5TXpFMU16RmFGdzB5TlRBeE1qVXlNekUxTXpGYU1DMHhGVEFUQmdOVkJBb01ER1Y0CllXMXdiR1VnU1c1akxqRVVNQklHQTFVRUF3d0xaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUURDTGhaNURuQ1ZFNUpKOTd5T29jcFJ3Y2xibDBVd1gzY0krMVpaTmx0bApXNmpSZ3kxR3VONlZyN0NCbUkvbVB0Z0dzOVQ3RE5STWw1Z0pKa05IU1pvbUk2R2p1UDFLVWh1dmxmYlpQV05vCnA0NVQyMzVaODJHZzhPUkpIVDVtbjFRUksrYno5cnVKZnlsZE1NbGljVUp2L1lmdDZ6TlVSeFE3QlU5Y2lHZTEKdE0rVU1TeGtvcDNkb3ZWcHRFTG5rVERKU3d0NWRuK25qNmovR3I5NXo5MC9lMmdqZlZUdG1BckFHM3hoLzJCMQovRDZOWGh3UE16WXJwbG5NM2xPcHh6ZmxPVmdqTVVsb0wxb0k3c202YysyQTE0TmVCclcvb2ZCOVJEN0RXQkhkCjc2aitoY0FXRnN4WW1zSG81T3gvdEZlVGs3R1Jka0hFRUxMV0ZCdllHMEJUQWdNQkFBR2pVekJSTUIwR0ExVWQKRGdRV0JCU3JMYmNRUHBFeCtEdCtoWUUveXJqdDZyT1Y2VEFmQmdOVkhTTUVHREFXZ0JTckxiY1FQcEV4K0R0KwpoWUUveXJqdDZyT1Y2VEFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUNGCjRqbHRxeFZhS1phVk1MN0hOUVN3ZWd5K2daMXhhbHltTU5vN0lwYzh6T3lVVUk0N3dlRWYvcCtua3E4b3hpL20KbUxab2VNU2RYZytnZWJZTU1jVVJndGw5UWZ1RjBhWUNCM0FsQ3hscGRINExrM3VYTlRMUVhKaUxRUlROc0J1LwpMSjZVWXZMRktQd29kdlJLTDhLV0tFZ0xWSm1yVGUzZzhpTDNTU253MDBoV2lldUNkU3N4TmwvNDdUaGdZWHJnCnUxUFJCVXQ1ZytYb1dwVVNPQ01PRldsQkpxd0pZS2ZSQTNFNmZmNDRJVUpzYjdxVUhIQWUxd2ExWURmdUQrVDUKQXQ5L20rTTdHeVc5b0ViU1FzUFRHZllxUDU5UUUrMWllaTZxaUcrN2tuNGlSeEpxaGdtNU41bzg2UVNrME1hegpDejRqVEVLZE52WFlWRmZoNlpxcgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway/target-gateway-2/ca.crt
+        certificates:
+        - name: envoy-gateway/tls-secret-1
+          privateKey: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQzc3aHZBUEFlRlJucS8KdHBHVmRKTmVjYWFqSzZrUXlDalk1ci9wWHhOQmE5dldWUUhVbkNXVk95bHBFZGg2T2ZZbUdnb0phdE1UVFlBWAorVml2TFM5WHBIOG5QQ1lhWm9CZGkyUDQxZGtuazJSekZabWwvWFI1SFp0RFpqZURPM3d2Qkpvbm0rTXhQN0JrCjVMZ2U5aEZIUndqRWJMY1k3dys3enE4QkRBeUlIdjdPSjNhN3g5L2pYMlJaRnU3TzVyNXlmRVE2RnNLY3pURG8Kb0N4ZFVrTklndHBWQ29ETEt2Ykw2MW5kTnVsZTMvbURtL3YyU3lUSHVkMVM1ZHFzcDhrSmR1OFhVUmZjMllFbApGS1d2QnRuamgvanJMTVhGY2FoVi9veEpyQ0h1dC9QQ0xiQlRBalRldVNEYXVTN09IYkpSREt3bUg3b1Z2eUlDCmFJeWFZY1pOQWdNQkFBRUNnZ0VBSG1McVd4NHZCbk9ybHFLMGVNLzM5c1lLOEVpTTlra0c5eHRJWGVSTGxCWnIKM2dTeUNSTStXRzk2ZGZkaFkxSDFPa1ZDUGpJOFNEQzRkMzA2Ymw0Ris2RW93TXFrUytjcTlrcDYzYTg3aE5TbQpOMGdxSnl3TGV5YzRXdll2ZFA2c25scnd6MXE3Vk5QbXpQUXJ6b1hIQVc2N2tpeHA1cFF3OG1oVzVQcHlidkp5Clo2TERCZGRSZkVma2ZXVnZUUk5YWUVDUEllUStST05jR3JvVzZ5RXRrbk1BWUJjdjRlNUhCQkkrcHdyYmsrOVMKY2FQYUVjdm4vS0lyT3NpVW1FT2wwb3JXVnhkbjRmMy9MNmlFZFgyZHhIdXlwYkFiL0Qwak1MSzBwb3kyaXYyTApyOGI5VUQrRVZFNmFTVnp0MFRHbVpJYUdRVVZDQnVDTDhodlYwSU9PV1FLQmdRRGplL3JXdmk4Rndia3BRNDA0CnFQcitBaEFwaG1pV3l1a1B1VmJLN2Q5ZkdURzRHOW9Bd2wzYlFoRGVUNHhjMzd0cjlkcCtpamJuWnpKWHczL1cKcm5xTDlGWkZsVXZCYXN6c05VK1lRNmJVOE9zTXl6cURSdGJaaytVWEowUEx6QzZKWHFkNTFZdVVDM3NwL2lmNwpqWEZrME55aHcrdkY3VU51N0ZFSzVuWEUwd0tCZ1FEVGZOT0RLYmZyalNkZEhkV05iOHhkN2pGMlZSY3hTTnRUCit0L0FmbkRjZG8zK1NBUnJaRi9TM0hZWUxxL0l4dmZ5ZHdIblUxdC9INkxDZjBnQ2RXS2NXL1hway93ZUo1QXYKWmdaZjBPTXZsOXF0THJhTU44OG1HblV4K2IxdHZLWm4xQVcySFNuYXd2Z0kvMWVjSldNRUJiYkREbkx4cUpMegowTHJhT2pYVVh3S0JnRGlBbE44OXdjUTJSOTFkNy9mQTBRYkNVRzFmK3g1cEs5WkIvTExPdm9xS1lYVVBSZWltClhsV1ZaVWN5anZTS2hhemRGZllVTW1ycmtPK0htWHNqUDBELzRXWExIVlBmU1NMcVl1aTQ5UGt6RmM3SnM3RGoKcVgzRlpFT0o5eWJwZ2kyUW14eUIwL2RqbXFYbGdOelVWdlBwaE1PUlBFQ2ZHLzZ6SjdZRFpBRU5Bb0dBSElVcQo2UGRKVEVTKzJEbmJ3TFVnOUZIWTdjSlAzRitjNUZoaXNFemMzMzVGYTlNK2RWVVY3eE80QVU3YWVkTUxRUEYzCm1rQ05pRGsxODlEQ1gwS0JSK0RHNnZiLyt2a080clY1aXBaYTdPSW5wVTgxWXZkcndoR3pXRWY3bWI3bEdmOW4KdmNWMURZRlpmYTBoblhjVlFVZWIrL1lJM2pvRGgwblF5UGtzcFRVQ2dZRUF0NERNajdZbStRS2J2bTJXaWNlcAo1Q2s3YWFMSUxuVHZqbGRLMkdjM2loOGVGRlE2Vy9pcUc1UUEzeHMwem8xVnhlUkhPWGkrK01xWjVWTVZMZFRWCjMxWXZOeUdPbVByTitZemVINmlTYXd5VXo2dW1UN1ZkMXRuUEJ1SmdPMFM3RnRlb01BckE3TGtDcUVhMDc4bS8KRXNxNzZjYW1WdW5kRXFTRWhGMllYNkU9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+          serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM0RENDQWNnQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5EQXhNall5TXpFMU16RmFGdzB5TlRBeApNalV5TXpFMU16RmFNRDh4R1RBWEJnTlZCQU1NRUdWa1oyVXVaWGhoYlhCc1pTNWpiMjB4SWpBZ0JnTlZCQW9NCkdXVmtaMlVnWlhoaGJYQnNaU0J2Y21kaGJtbDZZWFJwYjI0d2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFDNzdodkFQQWVGUm5xL3RwR1ZkSk5lY2Fhaks2a1F5Q2pZNXIvcFh4TkJhOXZXVlFIVQpuQ1dWT3lscEVkaDZPZlltR2dvSmF0TVRUWUFYK1ZpdkxTOVhwSDhuUENZYVpvQmRpMlA0MWRrbmsyUnpGWm1sCi9YUjVIWnREWmplRE8zd3ZCSm9ubStNeFA3Qms1TGdlOWhGSFJ3akViTGNZN3crN3pxOEJEQXlJSHY3T0ozYTcKeDkvalgyUlpGdTdPNXI1eWZFUTZGc0tjelREb29DeGRVa05JZ3RwVkNvRExLdmJMNjFuZE51bGUzL21EbS92MgpTeVRIdWQxUzVkcXNwOGtKZHU4WFVSZmMyWUVsRktXdkJ0bmpoL2pyTE1YRmNhaFYvb3hKckNIdXQvUENMYkJUCkFqVGV1U0RhdVM3T0hiSlJES3dtSDdvVnZ5SUNhSXlhWWNaTkFnTUJBQUV3RFFZSktvWklodmNOQVFFTEJRQUQKZ2dFQkFHeW5yNGNPMWFZbjRNQk90aVJ2WHFJdllHNnpxZXNrNGpQbU96TjdiUTdyRzdNUngzSVQ2SW4zVFI4RApHbFAxVE54TTg5cXZRcXp4VERsdER3bXluTlV1SEdEUW4yV1Z1OFEyK0RqRnFoc3B1WHp0NnhVK2RoVVBxUnV1Ckt6c1l4TDNpMVlWZ2pDQWtBUmp4SGhMWHYwdkFUWUVRMlJ6Uko5c2ZGcWVCMHVxSk5WL0lHamJFSzQ2eTQ5QU0KNzU4TUY4T0R6cVR2Q3hMRjJYd3BScjdjSDFuZ2J4eUJ6cEdlbkpsVTI2Q2hJT1BMZUV1NTUyUVJYVGwrU2JlQQpXUzNpS01Pb3F5NGV0b0ExNWFueW43Zm01YnpINEcyZ3Yxd1pWYlBkT1dNQWRZU2I5NDIvR09CSWUzSnIyVHo3CjRJdDRROWFERnF1aG9iOTVQMUhHQkxSQ2Y5QT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        maxVersion: "1.3"
+        minVersion: "1.2"

@@ -1,0 +1,75 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    loadBalancer:
+      roundRobin: {}
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    loadBalancer:
+      random: {}
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "third-route"
+    hostname: "*"
+    loadBalancer:
+      leastRequest: {}
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fourth-route"
+    hostname: "*"
+    loadBalancer:
+      consistentHash:
+        sourceIP: true
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fifth-route"
+    hostname: "*"
+    loadBalancer:
+      leastRequest:
+        slowStart:
+          window: 60s
+    destination:
+      name: "fifth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "sixth-route"
+    hostname: "*"
+    loadBalancer:
+      roundRobin:
+        slowStart:
+          window: 300s
+    destination:
+      name: "sixth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

@@ -12,53 +12,112 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
 	cases := []struct {
-		name         string
-		proxyMetrics *egcfgv1a1.ProxyMetrics
+		name string
+		opts *RenderBootsrapConfigOptions
 	}{
 		{
-			name: "default",
+			name: "disable-prometheus",
+			opts: &RenderBootsrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+			},
 		},
 		{
 			name: "enable-prometheus",
-			proxyMetrics: &egcfgv1a1.ProxyMetrics{
-				Prometheus: &egcfgv1a1.PrometheusProvider{},
+			opts: &RenderBootsrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{},
+				},
 			},
 		},
 		{
 			name: "otel-metrics",
-			proxyMetrics: &egcfgv1a1.ProxyMetrics{
-				Sinks: []egcfgv1a1.MetricSink{
-					{
-						Type: egcfgv1a1.MetricSinkTypeOpenTelemetry,
-						OpenTelemetry: &egcfgv1a1.OpenTelemetrySink{
-							Host: "otel-collector.monitoring.svc",
-							Port: 4317,
+			opts: &RenderBootsrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host: "otel-collector.monitoring.svc",
+								Port: 4317,
+							},
 						},
 					},
 				},
+			},
+		},
+		{
+			name: "custom-stats-matcher",
+			opts: &RenderBootsrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Matches: []egv1a1.StringMatch{
+						{
+							Type:  ptr.To(egv1a1.StringMatchExact),
+							Value: "http.foo.bar.cluster.upstream_rq",
+						},
+						{
+							Type:  ptr.To(egv1a1.StringMatchPrefix),
+							Value: "http",
+						},
+						{
+							Type:  ptr.To(egv1a1.StringMatchSuffix),
+							Value: "upstream_rq",
+						},
+						{
+							Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+							Value: "virtual.*",
+						},
+						{
+							Type:  ptr.To(egv1a1.StringMatchPrefix),
+							Value: "cluster",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "with-max-heap-size-bytes",
+			opts: &RenderBootsrapConfigOptions{
+				MaxHeapSizeBytes: 1073741824,
 			},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := GetRenderedBootstrapConfig(tc.proxyMetrics)
-			assert.NoError(t, err)
+			got, err := GetRenderedBootstrapConfig(tc.opts)
+			require.NoError(t, err)
+
+			if *overrideTestData {
+				// nolint:gosec
+				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0644)
+				require.NoError(t, err)
+				return
+			}
+
 			expected, err := readTestData(tc.name)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, expected, got)
 		})
 	}
 }
 
 func readTestData(caseName string) (string, error) {
-	filename := path.Join("testdata", fmt.Sprintf("%s.yaml", caseName))
+	filename := path.Join("testdata", "render", fmt.Sprintf("%s.yaml", caseName))
 
 	b, err := os.ReadFile(filename)
 	if err != nil {

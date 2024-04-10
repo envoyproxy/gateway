@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -65,7 +65,7 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
@@ -87,7 +87,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	go r.subscribeAndTranslate(ctx)
 
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) serveXdsConfigServer(ctx context.Context) {
@@ -111,13 +111,14 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources.
-	message.HandleSubscription(r.XdsIR.Subscribe(ctx),
-		func(update message.Update[string, *ir.Xds]) {
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 
 			if update.Delete {
 				if err := r.addNewSnapshot(ctx, nil); err != nil {
 					r.Logger.Error(err, "failed to update the config snapshot")
+					errChan <- err
 				}
 			} else {
 				// Translate to ratelimit xDS Config.

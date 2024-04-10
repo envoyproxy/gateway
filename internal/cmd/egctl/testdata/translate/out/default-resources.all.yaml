@@ -17,6 +17,13 @@ envoyProxy:
             socket_address:
               address: 127.0.0.1
               port_value: 19000
+        layered_runtime:
+          layers:
+          - name: global_config
+            static_layer:
+              envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
         dynamic_resources:
           ads_config:
             api_type: DELTA_GRPC
@@ -47,6 +54,15 @@ envoyProxy:
                   stat_prefix: eg-ready-http
                   route_config:
                     name: local_route
+                    virtual_hosts:
+                    - name: prometheus_stats
+                      domains:
+                      - "*"
+                      routes:
+                      - match:
+                          prefix: /stats/prometheus
+                        route:
+                          cluster: prometheus_stats
                   http_filters:
                   - name: envoy.filters.http.health_check
                     typed_config:
@@ -60,12 +76,27 @@ envoyProxy:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
           clusters:
+          - name: prometheus_stats
+            connect_timeout: 0.250s
+            type: STATIC
+            lb_policy: ROUND_ROBIN
+            load_assignment:
+              cluster_name: prometheus_stats
+              endpoints:
+              - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: 127.0.0.1
+                        port_value: 19000
           - connect_timeout: 10s
             load_assignment:
               cluster_name: xds_cluster
               endpoints:
-              - lb_endpoints:
-                - endpoint:
+              - load_balancing_weight: 1
+                lb_endpoints:
+                - load_balancing_weight: 1
+                  endpoint:
                     address:
                       socket_address:
                         address: envoy-gateway
@@ -74,13 +105,12 @@ envoyProxy:
               envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
                 "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
                 explicit_http_config:
-                  http2_protocol_options: {}
+                  http2_protocol_options:
+                    connection_keepalive:
+                      interval: 30s
+                      timeout: 5s
             name: xds_cluster
             type: STRICT_DNS
-            http2_protocol_options:
-              connection_keepalive:
-                interval: 30s
-                timeout: 5s
             transport_socket:
               name: envoy.transport_sockets.tls
               typed_config:
@@ -100,16 +130,14 @@ envoyProxy:
                       path_config_source:
                         path: "/sds/xds-trusted-ca.json"
                       resource_api_version: V3
-        layered_runtime:
-          layers:
-          - name: runtime-0
-            rtds_layer:
-              rtds_config:
-                ads: {}
-                resource_api_version: V3
-              name: runtime-0
+        overload_manager:
+          refresh_interval: 0.25s
+          resource_monitors:
+          - name: "envoy.resource_monitors.global_downstream_max_connections"
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+              max_active_downstream_connections: 50000
     logging: {}
-    telemetry: {}
   status: {}
 gatewayClass:
   metadata:
@@ -119,7 +147,7 @@ gatewayClass:
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
     parametersRef:
-      group: config.gateway.envoyproxy.io
+      group: gateway.envoyproxy.io
       kind: EnvoyProxy
       name: default-envoy-proxy
       namespace: envoy-gateway-system
@@ -178,6 +206,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tcp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -194,6 +227,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -210,6 +248,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls-passthrough
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -226,6 +269,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -242,6 +290,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: grpc
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -457,19 +510,33 @@ xds:
             resourceApiVersion: V3
         layeredRuntime:
           layers:
-          - name: runtime-0
-            rtdsLayer:
-              name: runtime-0
-              rtdsConfig:
-                ads: {}
-                resourceApiVersion: V3
+          - name: global_config
+            staticLayer:
+              envoy.restart_features.use_eds_cache_for_ads: true
+              re2.max_program_size.error_level: 4294967295
+              re2.max_program_size.warn_level: 1000
+        overloadManager:
+          refreshInterval: 0.250s
+          resourceMonitors:
+          - name: envoy.resource_monitors.global_downstream_max_connections
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+              maxActiveDownstreamConnections: "50000"
         staticResources:
           clusters:
+          - connectTimeout: 0.250s
+            loadAssignment:
+              clusterName: prometheus_stats
+              endpoints:
+              - lbEndpoints:
+                - endpoint:
+                    address:
+                      socketAddress:
+                        address: 127.0.0.1
+                        portValue: 19000
+            name: prometheus_stats
+            type: STATIC
           - connectTimeout: 10s
-            http2ProtocolOptions:
-              connectionKeepalive:
-                interval: 30s
-                timeout: 5s
             loadAssignment:
               clusterName: xds_cluster
               endpoints:
@@ -479,6 +546,8 @@ xds:
                       socketAddress:
                         address: envoy-gateway
                         portValue: 18000
+                  loadBalancingWeight: 1
+                loadBalancingWeight: 1
             name: xds_cluster
             transportSocket:
               name: envoy.transport_sockets.tls
@@ -504,7 +573,10 @@ xds:
               envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
                 '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
                 explicitHttpConfig:
-                  http2ProtocolOptions: {}
+                  http2ProtocolOptions:
+                    connectionKeepalive:
+                      interval: 30s
+                      timeout: 5s
           listeners:
           - address:
               socketAddress:
@@ -529,6 +601,15 @@ xds:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
                   routeConfig:
                     name: local_route
+                    virtualHosts:
+                    - domains:
+                      - '*'
+                      name: prometheus_stats
+                      routes:
+                      - match:
+                          prefix: /stats/prometheus
+                        route:
+                          cluster: prometheus_stats
                   statPrefix: eg-ready-http
             name: envoy-gateway-proxy-ready-0.0.0.0-19001
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
@@ -545,7 +626,8 @@ xds:
                     portValue: 8000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: httproute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: grpcroute/default/backend/rule/0
@@ -558,7 +640,8 @@ xds:
                     portValue: 9000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: grpcroute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tlsroute/default/backend/rule/-1
@@ -571,7 +654,8 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: tlsroute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tcproute/default/backend/rule/-1
@@ -582,8 +666,10 @@ xds:
                   socketAddress:
                     address: 127.0.0.1
                     portValue: 3000
+              loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: tcproute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: udproute/default/backend/rule/-1
@@ -594,12 +680,17 @@ xds:
                   socketAddress:
                     address: 127.0.0.1
                     portValue: 3000
+              loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: udproute/default/backend/rule/-1/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -609,12 +700,16 @@ xds:
               ads: {}
               resourceApiVersion: V3
             serviceName: httproute/default/backend/rule/0
+          lbPolicy: LEAST_REQUEST
           name: httproute/default/backend/rule/0
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -624,6 +719,7 @@ xds:
               ads: {}
               resourceApiVersion: V3
             serviceName: grpcroute/default/backend/rule/0
+          lbPolicy: LEAST_REQUEST
           name: grpcroute/default/backend/rule/0
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -635,6 +731,9 @@ xds:
                 http2ProtocolOptions: {}
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -644,12 +743,16 @@ xds:
               ads: {}
               resourceApiVersion: V3
             serviceName: tlsroute/default/backend/rule/-1
+          lbPolicy: LEAST_REQUEST
           name: tlsroute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -659,12 +762,16 @@ xds:
               ads: {}
               resourceApiVersion: V3
             serviceName: tcproute/default/backend/rule/-1
+          lbPolicy: LEAST_REQUEST
           name: tcproute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          circuitBreakers:
+            thresholds:
+            - maxRetries: 1024
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
@@ -674,6 +781,7 @@ xds:
               ads: {}
               resourceApiVersion: V3
             serviceName: udproute/default/backend/rule/-1
+          lbPolicy: LEAST_REQUEST
           name: udproute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -724,6 +832,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -732,10 +841,10 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
-                  upgradeConfigs:
-                  - upgradeType: websocket
                   useRemoteAddress: true
+            drainType: MODIFY_ONLY
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -790,6 +899,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -798,8 +908,10 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/grpc
+                  serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
+            drainType: MODIFY_ONLY
             name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -822,6 +934,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 8443
+            drainType: MODIFY_ONLY
             filterChains:
             - filterChainMatch:
                 serverNames:
@@ -867,6 +980,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 1234
+            drainType: MODIFY_ONLY
             filterChains:
             - filters:
               - name: envoy.filters.network.tcp_proxy
@@ -944,6 +1058,8 @@ xds:
               name: httproute/default/backend/rule/0/match/0/www_example_com
               route:
                 cluster: httproute/default/backend/rule/0
+                upgradeConfigs:
+                - upgradeType: websocket
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true

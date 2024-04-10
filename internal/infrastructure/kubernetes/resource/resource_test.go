@@ -13,13 +13,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestExpectedServiceSpec(t *testing.T) {
 	type args struct {
-		service *egcfgv1a1.KubernetesServiceSpec
+		service *egv1a1.KubernetesServiceSpec
 	}
 	loadbalancerClass := "foobar"
 	tests := []struct {
@@ -29,8 +30,8 @@ func TestExpectedServiceSpec(t *testing.T) {
 	}{
 		{
 			name: "LoadBalancer",
-			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
-				Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeLoadBalancer,
@@ -39,9 +40,21 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancerWithExternalTrafficPolicyCluster",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
+			},
+		},
+		{
 			name: "LoadBalancerWithClass",
-			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
-				Type:              egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:              egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 				LoadBalancerClass: &loadbalancerClass,
 			}},
 			want: corev1.ServiceSpec{
@@ -52,9 +65,35 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancerWithAllocateLoadBalancerNodePorts",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				AllocateLoadBalancerNodePorts: ptr.To(true),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                          corev1.ServiceTypeLoadBalancer,
+				AllocateLoadBalancerNodePorts: ptr.To(true),
+				SessionAffinity:               corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy:         corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
+			name: "LoadBalancerWithLoadBalancerIP",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				LoadBalancerIP: ptr.To("10.11.12.13"),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				LoadBalancerIP:        "10.11.12.13",
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
 			name: "ClusterIP",
-			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
-				Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 			}},
 			want: corev1.ServiceSpec{
 				Type:            corev1.ServiceTypeClusterIP,
@@ -246,6 +285,48 @@ func TestCompareSvc(t *testing.T) {
 					Type: "ClusterIP",
 				},
 			},
+		}, {
+			// Finalizers field differs
+			ExpectRet: true,
+			NewSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "my-service",
+					Namespace:  "default",
+					Finalizers: []string{"service.k8s.aws/resources"},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+			OriginalSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
 		},
 	}
 
@@ -258,7 +339,7 @@ func TestCompareSvc(t *testing.T) {
 
 func TestExpectedProxyContainerEnv(t *testing.T) {
 	type args struct {
-		container *egcfgv1a1.KubernetesContainerSpec
+		container *egv1a1.KubernetesContainerSpec
 		env       []corev1.EnvVar
 	}
 	tests := []struct {
@@ -269,7 +350,7 @@ func TestExpectedProxyContainerEnv(t *testing.T) {
 		{
 			name: "TestExpectedProxyContainerEnv",
 			args: args{
-				container: &egcfgv1a1.KubernetesContainerSpec{
+				container: &egv1a1.KubernetesContainerSpec{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "env_a",
@@ -322,14 +403,14 @@ func TestExpectedProxyContainerEnv(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, ExpectedProxyContainerEnv(tt.args.container, tt.args.env), "ExpectedProxyContainerEnv(%v, %v)", tt.args.container, tt.args.env)
+			assert.Equalf(t, tt.want, ExpectedContainerEnv(tt.args.container, tt.args.env), "ExpectedProxyContainerEnv(%v, %v)", tt.args.container, tt.args.env)
 		})
 	}
 }
 
 func TestExpectedDeploymentVolumes(t *testing.T) {
 	type args struct {
-		pod     *egcfgv1a1.KubernetesPodSpec
+		pod     *egv1a1.KubernetesPodSpec
 		volumes []corev1.Volume
 	}
 	tests := []struct {
@@ -340,7 +421,7 @@ func TestExpectedDeploymentVolumes(t *testing.T) {
 		{
 			name: "TestExpectedDeploymentVolumes",
 			args: args{
-				pod: &egcfgv1a1.KubernetesPodSpec{
+				pod: &egv1a1.KubernetesPodSpec{
 					Volumes: []corev1.Volume{
 						{
 							Name: "certs",
@@ -400,7 +481,7 @@ func TestExpectedDeploymentVolumes(t *testing.T) {
 
 func TestExpectedContainerVolumeMounts(t *testing.T) {
 	type args struct {
-		container    *egcfgv1a1.KubernetesContainerSpec
+		container    *egv1a1.KubernetesContainerSpec
 		volumeMounts []corev1.VolumeMount
 	}
 	tests := []struct {
@@ -411,7 +492,7 @@ func TestExpectedContainerVolumeMounts(t *testing.T) {
 		{
 			name: "TestExpectedContainerVolumeMounts",
 			args: args{
-				container: &egcfgv1a1.KubernetesContainerSpec{
+				container: &egv1a1.KubernetesContainerSpec{
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "certs",

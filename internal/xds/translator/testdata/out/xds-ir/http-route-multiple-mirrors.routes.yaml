@@ -1,0 +1,17 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: mirror-route
+      route:
+        cluster: route-dest
+        requestMirrorPolicies:
+        - cluster: mirror-route-dest
+        - cluster: mirror-route-dest1
+        upgradeConfigs:
+        - upgradeType: websocket

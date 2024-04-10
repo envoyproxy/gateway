@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -30,6 +30,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -38,7 +43,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10091
           name: tls
@@ -124,11 +130,14 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       destination:
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
         name: tlsroute/default/tlsroute-1/rule/-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+          protocol: HTTPS
+          weight: 1
       name: envoy-gateway/gateway-1/tls/tlsroute-1
       port: 10091
       tls:
@@ -137,11 +146,14 @@ xdsIR:
           - foo.com
     - address: 0.0.0.0
       destination:
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
         name: tlsroute/default/tlsroute-2/rule/-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+          protocol: HTTPS
+          weight: 1
       name: envoy-gateway/gateway-1/tls/tlsroute-2
       port: 10091
       tls:

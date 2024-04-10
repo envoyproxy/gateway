@@ -1,0 +1,39 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    cors:
+      allowOrigins:
+      - name: example.com
+        stringMatch:
+        safeRegex: "*.example.com"
+      - name: foo.bar.com
+        stringMatch:
+        exact: foo.bar.com
+      allowMethods:
+      - GET
+      - POST
+      allowHeaders:
+      - "x-header-1"
+      - "x-header-2"
+      exposeHeaders:
+      - "x-header-3"
+      - "x-header-4"
+      allowCredentials: true
+      maxAge: 1000s

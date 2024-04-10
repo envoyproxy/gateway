@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -46,44 +46,14 @@ func createTestSecrets(t *testing.T, certFile, keyFile string) []*corev1.Secret 
 	}}
 }
 
-/*
-TestValidateTLSSecretData ensures that we can properly validate the contents of a K8s tls secret.
-The test assumes the secret is valid and was able to be applied to a cluster.
-
-The following commands were used to generate test key/cert pairs
-using openssl (LibreSSL 3.3.6)
-
-# RSA
-
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout rsa-pkcs8.key -out rsa-cert.pem -subj "/CN=foo.bar.com"`
-	openssl rsa -in rsa-pkcs8.key -out rsa-pkcs1.key
-
-# RSA with SAN extension
-
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout rsa-pkcs8-san.key -out rsa-cert-san.pem -subj "/CN=Test Inc" -addext "subjectAltName = DNS:foo.bar.com"
-	openssl rsa -in rsa-pkcs8-san.key -out rsa-pkcs1-san.key
-
-# RSA with wildcard SAN domain
-
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout rsa-pkcs8-wildcard.key -out rsa-cert-wildcard.pem -subj "/CN=Test Inc" -addext "subjectAltName = DNS:*, DNS:*.example.com"
-	openssl rsa -in rsa-pkcs8-wildcard.key -out rsa-pkcs1-wildcard.key
-
-# ECDSA-p256
-
-	openssl ecparam -name prime256v1 -genkey -noout -out ecdsa-p256.key
-	openssl req -new -x509 -days 365 -key ecdsa-p256.key -out ecdsa-p256-cert.pem -subj "/CN=foo.bar.com"
-
-# ECDSA-p384
-
-	openssl ecparam -name secp384r1 -genkey -noout -out ecdsa-p384.key
-	openssl req -new -x509 -days 365 -key ecdsa-p384.key -out ecdsa-p384-cert.pem -subj "/CN=foo.bar.com"
-*/
+// TestValidateTLSSecretData ensures that we can properly validate the contents of a K8s tls secret.
+// The test assumes the secret is valid and was able to be applied to a cluster.
 func TestValidateTLSSecretsData(t *testing.T) {
 	type testCase struct {
 		Name        string
 		CertFile    string
 		KeyFile     string
-		Domain      v1beta1.Hostname
+		Domain      v1.Hostname
 		ExpectedErr error
 	}
 
@@ -135,7 +105,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			CertFile:    "malformed-encoding.pem",
 			KeyFile:     "rsa-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to decode pem data in tls.crt"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: pem decode failed"),
 		},
 		{
 			Name:        "malformed-key-pem-encoding",
@@ -149,7 +119,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			CertFile:    "malformed-cert.pem",
 			KeyFile:     "rsa-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to parse certificate in tls.crt: x509: malformed certificate"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: x509: malformed certificate"),
 		},
 		{
 			Name:        "malformed-pkcs8-key",
@@ -194,6 +164,51 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			secrets := createTestSecrets(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secrets)
 			err := validateTLSSecretsData(secrets, &tc.Domain)
+			if tc.ExpectedErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.ExpectedErr.Error())
+			}
+		})
+	}
+}
+
+func TestValidateCertificate(t *testing.T) {
+	type testCase struct {
+		Name        string
+		CertFile    string
+		ExpectedErr error
+	}
+
+	testCases := []testCase{
+		{
+			Name:        "valid-rsa-cert",
+			CertFile:    "rsa-cert.pem",
+			ExpectedErr: nil,
+		},
+		{
+			Name:        "valid-ecdsa-p256-cert",
+			CertFile:    "ecdsa-p256-cert.pem",
+			ExpectedErr: nil,
+		},
+		{
+			Name:        "valid-ecdsa-p384-cert",
+			CertFile:    "ecdsa-p384-cert.pem",
+			ExpectedErr: nil,
+		},
+		{
+			Name:        "malformed-cert",
+			CertFile:    "malformed-cert.pem",
+			ExpectedErr: errors.New("x509: malformed certificate"),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			certData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.CertFile))
+			require.NoError(t, err)
+			err = validateCertificate(certData)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {

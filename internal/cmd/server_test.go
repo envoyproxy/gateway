@@ -10,11 +10,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
 	validGatewayConfig = `
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 provider:
   type: Kubernetes
@@ -23,7 +24,7 @@ gateway:
 `
 	invalidGatewayConfig = `
 kind: EnvoyGateway
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 gateway: {}
 `
 )
@@ -54,18 +55,18 @@ func TestGetConfigValidate(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			file, err := os.CreateTemp("", "config")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer os.Remove(file.Name())
 
 			_, err = file.Write([]byte(test.input))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			_, err = getConfigByPath(file.Name())
 			if test.errors == nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
 				for _, e := range test.errors {
-					assert.ErrorContains(t, err, e)
+					require.ErrorContains(t, err, e)
 				}
 			}
 		})

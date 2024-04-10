@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -13,9 +15,10 @@ import (
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tracingtype "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"github.com/pkg/errors"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -40,14 +43,14 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 
 	ocAny, err := protocov.ToAnyWithError(oc)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal OpenTelemetryConfig")
+		return nil, fmt.Errorf("failed to marshal OpenTelemetryConfig: %w", err)
 	}
 
 	tags := []*tracingtype.CustomTag{}
 	// TODO: consider add some default tags for better UX
 	for k, v := range tracing.CustomTags {
 		switch v.Type {
-		case egcfgv1a1.CustomTagTypeLiteral:
+		case egv1a1.CustomTagTypeLiteral:
 			tags = append(tags, &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_Literal_{
@@ -56,7 +59,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 					},
 				},
 			})
-		case egcfgv1a1.CustomTagTypeEnvironment:
+		case egv1a1.CustomTagTypeEnvironment:
 			defaultVal := ""
 			if v.Environment.DefaultValue != nil {
 				defaultVal = *v.Environment.DefaultValue
@@ -71,7 +74,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 					},
 				},
 			})
-		case egcfgv1a1.CustomTagTypeRequestHeader:
+		case egv1a1.CustomTagTypeRequestHeader:
 			defaultVal := ""
 			if v.RequestHeader.DefaultValue != nil {
 				defaultVal = *v.RequestHeader.DefaultValue
@@ -87,7 +90,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				},
 			})
 		default:
-			return nil, errors.Errorf("unknown custom tag type: %s", v.Type)
+			return nil, fmt.Errorf("unknown custom tag type: %s", v.Type)
 		}
 	}
 	// sort tags by tag name, make result consistent
@@ -111,7 +114,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				TypedConfig: ocAny,
 			},
 		},
-		CustomTags: tags,
+		CustomTags:        tags,
+		SpawnUpstreamSpan: wrapperspb.Bool(true),
 	}, nil
 }
 
@@ -122,13 +126,16 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 
 	clusterName := buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port))
 
-	endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))}
-	if err := addXdsCluster(tCtx, addXdsClusterArgs{
+	ds := &ir.DestinationSetting{
+		Weight:    ptr.To[uint32](1),
+		Protocol:  ir.GRPC,
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))},
+	}
+	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
-		endpoints:    endpoints,
+		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      nil,
-		protocol:     HTTP2,
-		endpointType: DefaultEndpointType,
+		endpointType: EndpointTypeDNS,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

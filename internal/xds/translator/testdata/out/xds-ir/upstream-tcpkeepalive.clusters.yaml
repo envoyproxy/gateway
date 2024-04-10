@@ -1,0 +1,22 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: first-route-dest
+  lbPolicy: LEAST_REQUEST
+  name: first-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveInterval: 60
+      keepaliveProbes: 3
+      keepaliveTime: 1200

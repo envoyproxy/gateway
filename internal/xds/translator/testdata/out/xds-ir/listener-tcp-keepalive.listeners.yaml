@@ -1,0 +1,139 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768
+  socketOptions:
+  - description: socket option to enable tcp keep alive
+    intValue: "1"
+    level: "1"
+    name: "9"
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10081
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: second-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: second-listener
+  perConnectionBufferLimitBytes: 32768
+  socketOptions:
+  - description: socket option to enable tcp keep alive
+    intValue: "1"
+    level: "1"
+    name: "9"
+  - description: socket option for keep alive probes
+    intValue: "7"
+    level: "6"
+    name: "6"
+  - description: socket option for keep alive idle time
+    intValue: "50"
+    level: "6"
+    name: "4"
+  - description: socket option for keep alive interval
+    intValue: "200"
+    level: "6"
+    name: "5"
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10082
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tls-route-dest
+        statPrefix: passthrough
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  name: third-listener
+  perConnectionBufferLimitBytes: 32768
+  socketOptions:
+  - description: socket option to enable tcp keep alive
+    intValue: "1"
+    level: "1"
+    name: "9"
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10083
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-dest
+        statPrefix: tcp
+  name: fourth-listener
+  perConnectionBufferLimitBytes: 32768
+  socketOptions:
+  - description: socket option to enable tcp keep alive
+    intValue: "1"
+    level: "1"
+    name: "9"
+  - description: socket option for keep alive probes
+    intValue: "10"
+    level: "6"
+    name: "6"

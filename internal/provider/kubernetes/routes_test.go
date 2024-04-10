@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,376 +17,101 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	cfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 func TestProcessHTTPRoutes(t *testing.T) {
+	const (
+		defaultWait = time.Second * 10
+		defaultTick = time.Millisecond * 20
+	)
+
 	// The gatewayclass configured for the reconciler and referenced by test cases.
-	gcCtrlName := gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName)
-	gc := &gwapiv1b1.GatewayClass{
+	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
+	gc := &gwapiv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
-		Spec: gwapiv1b1.GatewayClassSpec{
+		Spec: gwapiv1.GatewayClassSpec{
 			ControllerName: gcCtrlName,
 		},
 	}
 
 	// The gateway referenced by test cases.
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "test",
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "http",
-					Protocol: gwapiv1b1.HTTPProtocolType,
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
 				},
 			},
 		},
 	}
 	gwNsName := utils.NamespacedName(gw).String()
 
+	invalidDuration := gwapiv1.Duration("invalid duration")
+
+	httpRouteNS := "test"
+
 	testCases := []struct {
 		name               string
-		routes             []*gwapiv1b1.HTTPRoute
-		authenFilters      []*egv1a1.AuthenticationFilter
-		rateLimitFilters   []*egv1a1.RateLimitFilter
+		routes             []*gwapiv1.HTTPRoute
 		extensionFilters   []*unstructured.Unstructured
 		extensionAPIGroups []schema.GroupVersionKind
 		expected           bool
 	}{
 		{
 			name: "valid httproute",
-			routes: []*gwapiv1b1.HTTPRoute{
+			routes: []*gwapiv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
+						Namespace: httpRouteNS,
 						Name:      "test",
 					},
-					Spec: gwapiv1b1.HTTPRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
 								{
 									Name: "test",
 								},
 							},
 						},
-						Rules: []gwapiv1b1.HTTPRouteRule{
+						Rules: []gwapiv1.HTTPRouteRule{
 							{
-								Matches: []gwapiv1b1.HTTPRouteMatch{
+								Matches: []gwapiv1.HTTPRouteMatch{
 									{
-										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
 										},
 									},
 								},
-								BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
 												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
 												Name:  "test",
 											},
 										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "httproute with one authenticationfilter",
-			routes: []*gwapiv1b1.HTTPRoute{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: gwapiv1b1.HTTPRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
-								{
-									Name: "test",
-								},
-							},
-						},
-						Rules: []gwapiv1b1.HTTPRouteRule{
-							{
-								Matches: []gwapiv1b1.HTTPRouteMatch{
-									{
-										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
-										},
-									},
-								},
-								Filters: []gwapiv1b1.HTTPRouteFilter{
-									{
-										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-										ExtensionRef: &gwapiv1b1.LocalObjectReference{
-											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-											Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
-											Name:  gwapiv1b1.ObjectName("test"),
-										},
-									},
-								},
-								BackendRefs: []gwapiv1b1.HTTPBackendRef{
-									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
-												Name:  "test",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			authenFilters: []*egv1a1.AuthenticationFilter{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindAuthenticationFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: egv1a1.AuthenticationFilterSpec{
-						Type: egv1a1.JwtAuthenticationFilterProviderType,
-						JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
-							{
-								Name:      "test",
-								Issuer:    "https://www.test.local",
-								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
-									URI: "https://test.local/jwt/public-key/jwks.json",
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "httproute with one rateLimitfilter",
-			routes: []*gwapiv1b1.HTTPRoute{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: gwapiv1b1.HTTPRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
-								{
-									Name: "test",
-								},
-							},
-						},
-						Rules: []gwapiv1b1.HTTPRouteRule{
-							{
-								Matches: []gwapiv1b1.HTTPRouteMatch{
-									{
-										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
-										},
-									},
-								},
-								Filters: []gwapiv1b1.HTTPRouteFilter{
-									{
-										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-										ExtensionRef: &gwapiv1b1.LocalObjectReference{
-											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-											Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
-											Name:  gwapiv1b1.ObjectName("test"),
-										},
-									},
-								},
-								BackendRefs: []gwapiv1b1.HTTPBackendRef{
-									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
-												Name:  "test",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			rateLimitFilters: []*egv1a1.RateLimitFilter{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindRateLimitFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: egv1a1.RateLimitFilterSpec{
-						Type: egv1a1.GlobalRateLimitType,
-						Global: &egv1a1.GlobalRateLimit{
-							Rules: []egv1a1.RateLimitRule{
-								{
-									ClientSelectors: []egv1a1.RateLimitSelectCondition{
-										{
-											Headers: []egv1a1.HeaderMatch{
-												{
-													Name:  "x-user-id",
-													Value: gatewayapi.StringPtr("one"),
-												},
-											},
-										},
-									},
-									Limit: egv1a1.RateLimitValue{
-										Requests: 5,
-										Unit:     "Second",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "httproute with one authenticationfilter and ratelimitfilter",
-			routes: []*gwapiv1b1.HTTPRoute{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: gwapiv1b1.HTTPRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
-								{
-									Name: "test",
-								},
-							},
-						},
-						Rules: []gwapiv1b1.HTTPRouteRule{
-							{
-								Matches: []gwapiv1b1.HTTPRouteMatch{
-									{
-										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
-										},
-									},
-								},
-								Filters: []gwapiv1b1.HTTPRouteFilter{
-									{
-										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-										ExtensionRef: &gwapiv1b1.LocalObjectReference{
-											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-											Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
-											Name:  gwapiv1b1.ObjectName("test"),
-										},
-									},
-								},
-								BackendRefs: []gwapiv1b1.HTTPBackendRef{
-									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
-												Name:  "test",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			authenFilters: []*egv1a1.AuthenticationFilter{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindAuthenticationFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: egv1a1.AuthenticationFilterSpec{
-						Type: egv1a1.JwtAuthenticationFilterProviderType,
-						JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
-							{
-								Name:      "test",
-								Issuer:    "https://www.test.local",
-								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
-									URI: "https://test.local/jwt/public-key/jwks.json",
-								},
-							},
-						},
-					},
-				},
-			},
-			rateLimitFilters: []*egv1a1.RateLimitFilter{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindRateLimitFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: egv1a1.RateLimitFilterSpec{
-						Type: egv1a1.GlobalRateLimitType,
-						Global: &egv1a1.GlobalRateLimit{
-							Rules: []egv1a1.RateLimitRule{
-								{
-									ClientSelectors: []egv1a1.RateLimitSelectCondition{
-										{
-											Headers: []egv1a1.HeaderMatch{
-												{
-													Name:  "x-user-id",
-													Value: gatewayapi.StringPtr("one"),
-												},
-											},
-										},
-									},
-									Limit: egv1a1.RateLimitValue{
-										Requests: 5,
-										Unit:     "Second",
 									},
 								},
 							},
@@ -397,44 +123,44 @@ func TestProcessHTTPRoutes(t *testing.T) {
 		},
 		{
 			name: "httproute with one filter_from_extension",
-			routes: []*gwapiv1b1.HTTPRoute{
+			routes: []*gwapiv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
+						Namespace: httpRouteNS,
 						Name:      "test",
 					},
-					Spec: gwapiv1b1.HTTPRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
 								{
 									Name: "test",
 								},
 							},
 						},
-						Rules: []gwapiv1b1.HTTPRouteRule{
+						Rules: []gwapiv1.HTTPRouteRule{
 							{
-								Matches: []gwapiv1b1.HTTPRouteMatch{
+								Matches: []gwapiv1.HTTPRouteMatch{
 									{
-										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
 										},
 									},
 								},
-								Filters: []gwapiv1b1.HTTPRouteFilter{
+								Filters: []gwapiv1.HTTPRouteFilter{
 									{
-										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-										ExtensionRef: &gwapiv1b1.LocalObjectReference{
-											Group: gwapiv1b1.Group("gateway.example.io"),
-											Kind:  gwapiv1b1.Kind("Foo"),
-											Name:  gwapiv1b1.ObjectName("test"),
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group("gateway.example.io"),
+											Kind:  gwapiv1.Kind("Foo"),
+											Name:  gwapiv1.ObjectName("test"),
 										},
 									},
 								},
-								BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
 												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
 												Name:  "test",
@@ -454,7 +180,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 						"kind":       "Foo",
 						"metadata": map[string]interface{}{
 							"name":      "test",
-							"namespace": "test",
+							"namespace": httpRouteNS,
 						},
 					},
 				},
@@ -464,6 +190,54 @@ func TestProcessHTTPRoutes(t *testing.T) {
 					Group:   "gateway.example.io",
 					Version: "v1alpha1",
 					Kind:    "Foo",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "httproute with invalid timeout setting for HTTPRouteRule",
+			routes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+								Timeouts: &gwapiv1.HTTPRouteTimeouts{
+									Request:        &invalidDuration,
+									BackendRequest: &invalidDuration,
+								},
+							},
+						},
+					},
 				},
 			},
 			expected: true,
@@ -478,7 +252,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(cfgv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 
@@ -491,12 +265,6 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			for _, route := range tc.routes {
 				objs = append(objs, route)
 			}
-			for _, filter := range tc.authenFilters {
-				objs = append(objs, filter)
-			}
-			for _, filter := range tc.rateLimitFilters {
-				objs = append(objs, filter)
-			}
 			for _, filter := range tc.extensionFilters {
 				objs = append(objs, filter)
 			}
@@ -506,8 +274,17 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(objs...).
-				WithIndex(&gwapiv1b1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
+				WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
 				Build()
+
+			// Wait until all the httproutes have been initialized.
+			require.Eventually(t, func() bool {
+				httpRoutes := gwapiv1.HTTPRouteList{}
+				if err := r.client.List(ctx, &httpRoutes, client.InNamespace(httpRouteNS)); err != nil {
+					return false
+				}
+				return len(httpRoutes.Items) > 0
+			}, defaultWait, defaultTick)
 
 			// Process the test case httproutes.
 			resourceTree := gatewayapi.NewResources()
@@ -517,25 +294,6 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
-				// NOTE: filters must be in the same namespace as the HTTPRoute
-				if tc.authenFilters != nil {
-					for i, filter := range tc.authenFilters {
-						key := types.NamespacedName{
-							Namespace: tc.routes[i].Namespace,
-							Name:      filter.Name,
-						}
-						require.Equal(t, filter, resourceMap.authenFilters[key])
-					}
-				}
-				if tc.rateLimitFilters != nil {
-					for i, filter := range tc.rateLimitFilters {
-						key := types.NamespacedName{
-							Namespace: tc.routes[i].Namespace,
-							Name:      filter.Name,
-						}
-						require.Equal(t, filter, resourceMap.rateLimitFilters[key])
-					}
-				}
 				if tc.extensionFilters != nil {
 					for i, filter := range tc.extensionFilters {
 						key := types.NamespacedName{
@@ -554,29 +312,29 @@ func TestProcessHTTPRoutes(t *testing.T) {
 
 func TestProcessGRPCRoutes(t *testing.T) {
 	// The gatewayclass configured for the reconciler and referenced by test cases.
-	gcCtrlName := gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName)
-	gc := &gwapiv1b1.GatewayClass{
+	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
+	gc := &gwapiv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
-		Spec: gwapiv1b1.GatewayClassSpec{
+		Spec: gwapiv1.GatewayClassSpec{
 			ControllerName: gcCtrlName,
 		},
 	}
 
 	// The gateway referenced by test cases.
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "test",
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "http",
-					Protocol: gwapiv1b1.HTTPProtocolType,
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
 				},
 			},
 		},
@@ -586,8 +344,6 @@ func TestProcessGRPCRoutes(t *testing.T) {
 	testCases := []struct {
 		name               string
 		routes             []*gwapiv1a2.GRPCRoute
-		authenFilters      []*egv1a1.AuthenticationFilter
-		rateLimitFilters   []*egv1a1.RateLimitFilter
 		extensionAPIGroups []schema.GroupVersionKind
 		expected           bool
 	}{
@@ -600,8 +356,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 						Name:      "test",
 					},
 					Spec: gwapiv1a2.GRPCRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
 								{
 									Name: "test",
 								},
@@ -612,185 +368,19 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								Matches: []gwapiv1a2.GRPCRouteMatch{
 									{
 										Method: &gwapiv1a2.GRPCMethodMatch{
-											Method: gatewayapi.StringPtr("Ping"),
+											Method: ptr.To("Ping"),
 										},
 									},
 								},
 								BackendRefs: []gwapiv1a2.GRPCBackendRef{
 									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
 												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
 												Name:  "test",
 											},
 										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "grpcroute with one authenticationfilter",
-			routes: []*gwapiv1a2.GRPCRoute{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: gwapiv1a2.GRPCRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
-								{
-									Name: "test",
-								},
-							},
-						},
-						Rules: []gwapiv1a2.GRPCRouteRule{
-							{
-								Matches: []gwapiv1a2.GRPCRouteMatch{
-									{
-										Method: &gwapiv1a2.GRPCMethodMatch{
-											Method: gatewayapi.StringPtr("Ping"),
-										},
-									},
-								},
-								Filters: []gwapiv1a2.GRPCRouteFilter{
-									{
-										Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
-										ExtensionRef: &gwapiv1b1.LocalObjectReference{
-											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-											Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
-											Name:  gwapiv1b1.ObjectName("test"),
-										},
-									},
-								},
-								BackendRefs: []gwapiv1a2.GRPCBackendRef{
-									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
-												Name:  "test",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			authenFilters: []*egv1a1.AuthenticationFilter{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindAuthenticationFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: egv1a1.AuthenticationFilterSpec{
-						Type: egv1a1.JwtAuthenticationFilterProviderType,
-						JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
-							{
-								Name:      "test",
-								Issuer:    "https://www.test.local",
-								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
-									URI: "https://test.local/jwt/public-key/jwks.json",
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "grpcroute with one ratelimitfilter",
-			routes: []*gwapiv1a2.GRPCRoute{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: gwapiv1a2.GRPCRouteSpec{
-						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-							ParentRefs: []gwapiv1b1.ParentReference{
-								{
-									Name: "test",
-								},
-							},
-						},
-						Rules: []gwapiv1a2.GRPCRouteRule{
-							{
-								Matches: []gwapiv1a2.GRPCRouteMatch{
-									{
-										Method: &gwapiv1a2.GRPCMethodMatch{
-											Method: gatewayapi.StringPtr("Ping"),
-										},
-									},
-								},
-								Filters: []gwapiv1a2.GRPCRouteFilter{
-									{
-										Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
-										ExtensionRef: &gwapiv1b1.LocalObjectReference{
-											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-											Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
-											Name:  gwapiv1b1.ObjectName("test"),
-										},
-									},
-								},
-								BackendRefs: []gwapiv1a2.GRPCBackendRef{
-									{
-										BackendRef: gwapiv1b1.BackendRef{
-											BackendObjectReference: gwapiv1b1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
-												Name:  "test",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			rateLimitFilters: []*egv1a1.RateLimitFilter{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindRateLimitFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-					Spec: egv1a1.RateLimitFilterSpec{
-						Type: egv1a1.KindRateLimitFilter,
-						Global: &egv1a1.GlobalRateLimit{
-							Rules: []egv1a1.RateLimitRule{
-								{
-									ClientSelectors: []egv1a1.RateLimitSelectCondition{
-										{
-											Headers: []egv1a1.HeaderMatch{
-												{
-													Name:  "x-user-id",
-													Value: gatewayapi.StringPtr("one"),
-												},
-											},
-										},
-									},
-									Limit: egv1a1.RateLimitValue{
-										Requests: 5,
-										Unit:     "Second",
 									},
 								},
 							},
@@ -810,7 +400,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(cfgv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 
@@ -822,12 +412,6 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			// Add the test case objects to the reconciler client.
 			for _, route := range tc.routes {
 				objs = append(objs, route)
-			}
-			for _, filter := range tc.authenFilters {
-				objs = append(objs, filter)
-			}
-			for _, filter := range tc.rateLimitFilters {
-				objs = append(objs, filter)
 			}
 			if len(tc.extensionAPIGroups) > 0 {
 				r.extGVKs = append(r.extGVKs, tc.extensionAPIGroups...)
@@ -846,25 +430,6 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.GRPCRoutes)
-				// NOTE: filters must be in the same namespace as the HTTPRoute
-				if tc.authenFilters != nil {
-					for i, filter := range tc.authenFilters {
-						key := types.NamespacedName{
-							Namespace: tc.routes[i].Namespace,
-							Name:      filter.Name,
-						}
-						require.Equal(t, filter, resourceMap.authenFilters[key])
-					}
-				}
-				if tc.rateLimitFilters != nil {
-					for i, filter := range tc.rateLimitFilters {
-						key := types.NamespacedName{
-							Namespace: tc.routes[i].Namespace,
-							Name:      filter.Name,
-						}
-						require.Equal(t, filter, resourceMap.rateLimitFilters[key])
-					}
-				}
 			} else {
 				require.Error(t, err)
 			}
@@ -875,24 +440,24 @@ func TestProcessGRPCRoutes(t *testing.T) {
 func TestValidateHTTPRouteParentRefs(t *testing.T) {
 	testCases := []struct {
 		name     string
-		route    *gwapiv1b1.HTTPRoute
-		gateways []*gwapiv1b1.Gateway
-		classes  []*gwapiv1b1.GatewayClass
-		expect   []gwapiv1b1.Gateway
+		route    *gwapiv1.HTTPRoute
+		gateways []*gwapiv1.Gateway
+		classes  []*gwapiv1.GatewayClass
+		expect   []gwapiv1.Gateway
 		expected bool
 	}{
 		{
 			name: "valid parentRef",
-			route: &gwapiv1b1.HTTPRoute{
+			route: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Gateway"),
 								Name:  "test",
 							},
@@ -900,39 +465,35 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 					},
 				},
 			},
-			gateways: []*gwapiv1b1.Gateway{
+			gateways: []*gwapiv1.Gateway{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      "test",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
 			},
-			classes: []*gwapiv1b1.GatewayClass{
+			classes: []*gwapiv1.GatewayClass{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gc1",
 					},
-					Spec: gwapiv1b1.GatewayClassSpec{
-						ControllerName: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName),
+					Spec: gwapiv1.GatewayClassSpec{
+						ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 					},
 				},
 			},
-			expect: []gwapiv1b1.Gateway{
+			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1b1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
 						ResourceVersion: "999",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
@@ -941,14 +502,14 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		},
 		{
 			name: "invalid parentRef group",
-			route: &gwapiv1b1.HTTPRoute{
+			route: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
 								Group: gatewayapi.GroupPtr("unsupported.group"),
 								Kind:  gatewayapi.KindPtr("Gateway"),
@@ -962,16 +523,16 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		},
 		{
 			name: "invalid parentRef kind",
-			route: &gwapiv1b1.HTTPRoute{
+			route: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("UnsupportedKind"),
 								Name:  "test",
 							},
@@ -983,16 +544,16 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		},
 		{
 			name: "non-existent parentRef name",
-			route: &gwapiv1b1.HTTPRoute{
+			route: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Gateway"),
 								Name:  "no-existent",
 							},
@@ -1004,21 +565,21 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		},
 		{
 			name: "valid parentRefs",
-			route: &gwapiv1b1.HTTPRoute{
+			route: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Gateway"),
 								Name:  "test",
 							},
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Gateway"),
 								Name:  "test2",
 							},
@@ -1026,13 +587,13 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 					},
 				},
 			},
-			gateways: []*gwapiv1b1.Gateway{
+			gateways: []*gwapiv1.Gateway{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      "test",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
@@ -1041,47 +602,39 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 						Namespace: "test",
 						Name:      "test2",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
 			},
-			classes: []*gwapiv1b1.GatewayClass{
+			classes: []*gwapiv1.GatewayClass{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gc1",
 					},
-					Spec: gwapiv1b1.GatewayClassSpec{
-						ControllerName: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName),
+					Spec: gwapiv1.GatewayClassSpec{
+						ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 					},
 				},
 			},
-			expect: []gwapiv1b1.Gateway{
+			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1b1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
 						ResourceVersion: "999",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1b1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test2",
 						ResourceVersion: "999",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
@@ -1090,21 +643,21 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		},
 		{
 			name: "one of two parentRefs are managed",
-			route: &gwapiv1b1.HTTPRoute{
+			route: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Gateway"),
 								Name:  "test",
 							},
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Gateway"),
 								Name:  "test2",
 							},
@@ -1112,13 +665,13 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 					},
 				},
 			},
-			gateways: []*gwapiv1b1.Gateway{
+			gateways: []*gwapiv1.Gateway{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      "test",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
@@ -1127,41 +680,37 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 						Namespace: "test",
 						Name:      "test2",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc2",
 					},
 				},
 			},
-			classes: []*gwapiv1b1.GatewayClass{
+			classes: []*gwapiv1.GatewayClass{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gc1",
 					},
-					Spec: gwapiv1b1.GatewayClassSpec{
-						ControllerName: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName),
+					Spec: gwapiv1.GatewayClassSpec{
+						ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 					},
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gc2",
 					},
-					Spec: gwapiv1b1.GatewayClassSpec{
-						ControllerName: gwapiv1b1.GatewayController("unmanaged.controller"),
+					Spec: gwapiv1.GatewayClassSpec{
+						ControllerName: gwapiv1.GatewayController("unmanaged.controller"),
 					},
 				},
 			},
-			expect: []gwapiv1b1.Gateway{
+			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1b1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
 						ResourceVersion: "999",
 					},
-					Spec: gwapiv1b1.GatewaySpec{
+					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
@@ -1170,21 +719,21 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		},
 		{
 			name: "one of two valid parentRefs kind",
-			route: &gwapiv1b1.HTTPRoute{
+			route: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Gateway"),
 								Name:  "test",
 							},
 							{
-								Group: gatewayapi.GroupPtr(gwapiv1b1.GroupName),
+								Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
 								Kind:  gatewayapi.KindPtr("Unsupported"),
 								Name:  "test2",
 							},
@@ -1197,7 +746,7 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	r := &gatewayAPIReconciler{classController: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName)}
+	r := &gatewayAPIReconciler{classController: gwapiv1.GatewayController(egv1a1.GatewayControllerName)}
 	ctx := context.Background()
 
 	for _, tc := range testCases {

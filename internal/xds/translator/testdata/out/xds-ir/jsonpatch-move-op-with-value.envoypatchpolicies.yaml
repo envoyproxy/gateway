@@ -1,0 +1,16 @@
+- name: first-policy
+  namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: foobar
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: The value field can not be set for the remove operation
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      controllerName: ""

@@ -1,4 +1,7 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -7,11 +10,15 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: first-route-dest
+  lbPolicy: LEAST_REQUEST
   name: first-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -20,11 +27,15 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: second-route-dest
+  lbPolicy: LEAST_REQUEST
   name: second-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -33,11 +44,15 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: third-route-dest
+  lbPolicy: LEAST_REQUEST
   name: third-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -46,15 +61,20 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: fourth-route-dest
+  lbPolicy: LEAST_REQUEST
   name: fourth-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: ratelimit_cluster
     endpoints:
@@ -64,8 +84,10 @@
             socketAddress:
               address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
               portValue: 8081
+        loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: ratelimit_cluster/backend/0
   name: ratelimit_cluster
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

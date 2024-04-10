@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // GetSelector returns a label selector used to select resources
@@ -23,29 +23,39 @@ func GetSelector(labels map[string]string) *metav1.LabelSelector {
 }
 
 // ExpectedServiceSpec returns service spec.
-func ExpectedServiceSpec(service *egcfgv1a1.KubernetesServiceSpec) corev1.ServiceSpec {
+func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSpec {
 	serviceSpec := corev1.ServiceSpec{}
 	serviceSpec.Type = corev1.ServiceType(*service.Type)
 	serviceSpec.SessionAffinity = corev1.ServiceAffinityNone
-	if *service.Type == egcfgv1a1.ServiceTypeLoadBalancer {
+	if service.ExternalTrafficPolicy == nil {
+		service.ExternalTrafficPolicy = egv1a1.DefaultKubernetesServiceExternalTrafficPolicy()
+	}
+	if *service.Type == egv1a1.ServiceTypeLoadBalancer {
 		if service.LoadBalancerClass != nil {
 			serviceSpec.LoadBalancerClass = service.LoadBalancerClass
 		}
-		// Preserve the client source IP and avoid a second hop for LoadBalancer.
-		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+		if service.AllocateLoadBalancerNodePorts != nil {
+			serviceSpec.AllocateLoadBalancerNodePorts = service.AllocateLoadBalancerNodePorts
+		}
+		if service.LoadBalancerIP != nil {
+			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP
+		}
+		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
 	}
+
 	return serviceSpec
 }
 
-// CompareSvc compare entire Svc.Spec but ignored the ports[*].nodePort, ClusterIP and ClusterIPs in case user have modified for some scene.
+// CompareSvc compares the Service resource and ignores specific fields that may have been modified by other actors.
 func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
 		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
-		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"))
+		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"),
+		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "Finalizers"))
 }
 
-// ExpectedProxyContainerEnv returns expected container envs.
-func ExpectedProxyContainerEnv(container *egcfgv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
+// ExpectedContainerEnv returns expected container envs.
+func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
 	amendFunc := func(envVar corev1.EnvVar) {
 		for index, e := range env {
 			if e.Name == envVar.Name {
@@ -64,7 +74,7 @@ func ExpectedProxyContainerEnv(container *egcfgv1a1.KubernetesContainerSpec, env
 }
 
 // ExpectedDeploymentVolumes returns expected deployment volumes.
-func ExpectedDeploymentVolumes(pod *egcfgv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
+func ExpectedDeploymentVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
 	amendFunc := func(volume corev1.Volume) {
 		for index, e := range volumes {
 			if e.Name == volume.Name {
@@ -84,7 +94,7 @@ func ExpectedDeploymentVolumes(pod *egcfgv1a1.KubernetesPodSpec, volumes []corev
 }
 
 // ExpectedContainerVolumeMounts returns expected container volume mounts.
-func ExpectedContainerVolumeMounts(container *egcfgv1a1.KubernetesContainerSpec, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func ExpectedContainerVolumeMounts(container *egv1a1.KubernetesContainerSpec, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	amendFunc := func(volumeMount corev1.VolumeMount) {
 		for index, e := range volumeMounts {
 			if e.Name == volumeMount.Name {

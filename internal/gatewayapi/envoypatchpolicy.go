@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"sort"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
+	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -25,38 +26,47 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	})
 
 	for _, policy := range envoyPatchPolicies {
-		policy := policy.DeepCopy()
-		targetNs := policy.Spec.TargetRef.Namespace
-		if targetNs == nil {
-			// This status condition will not get updated in the resource because
-			// we dont have access to the IR yet, but it has been kept here in case we publish
-			// the status from this layer instead of the xds layer.
+		var (
+			policy       = policy.DeepCopy()
+			ancestorRefs []gwv1a2.ParentReference
+			resolveErr   *status.PolicyResolveError
+			targetKind   string
+			irKey        string
+		)
 
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				"TargetRef.Namespace must be set",
-			)
-			continue
+		targetNs := policy.Spec.TargetRef.Namespace
+		// If empty, default to namespace of policy
+		if targetNs == nil {
+			targetNs = ptr.To(gwv1.Namespace(policy.Namespace))
 		}
 
-		// Get the IR
-		// It must exist since the gateways have already been processed
-		irKey := irStringKey(string(*targetNs), string(policy.Spec.TargetRef.Name))
+		if t.MergeGateways {
+			targetKind = KindGatewayClass
+			irKey = string(t.GatewayClassName)
+
+			ancestorRefs = []gwv1a2.ParentReference{
+				{
+					Group: GroupPtr(gwv1.GroupName),
+					Kind:  KindPtr(targetKind),
+					Name:  policy.Spec.TargetRef.Name,
+				},
+			}
+		} else {
+			targetKind = KindGateway
+			gatewayNN := types.NamespacedName{
+				Namespace: string(*targetNs),
+				Name:      string(policy.Spec.TargetRef.Name),
+			}
+			// It must exist since the gateways have already been processed
+			irKey = irStringKey(gatewayNN.Namespace, gatewayNN.Name)
+
+			ancestorRefs = []gwv1a2.ParentReference{
+				getAncestorRefForPolicy(gatewayNN, nil),
+			}
+		}
+
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
-			// This status condition will not get updated in the resource because
-			// the IR is missing, but it has been kept here in case we publish
-			// the status from this layer instead of the xds layer.
-			message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
-
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonTargetNotFound,
-				message,
-			)
 			continue
 		}
 
@@ -69,31 +79,57 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		// Append the IR
 		gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
 
-		// Ensure policy can only target a Gateway
-		if policy.Spec.TargetRef.Group != gwv1b1.GroupName || policy.Spec.TargetRef.Kind != KindGateway {
-			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1b1.GroupName, KindGateway)
-
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				message,
+		// Ensure EnvoyPatchPolicy is enabled
+		if !t.EnvoyPatchPolicyEnabled {
+			resolveErr = &status.PolicyResolveError{
+				Reason:  egv1a1.PolicyReasonDisabled,
+				Message: "EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
+			}
+			status.SetResolveErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				resolveErr,
 			)
+
 			continue
 		}
 
-		// Ensure Policy and target Gateway are in the same namespace
-		if policy.Namespace != string(*targetNs) {
-			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a Gateway in the same namespace.",
-				policy.Namespace, *targetNs)
+		// Ensure EnvoyPatchPolicy is targeting to a support type
+		if policy.Spec.TargetRef.Group != gwv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
+			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
+				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1.GroupName, targetKind)
 
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				message,
+			resolveErr = &status.PolicyResolveError{
+				Reason:  gwv1a2.PolicyReasonInvalid,
+				Message: message,
+			}
+			status.SetResolveErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				resolveErr,
 			)
+
+			continue
+		}
+
+		// Ensure EnvoyPatchPolicy and target Gateway are in the same namespace
+		if policy.Namespace != string(*targetNs) {
+			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a %s in the same namespace.",
+				policy.Namespace, *targetNs, targetKind)
+
+			resolveErr = &status.PolicyResolveError{
+				Reason:  gwv1a2.PolicyReasonInvalid,
+				Message: message,
+			}
+			status.SetResolveErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				resolveErr,
+			)
+
 			continue
 		}
 
@@ -104,17 +140,13 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			irPatch.Name = patch.Name
 			irPatch.Operation.Op = string(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
+			irPatch.Operation.From = patch.Operation.From
 			irPatch.Operation.Value = patch.Operation.Value
 
 			policyIR.JSONPatches = append(policyIR.JSONPatches, &irPatch)
 		}
 
 		// Set Accepted=True
-		status.SetEnvoyPatchPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionTrue,
-			gwv1a2.PolicyReasonAccepted,
-			"EnvoyPatchPolicy has been accepted.",
-		)
+		status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 	}
 }

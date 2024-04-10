@@ -9,6 +9,7 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -46,6 +47,7 @@ func TestTranslateXds(t *testing.T) {
 		dnsDomain                 string
 		requireSecrets            bool
 		requireEnvoyPatchPolicies bool
+		err                       bool
 	}{
 		{
 			name: "empty",
@@ -61,6 +63,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "http-route-mirror",
+		},
+		{
+			name: "http-route-multiple-mirrors",
 		},
 		{
 			name: "http-route-multiple-matches",
@@ -84,7 +89,30 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-weighted-invalid-backend",
 		},
 		{
+			name: "http-route-dns-cluster",
+		},
+		{
+			name:           "http-route-with-tls-system-truststore",
+			requireSecrets: true,
+		},
+		{
+			name:           "http-route-with-tlsbundle",
+			requireSecrets: true,
+		},
+		{
+			name:           "http-route-with-tlsbundle-multiple-certs",
+			requireSecrets: true,
+		},
+		{
 			name:           "simple-tls",
+			requireSecrets: true,
+		},
+		{
+			name:           "mutual-tls",
+			requireSecrets: true,
+		},
+		{
+			name:           "http3",
 			requireSecrets: true,
 		},
 		{
@@ -131,6 +159,10 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-rewrite-url-host",
 		},
 		{
+			name: "http-route-timeout",
+		},
+
+		{
 			name: "ratelimit",
 		},
 		{
@@ -141,34 +173,142 @@ func TestTranslateXds(t *testing.T) {
 			name: "ratelimit-sourceip",
 		},
 		{
-			name: "authn-single-route-single-match",
-		},
-		{
-			name: "authn-multi-route-single-provider",
-		},
-		{
-			name: "authn-multi-route-multi-provider",
-		},
-		{
-			name: "authn-ratelimit",
-		},
-		{
 			name: "accesslog",
 		},
 		{
 			name: "tracing",
 		},
 		{
+			name: "metrics-virtual-host",
+		},
+		{
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
+			requireSecrets:            true,
+			err:                       true,
 		},
 		{
 			name:                      "jsonpatch-missing-resource",
 			requireEnvoyPatchPolicies: true,
+			err:                       true,
 		},
 		{
 			name:                      "jsonpatch-invalid-patch",
 			requireEnvoyPatchPolicies: true,
+			err:                       true,
+		},
+		{
+			name:                      "jsonpatch-add-op-without-value",
+			requireEnvoyPatchPolicies: true,
+			err:                       true,
+		},
+		{
+			name:                      "jsonpatch-move-op-with-value",
+			requireEnvoyPatchPolicies: true,
+			err:                       true,
+		},
+		{
+			name: "listener-tcp-keepalive",
+		},
+		{
+			name: "load-balancer",
+		},
+		{
+			name: "cors",
+		},
+		{
+			name: "jwt-multi-route-multi-provider",
+		},
+		{
+			name: "jwt-multi-route-single-provider",
+		},
+		{
+			name: "jwt-ratelimit",
+		},
+		{
+			name: "jwt-single-route-single-match",
+		},
+		{
+			name:           "oidc",
+			requireSecrets: true,
+		},
+		{
+			name: "http-route-partial-invalid",
+		},
+		{
+			name: "listener-proxy-protocol",
+		},
+		{
+			name: "jwt-custom-extractor",
+		},
+		{
+			name: "proxy-protocol-upstream",
+		},
+		{
+			name: "basic-auth",
+		},
+		{
+			name: "health-check",
+		},
+		{
+			name: "local-ratelimit",
+		},
+		{
+			name: "circuit-breaker",
+		},
+		{
+			name: "suppress-envoy-headers",
+		},
+		{
+			name: "fault-injection",
+		},
+		{
+			name: "headers-with-underscores-action",
+		},
+		{
+			name: "tls-with-ciphers-versions-alpn",
+		},
+		{
+			name: "path-settings",
+		},
+		{
+			name: "client-ip-detection",
+		},
+		{
+			name: "http1-trailers",
+		},
+		{
+			name: "http1-preserve-case",
+		},
+		{
+			name: "timeout",
+		},
+		{
+			name: "ext-auth",
+		},
+		{
+			name: "http10",
+		},
+		{
+			name: "upstream-tcpkeepalive",
+		},
+		{
+			name: "client-timeout",
+		},
+		{
+			name: "client-buffer-limit",
+		},
+		{
+			name: "retry-partial-invalid",
+		},
+		{
+			name: "multiple-listeners-same-port-with-different-filters",
+		},
+		{
+			name: "listener-connection-limit",
+		},
+		{
+			name: "ext-proc",
 		},
 	}
 
@@ -187,7 +327,10 @@ func TestTranslateXds(t *testing.T) {
 			}
 
 			tCtx, err := tr.Translate(ir)
-			require.NoError(t, err)
+			if !strings.HasSuffix(tc.name, "partial-invalid") && !tc.err {
+				require.NoError(t, err)
+			}
+
 			listeners := tCtx.XdsResources[resourcev3.ListenerType]
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
@@ -252,13 +395,13 @@ func TestTranslateXdsNegative(t *testing.T) {
 			name: "jsonpatch-invalid",
 		},
 		{
+			name: "jsonpatch-invalid-listener",
+		},
+		{
 			name: "accesslog-invalid",
 		},
 		{
 			name: "tracing-invalid",
-		},
-		{
-			name: "jsonpatch-invalid-listener",
 		},
 	}
 
@@ -276,9 +419,8 @@ func TestTranslateXdsNegative(t *testing.T) {
 				},
 			}
 
-			tCtx, err := tr.Translate(ir)
+			_, err := tr.Translate(ir)
 			require.Error(t, err)
-			require.Nil(t, tCtx)
 			if tc.name != "jsonpatch-invalid" {
 				require.Contains(t, err.Error(), "validation failed for xds resource")
 			}
@@ -297,6 +439,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			name: "distinct-match",
 		},
 		{
+			name: "distinct-remote-address-match",
+		},
+		{
 			name: "value-match",
 		},
 		{
@@ -310,6 +455,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		},
 		{
 			name: "masked-remote-address-match",
+		},
+		{
+			name: "multiple-masked-remote-address-match-with-same-cidr",
 		},
 	}
 

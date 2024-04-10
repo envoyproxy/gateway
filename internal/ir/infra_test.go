@@ -8,6 +8,7 @@ package ir
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +21,7 @@ func TestValidateInfra(t *testing.T) {
 		{
 			name:   "default",
 			infra:  NewInfra(),
-			expect: false,
+			expect: true,
 		},
 		{
 			name: "no-name",
@@ -46,7 +47,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{},
 						},
@@ -60,7 +61,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{
 								{
@@ -79,7 +80,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{
 								{
@@ -98,7 +99,7 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name: "test",
-					Listeners: []ProxyListener{
+					Listeners: []*ProxyListener{
 						{
 							Ports: []ListenerPort{
 								{
@@ -157,9 +158,8 @@ func TestNewProxyInfra(t *testing.T) {
 		{
 			name: "default infra",
 			expected: &ProxyInfra{
-				Metadata:  NewInfraMetadata(),
-				Name:      DefaultProxyName,
-				Listeners: NewProxyListeners(),
+				Metadata: NewInfraMetadata(),
+				Name:     DefaultProxyName,
 			},
 		},
 	}
@@ -209,6 +209,38 @@ func TestObjectName(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := tc.infra.Proxy.ObjectName()
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestEqualInfra(t *testing.T) {
+	tests := []struct {
+		desc  string
+		a     *ProxyInfra
+		b     *ProxyInfra
+		equal bool
+	}{
+		{
+			desc: "out of order proxy listeners are equal",
+			a: &ProxyInfra{
+				Listeners: []*ProxyListener{
+					{Name: "listener-1"},
+					{Name: "listener-2"},
+				},
+			},
+			b: &ProxyInfra{
+				Listeners: []*ProxyListener{
+					{Name: "listener-2"},
+					{Name: "listener-1"},
+				},
+			},
+			equal: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			require.Equal(t, tc.equal, cmp.Equal(tc.a, tc.b))
 		})
 	}
 }

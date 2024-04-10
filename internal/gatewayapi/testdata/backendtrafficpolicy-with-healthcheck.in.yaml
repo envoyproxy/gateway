@@ -1,0 +1,239 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/v2"
+      backendRefs:
+      - name: service-2
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/v3"
+      backendRefs:
+      - name: service-3
+        port: 8080
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+    healthCheck:
+      active:
+        timeout: "500ms"
+        interval: "3s"
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        type: HTTP
+        http:
+          path: "/healthz"
+          method: "GET"
+          expectedStatuses:
+          - 200
+          - 300
+          expectedResponse:
+            type: Binary
+            binary: RXZlcnl0aGluZyBPSw==
+      passive:
+        baseEjectionTime: 160s
+        interval: 2s
+        maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        type: HTTP
+        http:
+          path: "/healthz"
+          method: "GET"
+          expectedStatuses:
+          - 200
+          - 201
+          expectedResponse:
+            type: Text
+            text: pong
+      passive:
+        baseEjectionTime: 150s
+        interval: 1s
+        maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+      namespace: default
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        type: TCP
+        tcp:
+          send:
+            type: Text
+            text: ping
+          receive:
+            type: Text
+            text: pong
+      passive:
+        baseEjectionTime: 10s
+        interval: 10s
+        maxEjectionPercent: 10
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+      namespace: default
+    healthCheck:
+      active:
+        timeout: 1s
+        interval: 3s
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        type: TCP
+        tcp:
+          send:
+            type: Binary
+            binary: cGluZw==
+          receive:
+            type: Binary
+            binary: RXZlcnl0aGluZyBPSw==
+      passive:
+        baseEjectionTime: 160s
+        interval: 8ms
+        maxEjectionPercent: 11
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false

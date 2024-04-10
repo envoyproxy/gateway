@@ -6,8 +6,10 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
+      loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: first-route-dest/backend/0
 - clusterName: second-route-dest
   endpoints:
   - lbEndpoints:
@@ -16,8 +18,10 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
+      loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: second-route-dest/backend/0
 - clusterName: third-route-dest
   endpoints:
   - lbEndpoints:
@@ -26,5 +30,7 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
+      loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: third-route-dest/backend/0

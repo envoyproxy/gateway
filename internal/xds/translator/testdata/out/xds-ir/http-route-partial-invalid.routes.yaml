@@ -1,0 +1,43 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        - name: test
+          stringMatch:
+            suffix: end
+        prefix: /
+        queryParameters:
+        - name: debug
+          stringMatch:
+            exact: "yes"
+      name: valid-route
+      route:
+        cluster: valid-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        - name: test
+          stringMatch:
+            suffix: end
+        prefix: /
+        queryParameters:
+        - name: debug
+          stringMatch:
+            exact: "yes"
+      name: invalid-route
+      route:
+        cluster: invalid-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

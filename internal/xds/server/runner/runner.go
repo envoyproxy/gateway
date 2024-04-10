@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -71,7 +71,7 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the xds-server runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
@@ -83,7 +83,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		PermitWithoutStream: true,
 	}))
 
-	r.cache = cache.NewSnapshotCache(false, r.Logger)
+	r.cache = cache.NewSnapshotCache(true, r.Logger)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.
@@ -92,7 +92,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Start message Subscription.
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) serveXdsServer(ctx context.Context) {
@@ -133,8 +133,8 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(r.Xds.Subscribe(ctx),
-		func(update message.Update[string, *xdstypes.ResourceVersionTable]) {
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentXdsServerRunner), Message: "xds"}, r.Xds.Subscribe(ctx),
+		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChan chan error) {
 			key := update.Key
 			val := update.Value
 
@@ -145,6 +145,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			} else if val != nil && val.XdsResources != nil {
 				if r.cache == nil {
 					r.Logger.Error(err, "failed to init snapshot cache")
+					errChan <- err
 				} else {
 					// Update snapshot cache
 					err = r.cache.GenerateNewSnapshot(key, val.XdsResources)
@@ -152,6 +153,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 			if err != nil {
 				r.Logger.Error(err, "failed to generate a snapshot")
+				errChan <- err
 			}
 		},
 	)

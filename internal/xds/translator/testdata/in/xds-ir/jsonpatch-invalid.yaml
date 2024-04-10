@@ -60,6 +60,9 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "first-route"
     hostname: "*"
@@ -67,6 +70,9 @@ http:
     - name: user
       stringMatch:
       exact: "jason"
-    destinations:
-    - host: ""
-      port: 50000
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: ""
+          port: 50000

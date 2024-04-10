@@ -17,6 +17,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=envoy-gateway,shortName=epp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -31,7 +32,7 @@ type EnvoyPatchPolicy struct {
 	Spec EnvoyPatchPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyPatchPolicy.
-	Status EnvoyPatchPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
@@ -48,7 +49,8 @@ type EnvoyPatchPolicySpec struct {
 	JSONPatches []EnvoyJSONPatchConfig `json:"jsonPatches,omitempty"`
 	// TargetRef is the name of the Gateway API resource this policy
 	// is being attached to.
-	// Currently only attaching to Gateway is supported
+	// By default attaching to Gateway is supported and
+	// when mergeGateways is enabled it should attach to GatewayClass.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway
 	// TargetRef
@@ -84,7 +86,7 @@ type EnvoyJSONPatchConfig struct {
 }
 
 // EnvoyResourceType specifies the type URL of the Envoy resource.
-// +kubebuilder:validation:Enum=type.googleapis.com/envoy.config.listener.v3.Listener;type.googleapis.com/envoy.config.route.v3.RouteConfiguration;type.googleapis.com/envoy.config.cluster.v3.Cluster;type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+// +kubebuilder:validation:Enum=type.googleapis.com/envoy.config.listener.v3.Listener;type.googleapis.com/envoy.config.route.v3.RouteConfiguration;type.googleapis.com/envoy.config.cluster.v3.Cluster;type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment;type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
 type EnvoyResourceType string
 
 const (
@@ -110,19 +112,15 @@ type JSONPatchOperation struct {
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path"`
-	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value"`
-}
-
-// EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy
-type EnvoyPatchPolicyStatus struct {
-	// Conditions describe the current conditions of the EnvoyPatchPolicy.
-	//
+	// From is the source location of the value to be copied or moved. Only valid
+	// for move or copy operations
+	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	From *string `json:"from,omitempty"`
+	// Value is the new value of the path location. The value is only used by
+	// the `add` and `replace` operations.
+	// +optional
+	Value *apiextensionsv1.JSON `json:"value,omitempty"`
 }
 
 const (
@@ -148,9 +146,13 @@ const (
 	// is syntactically or semantically invalid.
 	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
 
-	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
+	// PolicyReasonResourceNotFound is used with the "Programmed" condition when the
 	// policy cannot find the resource type to patch to.
 	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
+
+	// PolicyReasonDisabled is used with the "Accepted" condition when the policy
+	// feature is disabled by the configuration.
+	PolicyReasonDisabled gwapiv1a2.PolicyConditionReason = "Disabled"
 )
 
 //+kubebuilder:object:root=true

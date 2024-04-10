@@ -11,10 +11,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestZapLogLevel(t *testing.T) {
@@ -38,8 +39,12 @@ func TestLogger(t *testing.T) {
 	logger.WithName(string(v1alpha1.LogComponentGlobalRateLimitRunner)).WithValues("runner", v1alpha1.LogComponentGlobalRateLimitRunner).Info("msg", "k", "v")
 
 	defaultLogger := DefaultLogger(v1alpha1.LogLevelInfo)
-	assert.True(t, defaultLogger.logging != nil)
-	assert.True(t, defaultLogger.sugaredLogger != nil)
+	assert.NotNil(t, defaultLogger.logging)
+	assert.NotNil(t, defaultLogger.sugaredLogger)
+
+	fileLogger := FileLogger("/dev/stderr", "fl-test", v1alpha1.LogLevelInfo)
+	assert.NotNil(t, fileLogger.logging)
+	assert.NotNil(t, fileLogger.sugaredLogger)
 }
 
 func TestLoggerWithName(t *testing.T) {
@@ -51,7 +56,7 @@ func TestLoggerWithName(t *testing.T) {
 		// Restore the original stdout and close the pipe
 		os.Stdout = originalStdout
 		err := w.Close()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}()
 
 	config := v1alpha1.DefaultEnvoyGatewayLogging()
@@ -64,7 +69,7 @@ func TestLoggerWithName(t *testing.T) {
 	// Read from the pipe (captured stdout)
 	outputBytes := make([]byte, 200)
 	_, err := r.Read(outputBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	capturedOutput := string(outputBytes)
 	assert.Contains(t, capturedOutput, string(v1alpha1.LogComponentInfrastructureRunner))
 	assert.Contains(t, capturedOutput, "info message")

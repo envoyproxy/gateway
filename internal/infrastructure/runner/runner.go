@@ -8,7 +8,9 @@ package runner
 import (
 	"context"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"k8s.io/utils/ptr"
+
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -34,40 +36,63 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) error {
-	var err error
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
 	}
-	go r.subscribeToProxyInfraIR(ctx)
 
-	// Enable global ratelimit if it has been configured.
-	if r.EnvoyGateway.RateLimit != nil {
-		go r.enableRateLimitInfra(ctx)
+	var initInfra = func() {
+		go r.subscribeToProxyInfraIR(ctx)
+
+		// Enable global ratelimit if it has been configured.
+		if r.EnvoyGateway.RateLimit != nil {
+			go r.enableRateLimitInfra(ctx)
+		}
+		r.Logger.Info("started")
 	}
 
-	r.Logger.Info("started")
-	return nil
+	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
+	// to avoid multiple EG instances processing envoy proxy infra resources.
+	if !ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-r.Elected:
+				initInfra()
+			}
+		}()
+		return
+	}
+	initInfra()
+	return
 }
 
 func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
-		func(update message.Update[string, *ir.Infra]) {
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentInfrastructureRunner), Message: "infra-ir"}, r.InfraIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Infra], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
 
 			if update.Delete {
 				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to delete infra")
+					errChan <- err
 				}
 			} else {
 				// Manage the proxy infra.
+				if len(val.Proxy.Listeners) == 0 {
+					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					return
+				}
+
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to create new infra")
+					errChan <- err
 				}
 			}
 		},

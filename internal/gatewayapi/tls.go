@@ -9,20 +9,25 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) error {
+func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
 	var publicKeyAlgorithm string
 	var parseErr error
 
 	pkaSecretSet := make(map[string][]string)
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
+
+		if err := validateCertificate(certData); err != nil {
+			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
+		}
 
 		certBlock, _ := pem.Decode(certData)
 		if certBlock == nil {
@@ -50,7 +55,7 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 
 		// Check whether the public key algorithm and matched certificate FQDN in the referenced secrets are unique.
 		if matchedFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
-			return fmt.Errorf("%s/%s public key algorithm must be unique, matched cerificate FQDN %s has a conficting algorithm [%s]",
+			return fmt.Errorf("%s/%s public key algorithm must be unique, matched certificate FQDN %s has a conflicting algorithm [%s]",
 				secret.Namespace, secret.Name, matchedFQDN, publicKeyAlgorithm)
 
 		}
@@ -81,7 +86,7 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 }
 
 // verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.
-func verifyHostname(cert *x509.Certificate, host *v1beta1.Hostname) ([]string, error) {
+func verifyHostname(cert *x509.Certificate, host *v1.Hostname) ([]string, error) {
 	var matchedHosts []string
 
 	if len(cert.DNSNames) > 0 {
@@ -95,4 +100,25 @@ func verifyHostname(cert *x509.Certificate, host *v1beta1.Hostname) ([]string, e
 	}
 
 	return nil, x509.HostnameError{Certificate: cert, Host: string(*host)}
+}
+
+func validateCertificate(data []byte) error {
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return fmt.Errorf("pem decode failed")
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, cert := range certs {
+		if now.After(cert.NotAfter) {
+			return fmt.Errorf("certificate is expired")
+		}
+		if now.Before(cert.NotBefore) {
+			return fmt.Errorf("certificate is not yet valid")
+		}
+	}
+	return nil
 }

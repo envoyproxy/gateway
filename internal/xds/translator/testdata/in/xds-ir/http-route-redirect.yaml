@@ -5,14 +5,18 @@ http:
   port: 10080
   hostnames:
   - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
   routes:
-  - name: "redirect-route"
+  - name: "redirect-route-1"
     hostname: "*"
     destination:
       name: "redirect-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     redirect:
       scheme: https
       statusCode: 302
@@ -20,3 +24,29 @@ http:
       port: 8443
       path:
         prefixMatchReplace: /redirected
+  - name: "redirect-route-2"
+    hostname: "*"
+    pathMatch:
+      prefix: "/redirect"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    redirect:
+      path:
+        prefixMatchReplace: /
+  - name: "redirect-route-3"
+    hostname: "*"
+    pathMatch:
+      prefix: "/redirect/"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    redirect:
+      path:
+        prefixMatchReplace: /

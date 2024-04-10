@@ -16,14 +16,15 @@ package status
 import (
 	"fmt"
 	"time"
+	"unicode"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
-	ReasonOlderGatewayClassExists gwapiv1b1.GatewayClassConditionReason = "OlderGatewayClassExists"
+	ReasonOlderGatewayClassExists gwapiv1.GatewayClassConditionReason = "OlderGatewayClassExists"
 
 	MsgOlderGatewayClassExists   = "Invalid GatewayClass: another older GatewayClass with the same Spec.Controller exists"
 	MsgValidGatewayClass         = "Valid GatewayClass"
@@ -31,13 +32,13 @@ const (
 )
 
 // computeGatewayClassAcceptedCondition computes the GatewayClass Accepted status condition.
-func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass,
+func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 	accepted bool,
 	reason, msg string) metav1.Condition {
 	switch accepted {
 	case true:
 		return metav1.Condition{
-			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionTrue,
 			Reason:             reason,
 			Message:            msg,
@@ -46,7 +47,7 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass,
 		}
 	default:
 		return metav1.Condition{
-			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionFalse,
 			Reason:             reason,
 			Message:            msg,
@@ -57,25 +58,25 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass,
 }
 
 // computeGatewayAcceptedCondition computes the Gateway Accepted status condition.
-func computeGatewayAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) metav1.Condition {
+func computeGatewayAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) metav1.Condition {
 	switch accepted {
 	case true:
-		return newCondition(string(gwapiv1b1.GatewayReasonAccepted), metav1.ConditionTrue,
-			string(gwapiv1b1.GatewayReasonAccepted),
+		return newCondition(string(gwapiv1.GatewayReasonAccepted), metav1.ConditionTrue,
+			string(gwapiv1.GatewayReasonAccepted),
 			"The Gateway has been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	default:
-		return newCondition(string(gwapiv1b1.GatewayReasonAccepted), metav1.ConditionFalse,
-			string(gwapiv1b1.GatewayReasonAccepted),
+		return newCondition(string(gwapiv1.GatewayReasonAccepted), metav1.ConditionFalse,
+			string(gwapiv1.GatewayReasonAccepted),
 			"The Gateway has not been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	}
 }
 
 // computeGatewayProgrammedCondition computes the Gateway Programmed status condition.
 // Programmed condition surfaces true when the Envoy Deployment status is ready.
-func computeGatewayProgrammedCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
+func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
 	if len(gw.Status.Addresses) == 0 {
-		return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionFalse,
-			string(gwapiv1b1.GatewayReasonAddressNotAssigned),
+		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
+			string(gwapiv1.GatewayReasonAddressNotAssigned),
 			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
 	}
 
@@ -83,15 +84,15 @@ func computeGatewayProgrammedCondition(gw *gwapiv1b1.Gateway, deployment *appsv1
 	// mark the Gateway as ready yet.
 
 	if deployment == nil || deployment.Status.AvailableReplicas == 0 {
-		return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionFalse,
-			string(gwapiv1b1.GatewayReasonNoResources),
+		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
+			string(gwapiv1.GatewayReasonNoResources),
 			"Deployment replicas unavailable", time.Now(), gw.Generation)
 	}
 
 	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy Deployment replicas available",
 		deployment.Status.AvailableReplicas, deployment.Status.Replicas)
-	return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionTrue,
-		string(gwapiv1b1.GatewayConditionProgrammed), message, time.Now(), gw.Generation)
+	return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue,
+		string(gwapiv1.GatewayConditionProgrammed), message, time.Now(), gw.Generation)
 }
 
 // MergeConditions adds or updates matching conditions, and updates the transition
@@ -137,4 +138,29 @@ func conditionChanged(a, b metav1.Condition) bool {
 		(a.Reason != b.Reason) ||
 		(a.Message != b.Message) ||
 		(a.ObservedGeneration != b.ObservedGeneration)
+}
+
+// Error2ConditionMsg format the error string to a Status condition message.
+// * Convert the first letter to capital
+// * Append "." to the string if it doesn't exit
+func Error2ConditionMsg(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	message := err.Error()
+	if message == "" {
+		return message
+	}
+
+	// Convert the string to a rune slice for easier manipulation
+	runes := []rune(message)
+
+	// Check if the first rune is a letter and convert it to uppercase
+	if unicode.IsLetter(runes[0]) {
+		runes[0] = unicode.ToUpper(runes[0])
+	}
+
+	// Convert the rune slice back to a string
+	return string(runes)
 }

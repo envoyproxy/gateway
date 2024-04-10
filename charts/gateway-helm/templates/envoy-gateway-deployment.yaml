@@ -33,6 +33,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      {{- with .Values.deployment.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - args:
         - server
@@ -54,6 +58,11 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: envoy-gateway
+        ports:
+        {{- range .Values.deployment.ports }}
+        - containerPort: {{ .port }}
+          name: {{ .name }}
+        {{- end}}
         readinessProbe:
           httpGet:
             path: /readyz
@@ -71,23 +80,10 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=0
-        env:
-        - name: KUBERNETES_CLUSTER_DOMAIN
-          value: {{ .Values.kubernetesClusterDomain }}
-        image: {{ .Values.deployment.kubeRbacProxy.image.repository }}:{{ .Values.deployment.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
-        imagePullPolicy: {{ .Values.deployment.kubeRbacProxy.imagePullPolicy }}
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources: {{- toYaml .Values.deployment.kubeRbacProxy.resources | nindent 10
-          }}
+      {{- with .Values.deployment.envoyGateway.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway

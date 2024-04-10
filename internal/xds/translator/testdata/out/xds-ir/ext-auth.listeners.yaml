@@ -1,0 +1,65 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            allowedHeaders:
+              patterns:
+              - exact: header1
+              - exact: header2
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend.default:9000
+                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+              timeout: 10s
+            transportApiVersion: V3
+        - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-gateway-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            failureModeAllow: true
+            httpService:
+              authorizationResponse:
+                allowedUpstreamHeaders:
+                  patterns:
+                  - exact: header1
+                  - exact: header2
+              pathPrefix: /auth
+              serverUri:
+                cluster: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                timeout: 10s
+                uri: http://http-backend.envoy-gateway:80/auth
+            transportApiVersion: V3
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: default/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

@@ -1,5 +1,5 @@
 envoyproxy:
-  apiVersion: config.gateway.envoyproxy.io/v1alpha1
+  apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
     namespace: envoy-gateway-system
@@ -35,7 +35,7 @@ envoyproxy:
               value: env_a_value
             - name: env_b
               value: env_b_name
-            image: "envoyproxy/envoy-dev:latest"
+            image: "envoyproxy/envoy:distroless-dev"
             resources:
               requests:
                 cpu: 100m
@@ -71,7 +71,7 @@ envoyproxy:
               secret:
                 secretName: envoy-cert
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     namespace: envoy-gateway

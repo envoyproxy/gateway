@@ -1,0 +1,78 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - foo.com
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https
+        useRemoteAddress: true
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - some-other-protocol
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          tlsParams:
+            cipherSuites:
+            - ECDHE-ECDSA-AES128-GCM-SHA256
+            - ECDHE-RSA-AES128-GCM-SHA256
+            - ECDHE-ECDSA-AES256-GCM-SHA384
+            - ECDHE-RSA-AES256-GCM-SHA384
+            ecdhCurves:
+            - X25519
+            - P-256
+            signatureAlgorithms:
+            - ecdsa_secp256r1_sha256
+            - rsa_pss_rsae_sha256
+            - rsa_pkcs1_sha256
+            - ecdsa_secp384r1_sha384
+            - rsa_pss_rsae_sha384
+            - rsa_pkcs1_sha384
+            - rsa_pss_rsae_sha512
+            - rsa_pkcs1_sha512
+            - rsa_pkcs1_sha1
+            tlsMaximumProtocolVersion: TLSv1_2
+            tlsMinimumProtocolVersion: TLSv1_0
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

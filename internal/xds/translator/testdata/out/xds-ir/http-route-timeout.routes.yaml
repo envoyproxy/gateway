@@ -1,0 +1,38 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        idleTimeout: 3600s
+        timeout: 5s
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        idleTimeout: 4000s
+        timeout: 4000s
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: third-route
+      route:
+        cluster: third-route-dest
+        idleTimeout: 0s
+        timeout: 0s
+        upgradeConfigs:
+        - upgradeType: websocket

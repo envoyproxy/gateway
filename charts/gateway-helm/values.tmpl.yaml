@@ -4,6 +4,7 @@ deployment:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
     imagePullPolicy: Always
+    imagePullSecrets: []
     resources:
       limits:
         cpu: 500m
@@ -11,18 +12,6 @@ deployment:
       requests:
         cpu: 100m
         memory: 256Mi
-  kubeRbacProxy:
-    image:
-      repository: gcr.io/kubebuilder/kube-rbac-proxy
-      tag: v0.14.1
-    imagePullPolicy: IfNotPresent
-    resources:
-      limits:
-        cpu: 500m
-        memory: 128Mi
-      requests:
-        cpu: 5m
-        memory: 64Mi
   ports:
     - name: grpc
       port: 18000
@@ -30,9 +19,15 @@ deployment:
     - name: ratelimit
       port: 18001
       targetPort: 18001
+    - name: metrics
+      port: 19001
+      targetPort: 19001
   replicas: 1
   pod:
-    annotations: {}
+    affinity: {}
+    annotations: 
+      prometheus.io/scrape: 'true'
+      prometheus.io/port: '19001'
     labels: {}
 
 config:
@@ -45,13 +40,15 @@ config:
       level:
         default: info
 
-envoyGatewayMetricsService:
-  ports:
-    - name: https
-      port: 8443
-      protocol: TCP
-      targetPort: https
-
 createNamespace: false
 
 kubernetesClusterDomain: cluster.local
+
+certgen:
+  job:
+    annotations: {}
+    resources: {}
+    ttlSecondsAfterFinished: 0
+  rbac:
+    annotations: {}
+    labels: {}

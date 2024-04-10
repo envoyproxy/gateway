@@ -28,19 +28,33 @@ xds:
           resourceApiVersion: V3
       layeredRuntime:
         layers:
-        - name: runtime-0
-          rtdsLayer:
-            name: runtime-0
-            rtdsConfig:
-              ads: {}
-              resourceApiVersion: V3
+        - name: global_config
+          staticLayer:
+            envoy.restart_features.use_eds_cache_for_ads: true
+            re2.max_program_size.error_level: 4294967295
+            re2.max_program_size.warn_level: 1000
+      overloadManager:
+        refreshInterval: 0.250s
+        resourceMonitors:
+        - name: envoy.resource_monitors.global_downstream_max_connections
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+            maxActiveDownstreamConnections: "50000"
       staticResources:
         clusters:
+        - connectTimeout: 0.250s
+          loadAssignment:
+            clusterName: prometheus_stats
+            endpoints:
+            - lbEndpoints:
+              - endpoint:
+                  address:
+                    socketAddress:
+                      address: 127.0.0.1
+                      portValue: 19000
+          name: prometheus_stats
+          type: STATIC
         - connectTimeout: 10s
-          http2ProtocolOptions:
-            connectionKeepalive:
-              interval: 30s
-              timeout: 5s
           loadAssignment:
             clusterName: xds_cluster
             endpoints:
@@ -50,6 +64,8 @@ xds:
                     socketAddress:
                       address: envoy-gateway
                       portValue: 18000
+                loadBalancingWeight: 1
+              loadBalancingWeight: 1
           name: xds_cluster
           transportSocket:
             name: envoy.transport_sockets.tls
@@ -75,7 +91,10 @@ xds:
             envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
               '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
               explicitHttpConfig:
-                http2ProtocolOptions: {}
+                http2ProtocolOptions:
+                  connectionKeepalive:
+                    interval: 30s
+                    timeout: 5s
         listeners:
         - address:
             socketAddress:
@@ -100,5 +119,14 @@ xds:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
                 routeConfig:
                   name: local_route
+                  virtualHosts:
+                  - domains:
+                    - '*'
+                    name: prometheus_stats
+                    routes:
+                    - match:
+                        prefix: /stats/prometheus
+                      route:
+                        cluster: prometheus_stats
                 statPrefix: eg-ready-http
           name: envoy-gateway-proxy-ready-0.0.0.0-19001

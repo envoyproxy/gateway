@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -28,6 +28,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -38,7 +43,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       config:
-        apiVersion: config.gateway.envoyproxy.io/v1alpha1
+        apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
           creationTimestamp: null
@@ -55,7 +60,7 @@ infraIR:
                     value: env_a_value
                   - name: env_b
                     value: env_b_name
-                  image: envoyproxy/envoy-dev:latest
+                  image: envoyproxy/envoy:distroless-dev
                   resources:
                     requests:
                       cpu: 100m
@@ -106,7 +111,8 @@ infraIR:
                 - type: OpenTelemetry
         status: {}
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http
@@ -126,4 +132,7 @@ xdsIR:
       - '*'
       isHTTP2: false
       name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10080

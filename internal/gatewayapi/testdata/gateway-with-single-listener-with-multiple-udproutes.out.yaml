@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -16,7 +16,7 @@ gateways:
       protocol: UDP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -28,6 +28,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -36,7 +41,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/udp
         ports:
         - containerPort: 10162
           name: udp
@@ -118,9 +124,13 @@ xdsIR:
     udp:
     - address: 0.0.0.0
       destination:
-        endpoints:
-        - host: 7.7.7.7
-          port: 8162
         name: udproute/default/udproute-1/rule/-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.7.7.7
+            port: 8162
+          protocol: UDP
+          weight: 1
       name: envoy-gateway/gateway-1/udp/udproute-1
       port: 10162

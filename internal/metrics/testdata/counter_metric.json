@@ -1,0 +1,79 @@
+{
+  "Resource": [
+    {
+      "Key": "metric.type",
+      "Value": {
+        "Type": "STRING",
+        "Value": "Counter"
+      }
+    },
+    {
+      "Key": "service.name",
+      "Value": {
+        "Type": "STRING",
+        "Value": "test"
+      }
+    }
+  ],
+  "ScopeMetrics": [
+    {
+      "Scope": {
+        "Name": "envoy-gateway",
+        "Version": "",
+        "SchemaURL": ""
+      },
+      "Metrics": [
+        {
+          "Name": "ir_updates_total",
+          "Description": "Total Number of IR updates, by ir type",
+          "Unit": "1",
+          "Data": {
+            "DataPoints": [
+              {
+                "Attributes": [
+                  {
+                    "Key": "ir-type",
+                    "Value": {
+                      "Type": "STRING",
+                      "Value": "xds"
+                    }
+                  }
+                ],
+                "StartTime": "0001-01-01T00:00:00Z",
+                "Time": "0001-01-01T00:00:00Z",
+                "Value": 3
+              }
+            ],
+            "Temporality": "CumulativeTemporality",
+            "IsMonotonic": true
+          }
+        },
+        {
+          "Name": "watchable_subscribed_total",
+          "Description": "Total Number of IR updates, by ir type",
+          "Unit": "1",
+          "Data": {
+            "DataPoints": [
+              {
+                "Attributes": [
+                  {
+                    "Key": "ir-type",
+                    "Value": {
+                      "Type": "STRING",
+                      "Value": "xds"
+                    }
+                  }
+                ],
+                "StartTime": "0001-01-01T00:00:00Z",
+                "Time": "0001-01-01T00:00:00Z",
+                "Value": 7
+              }
+            ],
+            "Temporality": "CumulativeTemporality",
+            "IsMonotonic": true
+          }
+        }
+      ]
+    }
+  ]
+}

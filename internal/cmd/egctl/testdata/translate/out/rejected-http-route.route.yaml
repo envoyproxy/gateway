@@ -32,6 +32,11 @@ gateways:
         reason: Invalid
         status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -62,8 +67,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
         status: "False"
         type: Accepted
       - lastTransitionTime: null

@@ -1,0 +1,33 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: first-route-dest
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: foo.bar
+              portValue: 50000
+        loadBalancingWeight: 1
+      - endpoint:
+          address:
+            socketAddress:
+              address: bar.foo
+              portValue: 50001
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: first-route-dest/backend/0
+  name: first-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS

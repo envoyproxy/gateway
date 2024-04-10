@@ -7,10 +7,11 @@ package runner
 
 import (
 	"context"
+	"reflect"
 
 	ktypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
@@ -21,10 +22,10 @@ import (
 
 type Config struct {
 	config.Server
-	XdsIR                    *message.XdsIR
-	Xds                      *message.Xds
-	EnvoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
-	ExtensionManager         extension.Manager
+	XdsIR             *message.XdsIR
+	Xds               *message.Xds
+	ExtensionManager  extension.Manager
+	ProviderResources *message.ProviderResources
 }
 
 type Runner struct {
@@ -40,17 +41,17 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the xds-translator runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(r.XdsIR.Subscribe(ctx),
-		func(update message.Update[string, *ir.Xds]) {
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentXdsTranslatorRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received an update")
 			key := update.Key
 			val := update.Value
@@ -78,6 +79,25 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				result, err := t.Translate(val)
+				if err != nil {
+					r.Logger.Error(err, "failed to translate xds ir")
+					errChan <- err
+				}
+
+				// xDS translation is done in a best-effort manner, so the result
+				// may contain partial resources even if there are errors.
+				if result == nil {
+					r.Logger.Info("no xds resources to publish")
+					return
+				}
+
+				// Get all status keys from watchable and save them in the map statusesToDelete.
+				// Iterating through result.EnvoyPatchPolicyStatuses, any valid keys will be removed from statusesToDelete.
+				// Remaining keys will be deleted from watchable before we exit this function.
+				statusesToDelete := make(map[ktypes.NamespacedName]bool)
+				for key := range r.ProviderResources.EnvoyPatchPolicyStatuses.LoadAll() {
+					statusesToDelete[key] = true
+				}
 
 				// Publish EnvoyPatchPolicyStatus
 				for _, e := range result.EnvoyPatchPolicyStatuses {
@@ -85,16 +105,23 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						Name:      e.Name,
 						Namespace: e.Namespace,
 					}
-					r.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					// Skip updating status for policies with empty status
+					// They may have been skipped in this translation because
+					// their target is not found (not relevant)
+					if !(reflect.ValueOf(e.Status).IsZero()) {
+						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					}
+					delete(statusesToDelete, key)
 				}
 				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
 				result.EnvoyPatchPolicyStatuses = nil
 
-				if err != nil {
-					r.Logger.Error(err, "failed to translate xds ir")
-				} else {
-					// Publish
-					r.Xds.Store(key, result)
+				// Publish
+				r.Xds.Store(key, result)
+
+				// Delete all the deletable status keys
+				for key := range statusesToDelete {
+					r.ProviderResources.EnvoyPatchPolicyStatuses.Delete(key)
 				}
 			}
 		},

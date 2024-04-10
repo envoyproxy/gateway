@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -78,14 +78,14 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
 						},
 					},
-					Config: &egcfgv1a1.EnvoyProxy{
-						Spec: egcfgv1a1.EnvoyProxySpec{
-							Provider: &egcfgv1a1.EnvoyProxyProvider{
-								Type: egcfgv1a1.ProviderTypeKubernetes,
-								Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
-										Container: &egcfgv1a1.KubernetesContainerSpec{
-											Image: pointer.String("envoyproxy/envoy-dev:v1.2.3"),
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Provider: &egv1a1.EnvoyProxyProvider{
+								Type: egv1a1.ProviderTypeKubernetes,
+								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+										Container: &egv1a1.KubernetesContainerSpec{
+											Image: ptr.To("envoyproxy/envoy-dev:v1.2.3"),
 										},
 									},
 								},
@@ -106,9 +106,16 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var cli client.Client
 			if tc.current != nil {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.current).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			} else {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			}
 
 			kube := NewInfra(cli, cfg)
@@ -129,7 +136,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 }
 
 func TestDeleteProxyDeployment(t *testing.T) {
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects().
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
 	cfg, err := config.New()
 	require.NoError(t, err)
 

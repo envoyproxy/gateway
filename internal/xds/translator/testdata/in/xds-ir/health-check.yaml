@@ -1,0 +1,124 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    healthCheck:
+      active:
+        timeout: "500ms"
+        interval: "3s"
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        http:
+          host: "*"
+          path: "/healthz"
+          expectedResponse:
+            text: "ok"
+          expectedStatuses:
+          - 200
+          - 300
+      passive:
+        baseEjectionTime: 180s
+        interval: 2s
+        maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        http:
+          host: "*"
+          path: "/healthz"
+          expectedResponse:
+            binary: "cG9uZw=="
+          expectedStatuses:
+          - 200
+          - 201
+      passive:
+        baseEjectionTime: 180s
+        interval: 1s
+        maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "third-route"
+    hostname: "*"
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        tcp:
+          send:
+            text: "ping"
+          receive:
+            text: "pong"
+      passive:
+        baseEjectionTime: 160s
+        interval: 1s
+        maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fourth-route"
+    hostname: "*"
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        tcp:
+          send:
+            binary: "cGluZw=="
+          receive:
+            binary: "cG9uZw=="
+      passive:
+        baseEjectionTime: 180s
+        interval: 1s
+        maxEjectionPercent: 90
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: true
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

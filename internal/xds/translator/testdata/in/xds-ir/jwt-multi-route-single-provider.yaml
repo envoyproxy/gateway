@@ -1,0 +1,52 @@
+accesslog:
+  text:
+  - path: "/dev/stdout"
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    jwt:
+      providers:
+      - name: example
+        issuer: https://www.example.com
+        audiences:
+        - foo.com
+        remoteJWKS:
+          uri: https://localhost/jwt/public-key/jwks.json
+        claimToHeaders:
+        - header: first-route-key
+          claim: claim.neteased.key
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/baz"
+    jwt:
+      providers:
+      - name: example
+        issuer: https://www.example.com
+        audiences:
+        - foo.com
+        remoteJWKS:
+          uri: https://localhost/jwt/public-key/jwks.json
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 50000

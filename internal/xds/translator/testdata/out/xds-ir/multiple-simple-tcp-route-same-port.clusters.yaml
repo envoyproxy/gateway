@@ -1,4 +1,7 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -7,11 +10,15 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-dest
+  lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -20,11 +27,15 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-1-dest
+  lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-1-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -33,11 +44,15 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-2-dest
+  lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-2-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -46,11 +61,15 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-3-dest
+  lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-3-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -59,6 +78,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-4-dest
+  lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-4-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

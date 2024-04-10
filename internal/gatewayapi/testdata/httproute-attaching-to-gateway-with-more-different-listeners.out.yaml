@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -78,6 +78,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -96,6 +101,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-2
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -114,6 +124,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-3
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -132,6 +147,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-4
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -150,6 +170,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-5
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -168,6 +193,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-6
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -186,6 +216,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-7
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -204,6 +239,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-8
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -211,7 +251,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -249,36 +289,58 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: ""
+      - address: null
+        name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10081
           name: http-1
           protocol: HTTP
           servicePort: 81
+      - address: null
+        name: envoy-gateway/gateway-1/http-2
+        ports:
         - containerPort: 10082
           name: http-2
           protocol: HTTP
           servicePort: 82
+      - address: null
+        name: envoy-gateway/gateway-1/http-3
+        ports:
         - containerPort: 10083
           name: http-3
           protocol: HTTP
           servicePort: 83
+      - address: null
+        name: envoy-gateway/gateway-1/http-4
+        ports:
         - containerPort: 10084
           name: http-4
           protocol: HTTP
           servicePort: 84
+      - address: null
+        name: envoy-gateway/gateway-1/http-5
+        ports:
         - containerPort: 10085
           name: http-5
           protocol: HTTP
           servicePort: 85
+      - address: null
+        name: envoy-gateway/gateway-1/http-6
+        ports:
         - containerPort: 10086
           name: http-6
           protocol: HTTP
           servicePort: 86
+      - address: null
+        name: envoy-gateway/gateway-1/http-7
+        ports:
         - containerPort: 10087
           name: http-7
           protocol: HTTP
           servicePort: 87
+      - address: null
+        name: envoy-gateway/gateway-1/http-8
+        ports:
         - containerPort: 10088
           name: http-8
           protocol: HTTP
@@ -299,18 +361,25 @@ xdsIR:
       - foo.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10081
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: foo.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
           distinct: false
@@ -321,18 +390,25 @@ xdsIR:
       - bar.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10082
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: bar.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:
           distinct: false
@@ -343,18 +419,25 @@ xdsIR:
       - foo1.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10083
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: foo1.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo1_com
         pathMatch:
           distinct: false
@@ -365,18 +448,25 @@ xdsIR:
       - bar1.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-4
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10084
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: bar1.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar1_com
         pathMatch:
           distinct: false
@@ -387,18 +477,25 @@ xdsIR:
       - foo2.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-5
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10085
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: foo2.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo2_com
         pathMatch:
           distinct: false
@@ -409,18 +506,25 @@ xdsIR:
       - bar2.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-6
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10086
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: bar2.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar2_com
         pathMatch:
           distinct: false
@@ -431,18 +535,25 @@ xdsIR:
       - foo3.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-7
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10087
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: foo3.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo3_com
         pathMatch:
           distinct: false
@@ -453,18 +564,25 @@ xdsIR:
       - bar3.com
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-8
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
       port: 10088
       routes:
       - backendWeights:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
         hostname: bar3.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar3_com
         pathMatch:
           distinct: false

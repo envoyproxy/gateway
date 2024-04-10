@@ -1,0 +1,84 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.fault:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+          abort:
+            httpStatus: 500
+            percentage:
+              denominator: MILLION
+              numerator: 100
+    - match:
+        path: example
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.fault:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+          delay:
+            fixedDelay: 5.400s
+            percentage:
+              denominator: MILLION
+              numerator: 800000
+    - match:
+        path: test
+      name: third-route
+      route:
+        cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.fault:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+          abort:
+            httpStatus: 500
+            percentage:
+              denominator: MILLION
+              numerator: 1000000
+          delay:
+            fixedDelay: 5.005s
+            percentage:
+              denominator: MILLION
+              numerator: 1000000
+    - match:
+        path: test
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.fault:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+          abort:
+            grpcStatus: 14
+            percentage:
+              denominator: MILLION
+              numerator: 1000000
+          delay:
+            fixedDelay: 5.005s
+            percentage:
+              denominator: MILLION
+              numerator: 1000000
+    - match:
+        path: test
+      name: fifth-route
+      route:
+        cluster: fifth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

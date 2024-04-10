@@ -1,0 +1,61 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route
+      route:
+        cluster: first-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: first-route
+              descriptorValue: first-route
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: first-route
+    - match:
+        path: example
+      name: second-route
+      route:
+        cluster: second-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: second-route
+              descriptorValue: second-route
+          - requestHeaders:
+              descriptorKey: rule-0-match-0
+              headerName: x-user-id
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: test
+      name: third-route
+      route:
+        cluster: third-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: third-route
+              descriptorValue: third-route
+          - genericKey:
+              descriptorKey: rule-0-match--1
+              descriptorValue: rule-0-match--1
+        upgradeConfigs:
+        - upgradeType: websocket

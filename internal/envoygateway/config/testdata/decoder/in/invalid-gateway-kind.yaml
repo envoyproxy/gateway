@@ -1,4 +1,4 @@
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateways
 provider:
   type: Kubernetes

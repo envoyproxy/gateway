@@ -24,19 +24,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const (
@@ -53,13 +54,17 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
-	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
+
+	testNs := config.DefaultNamespace
+	cli := provider.manager.GetClient()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
 
 	// Stop the kube provider.
 	defer func() {
@@ -74,8 +79,6 @@ func TestProvider(t *testing.T) {
 		"gateway scheduled status":             testGatewayScheduledStatus,
 		"httproute":                            testHTTPRoute,
 		"tlsroute":                             testTLSRoute,
-		"ratelimit filter":                     testRateLimitFilter,
-		"authentication filter":                testAuthenFilter,
 		"stale service cleanup route deletion": testServiceCleanupForMultipleRoutes,
 	}
 	for name, tc := range testcases {
@@ -101,10 +104,10 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	return env, cfg, nil
 }
 
-func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, _ *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-controllername", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-controllername", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -120,7 +123,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-accepted-status", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-accepted-status", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -133,7 +136,7 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -141,10 +144,14 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		return false
 	}, defaultWait, defaultTick)
 
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
 	// Even though no gateways exist, the controller loads the empty resource map
 	// to support gateway deletions.
 	require.Eventually(t, func() bool {
-		_, ok := resources.GatewayAPIResources.Load(gc.Name)
+		_, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		return ok
 	}, defaultWait, defaultTick)
 }
@@ -152,28 +159,21 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	// Create the namespace for the test case.
 	// Note: The namespace for the EnvoyProxy must match EG's configured namespace.
 	testNs := config.DefaultNamespace
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
-	require.NoError(t, cli.Create(ctx, ns))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, ns))
-	}()
 
 	epName := "test-envoy-proxy"
-	ep := test.NewEnvoyProxy(testNs, epName)
+	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: testNs, Name: epName}, false)
 	require.NoError(t, cli.Create(ctx, ep))
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, ep))
 	}()
 
-	gc := test.GetGatewayClass("gc-with-param-ref", egcfgv1a1.GatewayControllerName)
-	gc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-		Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-		Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+	gc := test.GetGatewayClass("gc-with-param-ref", egv1a1.GatewayControllerName, nil)
+	gc.Spec.ParametersRef = &gwapiv1.ParametersReference{
+		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+		Kind:      egv1a1.KindEnvoyProxy,
 		Name:      epName,
 		Namespace: gatewayapi.NamespacePtr(testNs),
 	}
@@ -190,7 +190,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -198,16 +198,29 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		return false
 	}, defaultWait, defaultTick)
 
-	// Ensure the resource map contains the EnvoyProxy.
-	res, ok := resources.GatewayAPIResources.Load(gc.Name)
-	assert.Equal(t, ok, true)
-	assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+
+		if res.EnvoyProxy != nil {
+			assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
+			return true
+		}
+
+		return false
+	}, defaultWait, defaultTick)
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("gc-scheduled-status-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("gc-scheduled-status-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -217,7 +230,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -233,18 +246,18 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "scheduled-status-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
 		},
@@ -307,13 +320,13 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 	// Ensure the Gateway reports "Scheduled".
 	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, gw); err != nil {
+		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
 			return false
 		}
 
 		for _, cond := range gw.Status.Conditions {
 			fmt.Printf("Condition: %v\n", cond)
-			if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -326,9 +339,16 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
 	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
-		res, _ := resources.GatewayAPIResources.Load("gc-scheduled-status-test")
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
 		return res != nil && len(res.Gateways) == 1
 	}, defaultWait, defaultTick)
 
@@ -339,482 +359,25 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}, defaultWait, defaultTick)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
-	key := types.NamespacedName{
-		Namespace: gw.Namespace,
-		Name:      gw.Name,
-	}
+	key := utils.NamespacedName(gw)
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, key, gw) == nil
 	}, defaultWait, defaultTick)
 
-	res, _ := resources.GatewayAPIResources.Load("gc-scheduled-status-test")
+	res := resources.GetResourcesByGatewayClass(gc.Name)
+	assert.NotNil(t, res)
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
 	// with an updated status if the spec has not changed
 	// to eliminate this endless loop:
 	// reconcile->store->translate->update-status->reconcile
 	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
-}
-
-// Test that even when resources such as the Service/Deployment get hashed names (because of a gateway with a very long name)
-func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
-	cli := provider.manager.GetClient()
-
-	gc := test.GetGatewayClass("envoy-gateway-class", egcfgv1a1.GatewayControllerName)
-	require.NoError(t, cli.Create(ctx, gc))
-
-	// Ensure the GatewayClass reports "Ready".
-	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
-			return false
-		}
-
-		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
-				return true
-			}
-		}
-
-		return false
-	}, defaultWait, defaultTick)
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gc))
-	}()
-
-	// Create the namespace for the Gateway under test.
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway"}}
-	require.NoError(t, cli.Create(ctx, ns))
-
-	gw := &gwapiv1b1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gatewaywithaverylongnamethatwillresultinhashedresources",
-			Namespace: ns.Name,
-		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
-				{
-					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
-				},
-			},
-		},
-	}
-	require.NoError(t, cli.Create(ctx, gw))
-
-	// Ensure the Gateway is ready and gets an address.
-	ready := false
-	hasAddress := false
-	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, gw); err != nil {
-			return false
-		}
-
-		for _, cond := range gw.Status.Conditions {
-			fmt.Printf("Condition: %v\n", cond)
-			if cond.Type == string(gwapiv1b1.GatewayConditionProgrammed) && cond.Status == metav1.ConditionTrue {
-				ready = true
-			}
-		}
-
-		if gw.Status.Addresses != nil {
-			hasAddress = len(gw.Status.Addresses) >= 1
-		}
-
-		return ready && hasAddress
-	}, defaultWait, defaultTick)
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gw))
-	}()
-
-	// Ensure the gatewayclass has been finalized.
-	require.Eventually(t, func() bool {
-		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
-		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
-	}, defaultWait, defaultTick)
-
-	// Ensure the number of Gateways in the Gateway resource table is as expected.
-	require.Eventually(t, func() bool {
-		res, _ := resources.GatewayAPIResources.Load("envoy-gateway-class")
-		return len(res.Gateways) == 1
-	}, defaultWait, defaultTick)
-
-	// Ensure the test Gateway in the Gateway resources is as expected.
-	key := types.NamespacedName{
-		Namespace: gw.Namespace,
-		Name:      gw.Name,
-	}
-	require.Eventually(t, func() bool {
-		return cli.Get(ctx, key, gw) == nil
-	}, defaultWait, defaultTick)
-	res, _ := resources.GatewayAPIResources.Load("envoy-gateway-class")
-	// Only check if the spec is equal
-	// The watchable map will not store a resource
-	// with an updated status if the spec has not changed
-	// to eliminate this endless loop:
-	// reconcile->store->translate->update-status->reconcile
-	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
-}
-
-func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
-	cli := provider.manager.GetClient()
-
-	gc := test.GetGatewayClass("ratelimit-test", egcfgv1a1.GatewayControllerName)
-	require.NoError(t, cli.Create(ctx, gc))
-
-	// Ensure the GatewayClass reports ready.
-	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
-			return false
-		}
-
-		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
-				return true
-			}
-		}
-
-		return false
-	}, defaultWait, defaultTick)
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gc))
-	}()
-
-	// Create the namespace for the Gateway under test.
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ratelimit-test"}}
-	require.NoError(t, cli.Create(ctx, ns))
-
-	gw := &gwapiv1b1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ratelimit-test",
-			Namespace: ns.Name,
-		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
-				{
-					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
-				},
-			},
-		},
-	}
-	require.NoError(t, cli.Create(ctx, gw))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gw))
-	}()
-
-	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "test"}, nil, map[string]int32{
-		"http":  80,
-		"https": 443,
-	})
-
-	require.NoError(t, cli.Create(ctx, svc))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, svc))
-	}()
-
-	rateLimitFilter := test.GetRateLimitFilter("ratelimit-test", ns.Name)
-
-	require.NoError(t, cli.Create(ctx, rateLimitFilter))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, rateLimitFilter))
-	}()
-
-	var testCases = []struct {
-		name  string
-		route gwapiv1b1.HTTPRoute
-	}{
-		{
-			name: "ratelimit-test-httproute",
-			route: gwapiv1b1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ratelimit-test",
-					Namespace: ns.Name,
-				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
-							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
-							},
-						},
-					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
-						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
-								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/ratelimitfilter/"),
-									},
-								},
-							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
-								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
-											Name: "test",
-										},
-									},
-								},
-							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
-								{
-									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-									ExtensionRef: &gwapiv1b1.LocalObjectReference{
-										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-										Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
-										Name:  gwapiv1b1.ObjectName("ratelimit-test"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.NoError(t, cli.Create(ctx, &testCase.route))
-			defer func() {
-				require.NoError(t, cli.Delete(ctx, &testCase.route))
-			}()
-
-			require.Eventually(t, func() bool {
-				return resources.GatewayAPIResources.Len() != 0
-			}, defaultWait, defaultTick)
-
-			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
-			key := types.NamespacedName{
-				Namespace: testCase.route.Namespace,
-				Name:      testCase.route.Name,
-			}
-			require.Eventually(t, func() bool {
-				return cli.Get(ctx, key, &testCase.route) == nil
-			}, defaultWait, defaultTick)
-
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				return ok &&
-					len(res.HTTPRoutes) != 0 &&
-					assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
-			}, defaultWait, defaultTick)
-
-			// Ensure the RateLimitFilter is in the resource map.
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				return ok &&
-					len(res.RateLimitFilters) != 0 &&
-					assert.Equal(t, rateLimitFilter.Spec, res.RateLimitFilters[0].Spec)
-			}, defaultWait, defaultTick)
-
-			// Update the rate limit filter.
-			rateLimitFilter.Spec.Global.Rules = append(rateLimitFilter.Spec.Global.Rules, test.GetRateLimitGlobalRule("two"))
-			require.NoError(t, cli.Update(ctx, rateLimitFilter))
-
-			// Ensure the RateLimitFilter in the resource map has been updated.
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				return ok &&
-					len(res.RateLimitFilters) != 0 &&
-					assert.Equal(t, 2, len(res.RateLimitFilters[0].Spec.Global.Rules))
-			}, defaultWait, defaultTick)
-		})
-	}
-}
-
-func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
-	cli := provider.manager.GetClient()
-
-	gc := test.GetGatewayClass("authen-test", egcfgv1a1.GatewayControllerName)
-	require.NoError(t, cli.Create(ctx, gc))
-
-	// Ensure the GatewayClass reports ready.
-	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
-			return false
-		}
-
-		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
-				return true
-			}
-		}
-
-		return false
-	}, defaultWait, defaultTick)
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gc))
-	}()
-
-	// Create the namespace for the Gateway under test.
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "authen-test"}}
-	require.NoError(t, cli.Create(ctx, ns))
-
-	gw := &gwapiv1b1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "authen-test",
-			Namespace: ns.Name,
-		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
-				{
-					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
-				},
-			},
-		},
-	}
-	require.NoError(t, cli.Create(ctx, gw))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gw))
-	}()
-
-	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "test"}, nil, map[string]int32{
-		"http":  80,
-		"https": 443,
-	})
-
-	require.NoError(t, cli.Create(ctx, svc))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, svc))
-	}()
-
-	authenFilter := test.GetAuthenticationFilter("test-authen", ns.Name)
-
-	require.NoError(t, cli.Create(ctx, authenFilter))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, authenFilter))
-	}()
-
-	var testCases = []struct {
-		name  string
-		route gwapiv1b1.HTTPRoute
-	}{
-		{
-			name: "authenfilter-httproute",
-			route: gwapiv1b1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "httproute-authenfilter-test",
-					Namespace: ns.Name,
-				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
-							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
-							},
-						},
-					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
-						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
-								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/authenfilter/"),
-									},
-								},
-							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
-								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
-											Name: "test",
-										},
-									},
-								},
-							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
-								{
-									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-									ExtensionRef: &gwapiv1b1.LocalObjectReference{
-										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-										Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
-										Name:  gwapiv1b1.ObjectName(authenFilter.Name),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.NoError(t, cli.Create(ctx, &testCase.route))
-			defer func() {
-				require.NoError(t, cli.Delete(ctx, &testCase.route))
-			}()
-
-			require.Eventually(t, func() bool {
-				return resources.GatewayAPIResources.Len() != 0
-			}, defaultWait, defaultTick)
-
-			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
-			key := types.NamespacedName{
-				Namespace: testCase.route.Namespace,
-				Name:      testCase.route.Name,
-			}
-			require.Eventually(t, func() bool {
-				return cli.Get(ctx, key, &testCase.route) == nil
-			}, defaultWait, defaultTick)
-
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("authen-test")
-				return ok &&
-					len(res.HTTPRoutes) != 0 &&
-					assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
-			}, defaultWait, defaultTick)
-
-			// Ensure the AuthenticationFilter is in the resource map.
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("authen-test")
-				return ok &&
-					len(res.AuthenticationFilters) != 0 &&
-					assert.Equal(t, authenFilter.Spec, res.AuthenticationFilters[0].Spec)
-			}, defaultWait, defaultTick)
-
-			// Update the authn filter.
-			authenFilter.Spec.JwtProviders = append(authenFilter.Spec.JwtProviders, test.GetAuthenticationProvider("test2"))
-			require.NoError(t, cli.Update(ctx, authenFilter))
-
-			// Ensure the AuthenticationFilter in the resource map has been updated.
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("authen-test")
-				return ok &&
-					len(res.AuthenticationFilters) != 0 &&
-					assert.Equal(t, 2, len(res.AuthenticationFilters[0].Spec.JwtProviders))
-			}, defaultWait, defaultTick)
-		})
-	}
 }
 
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("httproute-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("httproute-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -824,7 +387,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -840,18 +403,18 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "httproute-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "httproute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
 		},
@@ -873,55 +436,48 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	authenFilter := test.GetAuthenticationFilter("test-authen", ns.Name)
-
-	require.NoError(t, cli.Create(ctx, authenFilter))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, authenFilter))
-	}()
-
-	redirectHostname := gwapiv1b1.PreciseHostname("redirect.hostname.local")
-	redirectPort := gwapiv1b1.PortNumber(8443)
+	redirectHostname := gwapiv1.PreciseHostname("redirect.hostname.local")
+	redirectPort := gwapiv1.PortNumber(8443)
 	redirectStatus := 301
 
-	rewriteHostname := gwapiv1b1.PreciseHostname("rewrite.hostname.local")
+	rewriteHostname := gwapiv1.PreciseHostname("rewrite.hostname.local")
 
 	var testCases = []struct {
 		name  string
-		route gwapiv1b1.HTTPRoute
+		route gwapiv1.HTTPRoute
 	}{
 		{
 			name: "destination-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -933,48 +489,39 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "redirect-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-redirect-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/redirect/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/redirect/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
-											Name: "test",
-										},
-									},
-								},
-							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
-								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestRedirect"),
-									RequestRedirect: &gwapiv1b1.HTTPRequestRedirectFilter{
-										Scheme:   gatewayapi.StringPtr("https"),
+									Type: gwapiv1.HTTPRouteFilterType("RequestRedirect"),
+									RequestRedirect: &gwapiv1.HTTPRequestRedirectFilter{
+										Scheme:   ptr.To("https"),
 										Hostname: &redirectHostname,
-										Path: &gwapiv1b1.HTTPPathModifier{
-											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
-											ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+										Path: &gwapiv1.HTTPPathModifier{
+											Type:            gwapiv1.HTTPPathModifierType("ReplaceFullPath"),
+											ReplaceFullPath: ptr.To("/newpath"),
 										},
 										Port:       &redirectPort,
 										StatusCode: &redirectStatus,
@@ -988,47 +535,48 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "rewrite-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-rewrite-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/rewrite/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/rewrite/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("URLRewrite"),
-									URLRewrite: &gwapiv1b1.HTTPURLRewriteFilter{
+									Type: gwapiv1.HTTPRouteFilterType("URLRewrite"),
+									URLRewrite: &gwapiv1.HTTPURLRewriteFilter{
 										Hostname: &rewriteHostname,
-										Path: &gwapiv1b1.HTTPPathModifier{
-											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
-											ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+										Path: &gwapiv1.HTTPPathModifier{
+											Type:            gwapiv1.HTTPPathModifierType("ReplaceFullPath"),
+											ReplaceFullPath: ptr.To("/newpath"),
 										},
 									},
 								},
@@ -1040,56 +588,57 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "add-request-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-add-request-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/addheader/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/addheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
-										Add: []gwapiv1b1.HTTPHeader{
+									Type: gwapiv1.HTTPRouteFilterType("RequestHeaderModifier"),
+									RequestHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+										Add: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
+												Name:  gwapiv1.HTTPHeaderName("header-1"),
 												Value: "value-1",
 											},
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-2"),
+												Name:  gwapiv1.HTTPHeaderName("header-2"),
 												Value: "value-2",
 											},
 										},
-										Set: []gwapiv1b1.HTTPHeader{
+										Set: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-3"),
+												Name:  gwapiv1.HTTPHeaderName("header-3"),
 												Value: "value-3",
 											},
 										},
@@ -1103,43 +652,44 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "remove-request-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-remove-request-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/remheader/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/remheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
+									Type: gwapiv1.HTTPRouteFilterType("RequestHeaderModifier"),
+									RequestHeaderModifier: &gwapiv1.HTTPHeaderFilter{
 										Remove: []string{
 											"example-header-1",
 											"test-header",
@@ -1155,56 +705,57 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "add-response-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-add-response-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/addheader/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/addheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("ResponseHeaderModifier"),
-									ResponseHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
-										Add: []gwapiv1b1.HTTPHeader{
+									Type: gwapiv1.HTTPRouteFilterType("ResponseHeaderModifier"),
+									ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+										Add: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
+												Name:  gwapiv1.HTTPHeaderName("header-1"),
 												Value: "value-1",
 											},
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-2"),
+												Name:  gwapiv1.HTTPHeaderName("header-2"),
 												Value: "value-2",
 											},
 										},
-										Set: []gwapiv1b1.HTTPHeader{
+										Set: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-3"),
+												Name:  gwapiv1.HTTPHeaderName("header-3"),
 												Value: "value-3",
 											},
 										},
@@ -1218,43 +769,44 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "remove-response-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-remove-response-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/remheader/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/remheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("ResponseHeaderModifier"),
-									ResponseHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
+									Type: gwapiv1.HTTPRouteFilterType("ResponseHeaderModifier"),
+									ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
 										Remove: []string{
 											"example-header-1",
 											"test-header",
@@ -1270,45 +822,47 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "mirror-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-mirror-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/mirror/"),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/mirror/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestMirror"),
-									RequestMirror: &gwapiv1b1.HTTPRequestMirrorFilter{
-										BackendRef: gwapiv1b1.BackendObjectReference{
+									Type: gwapiv1.HTTPRouteFilterType("RequestMirror"),
+									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
+										BackendRef: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1332,24 +886,26 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 
 			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
-			key := types.NamespacedName{
-				Namespace: testCase.route.Namespace,
-				Name:      testCase.route.Name,
-			}
+			key := utils.NamespacedName(&testCase.route)
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)
 
 			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("httproute-test")
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+				if !ok {
+					return false
+				}
 				return ok && len(res.HTTPRoutes) != 0
 			}, defaultWait, defaultTick)
-			res, _ := resources.GatewayAPIResources.Load("httproute-test")
+
+			res := resources.GetResourcesByGatewayClass(gc.Name)
+			assert.NotNil(t, res)
 			assert.Equal(t, &testCase.route, res.HTTPRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load(testCase.route.Namespace)
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -1363,7 +919,12 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 
 			// Ensure the Service is in the resource map.
 			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("httproute-test")
+				// The redirect test case does not have a service.
+				if testCase.name == "redirect-httproute" {
+					return true
+				}
+
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -1381,7 +942,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("tlsroute-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("tlsroute-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -1392,18 +953,21 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "tlsroute-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.TLSProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.TLSProtocolType,
+					TLS: &gwapiv1.GatewayTLSConfig{
+						Mode: ptr.To(gwapiv1.TLSModePassthrough),
+					},
 				},
 			},
 		},
@@ -1448,6 +1012,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 								{
 									BackendObjectReference: gwapiv1a2.BackendObjectReference{
 										Name: "test",
+										Port: ptr.To(gwapiv1.PortNumber(90)),
 									},
 								},
 							},
@@ -1470,24 +1035,26 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 
 			// Ensure the test TLSRoute in the TLSRoute resources is as expected.
-			key := types.NamespacedName{
-				Namespace: testCase.route.Namespace,
-				Name:      testCase.route.Name,
-			}
+			key := utils.NamespacedName(&testCase.route)
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)
 
 			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("tlsroute-test")
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+				if !ok {
+					return false
+				}
 				return ok && len(res.TLSRoutes) != 0
 			}, defaultWait, defaultTick)
-			res, _ := resources.GatewayAPIResources.Load("tlsroute-test")
+
+			res := resources.GetResourcesByGatewayClass(gc.Name)
+			assert.NotNil(t, res)
 			assert.Equal(t, &testCase.route, res.TLSRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load(testCase.route.Namespace)
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -1501,7 +1068,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 			// Ensure the Service is in the resource map.
 			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("tlsroute-test")
+				res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 				if !ok {
 					return false
 				}
@@ -1522,7 +1089,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("service-cleanup-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("service-cleanup-test", egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
@@ -1532,23 +1099,26 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "service-cleanup-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service-cleanup-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "httptest",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 				{
 					Name:     "tlstest",
-					Port:     gwapiv1b1.PortNumber(int32(8043)),
-					Protocol: gwapiv1b1.TLSProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8043)),
+					Protocol: gwapiv1.TLSProtocolType,
+					TLS: &gwapiv1.GatewayTLSConfig{
+						Mode: ptr.To(gwapiv1.TLSModePassthrough),
+					},
 				},
 			},
 		},
@@ -1583,35 +1153,37 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 				BackendRefs: []gwapiv1a2.BackendRef{{
 					BackendObjectReference: gwapiv1a2.BackendObjectReference{
 						Name: "test-common-svc",
+						Port: ptr.To(gwapiv1.PortNumber(90)),
 					}},
 				}},
 			},
 		},
 	}
 
-	httpRoute := gwapiv1b1.HTTPRoute{
+	httpRoute := gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "httproute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.HTTPRouteSpec{
-			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-				ParentRefs: []gwapiv1b1.ParentReference{{
-					Name: gwapiv1b1.ObjectName(gw.Name),
+		Spec: gwapiv1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{{
+					Name: gwapiv1.ObjectName(gw.Name),
 				}},
 			},
-			Hostnames: []gwapiv1b1.Hostname{"test-http.hostname.local"},
-			Rules: []gwapiv1b1.HTTPRouteRule{{
-				Matches: []gwapiv1b1.HTTPRouteMatch{{
-					Path: &gwapiv1b1.HTTPPathMatch{
-						Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-						Value: gatewayapi.StringPtr("/"),
+			Hostnames: []gwapiv1.Hostname{"test-http.hostname.local"},
+			Rules: []gwapiv1.HTTPRouteRule{{
+				Matches: []gwapiv1.HTTPRouteMatch{{
+					Path: &gwapiv1.HTTPPathMatch{
+						Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+						Value: ptr.To("/"),
 					},
 				}},
-				BackendRefs: []gwapiv1b1.HTTPBackendRef{{
-					BackendRef: gwapiv1b1.BackendRef{
-						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+				BackendRefs: []gwapiv1.HTTPBackendRef{{
+					BackendRef: gwapiv1.BackendRef{
+						BackendObjectReference: gwapiv1.BackendObjectReference{
 							Name: "test-common-svc",
+							Port: ptr.To(gwapiv1.PortNumber(80)),
 						},
 					},
 				}},
@@ -1623,9 +1195,13 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	require.NoError(t, cli.Create(ctx, &tlsRoute))
 	require.NoError(t, cli.Create(ctx, &httpRoute))
 
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
 	// Check that the Service is present in the resource map
 	require.Eventually(t, func() bool {
-		res, ok := resources.GatewayAPIResources.Load("service-cleanup-test")
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1640,7 +1216,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	// Delete the TLSRoute, and check if the Service is still present
 	require.NoError(t, cli.Delete(ctx, &tlsRoute))
 	require.Eventually(t, func() bool {
-		res, ok := resources.GatewayAPIResources.Load("service-cleanup-test")
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1655,7 +1231,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	// Delete the HTTPRoute, and check if the Service is also removed
 	require.NoError(t, cli.Delete(ctx, &httpRoute))
 	require.Eventually(t, func() bool {
-		res, ok := resources.GatewayAPIResources.Load("service-cleanup-test")
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
 		if !ok {
 			return false
 		}
@@ -1677,15 +1253,15 @@ func TestNamespacedProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
-	svr.EnvoyGateway.Provider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
-		Watch: &egcfgv1a1.KubernetesWatchMode{
+	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
+		Watch: &egv1a1.KubernetesWatchMode{
+			Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
 			Namespaces: []string{"ns1", "ns2"},
 		},
+		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
-
 	resources := new(message.ProviderResources)
-	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
-	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1697,7 +1273,7 @@ func TestNamespacedProvider(t *testing.T) {
 
 	cli := provider.manager.GetClient()
 	gcName := "gc-watch-ns"
-	gc := test.GetGatewayClass(gcName, egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName, nil)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Create the namespaces.
@@ -1709,15 +1285,15 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, cli.Create(ctx, ns3))
 
 	// Create the gateways
-	gw1 := test.GetGateway(types.NamespacedName{Name: "gw-ns1", Namespace: "ns1"}, gcName)
+	gw1 := test.GetGateway(types.NamespacedName{Name: "gw-ns1", Namespace: "ns1"}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, gw1))
-	gw2 := test.GetGateway(types.NamespacedName{Name: "gw-ns2", Namespace: "ns2"}, gcName)
+	gw2 := test.GetGateway(types.NamespacedName{Name: "gw-ns2", Namespace: "ns2"}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, gw2))
-	gw3 := test.GetGateway(types.NamespacedName{Name: "gw-ns3", Namespace: "ns3"}, gcName)
+	gw3 := test.GetGateway(types.NamespacedName{Name: "gw-ns3", Namespace: "ns3"}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, gw3))
 
 	// Ensure only 2 gateways are reconciled
-	gatewayList := &gwapiv1b1.GatewayList{}
+	gatewayList := &gwapiv1.GatewayList{}
 	require.NoError(t, cli.List(ctx, gatewayList))
 	assert.Equal(t, len(gatewayList.Items), 2)
 
@@ -1726,5 +1302,297 @@ func TestNamespacedProvider(t *testing.T) {
 		cancel()
 		require.NoError(t, testEnv.Stop())
 	}()
+}
 
+func TestNamespaceSelectorProvider(t *testing.T) {
+	// Setup the test environment.
+	testEnv, cliCfg, err := startEnv()
+	require.NoError(t, err)
+
+	// Setup and start the kube provider.
+	svr, err := config.New()
+	require.NoError(t, err)
+	// config to watch a subset of namespaces
+	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
+		Watch: &egv1a1.KubernetesWatchMode{
+			Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
+		},
+		LeaderElection: egv1a1.DefaultLeaderElection(),
+	}
+	resources := new(message.ProviderResources)
+	provider, err := New(cliCfg, svr, resources)
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		require.NoError(t, provider.Start(ctx))
+	}()
+
+	testNs := config.DefaultNamespace
+	cli := provider.manager.GetClient()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	defer func() {
+		cancel()
+		require.NoError(t, testEnv.Stop())
+	}()
+
+	watchedNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   "watched-ns",
+		Labels: map[string]string{"label-1": "true", "label-2": "true"},
+	}}
+	require.NoError(t, cli.Create(ctx, watchedNS))
+	nonWatchedNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "non-watched-ns"}}
+	require.NoError(t, cli.Create(ctx, nonWatchedNS))
+
+	gcName := "gc-name"
+	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName, nil)
+	require.NoError(t, cli.Create(ctx, gc))
+
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
+		}
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Create the gateways
+	watchedGateway := test.GetGateway(types.NamespacedName{Name: "watched-gateway", Namespace: watchedNS.Name}, gcName, 8080)
+	require.NoError(t, cli.Create(ctx, watchedGateway))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedGateway))
+	}()
+
+	nonWatchedGateway := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name}, gcName, 8080)
+	require.NoError(t, cli.Create(ctx, nonWatchedGateway))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedGateway))
+	}()
+
+	require.Eventually(t, func() bool {
+		return resources.GatewayAPIResources.Len() != 0
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.Gateways) == 1
+	}, defaultWait, defaultTick)
+
+	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name})
+	require.Equal(t, false, ok)
+
+	watchedSvc := test.GetService(types.NamespacedName{Namespace: watchedNS.Name, Name: "watched-service"}, nil, map[string]int32{
+		"http":  80,
+		"https": 443,
+	})
+	require.NoError(t, cli.Create(ctx, watchedSvc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedSvc))
+	}()
+
+	nonWatchedSvc := test.GetService(types.NamespacedName{Namespace: nonWatchedNS.Name, Name: "non-watched-service"}, nil, map[string]int32{
+		"http":  8001,
+		"https": 44300,
+	})
+	require.NoError(t, cli.Create(ctx, nonWatchedSvc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedSvc))
+	}()
+
+	watchedHTTPRoute := test.GetHTTPRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-http-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
+
+	require.NoError(t, cli.Create(ctx, watchedHTTPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedHTTPRoute))
+	}()
+
+	nonWatchedHTTPRoute := test.GetHTTPRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-http-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedSvc.Name}, 8001)
+	require.NoError(t, cli.Create(ctx, nonWatchedHTTPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedHTTPRoute))
+	}()
+
+	watchedGRPCRoute := test.GetGRPCRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-grpc-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
+	require.NoError(t, cli.Create(ctx, watchedGRPCRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedGRPCRoute))
+	}()
+
+	nonWatchedGRPCRoute := test.GetGRPCRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-grpc-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name}, 8001)
+	require.NoError(t, cli.Create(ctx, nonWatchedGRPCRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedGRPCRoute))
+	}()
+
+	watchedTCPRoute := test.GetTCPRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-tcp-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
+	require.NoError(t, cli.Create(ctx, watchedTCPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedTCPRoute))
+	}()
+
+	nonWatchedTCPRoute := test.GetTCPRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-tcp-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name}, 80)
+	require.NoError(t, cli.Create(ctx, nonWatchedTCPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedTCPRoute))
+	}()
+
+	watchedTLSRoute := test.GetTLSRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-tls-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name}, 443)
+	require.NoError(t, cli.Create(ctx, watchedTLSRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedTLSRoute))
+	}()
+
+	nonWatchedTLSRoute := test.GetTLSRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-tls-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name}, 443)
+	require.NoError(t, cli.Create(ctx, nonWatchedTLSRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedTLSRoute))
+	}()
+
+	watchedUDPRoute := test.GetUDPRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-udp-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
+	require.NoError(t, cli.Create(ctx, watchedUDPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedUDPRoute))
+	}()
+
+	nonWatchedUDPRoute := test.GetUDPRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-udp-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name}, 80)
+	require.NoError(t, cli.Create(ctx, nonWatchedUDPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedUDPRoute))
+	}()
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		// The service number dependes on the service created and the backendRef
+		return res != nil && len(res.Services) == 5
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.HTTPRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.TCPRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.TLSRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.UDPRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.GRPCRoutes) == 1
+	}, defaultWait, defaultTick)
+
+}
+
+func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*gatewayapi.Resources, bool) {
+	res := resources.GetResourcesByGatewayClass(gatewayClassName)
+	if res == nil {
+		return nil, false
+	}
+
+	return res, true
 }

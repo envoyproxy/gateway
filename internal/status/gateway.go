@@ -8,13 +8,12 @@ package status
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // UpdateGatewayStatusAcceptedCondition updates the status condition for the provided Gateway based on the accepted state.
-func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) *gwapiv1b1.Gateway {
+func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) *gwapiv1.Gateway {
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayAcceptedCondition(gw, accepted))
 	return gw
 }
@@ -22,17 +21,19 @@ func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) 
 // UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Programmed condition based on the
 // service and deployment state.
-func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment, nodeAddresses ...string) {
+func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment, nodeAddresses ...string) {
 	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
 		// If the addresses is explicitly set in the Gateway spec by the user, use it
 		// to populate the Status
 		if len(gw.Spec.Addresses) > 0 {
-			// Make sure the addresses have been populated into ExternalIPs
+			// Make sure the addresses have been populated into ExternalIPs/ClusterIPs
 			// and use that value
 			if len(svc.Spec.ExternalIPs) > 0 {
 				addresses = append(addresses, svc.Spec.ExternalIPs...)
+			} else if len(svc.Spec.ClusterIPs) > 0 {
+				addresses = append(addresses, svc.Spec.ClusterIPs...)
 			}
 		} else {
 			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
@@ -64,18 +65,18 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 			}
 		}
 
-		var gwAddresses []gwapiv1b1.GatewayStatusAddress
+		var gwAddresses []gwapiv1.GatewayStatusAddress
 		for i := range addresses {
-			addr := gwapiv1b1.GatewayStatusAddress{
-				Type:  ptr.To(gwapiv1b1.IPAddressType),
+			addr := gwapiv1.GatewayStatusAddress{
+				Type:  ptr.To(gwapiv1.IPAddressType),
 				Value: addresses[i],
 			}
 			gwAddresses = append(gwAddresses, addr)
 		}
 
 		for i := range hostnames {
-			addr := gwapiv1b1.GatewayStatusAddress{
-				Type:  ptr.To(gwapiv1b1.HostnameAddressType),
+			addr := gwapiv1.GatewayStatusAddress{
+				Type:  ptr.To(gwapiv1.HostnameAddressType),
 				Value: hostnames[i],
 			}
 			gwAddresses = append(gwAddresses, addr)

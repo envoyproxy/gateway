@@ -1,0 +1,72 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route-www.test.com"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    jwt:
+      providers:
+      - name: example
+        issuer: https://www.example.com
+        audiences:
+        - foo.com
+        remoteJWKS:
+          uri: http://localhost/jwt/public-key/jwks.json
+        claimToHeaders:
+        - header: one-route-example-key1
+          claim: claim.neteased.key
+      - name: example2
+        issuer: https://www.two.example.com
+        audiences:
+        - one.foo.com
+        - two.foo.com
+        remoteJWKS:
+          uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+        recomputeRoute: true
+        claimToHeaders:
+        - header: one-route-example2-key1
+          claim: claim.neteased.key
+        - header: one-route-example2-key2
+          claim: name
+    destination:
+      name: "first-route-www.test.com-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route-www.test.com"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/baz"
+    jwt:
+      providers:
+      - name: example
+        issuer: https://www.example.com
+        audiences:
+        - foo.com
+        remoteJWKS:
+          uri: http://localhost/jwt/public-key/jwks.json
+        claimToHeaders:
+        - header: second-route-example-key1
+          claim: claim.neteased.key
+      - name: example2
+        issuer: https://www.two.example.com
+        audiences:
+        - one.foo.com
+        - two.foo.com
+        remoteJWKS:
+          uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+    destination:
+      name: "second-route-www.test.com-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 50000

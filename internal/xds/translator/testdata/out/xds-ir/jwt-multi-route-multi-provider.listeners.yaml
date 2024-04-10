@@ -1,0 +1,119 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              first-route-www.test.com/example:
+                audiences:
+                - foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: one-route-example-key1
+                forward: true
+                issuer: https://www.example.com
+                payloadInMetadata: https://www.example.com
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_80
+                    timeout: 10s
+                    uri: http://localhost/jwt/public-key/jwks.json
+                  retryPolicy: {}
+              first-route-www.test.com/example2:
+                audiences:
+                - one.foo.com
+                - two.foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: one-route-example2-key1
+                - claimName: name
+                  headerName: one-route-example2-key2
+                clearRouteCache: true
+                forward: true
+                issuer: https://www.two.example.com
+                payloadInMetadata: https://www.two.example.com
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: "192_168_1_250_8080"
+                    timeout: 10s
+                    uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+                  retryPolicy: {}
+              second-route-www.test.com/example:
+                audiences:
+                - foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: second-route-example-key1
+                forward: true
+                issuer: https://www.example.com
+                payloadInMetadata: https://www.example.com
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_80
+                    timeout: 10s
+                    uri: http://localhost/jwt/public-key/jwks.json
+                  retryPolicy: {}
+              second-route-www.test.com/example2:
+                audiences:
+                - one.foo.com
+                - two.foo.com
+                forward: true
+                issuer: https://www.two.example.com
+                payloadInMetadata: https://www.two.example.com
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: "192_168_1_250_8080"
+                    timeout: 10s
+                    uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+                  retryPolicy: {}
+            requirementMap:
+              first-route-www.test.com:
+                requiresAny:
+                  requirements:
+                  - providerName: first-route-www.test.com/example
+                  - providerName: first-route-www.test.com/example2
+              second-route-www.test.com:
+                requiresAny:
+                  requirements:
+                  - providerName: second-route-www.test.com/example
+                  - providerName: second-route-www.test.com/example2
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

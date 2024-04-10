@@ -1,0 +1,41 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: client1-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-non-exist-secretRef
+    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    oidc:
+      provider:
+        issuer: "https://httpbin.org/"
+      clientID: "client1.apps.foo.bar.com"
+      clientSecret:
+        name: "client1-secret"

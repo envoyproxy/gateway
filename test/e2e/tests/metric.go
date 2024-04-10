@@ -59,7 +59,7 @@ var MetricTest = suite.ConformanceTest{
 					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
 						Name:      "same-namespace-gw-metrics",
-					}, "/stats/prometheus"); err != nil {
+					}, 19001, "/stats/prometheus"); err != nil {
 						t.Logf("failed to get metric: %v", err)
 						return false, nil
 					}
@@ -93,7 +93,7 @@ var MetricTest = suite.ConformanceTest{
 					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
 						Namespace: "monitoring",
 						Name:      "otel-collecot-prometheus",
-					}, "/metrics"); err != nil {
+					}, 19001, "/metrics"); err != nil {
 						t.Logf("failed to get metric: %v", err)
 						return false, nil
 					}
@@ -105,19 +105,25 @@ var MetricTest = suite.ConformanceTest{
 	},
 }
 
-func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, path string) error {
+func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), nn, &svc); err != nil {
 		return err
 	}
 	host := ""
-	for _, ing := range svc.Status.LoadBalancer.Ingress {
-		if ing.IP != "" {
-			host = ing.IP
-			break
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		for _, ing := range svc.Status.LoadBalancer.Ingress {
+			if ing.IP != "" {
+				host = ing.IP
+				break
+			}
 		}
+	default:
+		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
 	}
-	url := fmt.Sprintf("http://%s:19001%s", host, path)
+
+	url := fmt.Sprintf("http://%s:%d%s", host, port, path)
 	t.Logf("try to request: %s", url)
 
 	httpClient := http.Client{
@@ -125,7 +131,7 @@ func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, path 
 	}
 	res, err := httpClient.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to scrape metrics: %v", err)
+		return fmt.Errorf("failed to scrape metrics: %w", err)
 	}
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to scrape metrics: %s", res.Status)

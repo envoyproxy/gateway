@@ -1,17 +1,19 @@
 # Envoy Gateway
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/envoyproxy/gateway/badge)](https://securityscorecards.dev/viewer/?uri=github.com/envoyproxy/gateway)
 [![Build and Test](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml)
 [![codecov](https://codecov.io/gh/envoyproxy/gateway/branch/main/graph/badge.svg)](https://codecov.io/gh/envoyproxy/gateway)
 
 Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
 Kubernetes-based application gateway.
+[Gateway API](https://gateway-api.sigs.k8s.io) resources are used to dynamically provision and configure the managed Envoy Proxies.
 
 ## Documentation
 
 * [Blog][blog] introducing Envoy Gateway.
 * [Goals](GOALS.md)
-* [Quickstart](./docs/latest/user/quickstart.md) to use Envoy Gateway in a few simple steps.
-* [Roadmap](./docs/latest/design/roadmap.md)
+* [Quickstart](https://gateway.envoyproxy.io/latest/user/quickstart/) to use Envoy Gateway in a few simple steps.
+* [Roadmap](https://gateway.envoyproxy.io/latest/contributions/roadmap/)
 
 ## Contact
 
@@ -20,9 +22,9 @@ Kubernetes-based application gateway.
 
 ## Contributing
 
-* [Code of conduct](./docs/latest/dev/CODE_OF_CONDUCT.md)
-* [Contributing guide](./docs/latest/dev/CONTRIBUTING.md)
-* [Developer guide](docs/latest/dev/README.md)
+* [Code of conduct](https://gateway.envoyproxy.io/latest/contributions/code_of_conduct/)
+* [Contributing guide](https://gateway.envoyproxy.io/latest/contributions/contributing/)
+* [Developer guide](https://gateway.envoyproxy.io/latest/contributions/develop/)
 
 ## Community Meeting
 

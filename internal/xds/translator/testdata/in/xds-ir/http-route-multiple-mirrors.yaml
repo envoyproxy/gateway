@@ -1,0 +1,28 @@
+name: "http-route"
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "mirror-route"
+    hostname: "*"
+    destination:
+      name: "route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    mirrors:
+    - name: "mirror-route-dest"
+      settings:
+      - endpoints:
+        - host: "2.3.4.5"
+    - name: "mirror-route-dest1"
+      settings:
+      - endpoints:
+        - host: "3.4.5.6"
