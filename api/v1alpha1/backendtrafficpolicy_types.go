@@ -88,12 +88,10 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	Retry *Retry `json:"retry,omitempty"`
 
-	// UpstreamHTTPVersion defines which HTTP version to use for connecting to the attached backend.
-	// This option can only be specified on policies attached to HTTPRoute targetRefs.
-	// If not specified, the default is "SameAsDownstream".
+	// HTTP contains configuration options that are only relevant for backends that use the HTTP protocol
 	//
 	// +optional
-	UpstreamHTTPVersion *HTTPVersion `json:"upstreamHTTPVersion,omitempty"`
+	HTTP *HTTPOptions `json:"http,omitempty"`
 
 	// Timeout settings for the backend connections.
 	//
@@ -107,21 +105,14 @@ type BackendTrafficPolicySpec struct {
 	Compression []*Compression `json:"compression,omitempty"`
 }
 
-// HTTPVersion defines HTTP version selection options
-// +kubebuilder:validation:Enum="SameAsDownstream;HTTP1;HTTP2;HTTP3"
-type HTTPVersion string
-
-const (
-	// DownstreamHTTPVersion forces Envoy to use the same protocol version as the one used by
-	// the downstream client
-	DownstreamHTTPVersion HTTPVersion = "SameAsDownstream"
-	// HTTP1Version forces Envoy to use HTTP/1.1 for connecting to the backend
-	HTTP1Version HTTPVersion = "HTTP1"
-	// HTTP2Version forces Envoy to use HTTP/2 for connecting to the backend
-	HTTP2Version HTTPVersion = "HTTP2"
-	// HTTP3Version forces Envoy to use HTTP/3 for connecting to the backend
-	HTTP3Version HTTPVersion = "HTTP3"
-)
+type HTTPOptions struct {
+	// UseClientProtocol configures Envoy to prefer sending requests to TLS enabled backends using
+	// the same HTTP protocol that the incoming request used. Defaults to false, which means
+	// that Envoy will use the protocol indicated by the attached BackendRef.
+	//
+	// +optional
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
+}
 
 // +kubebuilder:object:root=true
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.

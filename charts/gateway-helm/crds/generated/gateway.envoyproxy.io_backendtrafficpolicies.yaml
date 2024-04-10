@@ -405,6 +405,17 @@ spec:
                         type: boolean
                     type: object
                 type: object
+              http:
+                description: HTTP contains configuration options that are only relevant
+                  for backends that use the HTTP protocol
+                properties:
+                  useClientProtocol:
+                    description: |-
+                      UseClientProtocol configures Envoy to prefer sending requests to TLS enabled backends using
+                      the same HTTP protocol that the incoming request used. Defaults to false, which means
+                      that Envoy will use the protocol indicated by the attached BackendRef.
+                    type: boolean
+                type: object
               loadBalancer:
                 description: |-
                   LoadBalancer policy to apply when routing traffic from the gateway to
@@ -961,14 +972,6 @@ spec:
                         type: string
                     type: object
                 type: object
-              upstreamHTTPVersion:
-                description: |-
-                  UpstreamHTTPVersion defines which HTTP version to use for connecting to the attached backend.
-                  This option can only be specified on policies attached to HTTPRoute targetRefs.
-                  If not specified, the default is "SameAsDownstream".
-                enum:
-                - SameAsDownstream;HTTP1;HTTP2;HTTP3
-                type: string
             required:
             - targetRef
             type: object

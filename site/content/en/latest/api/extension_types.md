@@ -260,7 +260,7 @@ _Appears in:_
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds |
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
-| `upstreamHTTPVersion` | _[HTTPVersion](#httpversion)_ |  false  | UpstreamHTTPVersion defines which HTTP version to use for connecting to the attached backend.<br />This option can only be specified on policies attached to HTTPRoute targetRefs.<br />If not specified, the default is "SameAsDownstream". |
+| `http` | _[HTTPOptions](#httpoptions)_ |  false  | HTTP contains configuration options that are only relevant for backends that use the HTTP protocol |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 
 
@@ -1507,6 +1507,20 @@ _Appears in:_
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
+#### HTTPOptions
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to TLS enabled backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
+
+
 #### HTTPStatus
 
 _Underlying type:_ _integer_
@@ -1532,17 +1546,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `connectionIdleTimeout` | _[Duration](#duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](#duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
-
-
-#### HTTPVersion
-
-_Underlying type:_ _string_
-
-HTTPVersion defines HTTP version selection options
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
 
 
 #### HTTPWasmCodeSource
