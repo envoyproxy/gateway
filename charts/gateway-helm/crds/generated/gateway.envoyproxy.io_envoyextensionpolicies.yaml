@@ -57,24 +57,8 @@ spec:
                   description: ExtProc defines the configuration for External Processing
                     filter.
                   properties:
-                    attributes:
-                      description: |-
-                        Attributes defines which envoy request and response attributes are provided as context to external processor
-                        Default: no attributes are sent
-                      properties:
-                        request:
-                          description: defines attributes to send for Request processing
-                          items:
-                            type: string
-                          type: array
-                        response:
-                          description: defines attributes to send for Response processing
-                          items:
-                            type: string
-                          type: array
-                      type: object
                     backendRef:
-                      description: Service defines the configuration of the external
+                      description: BackendRef defines the configuration of the external
                         processing service
                       properties:
                         group:
@@ -162,78 +146,6 @@ spec:
                         Default: 200ms
                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                       type: string
-                    metadataOptions:
-                      description: |-
-                        MetadataOptions defines options related to the sending and receiving of dynamic metadata
-                        Default: no metadata context is sent or received
-                      properties:
-                        forwardingNamespaces:
-                          description: metadata namespaces forwarded to external processor
-                          properties:
-                            untyped:
-                              description: |-
-                                Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service
-                                as an opaque protobuf::Struct.
-                              items:
-                                type: string
-                              type: array
-                          type: object
-                        receivingNamespaces:
-                          description: metadata namespaces updatable by external processor
-                          properties:
-                            untyped:
-                              description: |-
-                                Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service
-                                as an opaque protobuf::Struct.
-                              items:
-                                type: string
-                              type: array
-                          type: object
-                      type: object
-                    processingMode:
-                      description: |-
-                        ProcessingMode defines how request and response headers and body are processed
-                        Default: request and response headers are sent, body is not sent
-                      properties:
-                        request:
-                          description: Defines header and body processing for requests
-                          properties:
-                            body:
-                              description: Defines body processing mode
-                              enum:
-                              - None
-                              - Streamed
-                              - Buffered
-                              - BufferedPartial
-                              type: string
-                            headers:
-                              description: Defines header processing mode
-                              enum:
-                              - Default
-                              - Send
-                              - Skip
-                              type: string
-                          type: object
-                        response:
-                          description: Defines header and body processing for responses
-                          properties:
-                            body:
-                              description: Defines body processing mode
-                              enum:
-                              - None
-                              - Streamed
-                              - Buffered
-                              - BufferedPartial
-                              type: string
-                            headers:
-                              description: Defines header processing mode
-                              enum:
-                              - Default
-                              - Send
-                              - Skip
-                              type: string
-                          type: object
-                      type: object
                   required:
                   - backendRef
                   type: object

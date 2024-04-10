@@ -96,26 +96,8 @@ type ExtProcMetadataOptions struct {
 //
 // ExtProc defines the configuration for External Processing filter.
 type ExtProc struct {
-	// Service defines the configuration of the external processing service
+	// BackendRef defines the configuration of the external processing service
 	BackendRef ExtProcBackendRef `json:"backendRef"`
-
-	// ProcessingMode defines how request and response headers and body are processed
-	// Default: request and response headers are sent, body is not sent
-	//
-	// +optional
-	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
-
-	// Attributes defines which envoy request and response attributes are provided as context to external processor
-	// Default: no attributes are sent
-	//
-	// +optional
-	Attributes *ExtProcAttributes `json:"attributes,omitempty"`
-
-	// MetadataOptions defines options related to the sending and receiving of dynamic metadata
-	// Default: no metadata context is sent or received
-	//
-	// +optional
-	MetadataOptions *ExtProcMetadataOptions `json:"metadataOptions,omitempty"`
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms

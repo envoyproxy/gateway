@@ -1018,27 +1018,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `backendRef` | _[ExtProcBackendRef](#extprocbackendref)_ |  true  | Service defines the configuration of the external processing service |
-| `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response headers and body are processed<br />Default: request and response headers are sent, body is not sent |
-| `attributes` | _[ExtProcAttributes](#extprocattributes)_ |  false  | Attributes defines which envoy request and response attributes are provided as context to external processor<br />Default: no attributes are sent |
-| `metadataOptions` | _[ExtProcMetadataOptions](#extprocmetadataoptions)_ |  false  | MetadataOptions defines options related to the sending and receiving of dynamic metadata<br />Default: no metadata context is sent or received |
+| `backendRef` | _[ExtProcBackendRef](#extprocbackendref)_ |  true  | BackendRef defines the configuration of the external processing service |
 | `messageTimeout` | _[Duration](#duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 
 
-#### ExtProcAttributes
-
-
-
-ExtProcAttributes defines which attributes are
-
-_Appears in:_
-- [ExtProc](#extproc)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `request` | _string array_ |  false  | defines attributes to send for Request processing |
-| `response` | _string array_ |  false  | defines attributes to send for Response processing |
 
 
 #### ExtProcBackendRef
@@ -1083,36 +1067,8 @@ _Appears in:_
 
 
 
-#### ExtProcMetadataOptions
 
 
-
-ExtProcMetadataOptions defines options related to the sending and receiving of dynamic metadata to and from the
-external processor service
-
-_Appears in:_
-- [ExtProc](#extproc)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `forwardingNamespaces` | _[MetadataNamespaces](#metadatanamespaces)_ |  false  | metadata namespaces forwarded to external processor |
-| `receivingNamespaces` | _[MetadataNamespaces](#metadatanamespaces)_ |  false  | metadata namespaces updatable by external processor |
-
-
-#### ExtProcProcessingMode
-
-
-
-ExtProcProcessingMode defines if and how headers and bodies are sent to the service.
-https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-processingmode
-
-_Appears in:_
-- [ExtProc](#extproc)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `request` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines header and body processing for requests |
-| `response` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines header and body processing for responses |
 
 
 #### ExtensionAPISettings

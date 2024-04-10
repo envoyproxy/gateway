@@ -1495,21 +1495,6 @@ func (in *ExtAuth) DeepCopy() *ExtAuth {
 func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 	*out = *in
 	in.BackendRef.DeepCopyInto(&out.BackendRef)
-	if in.ProcessingMode != nil {
-		in, out := &in.ProcessingMode, &out.ProcessingMode
-		*out = new(ExtProcProcessingMode)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.Attributes != nil {
-		in, out := &in.Attributes, &out.Attributes
-		*out = new(ExtProcAttributes)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.MetadataOptions != nil {
-		in, out := &in.MetadataOptions, &out.MetadataOptions
-		*out = new(ExtProcMetadataOptions)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.MessageTimeout != nil {
 		in, out := &in.MessageTimeout, &out.MessageTimeout
 		*out = new(v1.Duration)
