@@ -391,7 +391,7 @@ const (
 type RateLimitTracingProvider struct {
 	// Type defines the tracing provider type.
 	// Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported
-	Type RateLimitTracingProviderType `json:"type"`
+	Type *RateLimitTracingProviderType `json:"type,omitempty"`
 
 	// URL is the endpoint of the trace collector that supports the OTLP protocol
 	URL string `json:"url"`
