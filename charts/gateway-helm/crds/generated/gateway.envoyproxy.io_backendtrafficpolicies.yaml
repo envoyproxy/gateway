@@ -975,11 +975,6 @@ spec:
             required:
             - targetRef
             type: object
-            x-kubernetes-validations:
-            - message: upstreamHTTPVersion can only be set if targetRef.kind is an
-                HTTPRoute
-              rule: 'has(self.upstreamHTTPVersion) ? self.targetRef.kind == ''HTTPRoute''
-                : true'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:

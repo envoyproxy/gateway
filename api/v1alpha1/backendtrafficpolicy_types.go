@@ -34,7 +34,6 @@ type BackendTrafficPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="has(self.upstreamHTTPVersion) ? self.targetRef.kind == 'HTTPRoute' : true", message="upstreamHTTPVersion can only be set if targetRef.kind is an HTTPRoute"
 // spec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
