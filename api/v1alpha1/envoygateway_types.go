@@ -378,7 +378,7 @@ type RateLimitTracing struct {
 
 	// Provider defines the rateLimit tracing provider.
 	// Only OpenTelemetry is supported currently.
-	Provider *RateLimitTracingProvider
+	Provider *RateLimitTracingProvider `json:"provider,omitempty"`
 }
 
 type RateLimitTracingProviderType string
