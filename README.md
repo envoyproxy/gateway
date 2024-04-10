@@ -3,6 +3,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/envoyproxy/gateway/badge)](https://securityscorecards.dev/viewer/?uri=github.com/envoyproxy/gateway)
 [![Build and Test](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml)
 [![codecov](https://codecov.io/gh/envoyproxy/gateway/branch/main/graph/badge.svg)](https://codecov.io/gh/envoyproxy/gateway)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fenvoyproxy%2Fgateway.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fenvoyproxy%2Fgateway?ref=badge_shield)
 
 Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
 Kubernetes-based application gateway.
@@ -38,3 +39,7 @@ face scheduling difficulties for the weekly meetings. Please refer to the meetin
 [blog]: https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532
 [Envoy Slack workspace]: https://communityinviter.com/apps/envoyproxy/envoy
 [Envoy Gateway channel]: https://envoyproxy.slack.com/archives/C03E6NHLESV
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fenvoyproxy%2Fgateway.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fenvoyproxy%2Fgateway?ref=badge_large)
