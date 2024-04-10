@@ -93,7 +93,7 @@ spec:
               fieldPath: metadata.name
         - name: TRACING_SAMPLING_RATE
           value: "1.0"
-        - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://trace-collector.envoy-gateway-system.svc.cluster.local:4318
         image: envoyproxy/ratelimit:master
         imagePullPolicy: IfNotPresent

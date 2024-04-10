@@ -90,7 +90,7 @@ const (
 	// TracingSamplingRateVar is trace sampling rate
 	TracingSamplingRateVar = "TRACING_SAMPLING_RATE"
 	// OTELExporterOTLPTraceEndpointVar is target url to which the trace exporter is going to send
-	OTELExporterOTLPTraceEndpointVar = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
+	OTELExporterOTLPTraceEndpointVar = "OTEL_EXPORTER_OTLP_ENDPOINT"
 
 	// InfraName is the name for rate-limit resources.
 	InfraName = "envoy-ratelimit"
