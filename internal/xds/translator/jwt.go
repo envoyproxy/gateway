@@ -323,17 +323,12 @@ func listenerContainsJWTAuthn(irListener *ir.HTTPListener) bool {
 // routeContainsJWTAuthn returns true if JWT authentication exists for the
 // provided route.
 func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
 	if irRoute != nil &&
 		irRoute.JWT != nil &&
 		irRoute.JWT.Providers != nil &&
 		len(irRoute.JWT.Providers) > 0 {
 		return true
 	}
-
 	return false
 }
 

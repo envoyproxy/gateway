@@ -170,6 +170,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			// every OIDC provider supports basic auth
 			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH,
 			AuthScopes: oidc.Scopes,
+			Resources:  oidc.Resources,
 		},
 	}
 	return oauth2, nil
@@ -177,15 +178,9 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 
 // routeContainsOIDC returns true if OIDC exists for the provided route.
 func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
-	if irRoute != nil &&
-		irRoute.OIDC != nil {
+	if irRoute != nil && irRoute.OIDC != nil {
 		return true
 	}
-
 	return false
 }
 

@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -124,7 +125,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				// It must exist since we've already finished processing the gateways
 				gwXdsIR := xdsIR[irKey]
 				if string(l.Name) == section {
-					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR)
+					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
 					if err == nil {
 						err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 					}
@@ -234,7 +235,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				irKey := t.getIRKey(l.gateway)
 				// It must exist since we've already finished processing the gateways
 				gwXdsIR := xdsIR[irKey]
-				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR); err != nil {
+				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
 					errs = errors.Join(errs, err)
 				} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 					errs = errors.Join(errs, err)
@@ -312,7 +313,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 	return gateway.GatewayContext, nil
 }
 
-func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds) error {
+func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, attachedToGateway bool) error {
 	// Find Listener IR
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
@@ -328,8 +329,29 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds) 
 
 	// IR must exist since we're past validation
 	if httpIR != nil {
+		// Get a list of all other non-TLS listeners on this Gateway that share a port with
+		// the listener in question.
 		if sameListeners := listenersWithSameHTTPPort(xds, httpIR); len(sameListeners) != 0 {
-			return fmt.Errorf("affects additional listeners: %s", strings.Join(sameListeners, ", "))
+			if attachedToGateway {
+				// If this policy is attached to an entire gateway and the mergeGateways feature
+				// is turned on, validate that all the listeners affected by this policy originated
+				// from the same Gateway resource. The name of the Gateway from which this listener
+				// originated is part of the listener's name by construction.
+				gatewayName := irListenerName[0:strings.LastIndex(irListenerName, "/")]
+				conflictingListeners := []string{}
+				for _, currName := range sameListeners {
+					if strings.Index(currName, gatewayName) != 0 {
+						conflictingListeners = append(conflictingListeners, currName)
+					}
+				}
+				if len(conflictingListeners) != 0 {
+					return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(conflictingListeners, ", "))
+				}
+			} else {
+				// If this policy is attached to a specific listener, any other listeners in the list
+				// would be affected by this policy but should not be, so this policy can't be accepted.
+				return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(sameListeners, ", "))
+			}
 		}
 	}
 	return nil
@@ -359,6 +381,11 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	if httpIR != nil {
 		// Translate TCPKeepalive
 		translateListenerTCPKeepalive(policy.Spec.TCPKeepalive, httpIR)
+
+		// Translate Connection
+		if err := translateListenerConnection(policy.Spec.Connection, httpIR); err != nil {
+			return err
+		}
 
 		// Translate Proxy Protocol
 		translateListenerProxyProtocol(policy.Spec.EnableProxyProtocol, httpIR)
@@ -456,26 +483,33 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 		return nil
 	}
 
+	irClientTimeout := &ir.ClientTimeout{}
+
 	if clientTimeout.HTTP != nil {
+		irHTTPTimeout := &ir.HTTPClientTimeout{}
 		if clientTimeout.HTTP.RequestReceivedTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestReceivedTimeout))
 			if err != nil {
 				return err
 			}
-			switch {
-			case httpIR.Timeout == nil:
-				httpIR.Timeout = &ir.ClientTimeout{}
-				fallthrough
-
-			case httpIR.Timeout.HTTP == nil:
-				httpIR.Timeout.HTTP = &ir.HTTPClientTimeout{}
-			}
-
-			httpIR.Timeout.HTTP.RequestReceivedTimeout = &metav1.Duration{
+			irHTTPTimeout.RequestReceivedTimeout = &metav1.Duration{
 				Duration: d,
 			}
 		}
+
+		if clientTimeout.HTTP.IdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.IdleTimeout))
+			if err != nil {
+				return err
+			}
+			irHTTPTimeout.IdleTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+		irClientTimeout.HTTP = irHTTPTimeout
 	}
+
+	httpIR.Timeout = irClientTimeout
 
 	return nil
 }
@@ -505,7 +539,8 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		return
 	}
 	httpIR.Headers = &ir.HeaderSettings{
-		EnableEnvoyHeaders: ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
 	}
 }
 
@@ -641,6 +676,46 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 			httpIR.TLS.CACertificate = irCACert
 		}
 	}
+
+	return nil
+}
+
+func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPListener) error {
+	// Return early if not set
+	if connection == nil {
+		return nil
+	}
+
+	irConnection := &ir.Connection{}
+
+	if connection.ConnectionLimit != nil {
+		irConnectionLimit := &ir.ConnectionLimit{}
+
+		irConnectionLimit.Value = ptr.To(uint64(connection.ConnectionLimit.Value))
+
+		if connection.ConnectionLimit.CloseDelay != nil {
+			d, err := time.ParseDuration(string(*connection.ConnectionLimit.CloseDelay))
+			if err != nil {
+				return fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
+			}
+			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
+		}
+
+		irConnection.ConnectionLimit = irConnectionLimit
+	}
+
+	if connection.BufferLimit != nil {
+		bufferLimit, ok := connection.BufferLimit.AsInt64()
+		if !ok {
+			return fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
+		}
+		if bufferLimit < 0 || bufferLimit > math.MaxUint32 {
+			return fmt.Errorf("BufferLimit value %s is out of range", connection.BufferLimit.String())
+		}
+		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
+	}
+
+	httpIR.Connection = irConnection
 
 	return nil
 }

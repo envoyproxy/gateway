@@ -1,0 +1,389 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway
+    namespace: default
+  spec:
+    circuitBreaker:
+      maxConnections: 2048
+      maxParallelRequests: 4294967295
+      maxParallelRetries: 1024
+      maxPendingRequests: 1
+      maxRequestsPerConnection: 1
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        http:
+          expectedResponse:
+            binary: RXZlcnl0aGluZyBPSw==
+            type: Binary
+          expectedStatuses:
+          - 200
+          - 300
+          method: GET
+          path: /healthz
+        interval: 3s
+        timeout: 500ms
+        type: HTTP
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 2s
+        maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
+    loadBalancer:
+      consistentHash:
+        type: SourceIP
+      type: ConsistentHash
+    proxyProtocol:
+      version: V2
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udp-app-1
+      namespace: default
+    tcpKeepalive:
+      idleTime: 20m
+      interval: 60s
+      probes: 3
+    timeout:
+      http:
+        connectionIdleTimeout: 16s
+        maxConnectionDuration: 17s
+      tcp:
+        connectTimeout: 15s
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: tcp-gateway
+        namespace: default
+        sectionName: foo
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway
+    namespace: default
+  spec:
+    circuitBreaker:
+      maxConnections: 2048
+      maxParallelRequests: 4294967295
+      maxParallelRetries: 1024
+      maxPendingRequests: 1
+      maxRequestsPerConnection: 1
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        http:
+          expectedResponse:
+            binary: RXZlcnl0aGluZyBPSw==
+            type: Binary
+          expectedStatuses:
+          - 200
+          - 300
+          method: GET
+          path: /healthz
+        interval: 3s
+        timeout: 500ms
+        type: HTTP
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 2s
+        maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
+    loadBalancer:
+      consistentHash:
+        type: SourceIP
+      type: ConsistentHash
+    proxyProtocol:
+      version: V2
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcp-app-1
+      namespace: default
+    tcpKeepalive:
+      idleTime: 20m
+      interval: 60s
+      probes: 3
+    timeout:
+      http:
+        connectionIdleTimeout: 16s
+        maxConnectionDuration: 17s
+      tcp:
+        connectTimeout: 15s
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: tcp-gateway
+        namespace: default
+        sectionName: bar
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: tcp-gateway
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+      name: foo
+      port: 8162
+      protocol: UDP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+      name: bar
+      port: 8089
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: foo
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: bar
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+infraIR:
+  default/tcp-gateway:
+    proxy:
+      listeners:
+      - address: null
+        name: default/tcp-gateway/foo
+        ports:
+        - containerPort: 8162
+          name: foo
+          protocol: UDP
+          servicePort: 8162
+      - address: null
+        name: default/tcp-gateway/bar
+        ports:
+        - containerPort: 8089
+          name: bar
+          protocol: TCP
+          servicePort: 8089
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: tcp-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+      name: default/tcp-gateway
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    creationTimestamp: null
+    name: tcp-app-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: tcp-gateway
+      sectionName: bar
+    rules:
+    - backendRefs:
+      - name: service-1
+        namespace: default
+        port: 8163
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: tcp-gateway
+        sectionName: bar
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    creationTimestamp: null
+    name: udp-app-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: tcp-gateway
+      sectionName: foo
+    rules:
+    - backendRefs:
+      - name: service-1
+        namespace: default
+        port: 8162
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: tcp-gateway
+        sectionName: foo
+xdsIR:
+  default/tcp-gateway:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    tcp:
+    - address: 0.0.0.0
+      circuitBreaker:
+        maxConnections: 2048
+        maxParallelRequests: 4294967295
+        maxParallelRetries: 1024
+        maxPendingRequests: 1
+        maxRequestsPerConnection: 1
+      destination:
+        name: tcproute/default/tcp-app-1/rule/-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.7.7.7
+            port: 8163
+          protocol: TCP
+          weight: 1
+      healthCheck:
+        active:
+          healthyThreshold: 1
+          http:
+            expectedResponse:
+              binary: RXZlcnl0aGluZyBPSw==
+            expectedStatuses:
+            - 200
+            - 300
+            host: ""
+            method: GET
+            path: /healthz
+          interval: 3s
+          timeout: 500ms
+          unhealthyThreshold: 3
+        passive:
+          baseEjectionTime: 2m40s
+          consecutive5XxErrors: 5
+          consecutiveGatewayErrors: 0
+          consecutiveLocalOriginFailures: 5
+          interval: 2s
+          maxEjectionPercent: 100
+          splitExternalLocalOriginErrors: false
+      loadBalancer:
+        consistentHash:
+          sourceIP: true
+      name: default/tcp-gateway/bar/tcp-app-1
+      port: 8089
+      proxyProtocol:
+        version: V2
+      tcpKeepalive:
+        idleTime: 1200
+        interval: 60
+        probes: 3
+      timeout:
+        http:
+          connectionIdleTimeout: 16s
+          maxConnectionDuration: 17s
+        tcp:
+          connectTimeout: 15s
+      tls: {}
+    udp:
+    - address: 0.0.0.0
+      destination:
+        name: udproute/default/udp-app-1/rule/-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.7.7.7
+            port: 8162
+          protocol: UDP
+          weight: 1
+      loadBalancer:
+        consistentHash:
+          sourceIP: true
+      name: default/tcp-gateway/foo/udp-app-1
+      port: 8162
+      timeout:
+        http:
+          connectionIdleTimeout: 16s
+          maxConnectionDuration: 17s
+        tcp:
+          connectTimeout: 15s
