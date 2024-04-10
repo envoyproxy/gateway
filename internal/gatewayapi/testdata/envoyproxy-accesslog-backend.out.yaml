@@ -115,7 +115,6 @@ infraIR:
                     - name: otel-collector
                       namespace: monitoring
                       port: 4317
-                    host: null
                     resources:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry

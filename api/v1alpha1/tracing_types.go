@@ -41,7 +41,7 @@ type TracingProvider struct {
 	// Deprecated: Use BackendRef instead.
 	//
 	// +optional
-	Host *string `json:"host"`
+	Host *string `json:"host,omitempty"`
 	// Port defines the port the provider service is exposed on.
 	// Deprecated: Use BackendRef instead.
 	//

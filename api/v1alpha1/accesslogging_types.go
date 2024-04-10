@@ -100,7 +100,7 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// Deprecated: Use BackendRef instead.
 	//
 	// +optional
-	Host *string `json:"host"`
+	Host *string `json:"host,omitempty"`
 	// Port defines the port the extension service is exposed on.
 	// Deprecated: Use BackendRef instead.
 	//
