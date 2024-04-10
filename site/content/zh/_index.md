@@ -3,10 +3,10 @@ title: Envoy Gateway
 ---
 
 {{< blocks/cover title="欢迎访问 Envoy Gateway！" image_anchor="top" height="full" >}}
-<a class="btn btn-lg btn-primary me-3 mb-4" href="/v1.0.0">
+<a class="btn btn-lg btn-primary me-3 mb-4" href="/v1.0.1">
   开始使用 <i class="fas fa-arrow-alt-circle-right ms-2"></i>
 </a>
-<a class="btn btn-lg btn-secondary me-3 mb-4" href="/v1.0.0/contributions">
+<a class="btn btn-lg btn-secondary me-3 mb-4" href="/v1.0.1/contributions">
   参与贡献 <i class="fa fa-heartbeat ms-2 "></i>
 </a>
 <p class="lead mt-5">将 Envoy 代理作为独立或基于 Kubernetes 的 API 网关进行管理</p>
