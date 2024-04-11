@@ -445,9 +445,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRef: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Port: ptr.To(gwapiv1.PortNumber(9000)),
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(9000)),
+														},
+													},
 												},
 												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
 											},
@@ -476,9 +480,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRef: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Port: ptr.To(gwapiv1.PortNumber(9000)),
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(9000)),
+														},
+													},
 												},
 												Type: egv1a1.ALSEnvoyProxyAccessLogTypeTCP,
 												HTTP: &egv1a1.ALSEnvoyProxyHTTPAccessLogConfig{},
@@ -494,7 +502,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"The http field may only be set when type is HTTP."},
 		},
 		{
-			desc: "invalid-accesslog-ALS-backendref",
+			desc: "invalid-accesslog-ALS-backendrefs",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
@@ -509,10 +517,15 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRef: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Kind: ptr.To(gwapiv1.Kind("foo")),
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Kind: ptr.To(gwapiv1.Kind("foo")),
+														},
+													},
 												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
 											},
 										},
 									},
@@ -522,7 +535,106 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRef only supports Service Kind."},
+			wantErrors: []string{"BackendRefs only supports Service Kind."},
+		},
+		{
+			desc: "invalid-accesslog-ALS-no-backendrefs",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Invalid value: \"null\""},
+		},
+		{
+			desc: "invalid-accesslog-ALS-empty-backendrefs",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{},
+												Type:        egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should have at least 1 items"},
+		},
+		{
+			desc: "invalid-accesslog-ALS-multi-backendrefs",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"must have at most 1 items"},
 		},
 		{
 			desc: "accesslog-OpenTelemetry",

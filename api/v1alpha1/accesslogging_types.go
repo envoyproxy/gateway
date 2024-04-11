@@ -112,12 +112,15 @@ const (
 // - `x-accesslog-text` - The access log format string when a Text format is used.
 // - `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
 //
-// +kubebuilder:validation:XValidation:message="BackendRef only supports Service Kind.",rule="!has(self.backendRef.kind) || self.backendRef.kind == 'Service'"
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' || !has(self.http)",message="The http field may only be set when type is HTTP."
 type ALSEnvoyProxyAccessLog struct {
-	// BackendRef references a Kubernetes object that represents the gRPC service to which
+	// BackendRefs references a Kubernetes object that represents the gRPC service to which
 	// the access logs will be sent. Currently only Service is supported.
-	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
+	BackendRefs []BackendRef `json:"backendRefs"`
 	// LogName defines the friendly name of the access log to be returned in
 	// StreamAccessLogsMessage.Identifier. This allows the access log server
 	// to differentiate between different access logs coming from the same Envoy.
