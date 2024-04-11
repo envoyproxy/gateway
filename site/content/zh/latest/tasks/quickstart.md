@@ -6,7 +6,7 @@ description: 只需几个简单的步骤即可开始使用 Envoy Gateway。
 
 本指南将帮助您通过几个简单的步骤开始使用 Envoy Gateway。
 
-## 前置条件
+## 前置条件 {#prerequisites}
 
 一个 Kubernetes 集群。
 
@@ -42,7 +42,7 @@ kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/
 
 [`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
 
-## 测试配置
+## 测试配置 {#testing-the-configuration}
 
 获取由示例 Gateway 创建的 Envoy 服务的名称：
 
@@ -62,7 +62,7 @@ kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-### 外部负载均衡器支持
+### 外部负载均衡器支持 {#external-loadBalancer-support}
 
 您还可以通过将流量发送到外部 IP 来测试相同的功能。获取外部 IP Envoy 服务，运行：
 
@@ -78,7 +78,7 @@ export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
-## 清理
+## 清理 {#clean-up}
 
 使用本节（快速开始）的步骤来卸载与 Envoy Gateway 相关的一切。
 
@@ -94,6 +94,6 @@ kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest
 helm uninstall eg -n envoy-gateway-system
 ```
 
-## 接下来
+## 接下来 {#next-steps}
 
 查看[开发者指南](../contributions/develop) 来参与该项目。
