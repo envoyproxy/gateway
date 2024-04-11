@@ -238,40 +238,6 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 	return errs
 }
 
-func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
-	var (
-		endpointType EndpointType
-		tSocket      *corev3.TransportSocket
-		err          error
-	)
-
-	// Get the address type from the first setting.
-	// This is safe because no mixed address types in the settings.
-	addrTypeState := rd.Settings[0].AddressType
-	if addrTypeState != nil && *addrTypeState == ir.FQDN {
-		endpointType = EndpointTypeDNS
-	} else {
-		endpointType = EndpointTypeStatic
-	}
-
-	if rd.Settings[0].TLS != nil {
-		tSocket, err = processTLSSocket(rd.Settings[0].TLS, tCtx)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err = addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      tSocket,
-		endpointType: endpointType,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-	return nil
-}
-
 // patchRoute patches the provided route with the extAuth config if applicable.
 // Note: this method enables the corresponding extAuth filter for the provided route.
 func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {

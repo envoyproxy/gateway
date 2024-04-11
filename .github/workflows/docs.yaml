@@ -36,7 +36,7 @@ jobs:
         config_file: ".github/markdown_lint_config.json"
 
     - name: Install linkinator
-      run: npm install -g linkinator
+      run: npm install -g linkinator@6.0.4
 
     - name: Check links
       run: make docs docs-check-links
@@ -56,7 +56,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Setup Hugo
-      uses: peaceiris/actions-hugo@16361eb4acea8698b220b76c0d4e84e1fd22c61d  # v2.6.0
+      uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f  # v3.0.0
       with:
         hugo-version: 'latest'
         extended: true

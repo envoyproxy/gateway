@@ -257,7 +257,7 @@ enable = true
     name = "Documentation"
     weight = -102
     pre = "<i class='fas fa-book pr-2'></i>"
-    url = "/v1.0.0"
+    url = "/v1.0.1"
 
   # i18n for Chinese
   [[languages.zh.menu.main]]
@@ -286,8 +286,8 @@ enable = true
   url = "/latest"
 
 [[params.versions]]
-  version = "v1.0.0"
-  url = "/v1.0.0"
+  version = "v1.0.1"
+  url = "/v1.0.1"
 
 [[params.versions]]
   version = "v0.6.0"
