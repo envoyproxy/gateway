@@ -33,8 +33,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		GrpcService: &corev3.GrpcService{
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 				EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
-					ClusterName: buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port)),
-					Authority:   tracing.Provider.Host,
+					ClusterName: buildClusterName("tracing", tracing.Host, tracing.Port),
+					Authority:   tracing.Host,
 				},
 			},
 		},
@@ -46,7 +46,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		return nil, fmt.Errorf("failed to marshal OpenTelemetryConfig: %w", err)
 	}
 
-	tags := []*tracingtype.CustomTag{}
+	tags := make([]*tracingtype.CustomTag, 0, len(tracing.CustomTags))
 	// TODO: consider add some default tags for better UX
 	for k, v := range tracing.CustomTags {
 		switch v.Type {
@@ -106,7 +106,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 			Value: 100.0,
 		},
 		RandomSampling: &xdstype.Percent{
-			Value: float64(*tracing.SamplingRate),
+			Value: tracing.SamplingRate,
 		},
 		Provider: &tracecfg.Tracing_Http{
 			Name: "envoy.tracers.opentelemetry",
@@ -124,12 +124,12 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		return nil
 	}
 
-	clusterName := buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port))
+	clusterName := buildClusterName("tracing", tracing.Host, tracing.Port)
 
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
 		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Host, tracing.Port)},
 	}
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
