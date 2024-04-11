@@ -11,4 +11,4 @@ spec:
     control-plane: envoy-gateway
   {{- include "eg.selectorLabels" . | nindent 4 }}
   ports:
-	{{- .Values.deployment.ports | toYaml | nindent 2 -}}
+  {{- .Values.deployment.ports | toYaml | nindent 2 -}}
