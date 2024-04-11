@@ -562,7 +562,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
-| `wasm` | _[Wasm](#wasm) array_ |  false  | WASM is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
+| `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  true  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
 
 
@@ -2849,6 +2849,7 @@ _Appears in:_
 | `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code.<br /><br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code.<br /><br />Note that the image must be accessible from the Envoy Gateway. |
+| `sha256` | _string_ |  true  | SHA256 checksum that will be used to verify the wasm code.<br /><br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
 
 
 #### WasmCodeSourceType

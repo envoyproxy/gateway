@@ -782,8 +782,8 @@ func (in *EnvoyExtensionPolicyList) DeepCopyObject() runtime.Object {
 func (in *EnvoyExtensionPolicySpec) DeepCopyInto(out *EnvoyExtensionPolicySpec) {
 	*out = *in
 	in.TargetRef.DeepCopyInto(&out.TargetRef)
-	if in.WASM != nil {
-		in, out := &in.WASM, &out.WASM
+	if in.Wasm != nil {
+		in, out := &in.Wasm, &out.Wasm
 		*out = make([]Wasm, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

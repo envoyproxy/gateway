@@ -78,8 +78,9 @@ type WasmCodeSource struct {
 	Image *ImageWasmCodeSource `json:"image,omitempty"`
 
 	// SHA256 checksum that will be used to verify the wasm code.
-	// +optional
-	// SHA256 *string `json:"sha256,omitempty"`
+	//
+	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	SHA256 string `json:"sha256"`
 }
 
 // WasmCodeSourceType specifies the types of sources for the wasm code.
@@ -92,6 +93,9 @@ const (
 
 	// ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.
 	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
+
+	// ConfigMapCodeSourceType allows the user to specify the wasm code in a ConfigMap.
+	ConfigMapWasmCodeSourceType WasmCodeSourceType = "ConfigMap"
 )
 
 // HTTPWasmCodeSource defines the HTTP URL containing the wasm code.

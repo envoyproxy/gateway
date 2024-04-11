@@ -215,7 +215,7 @@ spec:
                   rule: '!has(self.sectionName)'
               wasm:
                 description: |-
-                  WASM is a list of Wasm extensions to be loaded by the Gateway.
+                  Wasm is a list of Wasm extensions to be loaded by the Gateway.
                   Order matters, as the extensions will be loaded in the order they are
                   defined in this list.
                 items:
@@ -301,6 +301,13 @@ spec:
                           - pullSecret
                           - url
                           type: object
+                        sha256:
+                          description: |-
+                            SHA256 checksum that will be used to verify the wasm code.
+
+
+                            kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+                          type: string
                         type:
                           allOf:
                           - enum:
@@ -314,6 +321,7 @@ spec:
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
                           type: string
                       required:
+                      - sha256
                       - type
                       type: object
                     config:
