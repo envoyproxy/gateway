@@ -218,13 +218,6 @@ infraIR:
           name: default/gateway-1/http
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: default/mfqjpuycbgjrtdww/http
-        ports:
-        - containerPort: 10080
-          name: default/mfqjpuycbgjrtdww/http
-          protocol: HTTP
-          servicePort: 80
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class

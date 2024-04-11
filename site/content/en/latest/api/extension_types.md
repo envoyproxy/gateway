@@ -167,6 +167,26 @@ _Appears in:_
 | `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
 
 
+#### BackendRef
+
+
+
+BackendRef defines how an ObjectReference that is specific to BackendRef.
+
+_Appears in:_
+- [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
+- [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [TracingProvider](#tracingprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io".<br />When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example<br />"Service".<br /><br />Defaults to "Service" when not specified.<br /><br />ExternalName services can refer to CNAME DNS records that may live<br />outside of the cluster and as such are difficult to reason about in<br />terms of conformance. They also may not be safe to forward to (see<br />CVE-2021-25740 for more information). Implementations SHOULD NOT<br />support ExternalName Services.<br /><br />Support: Core (Services with a type other than ExternalName)<br /><br />Support: Implementation-specific (Services with type ExternalName) |
+| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
+| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
+| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+
+
 #### BackendTrafficPolicy
 
 
@@ -594,8 +614,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
-| `priority` | _integer_ |  false  | Priority of the EnvoyExtensionPolicy.<br />If multiple EnvoyExtensionPolices are applied to the same<br />TargetRef, extensions will execute in the ascending order of<br />the priority i.e. int32.min has the highest priority and<br />int32.max has the lowest priority.<br />Defaults to 0. |
 | `wasm` | _[Wasm](#wasm) array_ |  false  | WASM is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
+| `extProc` | _[ExtProc](#extproc) array_ |  true  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
 
 
 #### EnvoyGateway
@@ -722,6 +742,7 @@ _Appears in:_
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
+| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 
 
 #### EnvoyGatewayLogComponent
@@ -1058,6 +1079,40 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure. |
 
 
+#### ExtProc
+
+
+
+ExtProc defines the configuration for External Processing filter.
+
+_Appears in:_
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `backendRef` | _[ExtProcBackendRef](#extprocbackendref)_ |  true  | Service defines the configuration of the external processing service |
+
+
+#### ExtProcBackendRef
+
+
+
+ExtProcService defines the gRPC External Processing service using the envoy grpc client
+The processing request and response messages are defined in
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/ext_proc/v3/external_processor.proto
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io".<br />When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example<br />"Service".<br /><br />Defaults to "Service" when not specified.<br /><br />ExternalName services can refer to CNAME DNS records that may live<br />outside of the cluster and as such are difficult to reason about in<br />terms of conformance. They also may not be safe to forward to (see<br />CVE-2021-25740 for more information). Implementations SHOULD NOT<br />support ExternalName Services.<br /><br />Support: Core (Services with a type other than ExternalName)<br /><br />Support: Implementation-specific (Services with type ExternalName) |
+| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
+| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
+| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+
+
 #### ExtensionAPISettings
 
 
@@ -1071,7 +1126,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
-| `enableEnvoyExtensionPolicy` | _boolean_ |  true  | EnableEnvoyExtensionPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyExtensionPolicy resources. |
 
 
 #### ExtensionHooks
@@ -1724,6 +1778,23 @@ _Appears in:_
 
 
 
+#### LeaderElection
+
+
+
+LeaderElection defines the desired leader election settings.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `leaseDuration` | _[Duration](#duration)_ |  true  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.<br />It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds. |
+| `renewDeadline` | _[Duration](#duration)_ |  true  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position. The default setting is 10 seconds. |
+| `retryPeriod` | _[Duration](#duration)_ |  true  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
+| `disable` | _boolean_ |  true  | Disable provides the option to turn off leader election, which is enabled by default. |
+
+
 #### LiteralCustomTag
 
 
@@ -1852,9 +1923,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the extension service hostname.<br />Deprecated: Use BackendRef instead. |
+| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: Use BackendRef instead. |
 | `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
 | `resources` | _object (keys:string, values:string)_ |  false  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
@@ -2127,9 +2198,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the service hostname.<br />Deprecated: Use BackendRef instead. |
+| `host` | _string_ |  false  | Host define the service hostname.<br />Deprecated: Use BackendRef instead. |
 | `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
 
 
 #### ProxyPrometheusProvider
@@ -2356,6 +2427,39 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
+| `tracing` | _[RateLimitTracing](#ratelimittracing)_ |  true  | Tracing defines traces configuration for RateLimit. |
+
+
+#### RateLimitTracing
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `provider` | _[RateLimitTracingProvider](#ratelimittracingprovider)_ |  true  | Provider defines the rateLimit tracing provider.<br />Only OpenTelemetry is supported currently. |
+
+
+#### RateLimitTracingProvider
+
+
+
+RateLimitTracingProvider defines the tracing provider configuration of RateLimit
+
+_Appears in:_
+- [RateLimitTracing](#ratelimittracing)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[RateLimitTracingProviderType](#ratelimittracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported |
+| `url` | _string_ |  true  | URL is the endpoint of the trace collector that supports the OTLP protocol |
+
+
 
 
 #### RateLimitType
@@ -2736,9 +2840,9 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />EG currently only supports OpenTelemetry. |
-| `host` | _string_ |  true  | Host define the provider service hostname.<br />Deprecated: Use BackendRef instead. |
+| `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRef instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
 
 
 #### TracingProviderType

@@ -438,7 +438,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										Host: "0.0.0.0",
+										Host: ptr.To("0.0.0.0"),
 										Port: 3217,
 									},
 								},

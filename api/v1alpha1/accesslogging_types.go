@@ -5,8 +5,6 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
 type ProxyAccessLog struct {
 	// Disable disables access logging for managed proxies if set to true.
 	Disable bool `json:"disable,omitempty"`
@@ -154,11 +152,13 @@ type FileEnvoyProxyAccessLog struct {
 
 // OpenTelemetryEnvoyProxyAccessLog defines the OpenTelemetry access log sink.
 //
-// +kubebuilder:validation:XValidation:message="BackendRef only support Service Kind.",rule="!has(self.backendRef) || !has(self.backendRef.kind) || self.backendRef.kind == 'Service'"
+// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	// Host define the extension service hostname.
 	// Deprecated: Use BackendRef instead.
-	Host string `json:"host"`
+	//
+	// +optional
+	Host *string `json:"host,omitempty"`
 	// Port defines the port the extension service is exposed on.
 	// Deprecated: Use BackendRef instead.
 	//
@@ -166,12 +166,14 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-	// BackendRef references a Kubernetes object that represents the
+	// BackendRefs references a Kubernetes object that represents the
 	// backend server to which the accesslog will be sent.
 	// Only service Kind is supported for now.
 	//
 	// +optional
-	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional

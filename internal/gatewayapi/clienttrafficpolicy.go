@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -700,7 +701,18 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
 		}
 
-		irConnection.Limit = irConnectionLimit
+		irConnection.ConnectionLimit = irConnectionLimit
+	}
+
+	if connection.BufferLimit != nil {
+		bufferLimit, ok := connection.BufferLimit.AsInt64()
+		if !ok {
+			return fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
+		}
+		if bufferLimit < 0 || bufferLimit > math.MaxUint32 {
+			return fmt.Errorf("BufferLimit value %s is out of range", connection.BufferLimit.String())
+		}
+		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
 	}
 
 	httpIR.Connection = irConnection

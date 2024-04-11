@@ -3,10 +3,10 @@ title: Envoy Gateway
 ---
 
 {{< blocks/cover title="欢迎访问 Envoy Gateway！" image_anchor="top" height="full" >}}
-<a class="btn btn-lg btn-primary me-3 mb-4" href="/v1.0.0">
+<a class="btn btn-lg btn-primary me-3 mb-4" href="/v1.0.1">
   开始使用 <i class="fas fa-arrow-alt-circle-right ms-2"></i>
 </a>
-<a class="btn btn-lg btn-secondary me-3 mb-4" href="/v1.0.0/contributions">
+<a class="btn btn-lg btn-secondary me-3 mb-4" href="/v1.0.1/contributions">
   参与贡献 <i class="fa fa-heartbeat ms-2 "></i>
 </a>
 <p class="lead mt-5">将 Envoy 代理作为独立或基于 Kubernetes 的 API 网关进行管理</p>
@@ -26,7 +26,7 @@ title: Envoy Gateway
 无需了解 Envoy 代理的详细信息。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-battery-full" title="包含能力" %}}
+{{% blocks/feature icon="fa fa-battery-full" title="包含的能力" %}}
 自动 Envoy 基础设施配置和管理。
 {{% /blocks/feature %}}
 
@@ -38,11 +38,11 @@ title: Envoy Gateway
 供应商将有能力提供基于 Envoy Gateway 基础的增值产品。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-lock" title="安全"%}}
+{{% blocks/feature icon="fa fa-lock" title="安全" %}}
 支持多种安全功能，例如 TLS、TLS 直通、安全 gRPC、身份验证、限流等。
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa fa-bolt" title="高性能"%}}
+{{% blocks/feature icon="fa fa-bolt" title="高性能" %}}
 构建在高性能 Envoy 代理之上，每秒可以处理数百万个请求。
 {{% /blocks/feature %}}
 
