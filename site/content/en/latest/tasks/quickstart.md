@@ -48,7 +48,7 @@ consideration when debugging.
 ## Testing the Configuration
 
 {{< tabs name="tabs_test_the_configuration" >}}
-{{% tab name="Test Configuration" %}}
+{{% tab name="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
