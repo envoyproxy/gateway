@@ -46,16 +46,16 @@ type EnvoyExtensionPolicySpec struct {
 	// TargetRef
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
-	// Wasms is a list of Wasm extensions to be loaded by the Gateway.
+	// Wasm is a list of Wasm extensions to be loaded by the Gateway.
 	// Order matters, as the extensions will be loaded in the order they are
 	// defined in this list.
 	//
 	// +optional
-	Wasms []Wasm `json:"wasm,omitempty"`
+	Wasm []Wasm `json:"wasm,omitempty"`
 
-	// ExtProcs is an ordered list of external processing filters
+	// ExtProc is an ordered list of external processing filters
 	// that should added to the envoy filter chain
-	ExtProcs []ExtProc `json:"extProc,omitempty"`
+	ExtProc []ExtProc `json:"extProc,omitempty"`
 }
 
 //+kubebuilder:object:root=true

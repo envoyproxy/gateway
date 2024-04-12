@@ -562,8 +562,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
-| `wasm` | _[Wasm](#wasm) array_ |  false  | Wasms is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
-| `extProc` | _[ExtProc](#extproc) array_ |  true  | ExtProcs is an ordered list of external processing filters<br />that should added to the envoy filter chain |
+| `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
+| `extProc` | _[ExtProc](#extproc) array_ |  true  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
 
 
 #### EnvoyGateway
