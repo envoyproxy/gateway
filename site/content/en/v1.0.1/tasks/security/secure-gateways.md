@@ -41,23 +41,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          group: ""
+          name: example-cert
+  '
 ```
 
 Verify the Gateway status:
@@ -122,34 +119,31 @@ kubectl create secret tls foo-cert --key=foo.example.com.key --cert=foo.example.
 Create another HTTPS listener on the example Gateway:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https-foo",
-      "protocol": "HTTPS",
-      "port": 443,
-      "hostname": "foo.example.com",
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "foo-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https-foo
+      protocol: HTTPS
+      port: 443
+      hostname: foo.example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          group: ""
+          name: foo-cert
+  '
 ```
 
 Update the HTTPRoute to route traffic for hostname `foo.example.com` to the example backend service:
 
 ```shell
-kubectl patch httproute backend --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/hostnames/-",
-   "value": "foo.example.com",
-}]'
+kubectl patch httproute backend --type=json --patch '
+  - op: add
+    path: /spec/hostnames/-
+    value: foo.example.com
+  '
 ```
 
 Verify the Gateway status:
@@ -171,9 +165,9 @@ Before proceeding, ensure you can query the HTTPS backend service from the [Test
 To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default"
 namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
-```console
-$ cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
   name: example
@@ -210,8 +204,8 @@ kubectl create secret tls example-cert -n envoy-gateway-system --key=www.example
 
 Update the Gateway HTTPS listener with `namespace: envoy-gateway-system`, for example:
 
-```console
-$ cat <<EOF | kubectl apply -f -
+```shell
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -316,13 +310,12 @@ kubectl create secret tls example-cert-ecdsa --key=www.example.com.ecdsa.key --c
 Patch the Gateway with this additional ECDSA Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/1/tls/certificateRefs/-",
-   "value": {
-      "name": "example-cert-ecdsa",
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/1/tls/certificateRefs/-
+    value:
+      name: example-cert-ecdsa
+  '
 ```
 
 Verify the Gateway status:
@@ -393,23 +386,22 @@ Note that all occurrences of `example.com` were just replaced with `sample.com`
 Next we update the `Gateway` configuration to accommodate the new Certificate which will be used to Terminate TLS traffic:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/1/tls/certificateRefs/-",
-   "value": {
-      "name": "sample-cert",
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/1/tls/certificateRefs/-
+    value:
+      name: sample-cert
+  '
 ```
 
 Finally, we update the HTTPRoute to route traffic for hostname `www.sample.com` to the example backend service:
 
 ```shell
-kubectl patch httproute backend --type=json --patch '[{
-  "op": "add",
-  "path": "/spec/hostnames/-",
-  "value": "www.sample.com",
-}]'
+kubectl patch httproute backend --type=json --patch '
+  - op: add
+    path: /spec/hostnames/-
+    value: www.sample.com
+  '
 ```
 
 ## Testing

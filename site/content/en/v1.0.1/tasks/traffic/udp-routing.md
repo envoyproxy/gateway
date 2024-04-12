@@ -33,20 +33,17 @@ kubectl wait --timeout=5m deployment/coredns --for=condition=Available
 Update the Gateway from the Quickstart to include a UDP listener that listens on UDP port `5300`:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "coredns",
-      "protocol": "UDP",
-      "port": 5300,
-      "allowedRoutes": {
-         "kinds": [{
-            "kind": "UDPRoute"
-          }]
-      }
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: coredns
+      protocol: UDP
+      port: 5300
+      allowedRoutes:
+        kinds:
+        - kind: UDPRoute
+  '
 ```
 
 Verify the Gateway status:
