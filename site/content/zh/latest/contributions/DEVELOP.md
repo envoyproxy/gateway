@@ -90,7 +90,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 ### 运行 Gateway API 一致性测试 {#run-gateway-api-conformance-tests}
 
-以下命令将 Envoy Gateway 部署到 Kubernetes 集群并运行网关 API 一致性测试。
+以下命令将 Envoy Gateway 部署到 Kubernetes 集群并运行 Gateway API 一致性测试。
 请参阅 Gateway API [一致性主页][]了解有关测试的更多信息。如果 Envoy Gateway 已安装，
 请运行 `TAG=latest make run-conformance` 运行一致性测试。
 
