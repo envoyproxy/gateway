@@ -527,7 +527,7 @@ func wildcard2regex(wildcard string) string {
 
 func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 	return &ir.JWT{
-		AllowMissing: jwt.AllowMissing,
+		AllowMissing: ptr.Deref(jwt.AllowMissing, false),
 		Providers:    jwt.Providers,
 	}
 }

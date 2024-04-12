@@ -423,8 +423,9 @@ spec:
                   authentication.
                 properties:
                   allowMissing:
-                    description: AllowMissing specifies whether a missing JWT is acceptable,
-                      but it will fail if an invalid JWT is presented.
+                    description: |-
+                      AllowMissing determines whether a missing JWT is acceptable, defaulting to false if not specified.
+                      Note: Even if allowMissing is set to true, JWT authentication will still fail if an invalid JWT is presented.
                     type: boolean
                   providers:
                     description: |-

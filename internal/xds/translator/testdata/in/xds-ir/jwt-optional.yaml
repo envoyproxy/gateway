@@ -12,23 +12,24 @@ http:
     hostname: "*"
     pathMatch:
       exact: "foo/bar"
-    jwt:
-      providers:
-      - name: example
-        issuer: https://www.example.com
-        audiences:
-        - foo.com
-        remoteJWKS:
-          uri: https://localhost/jwt/public-key/jwks.json
-        extractFrom:
-          cookies:
-          - session_access_token
-          headers:
-          - name: Authorization
-            valuePrefix: 'Bearer '
-          params:
-          - token
-      allowMissing: true
+    security:
+      jwt:
+        providers:
+        - name: example
+          issuer: https://www.example.com
+          audiences:
+          - foo.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
+          extractFrom:
+            cookies:
+            - session_access_token
+            headers:
+            - name: Authorization
+              valuePrefix: 'Bearer '
+            params:
+            - token
+        allowMissing: true
     destination:
       name: "first-route-dest"
       settings:

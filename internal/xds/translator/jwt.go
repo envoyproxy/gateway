@@ -165,7 +165,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 			})
 		}
 
-		if route.JWT.AllowMissing {
+		if route.Security.JWT.AllowMissing {
 			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
 				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
 					AllowMissing: &emptypb.Empty{},

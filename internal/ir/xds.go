@@ -570,7 +570,7 @@ type CORS struct {
 //
 // +k8s:deepcopy-gen=true
 type JWT struct {
-	// AllowMissing specifies whether JWT authentication could be optionally required.
+	// AllowMissing determines whether a missing JWT is acceptable.
 	//
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
 
