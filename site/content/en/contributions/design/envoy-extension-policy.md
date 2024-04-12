@@ -158,6 +158,6 @@ Here is a list of features that can be included in this API
 [Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Gateway API Route Filters]: https://gateway-api.sigs.k8s.io/api-types/httproute/#filters-optional
-[Envoy Patch Policy]: ../../api/extension_types#envoypatchpolicy
+[Envoy Patch Policy]: ../../latest/api/extension_types#envoypatchpolicy
 [Envoy Extension Manager]: ./extending-envoy-gateway
 [Alternatives]: #Alternatives
