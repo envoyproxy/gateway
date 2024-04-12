@@ -24,10 +24,11 @@ _Appears in:_
 {{ end -}}
 
 {{ range $type.Members -}}
+{{- with .Markers.notImplementedHide -}}
+{{ else }}
 | `{{ .Name  }}` | _{{ markdownRenderType .Type }}_ | {{ with .Markers.optional }} {{ "false" }} {{ else }} {{ "true" }} {{end}} | {{ template "type_members" . }} |
-{{ end -}}
-
-{{ end -}}
-
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
