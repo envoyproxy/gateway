@@ -97,6 +97,7 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: basicAuthAny,
 		},
+		Disabled: true,
 	}, nil
 }
 
