@@ -9,7 +9,7 @@ type = "docs"
 
 {{% alert title="Note" color="primary" %}}
 
-This project is under **active** development. Many features are not complete. We would love for you to [Get Involved](contributions/)!
+This project is under **active** development. Many features are not complete. We would love for you to [Get Involved](/contributions)!
 
 {{% /alert %}}
 
