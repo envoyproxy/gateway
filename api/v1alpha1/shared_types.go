@@ -10,6 +10,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -415,4 +416,11 @@ type KubernetesPatchSpec struct {
 
 	// Object contains the raw configuration for merged object
 	Value apiextensionsv1.JSON `json:"value"`
+}
+
+// BackendRef defines how an ObjectReference that is specific to BackendRef.
+type BackendRef struct {
+	// BackendObjectReference references a Kubernetes object that represents the backend.
+	// Only service Kind is supported for now.
+	gwapiv1.BackendObjectReference `json:",inline"`
 }

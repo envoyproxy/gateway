@@ -92,16 +92,30 @@ type FileEnvoyProxyAccessLog struct {
 	Path string `json:"path,omitempty"`
 }
 
-// TODO: consider reuse ExtensionService?
+// OpenTelemetryEnvoyProxyAccessLog defines the OpenTelemetry access log sink.
+//
+// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	// Host define the extension service hostname.
-	Host string `json:"host"`
+	// Deprecated: Use BackendRef instead.
+	//
+	// +optional
+	Host *string `json:"host,omitempty"`
 	// Port defines the port the extension service is exposed on.
+	// Deprecated: Use BackendRef instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// BackendRefs references a Kubernetes object that represents the
+	// backend server to which the accesslog will be sent.
+	// Only service Kind is supported for now.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional

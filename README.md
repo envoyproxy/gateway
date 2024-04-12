@@ -6,13 +6,14 @@
 
 Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
 Kubernetes-based application gateway.
+[Gateway API](https://gateway-api.sigs.k8s.io) resources are used to dynamically provision and configure the managed Envoy Proxies.
 
 ## Documentation
 
 * [Blog][blog] introducing Envoy Gateway.
 * [Goals](GOALS.md)
-* [Quickstart](https://gateway.envoyproxy.io/latest/user/quickstart/) to use Envoy Gateway in a few simple steps.
-* [Roadmap](https://gateway.envoyproxy.io/latest/contributions/roadmap/)
+* [Quickstart](https://gateway.envoyproxy.io/latest/tasks/quickstart/) to use Envoy Gateway in a few simple steps.
+* [Roadmap](https://gateway.envoyproxy.io/contributions/roadmap/)
 
 ## Contact
 
@@ -21,9 +22,9 @@ Kubernetes-based application gateway.
 
 ## Contributing
 
-* [Code of conduct](https://gateway.envoyproxy.io/latest/contributions/code_of_conduct/)
-* [Contributing guide](https://gateway.envoyproxy.io/latest/contributions/contributing/)
-* [Developer guide](https://gateway.envoyproxy.io/latest/contributions/develop/)
+* [Code of conduct](/CODE_OF_CONDUCT)
+* [Contributing guide](https://gateway.envoyproxy.io/contributions/contributing/)
+* [Developer guide](https://gateway.envoyproxy.io/contributions/develop/)
 
 ## Community Meeting
 
