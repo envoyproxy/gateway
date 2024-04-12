@@ -2,7 +2,7 @@
 title: "TLS Passthrough"
 ---
 
-This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring
+This task will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring
 Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself
 to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
 

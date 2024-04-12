@@ -2,8 +2,8 @@
 title: "Secure Gateways"
 ---
 
-This guide will help you get started using secure Gateways. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This task will help you get started using secure Gateways.
+This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ testing and demonstration purposes only.
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
@@ -251,10 +251,10 @@ This section gives a walkthrough to generate RSA and ECDSA derived certificates 
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-Follow the steps in the [TLS Certificates](#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
+Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
 ## Pre-checks
 
@@ -289,7 +289,7 @@ Moving forward in the doc, we will be configuring the existing Gateway listener 
 
 ## TLS Certificates
 
-Reuse the CA certificate and key pair generated in the [Secure Gateways](#tls-certificates) guide and use this CA to sign both RSA and ECDSA Server certificates.
+Reuse the CA certificate and key pair generated in the [Secure Gateways](#tls-certificates) task and use this CA to sign both RSA and ECDSA Server certificates.
 Note the CA certificate and key names are `example.com.crt` and `example.com.key` respectively.
 
 
@@ -365,11 +365,11 @@ This sections gives a walkthrough to generate multiple certificates correspondin
 Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-Follow the steps in the [TLS Certificates](#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
+Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
 ## Additional Configurations
 
-Using the [TLS Certificates](#tls-certificates) section in the guide we first generate additional Secret for another Host `www.sample.com`.
+Using the [TLS Certificates](#tls-certificates) section, we first generate additional Secret for another Host `www.sample.com`.
 
 ```shell
 openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=sample Inc./CN=sample.com' -keyout sample.com.key -out sample.com.crt
@@ -438,7 +438,7 @@ Since the multiple certificates are configured on the same Gateway listener, Env
 
 ### Clusters with External LoadBalancer Support
 
-Refer to the steps mentioned earlier in the guide under [Testing in clusters with External LoadBalancer Support](#clusters-with-external-loadbalancer-support)
+Refer to the steps mentioned earlier under [Testing in clusters with External LoadBalancer Support](#clusters-with-external-loadbalancer-support)
 
 ## Next Steps
 

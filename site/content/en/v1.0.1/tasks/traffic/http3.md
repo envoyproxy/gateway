@@ -2,8 +2,8 @@
 title: "HTTP3"
 ---
 
-This guide will help you get started using HTTP3 using EG. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This task will help you get started using HTTP3 using EG.
+This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 ## Prerequisites
 

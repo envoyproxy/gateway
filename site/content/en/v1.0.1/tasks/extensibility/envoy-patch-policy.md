@@ -2,7 +2,7 @@
 title: "Envoy Patch Policy"
 ---
 
-This guide explains the usage of the [EnvoyPatchPolicy][] API.
+This task explains the usage of the [EnvoyPatchPolicy][] API.
 __Note:__ This API is meant for users extremely familiar with Envoy [xDS][] semantics.
 Also before considering this API for production use cases, please be aware that this API
 is unstable and the outcome may change across versions. Use at your own risk.
@@ -22,7 +22,7 @@ not exposed by Envoy Gateway APIs today.
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+* Follow the steps from the [Quickstart](../../quickstart) task to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Enable EnvoyPatchPolicy

@@ -2,8 +2,8 @@
 title: "Backend TLS: Gateway to Backend"
 ---
 
-This guide demonstrates how TLS can be achieved between the Gateway and a backend. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This task demonstrates how TLS can be achieved between the Gateway and a backend.
+This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][].
 
