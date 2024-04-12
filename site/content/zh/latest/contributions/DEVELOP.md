@@ -20,7 +20,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 ### docker {#docker}
 
-* 如果你想构建一个 Dokcer 镜像或者在 Docker 内部运行 `make`
+* 如果您想构建一个 Docker 镜像或者在 Docker 内部运行 `make`
 * 推荐版本：20.10.16
 * 安装指南：https://docs.docker.com/engine/install
 
