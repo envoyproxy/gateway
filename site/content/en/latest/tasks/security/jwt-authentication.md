@@ -160,9 +160,9 @@ kubectl delete securitypolicy/jwt-example
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../contributions/design/security-policy/
+[SecurityPolicy]: ../../../contributions/design/security-policy
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
