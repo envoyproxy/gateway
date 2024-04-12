@@ -5762,17 +5762,19 @@ spec:
                             - message: loadBalancerIP must be a valid IPv4 address
                               rule: self.matches(r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
                           loadBalancerSourceRanges:
-                            description: LoadBalancerSourceRanges defines a list of
-                              allowed IP addresses which will be configured as firewall
-                              rules on the platform providers load balancer. This
-                              is not guaranteed to be working as it happens outside
-                              of kubernetes and has to be supported and handled by
-                              the platform provider. This field may only be set for
-                              services with type LoadBalancer and will be cleared
-                              if the type is changed to any other type.
+                            description: |-
+                              LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
+                              firewall rules on the platform providers load balancer. This is not guaranteed to be working as
+                              it happens outside of kubernetes and has to be supported and handled by the platform provider.
+                              This field may only be set for services with type LoadBalancer and will be cleared if the type
+                              is changed to any other type.
                             items:
                               type: string
                             type: array
+                            x-kubernetes-validations:
+                            - message: loadBalancerSourceRange must be a valid IPv4
+                                subnet
+                              rule: self.all(lbsr, lbsr.matches(r"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|\/\d{1,2}$)){4})"))
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the service

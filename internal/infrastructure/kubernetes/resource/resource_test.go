@@ -81,11 +81,11 @@ func TestExpectedServiceSpec(t *testing.T) {
 			name: "LoadBalancerWithLoadBalancerSourceRanges",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-				LoadBalancerSourceRanges: []string{"1.1.1.1"},
+				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
 			}},
 			want: corev1.ServiceSpec{
 				Type:                     corev1.ServiceTypeLoadBalancer,
-				LoadBalancerSourceRanges: []string{"1.1.1.1"},
+				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
 				SessionAffinity:          corev1.ServiceAffinityNone,
 				ExternalTrafficPolicy:    corev1.ServiceExternalTrafficPolicyTypeLocal,
 			},
