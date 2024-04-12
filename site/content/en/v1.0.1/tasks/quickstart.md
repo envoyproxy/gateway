@@ -48,6 +48,27 @@ consideration when debugging.
 ## Testing the Configuration
 
 {{< tabs name="tabs_test_the_configuration" >}}
+{{% tab name="With LoadBalancer Support" %}}
+Get the name of the Envoy service created the by the example Gateway:
+
+You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
+Envoy service, run:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
+`ip` in the above command with `hostname`.
+
+Curl the example app through Envoy proxy:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
+```
+
+{{% /tab %}}
+
 {{% tab name="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
@@ -69,27 +90,6 @@ Curl the example app through Envoy proxy:
 
 ```shell
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
-```
-
-{{% /tab %}}
-
-{{% tab name="External LoadBalancer Support" %}}
-Get the name of the Envoy service created the by the example Gateway:
-
-You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
-Envoy service, run:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
-`ip` in the above command with `hostname`.
-
-Curl the example app through Envoy proxy:
-
-```shell
-curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
 {{% /tab %}}
