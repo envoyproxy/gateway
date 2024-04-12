@@ -7,7 +7,7 @@ processor:
     - "status$"
     - "TypeMeta$"
   customMarkers:
-    - name: "hidefromdoc"
+    - name: "notimplementedhide"
       target: "field"
 
 render:
