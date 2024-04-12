@@ -102,7 +102,7 @@ Use the steps in this section to uninstall everything from the quickstart guide.
 Delete the GatewayClass, Gateway, HTTPRoute and Example App:
 
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v1.0.0/quickstart.yaml --ignore-not-found=true
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml --ignore-not-found=true
 ```
 
 Delete the Gateway API CRDs and Envoy Gateway:
