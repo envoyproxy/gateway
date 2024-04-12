@@ -450,6 +450,6 @@ Refer to the steps mentioned earlier under [Testing in clusters with External Lo
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
