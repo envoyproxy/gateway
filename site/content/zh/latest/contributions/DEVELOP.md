@@ -60,7 +60,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 **注意：**使用你注册的镜像名称来替代 `IMAGE`。
 
-### 部署 Envoy Gateway 来测试或开发 {#deploying-envoy-gateway-for-test-dev}
+### 为测试或开发部署 Envoy Gateway {#deploying-envoy-gateway-for-test-dev}
 
 * 运行 `make create-cluster` 来创建一个 [Kind][] 集群。
 
