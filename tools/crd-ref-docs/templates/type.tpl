@@ -24,7 +24,7 @@ _Appears in:_
 {{ end -}}
 
 {{ range $type.Members -}}
-{{- with .Markers.NotImplementedHide -}}
+{{- with .Markers.notImplementedHide -}}
 {{ else }}
 | `{{ .Name  }}` | _{{ markdownRenderType .Type }}_ | {{ with .Markers.optional }} {{ "false" }} {{ else }} {{ "true" }} {{end}} | {{ template "type_members" . }} |
 {{- end -}}

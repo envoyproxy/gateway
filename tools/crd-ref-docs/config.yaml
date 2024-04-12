@@ -7,7 +7,7 @@ processor:
     - "status$"
     - "TypeMeta$"
   customMarkers:
-    - name: "NotImplementedHide"
+    - name: "notImplementedHide"
       target: "field"
 
 render:
