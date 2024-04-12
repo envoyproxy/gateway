@@ -534,7 +534,7 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 
 	var ret []string
 
-	for _, ep := range envoyExtensionPolicy.Spec.ExtProc {
+	for _, ep := range envoyExtensionPolicy.Spec.ExtProcs {
 		backendRef := ep.BackendRef.BackendObjectReference
 		ret = append(ret,
 			types.NamespacedName{

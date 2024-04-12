@@ -1469,7 +1469,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	// to IR because the referenced service can't be found.
 	for _, policy := range resourceTree.EnvoyExtensionPolicies {
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
-		for _, ep := range policy.Spec.ExtProc {
+		for _, ep := range policy.Spec.ExtProcs {
 			backendRef := ep.BackendRef.BackendObjectReference
 
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)

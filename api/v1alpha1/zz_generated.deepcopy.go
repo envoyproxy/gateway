@@ -782,15 +782,15 @@ func (in *EnvoyExtensionPolicyList) DeepCopyObject() runtime.Object {
 func (in *EnvoyExtensionPolicySpec) DeepCopyInto(out *EnvoyExtensionPolicySpec) {
 	*out = *in
 	in.TargetRef.DeepCopyInto(&out.TargetRef)
-	if in.Wasm != nil {
-		in, out := &in.Wasm, &out.Wasm
+	if in.Wasms != nil {
+		in, out := &in.Wasms, &out.Wasms
 		*out = make([]Wasm, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.ExtProc != nil {
-		in, out := &in.ExtProc, &out.ExtProc
+	if in.ExtProcs != nil {
+		in, out := &in.ExtProcs, &out.ExtProcs
 		*out = make([]ExtProc, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

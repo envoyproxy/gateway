@@ -51,7 +51,7 @@ spec:
             properties:
               extProc:
                 description: |-
-                  ExtProc is an ordered list of external processing filters
+                  ExtProcs is an ordered list of external processing filters
                   that should added to the envoy filter chain
                 items:
                   description: ExtProc defines the configuration for External Processing
@@ -215,7 +215,7 @@ spec:
                   rule: '!has(self.sectionName)'
               wasm:
                 description: |-
-                  Wasm is a list of Wasm extensions to be loaded by the Gateway.
+                  Wasms is a list of Wasm extensions to be loaded by the Gateway.
                   Order matters, as the extensions will be loaded in the order they are
                   defined in this list.
                 items:
