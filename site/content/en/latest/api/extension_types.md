@@ -1038,11 +1038,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+
 | `backendRef` | _[ExtProcBackendRef](#extprocbackendref)_ |  true  | BackendRef defines the configuration of the external processing service |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs defines the configuration of the external processing service |
 | `messageTimeout` | _[Duration](#duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
-
 
 #### ExtProcBackendRef
 
