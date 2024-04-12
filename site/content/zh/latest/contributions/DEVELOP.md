@@ -106,7 +106,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 * 在 [Kubernetes 支持][]下部署 Kubernetes 集群或使用 Docker Desktop 然后运行
   `TAG=latest make kube-deploy run-conformance`。
   这将使用最新的 [gateway-dev][] 镜像安装 Envoy Gateway 使用当前 kubectl 上下文连接到 Kubernetes 集群并运行一致性测试。
-  使用 `make kube-undeploy` 来卸载 Envoy 网关。
+  使用 `make kube-undeploy` 来卸载 Envoy Gateway。
 * 安装并执行 [Docker Mac Net Connect][mac_connect] 然后运行 `TAG=latest make conformance`。
 
 **注意：**在命令前加上 `IMAGE` 或替换 `TAG` 以使用不同的 Envoy Gateway 镜像或标签。
