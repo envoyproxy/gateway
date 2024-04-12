@@ -206,6 +206,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	}
 	if healthcheck.HTTP != nil {
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
+			Host: healthcheck.HTTP.Host,
 			Path: healthcheck.HTTP.Path,
 		}
 		if healthcheck.HTTP.Method != nil {
@@ -599,7 +600,7 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 		ka.TcpKeepalive.KeepaliveProbes = wrapperspb.UInt32(*tcpkeepalive.Probes)
 	}
 
-	if tcpkeepalive.Probes != nil {
+	if tcpkeepalive.IdleTime != nil {
 		ka.TcpKeepalive.KeepaliveTime = wrapperspb.UInt32(*tcpkeepalive.IdleTime)
 	}
 

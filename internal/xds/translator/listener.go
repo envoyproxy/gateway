@@ -8,8 +8,6 @@ package translator
 import (
 	"errors"
 
-	"google.golang.org/protobuf/proto"
-
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -27,6 +25,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -134,14 +133,15 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.Connection, accesslog *ir.AccessLog) *listenerv3.Listener {
 	socketOptions := buildTCPSocketOptions(keepalive)
 	al := buildXdsAccessLog(accesslog, true)
+	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	return &listenerv3.Listener{
 		Name:                          name,
 		AccessLog:                     al,
 		SocketOptions:                 socketOptions,
-		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes),
+		PerConnectionBufferLimitBytes: bufferLimitBytes,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -157,6 +157,13 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
+}
+
+func buildPerConnectionBufferLimitBytes(connection *ir.Connection) *wrapperspb.UInt32Value {
+	if connection != nil && connection.BufferLimitBytes != nil {
+		return wrapperspb.UInt32(*connection.BufferLimitBytes)
+	}
+	return wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes)
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
@@ -187,7 +194,17 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 	return xdsListener
 }
 
-func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
+// addHCMToXDSListener adds a HCM filter to the listener's filter chain, and adds
+// all the necessary HTTP filters to that HCM.
+//
+//   - If tls is not enabled, a HCM filter is added to the Listener's default TCP filter chain.
+//     All the ir HTTP Listeners on the same address + port combination share the
+//     same HCM + HTTP filters.
+//   - If tls is enabled, a new TCP filter chain is created and added to the listener.
+//     A HCM filter is added to the new TCP filter chain.
+//     The newly created TCP filter chain is configured with a filter chain match to
+//     match the server names(SNI) based on the listener's hostnames.
+func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection) error {
 	al := buildXdsAccessLog(accesslog, false)
 
@@ -237,13 +254,19 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		MergeSlashes:                 irListener.Path.MergeSlashes,
 		PathWithEscapedSlashesAction: translateEscapePath(irListener.Path.EscapedSlashesAction),
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
-			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
+			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
 		Tracing: hcmTracing,
 	}
 
-	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil && irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
-		mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
+	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
+		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
+			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
+		}
+
+		if irListener.Timeout.HTTP.IdleTimeout != nil {
+			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
+		}
 	}
 
 	// Add the proxy protocol filter if needed
@@ -267,7 +290,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 
 	var filters []*listenerv3.Filter
 
-	if connection != nil && connection.Limit != nil {
+	if connection != nil && connection.ConnectionLimit != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
@@ -378,11 +401,12 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
 		},
+		HashPolicy: buildTCPProxyHashPolicy(irListener.LoadBalancer),
 	}
 
 	var filters []*listenerv3.Filter
 
-	if connection != nil && connection.Limit != nil {
+	if connection != nil && connection.ConnectionLimit != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
@@ -423,11 +447,11 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 func buildConnectionLimitFilter(statPrefix string, connection *ir.Connection) *connection_limitv3.ConnectionLimit {
 	cl := &connection_limitv3.ConnectionLimit{
 		StatPrefix:     statPrefix,
-		MaxConnections: wrapperspb.UInt64(*connection.Limit.Value),
+		MaxConnections: wrapperspb.UInt64(*connection.ConnectionLimit.Value),
 	}
 
-	if connection.Limit.CloseDelay != nil {
-		cl.Delay = durationpb.New(connection.Limit.CloseDelay.Duration)
+	if connection.ConnectionLimit.CloseDelay != nil {
+		cl.Delay = durationpb.New(connection.ConnectionLimit.CloseDelay.Duration)
 	}
 	return cl
 }
@@ -717,4 +741,37 @@ func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.
 			TypedConfig: filterAny,
 		},
 	}, nil
+}
+
+func buildTCPProxyHashPolicy(lb *ir.LoadBalancer) []*typev3.HashPolicy {
+	// Return early
+	if lb == nil || lb.ConsistentHash == nil {
+		return nil
+	}
+
+	if lb.ConsistentHash.SourceIP != nil && *lb.ConsistentHash.SourceIP {
+		hashPolicy := &typev3.HashPolicy{
+			PolicySpecifier: &typev3.HashPolicy_SourceIp_{
+				SourceIp: &typev3.HashPolicy_SourceIp{},
+			},
+		}
+
+		return []*typev3.HashPolicy{hashPolicy}
+	}
+
+	return nil
+}
+
+func buildHeadersWithUnderscoresAction(in *ir.HeaderSettings) corev3.HttpProtocolOptions_HeadersWithUnderscoresAction {
+	if in != nil {
+		switch in.WithUnderscoresAction {
+		case ir.WithUnderscoresActionAllow:
+			return corev3.HttpProtocolOptions_ALLOW
+		case ir.WithUnderscoresActionRejectRequest:
+			return corev3.HttpProtocolOptions_REJECT_REQUEST
+		case ir.WithUnderscoresActionDropHeader:
+			return corev3.HttpProtocolOptions_DROP_HEADER
+		}
+	}
+	return corev3.HttpProtocolOptions_REJECT_REQUEST
 }
