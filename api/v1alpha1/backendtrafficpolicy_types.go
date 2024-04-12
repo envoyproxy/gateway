@@ -95,7 +95,7 @@ type BackendTrafficPolicySpec struct {
 	// The compression config for the http streams.
 	//
 	// +optional
-	// +notimplementedhide
+	// +NotImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 }
 
