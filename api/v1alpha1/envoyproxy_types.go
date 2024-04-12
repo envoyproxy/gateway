@@ -87,54 +87,66 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
-	// FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// If unspecified, the default filter order is applied.
+	// Default filter order is:
+	//
+	// - envoy.filters.http.fault
+	//
+	// - envoy.filters.http.cors
+	//
+	// - envoy.filters.http.ext_authz
+	//
+	// - envoy.filters.http.basic_authn
+	//
+	// - envoy.filters.http.oauth2
+	//
+	// - envoy.filters.http.jwt_authn
+	//
+	// - envoy.filters.http.ext_proc
+	//
+	// - envoy.filters.http.wasm
+	//
+	// - envoy.filters.http.local_ratelimit
+	//
+	// - envoy.filters.http.ratelimit
+	//
+	// - envoy.filters.http.router
 	//
 	// +optional
-	FilterPriority []FilterPriority `json:"filterPriority,omitempty"`
+	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
 }
 
-// FilterPriority defines the order of filters in the Envoy proxy's HTTP filter chain.
-// The filter with the lower value is put before those with higher values in the filter chain.
-// If unspecified, the default priority of filters is applied.
-// Default priority of filters:
-//
-// - envoy.filters.http.cors               0
-//
-// - envoy.filters.http.ext_authz          100
-//
-// - envoy.filters.http.basic_authn        200
-//
-// - envoy.filters.http.oauth2             300
-//
-// - envoy.filters.http.jwt_authn          400
-//
-// - envoy.filters.http.fault              500
-//
-// - envoy.filters.http.local_ratelimit    600
-//
-// - envoy.filters.http.ratelimit          700
-type FilterPriority struct {
+// FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
+type FilterPosition struct {
+	// Name of the filter.
+	Name EnvoyFilter `json:"filter"`
 
-	// Filter defines an Envoy Filter type.
-	Filter EnvoyFilter `json:"filter"`
+	// Before defines the filter that should come before the filter.
+	// Only one of Before or After must be set.
+	Before *EnvoyFilter `json:"before,omitempty"`
 
-	// Priority defines the priority for the specific Envoy Filter.
-	Priority int32 `json:"priority"`
+	// After defines the filter that should come after the filter.
+	// Only one of Before or After must be set.
+	After *EnvoyFilter `json:"after,omitempty"`
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
+// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc
 type EnvoyFilter string
 
 const (
+	EnvoyFilterFault          EnvoyFilter = "envoy.filters.http.fault"
 	EnvoyFilterCORS           EnvoyFilter = "envoy.filters.http.cors"
 	EnvoyFilterExtAuthz       EnvoyFilter = "envoy.filters.http.ext_authz"
 	EnvoyFilterBasicAuthn     EnvoyFilter = "envoy.filters.http.basic_authn"
 	EnvoyFilterOAuth2         EnvoyFilter = "envoy.filters.http.oauth2"
 	EnvoyFilterJWTAuthn       EnvoyFilter = "envoy.filters.http.jwt_authn"
-	EnvoyFilterFault          EnvoyFilter = "envoy.filters.http.fault"
+	EnvoyFilterExtProc        EnvoyFilter = "envoy.filters.http.ext_proc"
+	EnvoyFilterWasm           EnvoyFilter = "envoy.filters.http.wasm"
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
 	EnvoyFilterRateLimit      EnvoyFilter = "envoy.filters.http.ratelimit"
+	EnvoyFilterRouter         EnvoyFilter = "envoy.filters.http.router"
 )
 
 type ProxyTelemetry struct {
