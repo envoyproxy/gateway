@@ -129,7 +129,7 @@ export ENVOY_DEPLOYMENT=$(kubectl get deploy -n envoy-gateway-system --selector=
 kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
 ```
 
-现在你可以使用 `127.0.0.1:19000/config_dump` 来查看正在运行的 Envoy 配置。
+现在您可以使用 `127.0.0.1:19000/config_dump` 来查看正在运行的 Envoy 配置。
 
 还有很多可能会有助你调试的在 [Envoy 管理接口][]上的接入点。
 
