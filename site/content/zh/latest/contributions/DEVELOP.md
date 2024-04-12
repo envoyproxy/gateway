@@ -50,7 +50,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 ### 运行代码检查器（Linters） {#running-linters}
 
-* 运行 `make lint` 来确保你的代码可以通过所有的代码检查工具检查。
+* 运行 `make lint` 来确保您的代码可以通过所有的代码检查工具检查。
 **注意：**`golangci-lint` 在[这里](https://github.com/envoyproxy/gateway/blob/main/tools/linter/golangci-lint/.golangci.yml)。
 
 ### 构建和推送镜像 {#building-and-pushing-the-image}
