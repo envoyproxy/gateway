@@ -36,8 +36,8 @@ kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/
 ```
 
 **注意：**[`quickstart.yaml`] 定义了 Envoy Gateway 将侦听其全局可路由 IP 地址上端口
-80 上的流量，以便轻松使用浏览器测试 Envoy Gateway。当 Envoy Gateway 看到它的 listener
-使用特权端口（<1024），它将在内部映射到非特权端口，因此 Envoy Gateway 不需要额外的特权。
+80 上的流量，以便轻松使用浏览器测试 Envoy Gateway。当 Envoy Gateway 看到它的侦听器使用特权端口（<1024），
+它将在内部映射到非特权端口，因此 Envoy Gateway 不需要额外的特权。
 了解此映射很重要，当您调试时您可能需要将其考虑在内。
 
 [`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
