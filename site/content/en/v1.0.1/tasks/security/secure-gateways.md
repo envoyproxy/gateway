@@ -450,6 +450,6 @@ Refer to the steps mentioned earlier in the guide under [Testing in clusters wit
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
