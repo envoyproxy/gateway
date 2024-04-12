@@ -131,7 +131,7 @@ kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19
 
 现在您可以使用 `127.0.0.1:19000/config_dump` 来查看正在运行的 Envoy 配置。
 
-还有很多可能会有助你调试的在 [Envoy 管理接口][]上的接入点。
+还有很多可能会有助您调试的在 [Envoy 管理接口][]上的接入点。
 
 ### JWT 测试 {#jwt-testing}
 
