@@ -67,7 +67,6 @@ title: Envoy Gateway
 
 {{% blocks/feature icon="fab fa-github" title="欢迎贡献！"
     url="/contributions/" %}}
-We do a [Pull Request](https://github.com/envoyproxy/gateway/pulls) contributions workflow on **GitHub**.
 我们在 **GitHub** 通过 [Pull Request](https://github.com/envoyproxy/gateway/pulls) 开启贡献流程。
 {{% /blocks/feature %}}
 
