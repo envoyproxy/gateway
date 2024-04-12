@@ -52,5 +52,5 @@ Envoy Gateway 版本按固定时间表（每个季度的第 22 天）生成，
 |  0.6.0  | 2023/10/22  | 2023/11/02  |   +10 天  |  2024/05/02 |
 
 [v2.0.0 规范]: https://semver.org/lang/zh-CN/
-[发布指南]: ../latest/contributions/releasing
+[发布指南]: ../contributions/releasing
 [发布时间表]: https://github.com/envoyproxy/envoy/blob/main/RELEASES.md#major-release-schedule
