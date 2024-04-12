@@ -32,7 +32,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 ## 快速开始 {#quickstart}
 
-* 运行 `make help` 来查看所有可构建，可测试，可运行的的 targets，和运行 Envoy Gateway。
+* 运行 `make help` 来查看所有可构建，可测试，可运行的的目标，并运行 Envoy Gateway。
 
 ### 构建 {#building}
 
