@@ -138,7 +138,7 @@ kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19
 示例 [JSON Web Token（JWT）][jwt] 和 [JSON Web Key Set（JWKS）][jwks] 用于[请求认证][]任务。
 JWT 由 [JWT 调试器][]使用 `RS256` 算法创建。来自 JWT 的公钥验证签名已复制到 [JWK Creator][] 以生成 JWK。
 JWK Creator 配置了匹配的设置，即 `Signing` 公钥使用和 `RS256` 算法。
-生成的 JWK 包装在 JWKS 结构中并托管在存储库中。
+生成的 JWK 包装在 JWKS 结构中并被托管在仓库中。
 
 [快速开始]: https://gateway.envoyproxy.io/zh/latest/task/quickstart
 [make]: https://www.gnu.org/software/make/
