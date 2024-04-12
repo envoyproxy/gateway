@@ -17,6 +17,11 @@ type ExtProc struct {
 	// BackendRef defines the configuration of the external processing service
 	BackendRef ExtProcBackendRef `json:"backendRef"`
 
+	// BackendRefs defines the configuration of the external processing service
+	//
+	// +optional
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms
 	//

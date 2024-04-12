@@ -11,15 +11,16 @@ package celvalidation
 import (
 	"context"
 	"fmt"
-	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"strings"
 	"testing"
 	"time"
 
+	"k8s.io/utils/ptr"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -189,8 +190,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							BackendRef: egv1a1.ExtProcBackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{
 									Group: ptr.To(gwapiv1.Group("unsupported")),
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
+									Name:  "grpc-proc-service",
+									Port:  ptr.To(gwapiv1.PortNumber(80)),
 								},
 							},
 						},
