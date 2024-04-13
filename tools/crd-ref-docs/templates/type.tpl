@@ -25,9 +25,9 @@ _Appears in:_
 
 {{ range $type.Members -}}
 {{- with .Markers.notImplementedHide -}}
-{{ else }}
+{{- else -}}
 | `{{ .Name  }}` | _{{ markdownRenderType .Type }}_ | {{ with .Markers.optional }} {{ "false" }} {{ else }} {{ "true" }} {{end}} | {{ template "type_members" . }} |
-{{- end -}}
+{{ end -}}
 {{- end -}}
 {{- end -}}
 {{ if $type.EnumValues -}}
