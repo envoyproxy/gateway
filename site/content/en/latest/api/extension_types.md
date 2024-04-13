@@ -38,6 +38,11 @@ ALPNProtocol specifies the protocol to be negotiated using ALPN
 _Appears in:_
 - [TLSSettings](#tlssettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `http/1.0` | HTTPProtocolVersion1_0 specifies that HTTP/1.0 should be negotiable with ALPN<br /> | 
+| `http/1.1` | HTTPProtocolVersion1_1 specifies that HTTP/1.1 should be negotiable with ALPN<br /> | 
+| `h2` | HTTPProtocolVersion2 specifies that HTTP/2 should be negotiable with ALPN<br /> | 
 
 
 #### ActiveHealthCheck
@@ -87,6 +92,10 @@ ActiveHealthCheckPayloadType is the type of the payload.
 _Appears in:_
 - [ActiveHealthCheckPayload](#activehealthcheckpayload)
 
+| Value | Description |
+| ----- | ----------- |
+| `Text` | ActiveHealthCheckPayloadTypeText defines the Text type payload.<br /> | 
+| `Binary` | ActiveHealthCheckPayloadTypeBinary defines the Binary type payload.<br /> | 
 
 
 #### ActiveHealthCheckerType
@@ -98,6 +107,10 @@ ActiveHealthCheckerType is the type of health checker.
 _Appears in:_
 - [ActiveHealthCheck](#activehealthcheck)
 
+| Value | Description |
+| ----- | ----------- |
+| `HTTP` | ActiveHealthCheckerTypeHTTP defines the HTTP type of health checking.<br /> | 
+| `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
 #### BackOffPolicy
@@ -215,6 +228,10 @@ BootstrapType defines the types of bootstrap supported by Envoy Gateway.
 _Appears in:_
 - [ProxyBootstrap](#proxybootstrap)
 
+| Value | Description |
+| ----- | ----------- |
+| `Merge` | Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value<br />within a map, or add a new value to a list.<br />Please note that the provided bootstrap can't override a value within a list.<br /> | 
+| `Replace` | Replace replaces the default bootstrap with the provided one.<br /> | 
 
 
 #### CORS
@@ -453,6 +470,9 @@ ConsistentHashType defines the type of input to hash on.
 _Appears in:_
 - [ConsistentHash](#consistenthash)
 
+| Value | Description |
+| ----- | ----------- |
+| `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
 
 
 #### CustomHeaderExtensionSettings
@@ -499,6 +519,11 @@ _Underlying type:_ _string_
 _Appears in:_
 - [CustomTag](#customtag)
 
+| Value | Description |
+| ----- | ----------- |
+| `Literal` | CustomTagTypeLiteral adds hard-coded value to each span.<br /> | 
+| `Environment` | CustomTagTypeEnvironment adds value from environment variable to each span.<br /> | 
+| `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
 
 
 #### EnvironmentCustomTag
@@ -701,6 +726,15 @@ EnvoyGatewayLogComponent defines a component that supports a configured logging 
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 
+| Value | Description |
+| ----- | ----------- |
+| `default` | LogComponentGatewayDefault defines the "default"-wide logging component. When specified,<br />all other logging components are ignored.<br /> | 
+| `provider` | LogComponentProviderRunner defines the "provider" runner component.<br /> | 
+| `gateway-api` | LogComponentGatewayAPIRunner defines the "gateway-api" runner component.<br /> | 
+| `xds-translator` | LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.<br /> | 
+| `xds-server` | LogComponentXdsServerRunner defines the "xds-server" runner component.<br /> | 
+| `infrastructure` | LogComponentInfrastructureRunner defines the "infrastructure" runner component.<br /> | 
+| `global-ratelimit` | LogComponentGlobalRateLimitRunner defines the "global-ratelimit" runner component.<br /> | 
 
 
 #### EnvoyGatewayLogging
@@ -925,6 +959,9 @@ EnvoyPatchType specifies the types of Envoy patching mechanisms.
 _Appears in:_
 - [EnvoyPatchPolicySpec](#envoypatchpolicyspec)
 
+| Value | Description |
+| ----- | ----------- |
+| `JSONPatch` | JSONPatchEnvoyPatchType allows the user to patch the generated xDS resources using JSONPatch semantics.<br />For more details on the semantics, please refer to https://datatracker.ietf.org/doc/html/rfc6902<br /> | 
 
 
 #### EnvoyProxy
@@ -1007,6 +1044,12 @@ EnvoyResourceType specifies the type URL of the Envoy resource.
 _Appears in:_
 - [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
 
+| Value | Description |
+| ----- | ----------- |
+| `type.googleapis.com/envoy.config.listener.v3.Listener` | ListenerEnvoyResourceType defines the Type URL of the Listener resource<br /> | 
+| `type.googleapis.com/envoy.config.route.v3.RouteConfiguration` | RouteConfigurationEnvoyResourceType defines the Type URL of the RouteConfiguration resource<br /> | 
+| `type.googleapis.com/envoy.config.cluster.v3.Cluster` | ClusterEnvoyResourceType defines the Type URL of the Cluster resource<br /> | 
+| `type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment` | ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource<br /> | 
 
 
 #### ExtAuth
@@ -1415,6 +1458,11 @@ Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
 _Appears in:_
 - [HeaderMatch](#headermatch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | HeaderMatchExact matches the exact value of the Value field against the value of<br />the specified HTTP Header.<br /> | 
+| `RegularExpression` | HeaderMatchRegularExpression matches a regular expression against the value of the<br />specified HTTP Header. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+| `Distinct` | HeaderMatchDistinct matches any and all possible unique values encountered in the<br />specified HTTP Header. Note that each unique value will receive its own rate limit<br />bucket.<br />Note: This is only supported for Global Rate Limits.<br /> | 
 
 
 #### HeaderSettings
@@ -1472,6 +1520,9 @@ InfrastructureProviderType defines the types of custom infrastructure providers 
 _Appears in:_
 - [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> | 
 
 
 #### JSONPatchOperation
@@ -1781,6 +1832,12 @@ LoadBalancerType specifies the types of LoadBalancer.
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
 
+| Value | Description |
+| ----- | ----------- |
+| `ConsistentHash` | ConsistentHashLoadBalancerType load balancer policy.<br /> | 
+| `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> | 
+| `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
+| `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 
 
 #### LocalRateLimit
@@ -1807,6 +1864,12 @@ _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
 
+| Value | Description |
+| ----- | ----------- |
+| `debug` | LogLevelDebug defines the "debug" logging level.<br /> | 
+| `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
+| `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
+| `error` | LogLevelError defines the "Error" logging level.<br /> | 
 
 
 
@@ -1821,6 +1884,9 @@ _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
 - [ProxyMetricSink](#proxymetricsink)
 
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` |  | 
 
 
 #### OIDC
@@ -1931,6 +1997,12 @@ sequences in the URI path.
 _Appears in:_
 - [PathSettings](#pathsettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `KeepUnchanged` | KeepUnchangedAction keeps escaped slashes as they arrive without changes<br /> | 
+| `RejectRequest` | RejectRequestAction rejects client requests containing escaped slashes<br />with a 400 status. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />The "httpN.downstream_rq_failed_path_normalization" counter is incremented<br />for each rejected request.<br /> | 
+| `UnescapeAndRedirect` | UnescapeAndRedirect unescapes %2F and %5C sequences and redirects to the new path<br />if these sequences were present.<br />Redirect occurs after path normalization and merge slashes transformations if<br />they were configured. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />This option minimizes possibility of path confusion exploits by forcing request<br />with unescaped slashes to traverse all parties: downstream client, intermediate<br />proxies, Envoy and upstream server.<br />The “httpN.downstream_rq_redirected_with_normalized_path” counter is incremented<br />for each redirected request.<br /> | 
+| `UnescapeAndForward` | UnescapeAndForward unescapes %2F and %5C sequences and forwards the request.<br />Note: this option should not be enabled if intermediaries perform path based access<br />control as it may lead to path confusion vulnerabilities.<br /> | 
 
 
 #### PathSettings
@@ -1973,6 +2045,10 @@ _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 - [EnvoyProxyProvider](#envoyproxyprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `Kubernetes` | ProviderTypeKubernetes defines the "Kubernetes" provider.<br /> | 
+| `File` | ProviderTypeFile defines the "File" provider. This type is not implemented<br />until https://github.com/envoyproxy/gateway/issues/1001 is fixed.<br /> | 
 
 
 #### ProxyAccessLog
@@ -2016,6 +2092,10 @@ _Underlying type:_ _string_
 _Appears in:_
 - [ProxyAccessLogFormat](#proxyaccesslogformat)
 
+| Value | Description |
+| ----- | ----------- |
+| `Text` | ProxyAccessLogFormatTypeText defines the text accesslog format.<br /> | 
+| `JSON` | ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.<br /> | 
 
 
 #### ProxyAccessLogSetting
@@ -2058,6 +2138,10 @@ _Underlying type:_ _string_
 _Appears in:_
 - [ProxyAccessLogSink](#proxyaccesslogsink)
 
+| Value | Description |
+| ----- | ----------- |
+| `File` | ProxyAccessLogSinkTypeFile defines the file accesslog sink.<br /> | 
+| `OpenTelemetry` | ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.<br />When the provider is Kubernetes, EnvoyGateway always sends `k8s.namespace.name`<br />and `k8s.pod.name` as additional attributes.<br /> | 
 
 
 #### ProxyBootstrap
@@ -2084,6 +2168,18 @@ ProxyLogComponent defines a component that supports a configured logging level.
 _Appears in:_
 - [ProxyLogging](#proxylogging)
 
+| Value | Description |
+| ----- | ----------- |
+| `default` | LogComponentDefault defines the default logging component.<br />See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l<br /> | 
+| `upstream` | LogComponentUpstream defines the "upstream" logging component.<br /> | 
+| `http` | LogComponentHTTP defines the "http" logging component.<br /> | 
+| `connection` | LogComponentConnection defines the "connection" logging component.<br /> | 
+| `admin` | LogComponentAdmin defines the "admin" logging component.<br /> | 
+| `client` | LogComponentClient defines the "client" logging component.<br /> | 
+| `filter` | LogComponentFilter defines the "filter" logging component.<br /> | 
+| `main` | LogComponentMain defines the "main" logging component.<br /> | 
+| `router` | LogComponentRouter defines the "router" logging component.<br /> | 
+| `runtime` | LogComponentRuntime defines the "runtime" logging component.<br /> | 
 
 
 #### ProxyLogging
@@ -2187,6 +2283,10 @@ ProxyProtocolVersion defines the version of the Proxy Protocol to use.
 _Appears in:_
 - [ProxyProtocol](#proxyprotocol)
 
+| Value | Description |
+| ----- | ----------- |
+| `V1` | ProxyProtocolVersionV1 is the PROXY protocol version 1 (human readable format).<br /> | 
+| `V2` | ProxyProtocolVersionV2 is the PROXY protocol version 2 (binary format).<br /> | 
 
 
 #### ProxyTelemetry
@@ -2266,6 +2366,9 @@ to be used by the rate limit service.
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
 
+| Value | Description |
+| ----- | ----------- |
+| `Redis` | RedisBackendType uses a redis database for the rate limit service.<br /> | 
 
 
 #### RateLimitMetrics
@@ -2417,6 +2520,10 @@ RateLimitType specifies the types of RateLimiting.
 _Appears in:_
 - [RateLimitSpec](#ratelimitspec)
 
+| Value | Description |
+| ----- | ----------- |
+| `Global` | GlobalRateLimitType allows the rate limits to be applied across all Envoy<br />proxy instances.<br /> | 
+| `Local` | LocalRateLimitType allows the rate limits to be applied on a per Envoy<br />proxy instance basis.<br /> | 
 
 
 #### RateLimitUnit
@@ -2429,6 +2536,12 @@ Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
 _Appears in:_
 - [RateLimitValue](#ratelimitvalue)
 
+| Value | Description |
+| ----- | ----------- |
+| `Second` | RateLimitUnitSecond specifies the rate limit interval to be 1 second.<br /> | 
+| `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> | 
+| `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> | 
+| `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
 
 
 #### RateLimitValue
@@ -2499,6 +2612,9 @@ ResourceProviderType defines the types of custom resource providers supported by
 _Appears in:_
 - [EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
 #### Retry
@@ -2598,6 +2714,10 @@ and LoadBalancer IPs.
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
+| Value | Description |
+| ----- | ----------- |
+| `Cluster` | ServiceExternalTrafficPolicyCluster routes traffic to all endpoints.<br /> | 
+| `Local` | ServiceExternalTrafficPolicyLocal preserves the source IP of the traffic by<br />routing only to endpoints on the same node as the traffic was received on<br />(dropping the traffic if there are no local endpoints).<br /> | 
 
 
 #### ServiceType
@@ -2609,6 +2729,11 @@ ServiceType string describes ingress methods for a service
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
+| Value | Description |
+| ----- | ----------- |
+| `ClusterIP` | ServiceTypeClusterIP means a service will only be accessible inside the<br />cluster, via the cluster IP.<br /> | 
+| `LoadBalancer` | ServiceTypeLoadBalancer means a service will be exposed via an<br />external load balancer (if the cloud provider supports it).<br /> | 
+| `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> | 
 
 
 #### ShutdownConfig
@@ -2651,6 +2776,10 @@ _Underlying type:_ _string_
 _Appears in:_
 - [SourceMatch](#sourcematch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
+| `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
 
 
 #### StringMatch
@@ -2680,6 +2809,12 @@ Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 _Appears in:_
 - [StringMatch](#stringmatch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | StringMatchExact :the input string must match exactly the match value.<br /> | 
+| `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> | 
+| `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> | 
+| `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
 
 
 #### TCPActiveHealthChecker
@@ -2757,6 +2892,13 @@ TLSVersion specifies the TLS version
 _Appears in:_
 - [TLSSettings](#tlssettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | TLSAuto allows Envoy to choose the optimal TLS Version<br /> | 
+| `1.0` | TLS1.0 specifies TLS version 1.0<br /> | 
+| `1.1` | TLS1.1 specifies TLS version 1.1<br /> | 
+| `1.2` | TLSv1.2 specifies TLS version 1.2<br /> | 
+| `1.3` | TLSv1.3 specifies TLS version 1.3<br /> | 
 
 
 #### Timeout
@@ -2800,6 +2942,10 @@ _Underlying type:_ _string_
 _Appears in:_
 - [TracingProvider](#tracingprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` |  | 
+| `OpenTelemetry` |  | 
 
 
 #### TriggerEnum
@@ -2811,6 +2957,20 @@ TriggerEnum specifies the conditions that trigger retries.
 _Appears in:_
 - [RetryOn](#retryon)
 
+| Value | Description |
+| ----- | ----------- |
+| `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> | 
+| `gateway-error` | The response is a gateway error (502,503 or 504).<br /> | 
+| `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> | 
+| `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> | 
+| `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> | 
+| `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> | 
+| `retriable-status-codes` | The upstream server responds with any response code matching one defined in the RetriableStatusCodes.<br /> | 
+| `cancelled` | The gRPC status code in the response headers is “cancelled”.<br /> | 
+| `deadline-exceeded` | The gRPC status code in the response headers is “deadline-exceeded”.<br /> | 
+| `internal` | The gRPC status code in the response headers is “internal”.<br /> | 
+| `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> | 
+| `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
 
 
 #### Wasm
@@ -2859,6 +3019,10 @@ WasmCodeSourceType specifies the types of sources for the wasm code.
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
 
+| Value | Description |
+| ----- | ----------- |
+| `HTTP` | HTTPWasmCodeSourceType allows the user to specify the wasm code in an HTTP URL.<br /> | 
+| `Image` | ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.<br /> | 
 
 
 #### WithUnderscoresAction
@@ -2871,6 +3035,11 @@ is encountered.
 _Appears in:_
 - [HeaderSettings](#headersettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `Allow` | WithUnderscoresActionAllow allows headers with underscores to be passed through.<br /> | 
+| `RejectRequest` | WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with<br />the 400 status. HTTP/2 requests end with the stream reset.<br /> | 
+| `DropHeader` | WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header<br />is dropped before the filter chain is invoked and as such filters will not see<br />dropped headers.<br /> | 
 
 
 #### XDSTranslatorHook
@@ -2883,6 +3052,12 @@ for the xds-translator
 _Appears in:_
 - [XDSTranslatorHooks](#xdstranslatorhooks)
 
+| Value | Description |
+| ----- | ----------- |
+| `VirtualHost` |  | 
+| `Route` |  | 
+| `HTTPListener` |  | 
+| `Translation` |  | 
 
 
 #### XDSTranslatorHooks
