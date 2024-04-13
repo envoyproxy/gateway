@@ -6035,8 +6035,11 @@ spec:
                       proxies.
                     properties:
                       enablePerEndpointStats:
-                        description: EnablePerEndpointStats enables envoy stats metrics
-                          for peer endpoint
+                        description: |-
+                          EnablePerEndpointStats enables envoy stats metrics for peer endpoint
+                          WARNING: This field will let Envoy record the statistics of each endpoint.
+                          When the number of endpoints reaches a certain number, this may cause performance problems.
+                          Please use with caution.
                         type: boolean
                       enableVirtualHostStats:
                         description: EnableVirtualHostStats enables envoy stat metrics

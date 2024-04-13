@@ -31,6 +31,9 @@ type ProxyMetrics struct {
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
 
 	// EnablePerEndpointStats enables envoy stats metrics for peer endpoint
+	// WARNING: This field will let Envoy record the statistics of each endpoint.
+	// When the number of endpoints reaches a certain number, this may cause performance problems.
+	// Please use with caution.
 	EnablePerEndpointStats bool `json:"enablePerEndpointStats,omitempty"`
 }
 
