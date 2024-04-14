@@ -648,6 +648,46 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "enable-tracing",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						Provider: &egv1a1.RateLimitTracingProvider{
+							URL: "http://trace-collector.envoy-gateway-system.svc.cluster.local:4318",
+						},
+					},
+				},
+			},
+		},
+		{
+			caseName: "enable-tracing-custom",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						SamplingRate: func() *uint32 {
+							var samplingRate uint32 = 55
+							return &samplingRate
+						}(),
+						Provider: &egv1a1.RateLimitTracingProvider{
+							URL: "trace-collector.envoy-gateway-system.svc.cluster.local:4317",
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {

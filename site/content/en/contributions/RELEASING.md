@@ -148,7 +148,7 @@ export GITHUB_REMOTE=origin
       </a>
    ```
 
-   6. Uodate the `Documentation` referred link on the menu in `site/hugo.toml`:
+   6. Update the `Documentation` referred link on the menu in `site/hugo.toml`:
 
    ```shell
    [[menu.main]]
