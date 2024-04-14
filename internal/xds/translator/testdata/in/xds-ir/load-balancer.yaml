@@ -10,8 +10,9 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    loadBalancer:
-      roundRobin: {}
+    backendTraffic:
+      loadBalancer:
+        roundRobin: {}
     destination:
       name: "first-route-dest"
       settings:
@@ -20,8 +21,9 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    loadBalancer:
-      random: {}
+    backendTraffic:
+      loadBalancer:
+        random: {}
     destination:
       name: "second-route-dest"
       settings:
@@ -30,8 +32,9 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    loadBalancer:
-      leastRequest: {}
+    backendTraffic:
+      loadBalancer:
+        leastRequest: {}
     destination:
       name: "third-route-dest"
       settings:
@@ -40,9 +43,10 @@ http:
           port: 50000
   - name: "fourth-route"
     hostname: "*"
-    loadBalancer:
-      consistentHash:
-        sourceIP: true
+    backendTraffic:
+      loadBalancer:
+        consistentHash:
+          sourceIP: true
     destination:
       name: "fourth-route-dest"
       settings:
@@ -51,10 +55,11 @@ http:
           port: 50000
   - name: "fifth-route"
     hostname: "*"
-    loadBalancer:
-      leastRequest:
-        slowStart:
-          window: 60s
+    backendTraffic:
+      loadBalancer:
+        leastRequest:
+          slowStart:
+            window: 60s
     destination:
       name: "fifth-route-dest"
       settings:
@@ -63,10 +68,11 @@ http:
           port: 50000
   - name: "sixth-route"
     hostname: "*"
-    loadBalancer:
-      roundRobin:
-        slowStart:
-          window: 300s
+    backendTraffic:
+      loadBalancer:
+        roundRobin:
+          slowStart:
+            window: 300s
     destination:
       name: "sixth-route-dest"
       settings:

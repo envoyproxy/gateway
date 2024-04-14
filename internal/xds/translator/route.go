@@ -99,13 +99,18 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil && httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil &&
-		httpRoute.Timeout.HTTP.RequestTimeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.HTTP.RequestTimeout.Duration)
+	if router.GetRoute() != nil &&
+		httpRoute.BackendTraffic != nil &&
+		httpRoute.BackendTraffic.Timeout != nil &&
+		httpRoute.BackendTraffic.Timeout.HTTP != nil &&
+		httpRoute.BackendTraffic.Timeout.HTTP.RequestTimeout != nil {
+		router.GetRoute().Timeout = durationpb.New(httpRoute.BackendTraffic.Timeout.HTTP.RequestTimeout.Duration)
 	}
 
 	// Retries
-	if router.GetRoute() != nil && httpRoute.Retry != nil {
+	if router.GetRoute() != nil &&
+		httpRoute.BackendTraffic != nil &&
+		httpRoute.BackendTraffic.Retry != nil {
 		if rp, err := buildRetryPolicy(httpRoute); err == nil {
 			router.GetRoute().RetryPolicy = rp
 		} else {
@@ -259,17 +264,20 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 }
 
 func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
-	if httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil {
-		if httpRoute.Timeout.HTTP.RequestTimeout != nil {
+	if httpRoute.BackendTraffic != nil &&
+		httpRoute.BackendTraffic.Timeout != nil &&
+		httpRoute.BackendTraffic.Timeout.HTTP != nil {
+		rt := httpRoute.BackendTraffic.Timeout.HTTP.RequestTimeout
+		if rt != nil {
 			timeout := time.Hour // Default to 1 hour
 
 			// Ensure is not less than the request timeout
-			if timeout < httpRoute.Timeout.HTTP.RequestTimeout.Duration {
-				timeout = httpRoute.Timeout.HTTP.RequestTimeout.Duration
+			if timeout < rt.Duration {
+				timeout = rt.Duration
 			}
 
 			// Disable idle timeout when request timeout is disabled
-			if httpRoute.Timeout.HTTP.RequestTimeout.Duration == 0 {
+			if rt.Duration == 0 {
 				timeout = 0
 			}
 
@@ -436,11 +444,15 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 
 func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy {
 	// Return early
-	if httpRoute == nil || httpRoute.LoadBalancer == nil || httpRoute.LoadBalancer.ConsistentHash == nil {
+	if httpRoute == nil ||
+		httpRoute.BackendTraffic == nil ||
+		httpRoute.BackendTraffic.LoadBalancer == nil ||
+		httpRoute.BackendTraffic.LoadBalancer.ConsistentHash == nil {
 		return nil
 	}
 
-	if httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil && *httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+	ch := httpRoute.BackendTraffic.LoadBalancer.ConsistentHash
+	if ch.SourceIP != nil && *ch.SourceIP {
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
 				ConnectionProperties: &routev3.RouteAction_HashPolicy_ConnectionProperties{
@@ -455,8 +467,8 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 }
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
-	if route.Retry != nil {
-		rr := route.Retry
+	if route.BackendTraffic != nil && route.BackendTraffic.Retry != nil {
+		rr := route.BackendTraffic.Retry
 		rp := &routev3.RetryPolicy{
 			RetryOn:              retryDefaultRetryOn,
 			RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},

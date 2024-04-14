@@ -629,18 +629,22 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
+	bt := httpRoute.BackendTraffic
+	if bt == nil {
+		bt = new(ir.BackendTrafficFeatures)
+	}
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
 		tSocket:        nil,
 		endpointType:   buildEndpointType(httpRoute.Destination.Settings),
-		loadBalancer:   httpRoute.LoadBalancer,
-		proxyProtocol:  httpRoute.ProxyProtocol,
-		circuitBreaker: httpRoute.CircuitBreaker,
-		healthCheck:    httpRoute.HealthCheck,
+		loadBalancer:   bt.LoadBalancer,
+		proxyProtocol:  bt.ProxyProtocol,
+		circuitBreaker: bt.CircuitBreaker,
+		healthCheck:    bt.HealthCheck,
 		http1Settings:  http1Settings,
-		timeout:        httpRoute.Timeout,
-		tcpkeepalive:   httpRoute.TCPKeepalive,
+		timeout:        bt.Timeout,
+		tcpkeepalive:   bt.TCPKeepalive,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

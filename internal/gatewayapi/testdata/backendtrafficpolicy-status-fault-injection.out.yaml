@@ -342,7 +342,15 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic:
+          faultInjection:
+            abort:
+              grpcStatus: 14
+              percentage: 100
+            delay:
+              fixedDelay: 5.4s
+              percentage: 80
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -354,13 +362,6 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
-        faultInjection:
-          abort:
-            grpcStatus: 14
-            percentage: 100
-          delay:
-            fixedDelay: 5.4s
-            percentage: 80
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
@@ -379,7 +380,12 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
+      - backendTraffic:
+          faultInjection:
+            abort:
+              httpStatus: 14
+              percentage: 0.01
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -391,10 +397,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        faultInjection:
-          abort:
-            httpStatus: 14
-            percentage: 0.01
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
@@ -402,7 +404,15 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route2
-      - backendWeights:
+      - backendTraffic:
+          faultInjection:
+            abort:
+              httpStatus: 500
+              percentage: 100
+            delay:
+              fixedDelay: 5.4s
+              percentage: 80
+        backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -414,13 +424,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        faultInjection:
-          abort:
-            httpStatus: 500
-            percentage: 100
-          delay:
-            fixedDelay: 5.4s
-            percentage: 80
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
