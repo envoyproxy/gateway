@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
@@ -678,7 +677,7 @@ func TestDeployment(t *testing.T) {
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
 					Tracing: &egv1a1.RateLimitTracing{
-						SamplingRate: pointer.Uint32(55),
+						SamplingRate: ptr.To[uint32](55),
 						Provider: &egv1a1.RateLimitTracingProvider{
 							URL: "trace-collector.envoy-gateway-system.svc.cluster.local:4317",
 						},
