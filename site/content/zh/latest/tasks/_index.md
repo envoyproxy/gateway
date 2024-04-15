@@ -1,5 +1,5 @@
 ---
-title: "用户指南"
+title: "任务"
 weight: 2
-description: 本节包含关于 Envoy Gateway 的用户指南。
+description: 通过任务学习 Envoy Gateway 实践。
 ---
