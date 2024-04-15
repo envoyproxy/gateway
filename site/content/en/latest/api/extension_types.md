@@ -2316,6 +2316,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
+| `enableCompression` | _boolean_ |  true  | Enable the compression on Prometheus endpoint. |
+| `compressionLibrary` | _string_ |  true  | Compression type |
 
 
 #### ProxyProtocol

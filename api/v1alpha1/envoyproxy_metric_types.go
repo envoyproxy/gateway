@@ -79,4 +79,10 @@ type ProxyOpenTelemetrySink struct {
 type ProxyPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
+	// Enable the compression on Prometheus endpoint.
+	EnableCompression bool `json:"enableCompression,omitempty"`
+	// Compression type
+	// +kubebuilder:validation:Enum=gzip;brotli;zstd
+	// +kubebuilder:default=gzip
+	CompressionLibrary string `json:"compressionLibrary,omitempty"`
 }
