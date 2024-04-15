@@ -677,10 +677,7 @@ func TestDeployment(t *testing.T) {
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
 					Tracing: &egv1a1.RateLimitTracing{
-						SamplingRate: func() *uint32 {
-							var samplingRate uint32 = 55
-							return &samplingRate
-						}(),
+						SamplingRate: ptr.To[uint32](55),
 						Provider: &egv1a1.RateLimitTracingProvider{
 							URL: "trace-collector.envoy-gateway-system.svc.cluster.local:4317",
 						},
