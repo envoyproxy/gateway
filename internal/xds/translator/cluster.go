@@ -397,17 +397,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 				Metadata: metadata,
 				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 					Endpoint: &endpointv3.Endpoint{
-						Address: &corev3.Address{
-							Address: &corev3.Address_SocketAddress{
-								SocketAddress: &corev3.SocketAddress{
-									Protocol: corev3.SocketAddress_TCP,
-									Address:  irEp.Host,
-									PortSpecifier: &corev3.SocketAddress_PortValue{
-										PortValue: irEp.Port,
-									},
-								},
-							},
-						},
+						Address: buildAddress(irEp),
 					},
 				},
 			}
@@ -626,4 +616,27 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 	}
 
 	return ka
+}
+
+func buildAddress(irEp *ir.DestinationEndpoint) *corev3.Address {
+	if irEp.Path != nil {
+		return &corev3.Address{
+			Address: &corev3.Address_Pipe{
+				Pipe: &corev3.Pipe{
+					Path: *irEp.Path,
+				},
+			},
+		}
+	}
+	return &corev3.Address{
+		Address: &corev3.Address_SocketAddress{
+			SocketAddress: &corev3.SocketAddress{
+				Protocol: corev3.SocketAddress_TCP,
+				Address:  irEp.Host,
+				PortSpecifier: &corev3.SocketAddress_PortValue{
+					PortValue: irEp.Port,
+				},
+			},
+		},
+	}
 }

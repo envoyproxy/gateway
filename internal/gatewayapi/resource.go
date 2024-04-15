@@ -56,6 +56,7 @@ type Resources struct {
 	SecurityPolicies       []*egv1a1.SecurityPolicy       `json:"securityPolicies,omitempty" yaml:"securityPolicies,omitempty"`
 	BackendTLSPolicies     []*gwapiv1a3.BackendTLSPolicy  `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
 	EnvoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
+	Backends               []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -77,6 +78,7 @@ func NewResources() *Resources {
 		SecurityPolicies:       []*egv1a1.SecurityPolicy{},
 		BackendTLSPolicies:     []*gwapiv1a3.BackendTLSPolicy{},
 		EnvoyExtensionPolicies: []*egv1a1.EnvoyExtensionPolicy{},
+		Backends:               []*egv1a1.Backend{},
 	}
 }
 
@@ -104,6 +106,16 @@ func (r *Resources) GetServiceImport(namespace, name string) *mcsapi.ServiceImpo
 	for _, svcImp := range r.ServiceImports {
 		if svcImp.Namespace == namespace && svcImp.Name == name {
 			return svcImp
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetBackend(namespace, name string) *egv1a1.Backend {
+	for _, be := range r.Backends {
+		if be.Namespace == namespace && be.Name == name {
+			return be
 		}
 	}
 

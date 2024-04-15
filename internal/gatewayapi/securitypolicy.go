@@ -787,11 +787,7 @@ func (t *Translator) buildExtAuth(
 		protocol = ir.GRPC
 	}
 
-	if err = t.validateExtServiceBackendReference(
-		backendRef,
-		policy.Namespace,
-		KindSecurityPolicy,
-		resources); err != nil {
+	if err = t.validateExtServiceBackendReference(backendRef, policy.Namespace, policy.Kind, resources); err != nil {
 		return nil, err
 	}
 	authority = fmt.Sprintf(

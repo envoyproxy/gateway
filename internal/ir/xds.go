@@ -38,6 +38,8 @@ var (
 	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                 = errors.New("field Port specified is invalid")
+	ErrDestEndpointUDSPortInvalid              = errors.New("field Port must not be specified for Unix Domain Socket address")
+	ErrDestEndpointUDSHostInvalid              = errors.New("field Host must not be specified for Unix Domain Socket address")
 	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
 	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
@@ -1027,21 +1029,33 @@ type DestinationEndpoint struct {
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
 	Port uint32 `json:"port" yaml:"port"`
+	// Path refers to the Unix Domain Socket
+	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
 
-	err := validation.IsDNS1123Subdomain(d.Host)
-	_, pErr := netip.ParseAddr(d.Host)
+	// unix domain socket
+	if d.Path != nil {
+		if d.Port != 0 {
+			errs = errors.Join(errs, ErrDestEndpointUDSPortInvalid)
+		}
+		if d.Host != "" {
+			errs = errors.Join(errs, ErrDestEndpointUDSHostInvalid)
+		}
+	} else { // IP or FQDN
+		err := validation.IsDNS1123Subdomain(d.Host)
+		_, pErr := netip.ParseAddr(d.Host)
 
-	if err != nil && pErr != nil {
-		errs = errors.Join(errs, ErrDestEndpointHostInvalid)
-	}
+		if err != nil && pErr != nil {
+			errs = errors.Join(errs, ErrDestEndpointHostInvalid)
+		}
 
-	if d.Port == 0 {
-		errs = errors.Join(errs, ErrDestEndpointPortInvalid)
+		if d.Port == 0 {
+			errs = errors.Join(errs, ErrDestEndpointPortInvalid)
+		}
 	}
 
 	return errs

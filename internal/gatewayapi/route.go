@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
@@ -1176,6 +1178,17 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			Endpoints:   endpoints,
 			AddressType: addrType,
 		}
+		// TODO: support mixed endpointslice address type for the same backendRef
+		if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
+			routeStatus := GetRouteStatus(route)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				route.GetGeneration(),
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapiv1a2.RouteReasonResolvedRefs,
+				"Mixed endpointslice address type for the same backendRef is not supported")
+		}
 	case KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS = t.applyBackendTLSSetting(
@@ -1191,18 +1204,43 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			},
 			resources)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-	}
-
-	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			gwapiv1a2.RouteReasonResolvedRefs,
-			"Mixed endpointslice address type for the same backendRef is not supported")
+		// TODO: support mixed endpointslice address type for the same backendRef
+		if !t.EndpointRoutingDisabled && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
+			routeStatus := GetRouteStatus(route)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				route.GetGeneration(),
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapiv1a2.RouteReasonResolvedRefs,
+				"Mixed endpointslice address type for the same backendRef is not supported")
+		}
+	case v1alpha1.KindBackend:
+		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
+		ds.TLS = t.applyBackendTLSSetting(
+			backendRef.BackendObjectReference,
+			backendNamespace,
+			gwapiv1a2.ParentReference{
+				Group:       parentRef.Group,
+				Kind:        parentRef.Kind,
+				Namespace:   parentRef.Namespace,
+				Name:        parentRef.Name,
+				SectionName: parentRef.SectionName,
+				Port:        parentRef.Port,
+			},
+			resources)
+		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
+		// TODO: support mixed endpointslice address type for the same backendRef
+		if ds.AddressType != nil && *ds.AddressType == ir.MIXED {
+			routeStatus := GetRouteStatus(route)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				route.GetGeneration(),
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapiv1a2.RouteReasonResolvedRefs,
+				"Mixed FQDN and IPv4 or Unix address type for the same backendRef is not supported")
+		}
 	}
 
 	ds.Weight = &weight
@@ -1490,4 +1528,66 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference) gwap
 		}(),
 	}
 	return ref
+}
+
+func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *Resources) *ir.DestinationSetting {
+	var (
+		dstEndpoints []*ir.DestinationEndpoint
+		dstAddrType  *ir.DestinationAddressType
+		dstProtocol  ir.AppProtocol
+	)
+
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
+
+	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	for _, bep := range backend.Spec.Endpoints {
+		var irde *ir.DestinationEndpoint
+		switch {
+		case bep.IPv4 != nil:
+			ip := net.ParseIP(bep.IPv4.Address)
+			if ip != nil {
+				addrTypeMap[ir.IP]++
+				irde = &ir.DestinationEndpoint{
+					Host: bep.IPv4.Address,
+					Port: uint32(bep.IPv4.Port),
+				}
+			}
+		case bep.FQDN != nil:
+			addrTypeMap[ir.FQDN]++
+			irde = &ir.DestinationEndpoint{
+				Host: bep.FQDN.Hostname,
+				Port: uint32(bep.FQDN.Port),
+			}
+		case bep.Unix != nil:
+			addrTypeMap[ir.IP]++
+			irde = &ir.DestinationEndpoint{
+				Path: ptr.To(bep.Unix.Path),
+			}
+		}
+
+		dstEndpoints = append(dstEndpoints, irde)
+	}
+
+	for addrTypeState, addrTypeCounts := range addrTypeMap {
+		if addrTypeCounts == len(backend.Spec.Endpoints) {
+			dstAddrType = ptr.To(addrTypeState)
+			break
+		}
+	}
+
+	if len(addrTypeMap) > 0 && dstAddrType == nil {
+		dstAddrType = ptr.To(ir.MIXED)
+	}
+
+	for _, ap := range backend.Spec.AppProtocols {
+		if ap == v1alpha1.AppProtocolTypeH2C {
+			dstProtocol = ir.HTTP2
+		}
+	}
+
+	return &ir.DestinationSetting{
+		Protocol:    dstProtocol,
+		Endpoints:   dstEndpoints,
+		AddressType: dstAddrType,
+	}
 }

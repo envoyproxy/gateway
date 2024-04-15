@@ -117,6 +117,7 @@ rules:
   - backendtrafficpolicies
   - securitypolicies
   - envoyextensionpolicies
+  - backends
   verbs:
   - get
   - list
@@ -129,6 +130,7 @@ rules:
   - backendtrafficpolicies/status
   - securitypolicies/status
   - envoyextensionpolicies/status
+  - backends/status
   verbs:
   - update
 - apiGroups:

@@ -256,6 +256,28 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
+// validateBackendForReconcile tries finding the owning Gateway of the Backend
+// if it exists, finds the Gateway's Deployment, and further updates the Gateway
+// status Ready condition. All Services are pushed for reconciliation.
+func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bool {
+	be, ok := obj.(*egv1a1.Backend)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	nsName := utils.NamespacedName(be)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+}
+
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
 	spList := &egv1a1.SecurityPolicyList{}
 	if err := r.client.List(context.Background(), spList, &client.ListOptions{

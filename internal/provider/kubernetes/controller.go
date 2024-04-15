@@ -234,6 +234,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
+		if err = r.processBackends(ctx, gwcResource); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// Add the referenced services, ServiceImports, and EndpointSlices in
 		// the collected BackendRefs to the resourceTree.
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
@@ -352,6 +356,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 // - Services
 // - ServiceImports
 // - EndpointSlices
+// - Backends
 func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResource *gatewayapi.Resources, resourceMappings *resourceMappings) {
 	for backendRef := range resourceMappings.allAssociatedBackendRefs {
 		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService)
@@ -387,25 +392,40 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					"name", string(backendRef.Name))
 			}
 			endpointSliceLabelKey = mcsapi.LabelServiceName
+
+		case egv1a1.KindBackend:
+			backend := new(egv1a1.Backend)
+			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, backend)
+			if err != nil {
+				r.log.Error(err, "failed to get Backend", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			} else {
+				resourceMappings.allAssociatedNamespaces[backend.Namespace] = struct{}{}
+				gwcResource.Backends = append(gwcResource.Backends, backend)
+				r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			}
 		}
 
 		// Retrieve the EndpointSlices associated with the service
-		endpointSliceList := new(discoveryv1.EndpointSliceList)
-		opts := []client.ListOption{
-			client.MatchingLabels(map[string]string{
-				endpointSliceLabelKey: string(backendRef.Name),
-			}),
-			client.InNamespace(string(*backendRef.Namespace)),
-		}
-		if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
-			r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
-				backendRefKind, string(backendRef.Name))
-		} else {
-			for _, endpointSlice := range endpointSliceList.Items {
-				endpointSlice := endpointSlice
-				r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
-					"name", endpointSlice.Name)
-				gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
+		if endpointSliceLabelKey != "" {
+			endpointSliceList := new(discoveryv1.EndpointSliceList)
+			opts := []client.ListOption{
+				client.MatchingLabels(map[string]string{
+					endpointSliceLabelKey: string(backendRef.Name),
+				}),
+				client.InNamespace(string(*backendRef.Namespace)),
+			}
+			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
+					backendRefKind, string(backendRef.Name))
+			} else {
+				for _, endpointSlice := range endpointSliceList.Items {
+					endpointSlice := endpointSlice
+					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
+						"name", endpointSlice.Name)
+					gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
+				}
 			}
 		}
 	}
@@ -925,6 +945,24 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	return nil
 }
 
+// processBackends adds Backends to the resourceTree
+func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree *gatewayapi.Resources) error {
+	backends := egv1a1.BackendList{}
+	if err := r.client.List(ctx, &backends); err != nil {
+		return fmt.Errorf("error listing Backends: %w", err)
+	}
+
+	for _, backend := range backends.Items {
+		backend := backend
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		backend.Status = egv1a1.BackendStatus{}
+
+		resourceTree.Backends = append(resourceTree.Backends, &backend)
+	}
+	return nil
+}
+
 // removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
 func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
 	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
@@ -1179,6 +1217,28 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}),
 			esPredicates...)); err != nil {
 		return err
+	}
+
+	// Watch Backend CRUDs and process affected *Route objects.
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
+		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
+			predicate.NewTypedPredicateFuncs[*egv1a1.Backend](func(be *egv1a1.Backend) bool {
+				return r.validateBackendForReconcile(be)
+			}),
+		}
+		if r.namespaceLabel != nil {
+			backendPredicates = append(backendPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.Backend](func(be *egv1a1.Backend) bool {
+				return r.hasMatchingNamespaceLabels(be)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.Backend{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, be *egv1a1.Backend) []reconcile.Request {
+					return r.enqueueClass(ctx, be)
+				}),
+				backendPredicates...)); err != nil {
+			return err
+		}
 	}
 
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.

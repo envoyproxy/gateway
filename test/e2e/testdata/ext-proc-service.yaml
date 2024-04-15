@@ -99,11 +99,44 @@ data:
     		log.Fatalf("Failed to load TLS credentials: %v", err)
     	}
     	gs := grpc.NewServer(grpc.Creds(creds))
-
     	envoy_service_proc_v3.RegisterExternalProcessorServer(gs, &extProcServer{})
 
     	go func() {
     		err = gs.Serve(lis)
+    		if err != nil {
+    			log.Fatalf("failed to serve: %v", err)
+    		}
+    	}()
+
+    	// Create Unix listener
+    	gus := grpc.NewServer(grpc.Creds(creds))
+    	envoy_service_proc_v3.RegisterExternalProcessorServer(gus, &extProcServer{})
+
+    	udsAddr := "/var/run/ext-proc/extproc.sock"
+    	if _, err := os.Stat(udsAddr); err == nil {
+    		if err := os.RemoveAll(udsAddr); err != nil {
+    			log.Fatalf("failed to remove: %v", err)
+    		}
+    	}
+
+    	ul, err := net.Listen("unix", udsAddr)
+    	if err != nil {
+    		log.Fatalf("failed to listen: %v", err)
+    	}
+
+    	err = os.Chmod(udsAddr, 0700)
+    	if err != nil {
+    		log.Fatalf("failed to set permissions: %v", err)
+    	}
+
+    	// envoy distroless uid
+    	err = os.Chown(udsAddr, 65532, 0)
+    	if err != nil {
+     	  log.Fatalf("failed to set permissions: %v", err)
+    	}
+
+    	go func() {
+    		err = gus.Serve(ul)
     		if err != nil {
     			log.Fatalf("failed to serve: %v", err)
     		}
@@ -376,7 +409,7 @@ spec:
           command:
             - sh
             - "-c"
-            - "cp -a /app /app-live && cd /app-live && go  run . --certPath=/app-live/certs/ "
+            - "cd /app && go run . --certPath=/app/certs/"
           image: golang:1.22.3-alpine
           ports:
             - containerPort: 8000
@@ -385,6 +418,8 @@ spec:
               mountPath: /app
             - name: grpc-ext-proc-secret
               mountPath: /app/certs
+            - name: socket-dir
+              mountPath: /var/run/ext-proc/
           readinessProbe:
             httpGet:
               path: /healthz
@@ -401,6 +436,10 @@ spec:
                 path: server.crt
               - key: tls.key
                 path: server.key
+        - name: socket-dir
+          hostPath:
+            path: /var/run/ext-proc/
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service
