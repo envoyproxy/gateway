@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       faultInjection:
         abort:
           httpStatus: 500
@@ -25,7 +25,7 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       faultInjection:
         delay:
           fixedDelay: 5.4s
@@ -40,7 +40,7 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       faultInjection:
         abort:
           httpStatus: 500
@@ -58,7 +58,7 @@ http:
           port: 50000
   - name: "fourth-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       faultInjection:
         abort:
           grpcStatus: 14
@@ -76,7 +76,7 @@ http:
           port: 50000
   - name: "fifth-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       faultInjection: {}
     pathMatch:
       exact: "test"

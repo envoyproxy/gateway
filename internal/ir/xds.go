@@ -463,15 +463,15 @@ type HTTPRoute struct {
 	// External Processing extensions
 	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
 
-	// BackendTraffic holds the features associated with BackendTrafficPolicy
-	BackendTraffic *BackendTrafficFeatures `json:"backendTraffic,omitempty" yaml:"backendTraffic,omitempty"`
+	// Traffic holds the features associated with BackendTrafficPolicy
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
 	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
 }
 
-// BackendTrafficFeatures holds the information associated with the Backend Traffic Policy.
+// TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
-type BackendTrafficFeatures struct {
+type TrafficFeatures struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -493,7 +493,7 @@ type BackendTrafficFeatures struct {
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 }
 
-func (b *BackendTrafficFeatures) Validate() error {
+func (b *TrafficFeatures) Validate() error {
 	var errs error
 
 	if b.LoadBalancer != nil {
@@ -857,8 +857,8 @@ func (h HTTPRoute) Validate() error {
 			occurred.Insert(header)
 		}
 	}
-	if h.BackendTraffic != nil {
-		if err := h.BackendTraffic.Validate(); err != nil {
+	if h.Traffic != nil {
+		if err := h.Traffic.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

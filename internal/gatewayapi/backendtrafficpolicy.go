@@ -371,7 +371,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
-					r.BackendTraffic = &ir.BackendTrafficFeatures{
+					r.Traffic = &ir.TrafficFeatures{
 						RateLimit:      rl,
 						LoadBalancer:   lb,
 						ProxyProtocol:  pp,
@@ -383,14 +383,14 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-					r.BackendTraffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 					// Some timeout setting originate from the route
 					if policy.Spec.Timeout != nil {
 						if to, err = t.buildTimeout(policy, r); err != nil {
 							return errors.Wrap(err, "Timeout")
 						}
-						r.BackendTraffic.Timeout = to
+						r.Traffic.Timeout = to
 					}
 				}
 			}
@@ -516,11 +516,11 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			if r.BackendTraffic != nil {
+			if r.Traffic != nil {
 				continue
 			}
 
-			r.BackendTraffic = &ir.BackendTrafficFeatures{
+			r.Traffic = &ir.TrafficFeatures{
 				RateLimit:      rl,
 				LoadBalancer:   lb,
 				ProxyProtocol:  pp,
@@ -532,13 +532,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-			r.BackendTraffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 			if policy.Spec.Timeout != nil {
 				if ct, err = t.buildTimeout(policy, r); err != nil {
 					return errors.Wrap(err, "Timeout")
 				}
-				r.BackendTraffic.Timeout = ct
+				r.Traffic.Timeout = ct
 			}
 		}
 	}
@@ -1032,16 +1032,16 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 	// http request timeout is translated during the gateway-api route resource translation
 	// merge route timeout setting with backendtrafficpolicy timeout settings
 	if r != nil &&
-		r.BackendTraffic != nil &&
-		r.BackendTraffic.Timeout != nil &&
-		r.BackendTraffic.Timeout.HTTP != nil &&
-		r.BackendTraffic.Timeout.HTTP.RequestTimeout != nil {
+		r.Traffic != nil &&
+		r.Traffic.Timeout != nil &&
+		r.Traffic.Timeout.HTTP != nil &&
+		r.Traffic.Timeout.HTTP.RequestTimeout != nil {
 		if hto == nil {
 			hto = &ir.HTTPTimeout{
-				RequestTimeout: r.BackendTraffic.Timeout.HTTP.RequestTimeout,
+				RequestTimeout: r.Traffic.Timeout.HTTP.RequestTimeout,
 			}
 		} else {
-			hto.RequestTimeout = r.BackendTraffic.Timeout.HTTP.RequestTimeout
+			hto.RequestTimeout = r.Traffic.Timeout.HTTP.RequestTimeout
 		}
 	}
 

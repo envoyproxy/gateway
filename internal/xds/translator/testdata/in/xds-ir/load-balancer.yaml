@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       loadBalancer:
         roundRobin: {}
     destination:
@@ -21,7 +21,7 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       loadBalancer:
         random: {}
     destination:
@@ -32,7 +32,7 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       loadBalancer:
         leastRequest: {}
     destination:
@@ -43,7 +43,7 @@ http:
           port: 50000
   - name: "fourth-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       loadBalancer:
         consistentHash:
           sourceIP: true
@@ -55,7 +55,7 @@ http:
           port: 50000
   - name: "fifth-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       loadBalancer:
         leastRequest:
           slowStart:
@@ -68,7 +68,7 @@ http:
           port: 50000
   - name: "sixth-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       loadBalancer:
         roundRobin:
           slowStart:

@@ -8,7 +8,7 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  backendTraffic:
+  traffic:
     rateLimit:
       global:
         rules:

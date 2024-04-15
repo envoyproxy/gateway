@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       circuitBreaker:
         maxConnections: 1
         maxPendingRequests: 1

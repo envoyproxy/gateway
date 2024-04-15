@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route-ratelimit-single-rule"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         local:
           default:
@@ -35,7 +35,7 @@ http:
           port: 50000
   - name: "second-route-ratelimit-multiple-rules"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         local:
           default:
@@ -71,7 +71,7 @@ http:
           port: 50000
   - name: "third-route-ratelimit-no-rule"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         local:
           default:

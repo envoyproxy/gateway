@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       tcpKeepalive:
         idleTime: 1200
         interval: 60

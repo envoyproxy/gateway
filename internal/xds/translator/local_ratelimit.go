@@ -99,9 +99,9 @@ func listenerContainsLocalRateLimit(irListener *ir.HTTPListener) bool {
 
 func routeContainsLocalRateLimit(irRoute *ir.HTTPRoute) bool {
 	if irRoute == nil ||
-		irRoute.BackendTraffic == nil ||
-		irRoute.BackendTraffic.RateLimit == nil ||
-		irRoute.BackendTraffic.RateLimit.Local == nil {
+		irRoute.Traffic == nil ||
+		irRoute.Traffic.RateLimit == nil ||
+		irRoute.Traffic.RateLimit.Local == nil {
 		return false
 	}
 
@@ -129,7 +129,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 			route.Name)
 	}
 
-	local := irRoute.BackendTraffic.RateLimit.Local
+	local := irRoute.Traffic.RateLimit.Local
 
 	rateLimits, descriptors, err := buildRouteLocalRateLimits(local)
 	if err != nil {

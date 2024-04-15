@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         global:
           rules:
@@ -39,7 +39,7 @@ http:
             uri: https://192.168.1.250/jwt/public-key/jwks.json
   - name: "second-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         global:
           rules:
@@ -59,7 +59,7 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         global:
           rules:

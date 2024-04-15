@@ -56,7 +56,7 @@ http:
       - backendWeights:
           invalid: 0
           valid: 0
-        backendTraffic:
+        traffic:
           proxyProtocol:
             version: "V2"
         destination:

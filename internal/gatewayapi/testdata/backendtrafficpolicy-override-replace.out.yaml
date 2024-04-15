@@ -220,11 +220,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendTraffic:
-          loadBalancer:
-            consistentHash:
-              sourceIP: true
-        backendWeights:
+      - backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -243,16 +239,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
-      - backendTraffic:
+        traffic:
           loadBalancer:
-            random: {}
-          timeout:
-            http:
-              connectionIdleTimeout: 21s
-              maxConnectionDuration: 22s
-            tcp:
-              connectTimeout: 20s
-        backendWeights:
+            consistentHash:
+              sourceIP: true
+      - backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -271,3 +262,12 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+        traffic:
+          loadBalancer:
+            random: {}
+          timeout:
+            http:
+              connectionIdleTimeout: 21s
+              maxConnectionDuration: 22s
+            tcp:
+              connectTimeout: 20s

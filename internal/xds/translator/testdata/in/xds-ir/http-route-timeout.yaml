@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       timeout:
         http:
           requestTimeout: 5s
@@ -26,7 +26,7 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       timeout:
         http:
           requestTimeout: 4000s
@@ -38,7 +38,7 @@ http:
           port: 50001
   - name: "third-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       timeout:
         http:
           requestTimeout: 0s

@@ -164,7 +164,26 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendTraffic:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
           rateLimit:
             local:
               default:
@@ -196,22 +215,3 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Minute
-        backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /

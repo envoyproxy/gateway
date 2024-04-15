@@ -629,9 +629,9 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
-	bt := httpRoute.BackendTraffic
+	bt := httpRoute.Traffic
 	if bt == nil {
-		bt = new(ir.BackendTrafficFeatures)
+		bt = new(ir.TrafficFeatures)
 	}
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,

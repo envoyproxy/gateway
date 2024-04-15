@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         global:
           rules:
@@ -30,7 +30,7 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         global:
           rules:
@@ -50,7 +50,7 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       rateLimit:
         global:
           rules:

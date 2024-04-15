@@ -306,12 +306,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendTraffic:
-          tcpKeepalive:
-            idleTime: 1200
-            interval: 60
-            probes: 3
-        backendWeights:
+      - backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -346,6 +341,11 @@ xdsIR:
             - x-header-7
             - x-header-8
             maxAge: 33m20s
+        traffic:
+          tcpKeepalive:
+            idleTime: 1200
+            interval: 60
+            probes: 3
     - address: 0.0.0.0
       hostnames:
       - '*'

@@ -102,8 +102,8 @@ func listenerContainsFault(irListener *ir.HTTPListener) bool {
 // routeContainsFault returns true if Fault exists for the provided route.
 func routeContainsFault(irRoute *ir.HTTPRoute) bool {
 	if irRoute != nil &&
-		irRoute.BackendTraffic != nil &&
-		irRoute.BackendTraffic.FaultInjection != nil {
+		irRoute.Traffic != nil &&
+		irRoute.Traffic.FaultInjection != nil {
 		return true
 	}
 	return false
@@ -122,7 +122,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.BackendTraffic == nil || irRoute.BackendTraffic.FaultInjection == nil {
+	if irRoute.Traffic == nil || irRoute.Traffic.FaultInjection == nil {
 		return nil
 	}
 
@@ -135,7 +135,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 	routeCfgProto := &xdshttpfaultv3.HTTPFault{}
 
-	delay := irRoute.BackendTraffic.FaultInjection.Delay
+	delay := irRoute.Traffic.FaultInjection.Delay
 	if delay != nil {
 		routeCfgProto.Delay = &xdsfault.FaultDelay{}
 		if delay.Percentage != nil {
@@ -148,7 +148,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 	}
 
-	abort := irRoute.BackendTraffic.FaultInjection.Abort
+	abort := irRoute.Traffic.FaultInjection.Abort
 	if abort != nil {
 		routeCfgProto.Abort = &xdshttpfaultv3.FaultAbort{}
 		if abort.Percentage != nil {

@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       healthCheck:
         active:
           timeout: "500ms"
@@ -41,7 +41,7 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       healthCheck:
         active:
           timeout: "1s"
@@ -72,7 +72,7 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       healthCheck:
         active:
           timeout: "1s"
@@ -100,7 +100,7 @@ http:
           port: 50000
   - name: "fourth-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       healthCheck:
         active:
           timeout: "1s"

@@ -233,8 +233,8 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		var rto *ir.Timeout
 
 		// Timeout is translated from multiple resources and may already be partially set
-		if irRoute.BackendTraffic != nil && irRoute.BackendTraffic.Timeout != nil {
-			rto = irRoute.BackendTraffic.Timeout.DeepCopy()
+		if irRoute.Traffic != nil && irRoute.Traffic.Timeout != nil {
+			rto = irRoute.Traffic.Timeout.DeepCopy()
 		} else {
 			rto = &ir.Timeout{}
 		}
@@ -257,7 +257,7 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			setRequestTimeout(rto, metav1.Duration{Duration: d})
 		}
 
-		irRoute.BackendTraffic = &ir.BackendTrafficFeatures{
+		irRoute.Traffic = &ir.TrafficFeatures{
 			Timeout: rto,
 		}
 	}
@@ -663,10 +663,10 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				if routeRoute.BackendWeights.Invalid > 0 {
 					hostRoute.BackendWeights = routeRoute.BackendWeights
 				}
-				if routeRoute.BackendTraffic != nil {
-					hostRoute.BackendTraffic = &ir.BackendTrafficFeatures{
-						Timeout: routeRoute.BackendTraffic.Timeout,
-						Retry:   routeRoute.BackendTraffic.Retry,
+				if routeRoute.Traffic != nil {
+					hostRoute.Traffic = &ir.TrafficFeatures{
+						Timeout: routeRoute.Traffic.Timeout,
+						Retry:   routeRoute.Traffic.Retry,
 					}
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)

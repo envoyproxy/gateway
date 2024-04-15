@@ -276,17 +276,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendTraffic:
-          retry:
-            perRetry:
-              backOff:
-                baseInterval: 100ms
-                maxInterval: 10s
-              timeout: 250ms
-            retryOn:
-              triggers:
-              - cancelled
-        backendWeights:
+      - backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -301,6 +291,16 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+        traffic:
+          retry:
+            perRetry:
+              backOff:
+                baseInterval: 100ms
+                maxInterval: 10s
+              timeout: 250ms
+            retryOn:
+              triggers:
+              - cancelled
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -316,22 +316,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendTraffic:
-          retry:
-            numRetries: 5
-            perRetry:
-              backOff:
-                baseInterval: 100ms
-                maxInterval: 10s
-              timeout: 250ms
-            retryOn:
-              httpStatusCodes:
-              - 429
-              - 503
-              triggers:
-              - connect-failure
-              - retriable-status-codes
-        backendWeights:
+      - backendWeights:
           invalid: 0
           valid: 0
         destination:
@@ -350,3 +335,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          retry:
+            numRetries: 5
+            perRetry:
+              backOff:
+                baseInterval: 100ms
+                maxInterval: 10s
+              timeout: 250ms
+            retryOn:
+              httpStatusCodes:
+              - 429
+              - 503
+              triggers:
+              - connect-failure
+              - retriable-status-codes

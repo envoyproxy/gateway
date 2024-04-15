@@ -8,7 +8,7 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  backendTraffic:
+  traffic:
     rateLimit:
       global:
         rules:
@@ -21,7 +21,7 @@ routes:
   pathMatch:
     exact: "foo/baz"
 - name: "second-route"
-  backendTraffic:
+  traffic:
     rateLimit:
       global:
         rules:

@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    backendTraffic:
+    traffic:
       retry:
         numRetries: 5
         retryOn:
@@ -34,7 +34,7 @@ http:
           port: 50000
   - name: "second-route-defaults"
     hostname: "foo"
-    backendTraffic:
+    traffic:
       retry: {}
     destination:
       name: "first-route-dest"
@@ -44,7 +44,7 @@ http:
           port: 50000
   - name: "third-route-error"
     hostname: "bar"
-    backendTraffic:
+    traffic:
       retry:
         retryOn:
           triggers:

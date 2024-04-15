@@ -75,9 +75,9 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 
 func routeContainsGlobalRateLimit(irRoute *ir.HTTPRoute) bool {
 	if irRoute == nil ||
-		irRoute.BackendTraffic == nil ||
-		irRoute.BackendTraffic.RateLimit == nil ||
-		irRoute.BackendTraffic.RateLimit.Global == nil {
+		irRoute.Traffic == nil ||
+		irRoute.Traffic.RateLimit == nil ||
+		irRoute.Traffic.RateLimit.Global == nil {
 		return false
 	}
 
@@ -143,7 +143,7 @@ func patchRouteWithRateLimit(xdsRouteAction *routev3.RouteAction, irRoute *ir.HT
 		return nil
 	}
 
-	rateLimits := buildRouteRateLimits(irRoute.Name, irRoute.BackendTraffic.RateLimit.Global)
+	rateLimits := buildRouteRateLimits(irRoute.Name, irRoute.Traffic.RateLimit.Global)
 	xdsRouteAction.RateLimits = rateLimits
 	return nil
 }
@@ -299,7 +299,7 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 
 	for _, route := range irListener.Routes {
 		if routeContainsGlobalRateLimit(route) {
-			serviceDescriptors := buildRateLimitServiceDescriptors(route.BackendTraffic.RateLimit.Global)
+			serviceDescriptors := buildRateLimitServiceDescriptors(route.Traffic.RateLimit.Global)
 
 			// Get route rule descriptors within each route.
 			//

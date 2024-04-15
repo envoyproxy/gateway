@@ -8,7 +8,7 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  backendTraffic:
+  traffic:
     rateLimit:
       global:
         rules:
@@ -28,7 +28,7 @@ routes:
       - host: "1.2.3.4"
         port: 50000
 - name: "second-route"
-  backendTraffic:
+  traffic:
     rateLimit:
       global:
         rules:
