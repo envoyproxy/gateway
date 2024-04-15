@@ -110,6 +110,12 @@ const (
 // to the Gateway.
 // By default, no client specific configuration is validated.
 type ClientValidationContext struct {
+	// RequiredClientCertificate set to true means that Envoy will reject connections without a valid client certificate.
+	//
+	// +kubebuilder:default=true
+	// +optional
+	RequiredClientCertificate bool `json:"requiredClientCertificate,omitempty"`
+
 	// CACertificateRefs contains one or more references to
 	// Kubernetes objects that contain TLS certificates of
 	// the Certificate Authorities that can be used
