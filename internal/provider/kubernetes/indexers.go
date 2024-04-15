@@ -65,30 +65,53 @@ func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
 
 func backendEnvoyProxyIndexFunc(rawObj client.Object) []string {
 	envoyproxy := rawObj.(*v1alpha1.EnvoyProxy)
-	var backendRefs []string
+	var backendIndex []string
 
-	if envoyproxy.Spec.Telemetry != nil && envoyproxy.Spec.Telemetry.AccessLog != nil {
-		for _, settings := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
-			for _, sink := range settings.Sinks {
-				if sink.OpenTelemetry != nil {
-					for _, backendRef := range sink.OpenTelemetry.BackendRefs {
-						if backendRef.Kind == nil || string(*backendRef.Kind) == gatewayapi.KindService {
-							// If an explicit Backend namespace is not provided, use the EnvoyProxy namespace to
-							// lookup the provided Gateway Name.
-							backendRefs = append(backendRefs,
-								types.NamespacedName{
-									Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyproxy.Namespace),
-									Name:      string(backendRef.Name),
-								}.String(),
-							)
-						}
+	if envoyproxy.Spec.Telemetry != nil {
+		backendRefs := []v1alpha1.BackendRef{}
+
+		// Collect BackendRefs for access log sinks
+		if envoyproxy.Spec.Telemetry.AccessLog != nil {
+			for _, settings := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+				for _, sink := range settings.Sinks {
+					if sink.OpenTelemetry != nil {
+						backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 					}
 				}
 			}
 		}
+
+		// Collect BackendRefs for metrics sinks
+		if envoyproxy.Spec.Telemetry.Metrics != nil {
+			for _, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
+				if sink.OpenTelemetry != nil {
+					backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
+				}
+			}
+
+		}
+
+		// Collect BackendRefs for tracing provider
+		if envoyproxy.Spec.Telemetry.Tracing != nil {
+			backendRefs = append(backendRefs, envoyproxy.Spec.Telemetry.Tracing.Provider.BackendRefs...)
+		}
+
+		// Append all referenced BackendRefs to maps
+		for _, backendRef := range backendRefs {
+			if backendRef.Kind == nil || string(*backendRef.Kind) == gatewayapi.KindService {
+				// If an explicit Backend namespace is not provided, use the EnvoyProxy namespace to
+				// lookup the provided Gateway Name.
+				backendIndex = append(backendIndex,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyproxy.Namespace),
+						Name:      string(backendRef.Name),
+					}.String(),
+				)
+			}
+		}
 	}
 
-	return backendRefs
+	return backendIndex
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.

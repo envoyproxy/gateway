@@ -795,30 +795,52 @@ func (r *gatewayAPIReconciler) processEnvoyProxies(ctx context.Context, managedG
 // processEnvoyProxyObjectRefs adds the referenced resources in EnvoyProxies
 // to the resourceTree
 // - BackendRefs for AccessLog
+// - BackendRefs for Metrics
+// - BackendRefs for Tracing
 func (r *gatewayAPIReconciler) processEnvoyProxyObjectRefs(resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
 	if resourceTree.EnvoyProxy == nil {
 		return
 	}
 	envoyproxy := resourceTree.EnvoyProxy
 
-	if envoyproxy.Spec.Telemetry != nil && envoyproxy.Spec.Telemetry.AccessLog != nil {
+	if envoyproxy.Spec.Telemetry != nil {
+		backendRefs := []egv1a1.BackendRef{}
 
-		// Add the referenced BackendRefs in AccessLog to Maps for later processing
-		accessLog := envoyproxy.Spec.Telemetry.AccessLog
-		for _, settings := range accessLog.Settings {
-			for _, sink := range settings.Sinks {
-				if sink.OpenTelemetry != nil {
-					for _, backendRef := range sink.OpenTelemetry.BackendRefs {
-						backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyproxy.Namespace)
-						resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
-							Group:     backendRef.Group,
-							Kind:      backendRef.Kind,
-							Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
-							Name:      backendRef.Name,
-						}] = struct{}{}
+		// Collect BackendRefs for access log sinks
+		if envoyproxy.Spec.Telemetry.AccessLog != nil {
+			for _, settings := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+				for _, sink := range settings.Sinks {
+					if sink.OpenTelemetry != nil {
+						backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 					}
 				}
 			}
+		}
+
+		// Collect BackendRefs for metrics sinks
+		if envoyproxy.Spec.Telemetry.Metrics != nil {
+			for _, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
+				if sink.OpenTelemetry != nil {
+					backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
+				}
+			}
+
+		}
+
+		// Collect BackendRefs for tracing provider
+		if envoyproxy.Spec.Telemetry.Tracing != nil {
+			backendRefs = append(backendRefs, envoyproxy.Spec.Telemetry.Tracing.Provider.BackendRefs...)
+		}
+
+		// Append all referenced BackendRefs to maps
+		for _, backendRef := range backendRefs {
+			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyproxy.Namespace)
+			resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				Group:     backendRef.Group,
+				Kind:      backendRef.Kind,
+				Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+				Name:      backendRef.Name,
+			}] = struct{}{}
 		}
 	}
 }
