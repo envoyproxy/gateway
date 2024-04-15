@@ -6,7 +6,7 @@
 //go:build e2e
 // +build e2e
 
-package merge_gateways
+package mergegateways
 
 import (
 	"flag"
