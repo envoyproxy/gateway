@@ -9,18 +9,16 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.group) || self.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
-//
 // ExtProc defines the configuration for External Processing filter.
 type ExtProc struct {
-	// BackendRef defines the configuration of the external processing service
-	BackendRef ExtProcBackendRef `json:"backendRef"`
-
-	// BackendRefs defines the configuration of the external processing service
+	// BackendRefs references a Kubernetes object that represents the gRPC service to which
+	// the access logs will be sent. Currently only Service is supported.
 	//
-	// +optional
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
+	BackendRefs []BackendRef `json:"backendRefs"`
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms

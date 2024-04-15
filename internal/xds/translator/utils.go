@@ -144,13 +144,6 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 		endpointType = EndpointTypeStatic
 	}
 
-	if rd.Settings[0].TLS != nil {
-		tSocket, err = processTLSSocket(rd.Settings[0].TLS, tCtx)
-		if err != nil {
-			return err
-		}
-	}
-
 	if err = addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         rd.Name,
 		settings:     rd.Settings,

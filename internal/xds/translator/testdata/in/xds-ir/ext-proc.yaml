@@ -21,22 +21,43 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
-        envoyExtensionFeatures:
-          extProc:
-            - name: envoyextensionpolicy/default/policy-for-route-2/0
-              authority: grpc-backend-4.default:4000
-              destination:
-                name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
-                settings:
-                  - protocol: GRPC
-                    weight: 1
-            - name: envoyextensionpolicy/default/policy-for-route-1/0
-              authority: grpc-backend-2.default:8000
-              destination:
-                name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
-                settings:
-                  - protocol: GRPC
-                    weight: 1
+        extProc:
+          - name: envoyextensionpolicy/default/policy-for-route-2/0
+            failOpen: true
+            messageTimeout: 5s
+            requestAttributes:
+              - xds.route_metadata
+              - connection.requested_server_name
+            requestBodyProcessingMode: Buffered
+            requestHeaderProcessingMode: Send
+            responseAttributes:
+              - request.path
+            responseBodyProcessingMode: Streamed
+            responseHeaderProcessingMode: Skip
+            untypedForwardingMetadataNamespaces:
+              - envoy.filters.http.ext_authz
+            untypedReceivingMetadataNamespaces:
+              - envoy.filters.http.my_custom
+            authority: grpc-backend-4.default:4000
+            destination:
+              name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
+              settings:
+                - protocol: GRPC
+                  weight: 1
+          - name: envoyextensionpolicy/default/policy-for-route-1/0
+            failOpen: true
+            messageTimeout: 5s
+            requestAttributes:
+            requestBodyProcessingMode: BufferedPartial
+            responseAttributes:
+            untypedForwardingMetadataNamespaces:
+            untypedReceivingMetadataNamespaces:
+            authority: grpc-backend-2.default:8000
+            destination:
+              name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
+              settings:
+                - protocol: GRPC
+                  weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -56,22 +77,36 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
-        envoyExtensionFeatures:
-          extProc:
-            - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0
-              authority: grpc-backend-3.envoy-gateway:3000
-              destination:
-                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
-                settings:
-                  - protocol: GRPC
-                    weight: 1
-            - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0
-              authority: grpc-backend.envoy-gateway:9000
-              destination:
-                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
-                settings:
-                  - protocol: GRPC
-                    weight: 1
+        extProc:
+          - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0
+            authority: grpc-backend-3.envoy-gateway:3000
+            destination:
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
+              settings:
+                - protocol: GRPC
+                  weight: 1
+          - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0
+            failOpen: false
+            messageTimeout: 15s
+            requestAttributes:
+              - xds.route_metadata
+              - connection.requested_server_name
+            requestBodyProcessingMode: None
+            requestHeaderProcessingMode: Default
+            responseAttributes:
+              - request.path
+            responseBodyProcessingMode: None
+            responseHeaderProcessingMode: Default
+            untypedForwardingMetadataNamespaces:
+              - envoy.filters.http.ext_proc
+            untypedReceivingMetadataNamespaces:
+              - envoy.filters.http.prc_ext
+            authority: grpc-backend.envoy-gateway:9000
+            destination:
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
+              settings:
+                - protocol: GRPC
+                  weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io

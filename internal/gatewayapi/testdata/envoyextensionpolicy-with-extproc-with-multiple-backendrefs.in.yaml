@@ -171,42 +171,7 @@ backendTLSPolicies:
         group: ''
         kind: ConfigMap
       hostname: grpc-backend
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: BackendTLSPolicy
-  metadata:
-    name: policy-btls-grpc-2
-    namespace: default
-  spec:
-    targetRef:
-      group: ''
-      kind: Service
-      name: grpc-backend-2
-      sectionName: "9000"
-    tls:
-      caCertRefs:
-      - name: ca-cmap
-        group: ''
-        kind: ConfigMap
-      hostname: grpc-backend-2
 envoyExtensionPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
-    namespace: default
-    name: policy-for-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-      namespace: default
-    extProc:
-    - backendRefs:
-      - Name: grpc-backend
-        Namespace: envoy-gateway
-        Port: 8000
-      messageTimeout: 5s
-      failOpen: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -220,5 +185,8 @@ envoyExtensionPolicies:
       namespace: default
     extProc:
     - backendRefs:
+      - Name: grpc-backend
+        Namespace: envoy-gateway
+        Port: 8000
       - Name: grpc-backend-2
         Port: 9000

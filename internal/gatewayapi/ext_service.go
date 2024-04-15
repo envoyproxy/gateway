@@ -93,12 +93,11 @@ func (t *Translator) processExtServiceDestination(
 }
 
 // TODO: also refer to extension type, as WASM may also introduce destinations
-func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind, service string, idx int) string {
+func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, idx int) string {
 	return strings.ToLower(fmt.Sprintf(
-		"%s/%s/%s/%d/%s",
+		"%s/%s/%s/%d",
 		policyKind,
 		policyNamespacedName.Namespace,
 		policyNamespacedName.Name,
-		idx,
-		service))
+		idx))
 }

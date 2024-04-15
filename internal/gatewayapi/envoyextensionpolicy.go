@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -376,46 +376,61 @@ func (t *Translator) buildExtProc(
 	extProcIdx int,
 	resources *Resources) (*ir.ExtProc, error) {
 	var (
-		backendRef *gwapiv1.BackendObjectReference
-		ds         *ir.DestinationSetting
-		authority  string
-		err        error
+		ds        *ir.DestinationSetting
+		authority string
+		err       error
 	)
 
-	backendRef = &extProc.BackendRef.BackendObjectReference
+	var dsl []*ir.DestinationSetting
+	for i := range extProc.BackendRefs {
+		if err = t.validateExtServiceBackendReference(
+			&extProc.BackendRefs[i].BackendObjectReference,
+			policyNamespacedName.Namespace,
+			resources); err != nil {
+			return nil, err
+		}
 
-	if err = t.validateExtServiceBackendReference(
-		backendRef,
-		policyNamespacedName.Namespace,
-		resources); err != nil {
-		return nil, err
+		ds, err = t.processExtServiceDestination(
+			&extProc.BackendRefs[i].BackendObjectReference,
+			policyNamespacedName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			ir.GRPC,
+			resources)
+
+		if err != nil {
+			return nil, err
+		}
+
+		dsl = append(dsl, ds)
+	}
+
+	rd := ir.RouteDestination{
+		Name:     irIndexedExtServiceDestinationName(policyNamespacedName, egv1a1.KindEnvoyExtensionPolicy, extProcIdx),
+		Settings: dsl,
 	}
 
 	authority = fmt.Sprintf(
 		"%s.%s:%d",
-		backendRef.Name,
-		NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace),
-		*backendRef.Port)
-
-	if ds, err = t.processExtServiceDestination(
-		backendRef,
-		policyNamespacedName,
-		egv1a1.KindEnvoyExtensionPolicy,
-		ir.GRPC,
-		resources); err != nil {
-		return nil, err
-	}
-
-	rd := ir.RouteDestination{
-		Name: irIndexedExtServiceDestinationName(policyNamespacedName, egv1a1.KindEnvoyExtensionPolicy,
-			string(backendRef.Name), extProcIdx),
-		Settings: []*ir.DestinationSetting{ds},
-	}
+		extProc.BackendRefs[0].Name,
+		NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace),
+		*extProc.BackendRefs[0].Port)
 
 	extProcIR := &ir.ExtProc{
 		Name:        name,
 		Destination: rd,
 		Authority:   authority,
+	}
+
+	if extProc.MessageTimeout != nil {
+		d, err := time.ParseDuration(string(*extProc.MessageTimeout))
+		if err != nil {
+			return nil, fmt.Errorf("invalid ExtProc MessageTimeout value %v", extProc.MessageTimeout)
+		}
+		extProcIR.MessageTimeout = ptr.To(metav1.Duration{Duration: d})
+	}
+
+	if extProc.FailOpen != nil {
+		extProcIR.FailOpen = extProc.FailOpen
 	}
 
 	return extProcIR, err

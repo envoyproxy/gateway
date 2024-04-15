@@ -14,6 +14,47 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-2/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            failureModeAllow: true
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend-4.default:4000
+                clusterName: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
+              timeout: 10s
+            messageTimeout: 5s
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-1/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            failureModeAllow: true
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend-2.default:8000
+                clusterName: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
+              timeout: 10s
+            messageTimeout: 5s
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend-3.envoy-gateway:3000
+                clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
+              timeout: 10s
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend.envoy-gateway:9000
+                clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
+              timeout: 10s
+            messageTimeout: 15s
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

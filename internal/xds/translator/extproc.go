@@ -12,11 +12,13 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_proc/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"github.com/golang/protobuf/ptypes/duration"
-	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+
+	"github.com/golang/protobuf/ptypes/duration"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
@@ -107,6 +109,14 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 				Seconds: defaultExtServiceRequestTimeout,
 			},
 		},
+	}
+
+	if extProc.FailOpen != nil {
+		config.FailureModeAllow = *extProc.FailOpen
+	}
+
+	if extProc.MessageTimeout != nil {
+		config.MessageTimeout = durationpb.New(extProc.MessageTimeout.Duration)
 	}
 
 	return config

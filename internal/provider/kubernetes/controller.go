@@ -1470,38 +1470,40 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	for _, policy := range resourceTree.EnvoyExtensionPolicies {
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		for _, ep := range policy.Spec.ExtProc {
-			backendRef := ep.BackendRef.BackendObjectReference
+			for _, br := range ep.BackendRefs {
+				backendRef := br.BackendObjectReference
 
-			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-			resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
-				Group:     backendRef.Group,
-				Kind:      backendRef.Kind,
-				Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
-				Name:      backendRef.Name,
-			}] = struct{}{}
+				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
+				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+					Group:     backendRef.Group,
+					Kind:      backendRef.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
+				}] = struct{}{}
 
-			if backendNamespace != policy.Namespace {
-				from := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindHTTPRoute,
-					namespace: policy.Namespace,
-					name:      policy.Name,
-				}
-				to := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
-					namespace: backendNamespace,
-					name:      string(backendRef.Name),
-				}
-				refGrant, err := r.findReferenceGrant(ctx, from, to)
-				switch {
-				case err != nil:
-					r.log.Error(err, "failed to find ReferenceGrant")
-				case refGrant == nil:
-					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-				default:
-					resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-					r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-						"name", refGrant.Name)
+				if backendNamespace != policy.Namespace {
+					from := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindHTTPRoute,
+						namespace: policy.Namespace,
+						name:      policy.Name,
+					}
+					to := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+						namespace: backendNamespace,
+						name:      string(backendRef.Name),
+					}
+					refGrant, err := r.findReferenceGrant(ctx, from, to)
+					switch {
+					case err != nil:
+						r.log.Error(err, "failed to find ReferenceGrant")
+					case refGrant == nil:
+						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+					default:
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+							"name", refGrant.Name)
+					}
 				}
 			}
 		}

@@ -46,8 +46,8 @@ spec:
     kind: HTTPRoute
     name: http-with-ext-proc
   extProc:
-  - backendRef:
-      name: grpc-ext-proc
+  - backendRefs:
+    - name: grpc-ext-proc
       namespace: gateway-conformance-infra
       port: 9002
 ---

@@ -73,8 +73,8 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend-2
+    - backendRefs:
+      - name: grpc-backend-2
         port: 9000
     targetRef:
       group: gateway.networking.k8s.io
@@ -104,10 +104,12 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend
+    - backendRefs:
+      - name: grpc-backend
         namespace: envoy-gateway
         port: 8000
+      failOpen: true
+      messageTimeout: 5s
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -298,7 +300,7 @@ xdsIR:
         extProc:
         - authority: grpc-backend-2.default:9000
           destination:
-            name: envoyextensionpolicy/default/policy-for-http-route/0/grpc-backend-2
+            name: envoyextensionpolicy/default/policy-for-http-route/0
             settings:
             - addressType: IP
               endpoints:
@@ -334,7 +336,7 @@ xdsIR:
         extProc:
         - authority: grpc-backend.envoy-gateway:8000
           destination:
-            name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
+            name: envoyextensionpolicy/default/policy-for-gateway/0
             settings:
             - addressType: IP
               protocol: GRPC
@@ -344,6 +346,8 @@ xdsIR:
                   name: policy-btls-grpc/default-ca
                 sni: grpc-backend
               weight: 1
+          failOpen: true
+          messageTimeout: 5s
           name: envoyextensionpolicy/default/policy-for-gateway/0
         hostname: www.bar.com
         isHTTP2: false
