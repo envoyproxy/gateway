@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"fmt"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -147,7 +146,7 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 	}
 
 	infraPort := ir.ListenerPort{
-		Name:          strings.ToLower(fmt.Sprintf("%s-%d", proto, servicePort.port)),
+		Name:          irListenerPortName(proto, servicePort.port),
 		Protocol:      proto,
 		ServicePort:   servicePort.port,
 		ContainerPort: servicePortToContainerPort(servicePort.port),
