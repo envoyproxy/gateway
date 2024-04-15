@@ -10,9 +10,9 @@ description: 只需几个简单的步骤即可开始使用 Envoy Gateway。
 
 一个 Kubernetes 集群。
 
-**注意：**请参考[兼容性表格](../install/matrix)来查看所支持的 Kubernetes 版本。
+**注意：** 请参考[兼容性表格](../install/matrix)来查看所支持的 Kubernetes 版本。
 
-**注意：**如果您的 Kubernetes 集群没有负载均衡器实现，我们建议安装一个
+**注意：** 如果您的 Kubernetes 集群没有负载均衡器实现，我们建议安装一个
 `Gateway` 资源有一个与其关联的地址。我们推荐使用 [MetalLB](https://metallb.universe.tf/installation/)。
 
 ## 安装 {#installation}
@@ -77,6 +77,24 @@ export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -
 ```shell
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
+
+## 接下来的探索？ {#what-to-explore-next}
+
+在快速开始（本节），您将：
+
+- 完成 Envoy Gateway 的安装
+- 部署一个后端服务和一个网关
+- 使用 Kubernetes Gateway API 资源 [网关](https://gateway-api.sigs.k8s.io/api-types/gateway/) 和 [Http路由](https://gateway-api.sigs.k8s.io/api-types/httproute/) 配置网关。将通过 HTTP 传入的请求定向到后端服务。
+
+以下是建议的后续任务列表，可指导您探索 Envoy Gateway：
+
+- [HTTP 路由](traffic/http-routing)
+- [流量分流](traffic/http-traffic-splitting)
+- [安全网关](security/secure-gateways/)
+- [全局流量限制](traffic/global-rate-limit/)
+- [gRPC 路由](traffic/grpc-routing/)
+
+查看 [任务](./) 部分以了解与您的用例匹配的场景。 Envoy Gateway 任务按类别组织：流量管理、安全性、可扩展性、可观察性和操作。
 
 ## 清理 {#clean-up}
 
