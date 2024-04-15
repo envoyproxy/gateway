@@ -61,6 +61,7 @@ func (r *ResourceRender) Name() string {
 func enablePrometheus(rl *egv1a1.RateLimit) bool {
 	if rl != nil &&
 		rl.Telemetry != nil &&
+		rl.Telemetry.Metrics != nil &&
 		rl.Telemetry.Metrics.Prometheus != nil {
 		return !rl.Telemetry.Metrics.Prometheus.Disable
 	}
@@ -183,7 +184,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
 	labels := rateLimitLabels()
 	selector := resource.GetSelector(labels)
 

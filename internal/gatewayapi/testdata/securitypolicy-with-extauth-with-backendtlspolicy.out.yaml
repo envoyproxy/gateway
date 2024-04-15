@@ -27,7 +27,7 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: BackendTLSPolicy is Accepted
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
@@ -59,7 +59,7 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: BackendTLSPolicy is Accepted
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
@@ -306,28 +306,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        extAuth:
-          failOpen: true
-          grpc:
-            authority: grpc-backend.default:9000
-            destination:
-              name: securitypolicy/default/policy-for-http-route/default/grpc-backend
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 8.8.8.8
-                  port: 9000
-                protocol: GRPC
-                tls:
-                  caCertificate:
-                    certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                    name: policy-btls-grpc/default-ca
-                  sni: grpc-backend
-                weight: 1
-          headersToExtAuth:
-          - header1
-          - header2
-          name: securitypolicy/default/policy-for-http-route
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -335,6 +313,29 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+        security:
+          extAuth:
+            failOpen: true
+            grpc:
+              authority: grpc-backend.default:9000
+              destination:
+                name: securitypolicy/default/policy-for-http-route/default/grpc-backend
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 8.8.8.8
+                    port: 9000
+                  protocol: GRPC
+                  tls:
+                    caCertificate:
+                      certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                      name: policy-btls-grpc/default-ca
+                    sni: grpc-backend
+                  weight: 1
+            headersToExtAuth:
+            - header1
+            - header2
+            name: securitypolicy/default/policy-for-http-route
       - backendWeights:
           invalid: 0
           valid: 0
@@ -347,29 +348,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        extAuth:
-          failOpen: false
-          http:
-            authority: http-backend.envoy-gateway:80
-            destination:
-              name: securitypolicy/default/policy-for-gateway/envoy-gateway/http-backend
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.7
-                  port: 80
-                protocol: HTTP
-                tls:
-                  caCertificate:
-                    certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                    name: policy-btls-http/default-ca
-                  sni: http-backend
-                weight: 1
-            headersToBackend:
-            - header1
-            - header2
-            path: /auth
-          name: securitypolicy/default/policy-for-gateway
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
@@ -377,3 +355,27 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+        security:
+          extAuth:
+            failOpen: false
+            http:
+              authority: http-backend.envoy-gateway:80
+              destination:
+                name: securitypolicy/default/policy-for-gateway/envoy-gateway/http-backend
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 80
+                  protocol: HTTP
+                  tls:
+                    caCertificate:
+                      certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                      name: policy-btls-http/default-ca
+                    sni: http-backend
+                  weight: 1
+              headersToBackend:
+              - header1
+              - header2
+              path: /auth
+            name: securitypolicy/default/policy-for-gateway

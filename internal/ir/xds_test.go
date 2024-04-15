@@ -446,12 +446,14 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("jwtauthen"),
 		},
-		JWT: &JWT{
-			Providers: []egv1a1.JWTProvider{
-				{
-					Name: "test1",
-					RemoteJWKS: egv1a1.RemoteJWKS{
-						URI: "https://test1.local",
+		Security: &SecurityFeatures{
+			JWT: &JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test1",
+						RemoteJWKS: egv1a1.RemoteJWKS{
+							URI: "https://test1.local",
+						},
 					},
 				},
 			},
@@ -1153,9 +1155,9 @@ func TestValidateJWT(t *testing.T) {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.validate())
+				require.NoError(t, test.input.Validate())
 			} else {
-				require.EqualError(t, test.input.validate(), test.want.Error())
+				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
 		})
 	}
@@ -1257,6 +1259,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To[uint32](3),
 				HealthyThreshold:   ptr.To[uint32](3),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					ExpectedStatuses: []HTTPStatus{200, 400},
 				},
@@ -1273,6 +1276,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To[uint32](3),
 				HealthyThreshold:   ptr.To[uint32](3),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodGet),
 					ExpectedStatuses: []HTTPStatus{200, 400},
@@ -1290,6 +1294,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To[uint32](0),
 				HealthyThreshold:   ptr.To[uint32](3),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodPatch),
 					ExpectedStatuses: []HTTPStatus{200, 400},
@@ -1307,6 +1312,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To[uint32](3),
 				HealthyThreshold:   ptr.To[uint32](0),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodPost),
 					ExpectedStatuses: []HTTPStatus{200, 400},
@@ -1317,6 +1323,23 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
 		{
+			name: "http-health-check: invalid host",
+			input: HealthCheck{&ActiveHealthCheck{
+				Timeout:            &metav1.Duration{Duration: time.Second},
+				Interval:           &metav1.Duration{Duration: time.Second},
+				UnhealthyThreshold: ptr.To[uint32](3),
+				HealthyThreshold:   ptr.To[uint32](3),
+				HTTP: &HTTPHealthChecker{
+					Path:             "/healthz",
+					Method:           ptr.To(http.MethodPut),
+					ExpectedStatuses: []HTTPStatus{200, 400},
+				},
+			},
+				&OutlierDetection{},
+			},
+			want: ErrHCHTTPHostInvalid,
+		},
+		{
 			name: "http-health-check: invalid path",
 			input: HealthCheck{&ActiveHealthCheck{
 				Timeout:            &metav1.Duration{Duration: time.Second},
@@ -1324,6 +1347,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To[uint32](3),
 				HealthyThreshold:   ptr.To[uint32](3),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "",
 					Method:           ptr.To(http.MethodPut),
 					ExpectedStatuses: []HTTPStatus{200, 400},
@@ -1341,6 +1365,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To(uint32(3)),
 				HealthyThreshold:   ptr.To(uint32(3)),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodConnect),
 					ExpectedStatuses: []HTTPStatus{200, 400},
@@ -1358,6 +1383,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To(uint32(3)),
 				HealthyThreshold:   ptr.To(uint32(3)),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodDelete),
 					ExpectedStatuses: []HTTPStatus{},
@@ -1375,6 +1401,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To(uint32(3)),
 				HealthyThreshold:   ptr.To(uint32(3)),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodHead),
 					ExpectedStatuses: []HTTPStatus{100, 600},
@@ -1392,6 +1419,7 @@ func TestValidateHealthCheck(t *testing.T) {
 				UnhealthyThreshold: ptr.To(uint32(3)),
 				HealthyThreshold:   ptr.To(uint32(3)),
 				HTTP: &HTTPHealthChecker{
+					Host:             "*",
 					Path:             "/healthz",
 					Method:           ptr.To(http.MethodOptions),
 					ExpectedStatuses: []HTTPStatus{200, 300},

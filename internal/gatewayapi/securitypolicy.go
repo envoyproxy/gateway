@@ -134,12 +134,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			err := validatePortOverlapForSecurityPolicyRoute(xdsIR, targetedRoute)
-			if err == nil {
-				err = t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR)
-			}
-
-			if err != nil {
+			if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
 					t.GatewayControllerName,
@@ -191,15 +186,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				continue
 			}
 
-			irKey := t.getIRKey(targetedGateway.Gateway)
-			// Should exist since we've validated this
-			xds := xdsIR[irKey]
-			err := validatePortOverlapForSecurityPolicyGateway(xds)
-			if err == nil {
-				err = t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR)
-			}
-
-			if err != nil {
+			if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, resources, xdsIR); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					parentGateways,
 					t.GatewayControllerName,
@@ -367,7 +354,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
-			irConfigName(policy),
 			policy,
 			resources); err != nil {
 			errs = errors.Join(errs, err)
@@ -394,35 +380,20 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
 	prefix := irRoutePrefix(route)
-	for _, ir := range xdsIR {
-		for _, http := range ir.HTTP {
-			for _, r := range http.Routes {
+	for _, x := range xdsIR {
+		for _, h := range x.HTTP {
+			for _, r := range h.Routes {
 				// Apply if there is a match
-				// TODO zhaohuabing: extract a utils function to check if an HTTP
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
-					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
-					r.CORS = cors
-					r.JWT = jwt
-					r.OIDC = oidc
-					r.BasicAuth = basicAuth
-					r.ExtAuth = extAuth
-				}
-			}
-		}
-	}
-	return errs
-}
-
-func validatePortOverlapForSecurityPolicyRoute(xds XdsIRMap, route RouteContext) error {
-	var errs error
-	prefix := irRoutePrefix(route)
-	for _, ir := range xds {
-		for _, http := range ir.HTTP {
-			for _, r := range http.Routes {
-				if strings.HasPrefix(r.Name, prefix) {
-					if sameListeners := listenersWithSameHTTPPort(ir, http); len(sameListeners) != 0 {
-						errs = errors.Join(errs, fmt.Errorf("affects multiple listeners: %s", strings.Join(sameListeners, ", ")))
+					// This security policy matches the current route.
+					// It should only be accepted if it doesn't match any other route
+					r.Security = &ir.SecurityFeatures{
+						CORS:      cors,
+						JWT:       jwt,
+						OIDC:      oidc,
+						BasicAuth: basicAuth,
+						ExtAuth:   extAuth,
 					}
 				}
 			}
@@ -454,7 +425,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
-			irConfigName(policy),
 			policy,
 			resources); err != nil {
 			errs = errors.Join(errs, err)
@@ -486,62 +456,36 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// are invalid, we still want to apply the valid ones.
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
-	ir := xdsIR[irKey]
+	x := xdsIR[irKey]
 
 	policyTarget := irStringKey(
 		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
 		string(policy.Spec.TargetRef.Name),
 	)
-	for _, http := range ir.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+	for _, h := range x.HTTP {
+		gatewayName := h.Name[0:strings.LastIndex(h.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
 		// targeting a lesser specific scope(Gateway).
-		for _, r := range http.Routes {
+		for _, r := range h.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			// TODO: zhaohuabing group the features into a struct and check if all of them are set
-			if r.CORS != nil ||
-				r.JWT != nil ||
-				r.OIDC != nil ||
-				r.BasicAuth != nil ||
-				r.ExtAuth != nil {
+			if !r.Security.Empty() {
 				continue
 			}
-			if r.CORS == nil {
-				r.CORS = cors
-			}
-			if r.JWT == nil {
-				r.JWT = jwt
-			}
-			if r.OIDC == nil {
-				r.OIDC = oidc
-			}
-			if r.BasicAuth == nil {
-				r.BasicAuth = basicAuth
-			}
-			if r.ExtAuth == nil {
-				r.ExtAuth = extAuth
+
+			r.Security = &ir.SecurityFeatures{
+				CORS:      cors,
+				JWT:       jwt,
+				OIDC:      oidc,
+				BasicAuth: basicAuth,
+				ExtAuth:   extAuth,
 			}
 		}
 	}
 	return errs
-}
-
-func validatePortOverlapForSecurityPolicyGateway(xds *ir.Xds) error {
-	affectedListeners := []string{}
-	for _, http := range xds.HTTP {
-		if sameListeners := listenersWithSameHTTPPort(xds, http); len(sameListeners) != 0 {
-			affectedListeners = append(affectedListeners, sameListeners...)
-		}
-	}
-
-	if len(affectedListeners) > 0 {
-		return fmt.Errorf("affects multiple listeners: %s", strings.Join(affectedListeners, ", "))
-	}
-	return nil
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
@@ -588,7 +532,6 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 }
 
 func (t *Translator) buildOIDC(
-	name string,
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources) (*ir.OIDC, error) {
 	var (
@@ -662,11 +605,12 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
-		Name:         name,
+		Name:         irConfigName(policy),
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
 		ClientSecret: clientSecretBytes,
 		Scopes:       scopes,
+		Resources:    oidc.Resources,
 		RedirectURL:  redirectURL,
 		RedirectPath: redirectPath,
 		LogoutPath:   logoutPath,
@@ -851,9 +795,11 @@ func (t *Translator) buildExtAuth(
 		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
 		*backendRef.Port)
 
+	pnn := utils.NamespacedName(policy)
 	if ds, err = t.processExtServiceDestination(
 		backendRef,
-		policy,
+		pnn,
+		KindSecurityPolicy,
 		protocol,
 		resources); err != nil {
 		return nil, err
@@ -883,77 +829,6 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 	return extAuth, nil
-}
-
-// TODO: zhaohuabing combine this function with the one in the route translator
-func (t *Translator) processExtServiceDestination(
-	backendRef *gwapiv1.BackendObjectReference,
-	policy *egv1a1.SecurityPolicy,
-	protocol ir.AppProtocol,
-	resources *Resources) (*ir.DestinationSetting, error) {
-	var (
-		endpoints   []*ir.DestinationEndpoint
-		addrType    *ir.DestinationAddressType
-		servicePort v1.ServicePort
-		backendTLS  *ir.TLSUpstreamConfig
-	)
-
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-	service := resources.GetService(serviceNamespace, string(backendRef.Name))
-	for _, port := range service.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) {
-			servicePort = port
-			break
-		}
-	}
-
-	if servicePort.AppProtocol != nil &&
-		*servicePort.AppProtocol == "kubernetes.io/h2c" {
-		protocol = ir.HTTP2
-	}
-
-	// Route to endpoints by default
-	if !t.EndpointRoutingDisabled {
-		endpointSlices := resources.GetEndpointSlicesForBackend(
-			serviceNamespace, string(backendRef.Name), KindService)
-		endpoints, addrType = getIREndpointsFromEndpointSlices(
-			endpointSlices, servicePort.Name, servicePort.Protocol)
-	} else {
-		// Fall back to Service ClusterIP routing
-		ep := ir.NewDestEndpoint(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port))
-		endpoints = append(endpoints, ep)
-	}
-
-	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
-		return nil, errors.New(
-			"mixed endpointslice address type for the same backendRef is not supported")
-	}
-
-	backendTLS = t.processBackendTLSPolicy(
-		*backendRef,
-		serviceNamespace,
-		// Gateway is not the appropriate parent reference here because the owner
-		// of the BackendRef is the security policy, and there is no hierarchy
-		// relationship between the security policy and a gateway.
-		// The owner security policy of the BackendRef is used as the parent reference here.
-		gwv1a2.ParentReference{
-			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
-			Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindSecurityPolicy)),
-			Namespace: ptr.To(gwapiv1.Namespace(policy.Namespace)),
-			Name:      gwapiv1.ObjectName(policy.Name),
-		},
-		resources)
-
-	return &ir.DestinationSetting{
-		Weight:      ptr.To(uint32(1)),
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		TLS:         backendTLS,
-	}, nil
 }
 
 func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwapiv1.BackendObjectReference) string {

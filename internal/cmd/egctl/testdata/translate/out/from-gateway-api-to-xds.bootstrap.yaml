@@ -33,6 +33,13 @@ xds:
             envoy.restart_features.use_eds_cache_for_ads: true
             re2.max_program_size.error_level: 4294967295
             re2.max_program_size.warn_level: 1000
+      overloadManager:
+        refreshInterval: 0.250s
+        resourceMonitors:
+        - name: envoy.resource_monitors.global_downstream_max_connections
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+            maxActiveDownstreamConnections: "50000"
       staticResources:
         clusters:
         - connectTimeout: 0.250s

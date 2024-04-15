@@ -23,4 +23,5 @@
               regex: '*.example.com'
           - exact: foo.bar.com
           exposeHeaders: x-header-3, x-header-4
+          forwardNotMatchingPreflights: false
           maxAge: "1000"

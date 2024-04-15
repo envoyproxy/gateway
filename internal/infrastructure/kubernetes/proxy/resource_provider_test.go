@@ -497,6 +497,19 @@ func TestDeployment(t *testing.T) {
 			infra:     newTestInfra(),
 			extraArgs: []string{"--key1 val1", "--key2 val2"},
 		},
+		{
+			caseName: "with-empty-memory-limits",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Container: &egv1a1.KubernetesContainerSpec{
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("400m"),
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {

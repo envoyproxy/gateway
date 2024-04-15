@@ -92,7 +92,8 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-dns-cluster",
 		},
 		{
-			name: "http-route-with-tls-system-truststore",
+			name:           "http-route-with-tls-system-truststore",
+			requireSecrets: true,
 		},
 		{
 			name:           "http-route-with-tlsbundle",
@@ -228,7 +229,8 @@ func TestTranslateXds(t *testing.T) {
 			name: "jwt-single-route-single-match",
 		},
 		{
-			name: "oidc",
+			name:           "oidc",
+			requireSecrets: true,
 		},
 		{
 			name: "http-route-partial-invalid",
@@ -261,6 +263,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "fault-injection",
 		},
 		{
+			name: "headers-with-underscores-action",
+		},
+		{
 			name: "tls-with-ciphers-versions-alpn",
 		},
 		{
@@ -291,7 +296,19 @@ func TestTranslateXds(t *testing.T) {
 			name: "client-timeout",
 		},
 		{
+			name: "client-buffer-limit",
+		},
+		{
 			name: "retry-partial-invalid",
+		},
+		{
+			name: "multiple-listeners-same-port-with-different-filters",
+		},
+		{
+			name: "listener-connection-limit",
+		},
+		{
+			name: "ext-proc",
 		},
 	}
 
