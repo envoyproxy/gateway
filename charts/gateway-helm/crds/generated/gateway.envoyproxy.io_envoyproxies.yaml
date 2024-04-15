@@ -6227,19 +6227,23 @@ spec:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
                         properties:
-                          compressionLibrary:
-                            default: gzip
-                            description: Compression type
-                            enum:
-                            - gzip
-                            - brotli
-                            - zstd
-                            type: string
+                          compression:
+                            description: Configure the compression on Prometheus endpoint.
+                            properties:
+                              gzip:
+                                description: The configuration for GZIP compressor.
+                                type: object
+                              type:
+                                description: CompressorType defines the compressor
+                                  type to use for compression.
+                                enum:
+                                - Gzip
+                                type: string
+                            required:
+                            - type
+                            type: object
                           disable:
                             description: Disable the Prometheus endpoint.
-                            type: boolean
-                          enableCompression:
-                            description: Enable the compression on Prometheus endpoint.
                             type: boolean
                         type: object
                       sinks:

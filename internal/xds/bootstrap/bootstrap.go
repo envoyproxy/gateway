@@ -153,10 +153,10 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 
 		if proxyMetrics.Prometheus != nil {
 			enablePrometheus = !proxyMetrics.Prometheus.Disable
-			enablePrometheusCompression = proxyMetrics.Prometheus.EnableCompression
 
-			if proxyMetrics.Prometheus.EnableCompression {
-				PrometheusCompressionLibrary = proxyMetrics.Prometheus.CompressionLibrary
+			if proxyMetrics.Prometheus.Compression != nil {
+				enablePrometheusCompression = true
+				PrometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
 			}
 		}
 
