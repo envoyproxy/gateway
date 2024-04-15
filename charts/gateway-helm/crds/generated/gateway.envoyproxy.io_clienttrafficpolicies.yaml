@@ -438,10 +438,10 @@ spec:
                           type: object
                         maxItems: 8
                         type: array
-                      requiredClientCertificate:
+                      required:
                         default: true
-                        description: RequiredClientCertificate set to true means that
-                          Envoy will reject connections without a valid client certificate.
+                        description: Required set to true means that Envoy will reject
+                          connections without a valid client certificate.
                         type: boolean
                     type: object
                   ecdhCurves:
