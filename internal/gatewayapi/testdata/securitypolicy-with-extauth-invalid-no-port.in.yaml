@@ -62,3 +62,4 @@ securityPolicies:
           headersToBackend:
             - header1
             - header2
+        failOpen: false
