@@ -263,6 +263,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "fault-injection",
 		},
 		{
+			name: "headers-forward-client-cert-details",
+		},
+		{
 			name: "headers-with-underscores-action",
 		},
 		{

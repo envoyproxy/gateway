@@ -256,7 +256,8 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
-		Tracing: hcmTracing,
+		ForwardClientCertDetails: buildForwardClientCertDetailsAction(irListener.Headers),
+		Tracing:                  hcmTracing,
 	}
 
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
@@ -774,4 +775,22 @@ func buildHeadersWithUnderscoresAction(in *ir.HeaderSettings) corev3.HttpProtoco
 		}
 	}
 	return corev3.HttpProtocolOptions_REJECT_REQUEST
+}
+
+func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnectionManager_ForwardClientCertDetails {
+	if in != nil {
+		switch in.ForwardClientCertDetails {
+		case ir.ForwardClientCertDetailsSanitize:
+			return hcmv3.HttpConnectionManager_SANITIZE
+		case ir.ForwardClientCertDetailsForwardOnly:
+			return hcmv3.HttpConnectionManager_FORWARD_ONLY
+		case ir.ForwardClientCertDetailsAppendForward:
+			return hcmv3.HttpConnectionManager_APPEND_FORWARD
+		case ir.ForwardClientCertDetailsSanitizeSet:
+			return hcmv3.HttpConnectionManager_SANITIZE_SET
+		case ir.ForwardClientCertDetailsAlwaysForwardOnly:
+			return hcmv3.HttpConnectionManager_ALWAYS_FORWARD_ONLY
+		}
+	}
+	return hcmv3.HttpConnectionManager_SANITIZE
 }

@@ -366,6 +366,16 @@ const (
 	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
 )
 
+type ForwardClientCertDetails egv1a1.ForwardClientCertDetails
+
+const (
+	ForwardClientCertDetailsSanitize          = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsSanitize)
+	ForwardClientCertDetailsForwardOnly       = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsForwardOnly)
+	ForwardClientCertDetailsAppendForward     = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsAppendForward)
+	ForwardClientCertDetailsSanitizeSet       = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsSanitizeSet)
+	ForwardClientCertDetailsAlwaysForwardOnly = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsAlwaysForwardOnly)
+)
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
@@ -399,6 +409,10 @@ type HeaderSettings struct {
 	// The default is to suppress these headers.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
+
+	// configure Envoy proxy to forward x-forwarded-client-cert (XFCC) HTTP header
+	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
+	ForwardClientCertDetails ForwardClientCertDetails `json:"forwardClientCertDetails,omitempty"`
 
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.

@@ -1298,6 +1298,24 @@ _Appears in:_
 | `path` | _string_ |  true  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### ForwardClientCertDetails
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `Sanitize` | Do not send the XFCC header to the next hop. This is the default value.<br /> | 
+| `ForwardOnly` | When the client connection is mTLS (Mutual TLS), forward the XFCC header<br />in the request.<br /> | 
+| `AppendForward` | When the client connection is mTLS, append the client certificate<br />information to the request’s XFCC header and forward it.<br /> | 
+| `SanitizeSet` | When the client connection is mTLS, reset the XFCC header with the client<br />certificate information and send it to the next hop.<br /> | 
+| `AlwaysForwardOnly` | Always forward the XFCC header in the request, regardless of whether the<br />client connection is mTLS.<br /> | 
+
+
 #### GRPCExtAuthService
 
 
@@ -1535,6 +1553,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
+| `forwardClientCertDetails` | _[ForwardClientCertDetails](#forwardclientcertdetails)_ |  true  | configure Envoy proxy to forward x-forwarded-client-cert (XFCC) HTTP header |
 
 
 #### HealthCheck

@@ -104,6 +104,9 @@ type HeaderSettings struct {
 	// is encountered. The default action is to reject the request.
 	// +optional
 	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
+
+	// configure Envoy proxy to forward x-forwarded-client-cert (XFCC) HTTP header
+	ForwardClientCertDetails *ForwardClientCertDetails `json:"forwardClientCertDetails,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -121,6 +124,26 @@ const (
 	// is dropped before the filter chain is invoked and as such filters will not see
 	// dropped headers.
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
+)
+
+// +kubebuilder:validation:Enum=Sanitize;ForwardOnly;AppendForward;SanitizeSet;AlwaysForwardOnly
+type ForwardClientCertDetails string
+
+const (
+	// Do not send the XFCC header to the next hop. This is the default value.
+	ForwardClientCertDetailsSanitize ForwardClientCertDetails = "Sanitize"
+	// When the client connection is mTLS (Mutual TLS), forward the XFCC header
+	// in the request.
+	ForwardClientCertDetailsForwardOnly ForwardClientCertDetails = "ForwardOnly"
+	// When the client connection is mTLS, append the client certificate
+	// information to the request’s XFCC header and forward it.
+	ForwardClientCertDetailsAppendForward ForwardClientCertDetails = "AppendForward"
+	// When the client connection is mTLS, reset the XFCC header with the client
+	// certificate information and send it to the next hop.
+	ForwardClientCertDetailsSanitizeSet ForwardClientCertDetails = "SanitizeSet"
+	// Always forward the XFCC header in the request, regardless of whether the
+	// client connection is mTLS.
+	ForwardClientCertDetailsAlwaysForwardOnly ForwardClientCertDetails = "AlwaysForwardOnly"
 )
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.

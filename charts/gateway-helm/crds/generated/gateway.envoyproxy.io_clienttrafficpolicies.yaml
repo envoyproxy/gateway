@@ -150,6 +150,16 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  forwardClientCertDetails:
+                    description: configure Envoy proxy to forward x-forwarded-client-cert
+                      (XFCC) HTTP header
+                    enum:
+                    - Sanitize
+                    - ForwardOnly
+                    - AppendForward
+                    - SanitizeSet
+                    - AlwaysForwardOnly
+                    type: string
                   withUnderscoresAction:
                     description: |-
                       WithUnderscoresAction configures the action to take when an HTTP header with underscores
