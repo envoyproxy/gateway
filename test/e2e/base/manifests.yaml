@@ -727,3 +727,183 @@ spec:
     allowedRoutes:
       namespaces:
         from: Same
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-conformance-http3
+  labels:
+    gateway-conformance: http3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: http3-secret
+  namespace: gateway-conformance-http3
+type: kubernetes.io/tls
+data:
+  tls.crt: |
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURQekNDQWllZ0F3SUJBZ0lCQURBTkJna3Fo
+    a2lHOXcwQkFRc0ZBREF0TVJVd0V3WURWUVFLREF4bGVHRnQKY0d4bElFbHVZeTR4RkRBU0JnTlZC
+    QU1NQzJWNFlXMXdiR1V1WTI5dE1CNFhEVEkwTURNd01qRTRNakV3TUZvWApEVEkxTURNd01qRTRN
+    akV3TUZvd09URVlNQllHQTFVRUF3d1BkM2QzTG1WNFlXMXdiR1V1WTI5dE1SMHdHd1lEClZRUUtE
+    QlJsZUdGdGNHeGxJRzl5WjJGdWFYcGhkR2x2YmpDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdn
+    RVAKQURDQ0FRb0NnZ0VCQUx4eXVkRlRCZ3pMTGVtbTRTVlkvN2lRMUI3QVFMeHUxSVFTbG5zTFI0
+    YWowL2c2eHpQbwpXbWd0dWxBUHZWUTJEREYyc3oxbE5WODFpL2xrYzh6bjIwdlFwK0hpSUEvd0Qv
+    US9zNUhKcHQ0V2kyNmd2L29DCkpTSG5oQXZzYzNraGViMDhBVHhtdFIrU2hkaVN5dExwVGtVUlpP
+    WVBvdTZvWlBpN1c0NG56UVh6RVhBVXhxUWEKbmt2U040VUFCQnRteUUyMlJqNXh6bnBkQ09KYzNS
+    T1BIb1lESHVnVkpFQUZJV0RPeUZnUFlnZTJPRTh0eHZURAo0eUNwNlBRdUtGbWxnbElkYnBTY01i
+    YTZFOWw0Y2pLSlUxdzdMSHl6azd1UXdiYlR1WlNGVUJ2OHBFbDVEVWlUCjJYVDhmN1ArWS9DVTJS
+    MllYTkpORVVONDY0a3JQUWllM0kwQ0F3RUFBYU5lTUZ3d0dnWURWUjBSQkJNd0VZSVAKZDNkM0xt
+    VjRZVzF3YkdVdVkyOXRNQjBHQTFVZERnUVdCQlIybnJJRU1NQys1MEVQaDBZaU05ckxIRWF5T2pB
+    ZgpCZ05WSFNNRUdEQVdnQlFYZWc5SEY3VElSSFVXT3NGNWRkMG02OHpieFRBTkJna3Foa2lHOXcw
+    QkFRc0ZBQU9DCkFRRUFCcFRtYmV4T2d4VnJOUVMremdtWVMyS1FnS0k5YjhPSjZTVmdrZ1M5V25Z
+    QmhuSlpzNXNOTWI0TytzZ2UKTzczdVVTemJ4UUJtNnA2MVlzMzhoR1o5TWxHS0I3QjRkOWJoM1pE
+    WSt3elpCSEdKSEFYNTF2Y2NydE94UFBveAplM0tnTlpzeDFHK29VN1IvT0VSTHRqVkJZdEhRdmxK
+    Z25oWGV5OUJxREVlZkZVODR5VnpzRVgwZnd6ZkdyUVl2ClJJSkdzOEpzcjFiUCtiT1RnZ2dHcVFK
+    Tld6ZHZtYzEzTHlGSFN2SUxrVlIyOEJwSjRSNmZ3K0Q4dzFRRmxFc20KZ2R3aXJORVNtMUNRQmZp
+    ZXpiQ3luRCswYlZhSzZpU2YrUThYZFBDdHdUZ2lKNEpNVVIrVTRaNFVqczk5UEFQRwpLZkNPeU9w
+    Sm8vdkRicC9DdWlQOUcrSHl4Zz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: |
+    LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZB
+    QVNDQktrd2dnU2xBZ0VBQW9JQkFRQzhjcm5SVXdZTXl5M3AKcHVFbFdQKzRrTlFld0VDOGJ0U0VF
+    cFo3QzBlR285UDRPc2N6NkZwb0xicFFENzFVTmd3eGRyTTlaVFZmTll2NQpaSFBNNTl0TDBLZmg0
+    aUFQOEEvMFA3T1J5YWJlRm90dW9MLzZBaVVoNTRRTDdITjVJWG05UEFFOFpyVWZrb1hZCmtzclM2
+    VTVGRVdUbUQ2THVxR1Q0dTF1T0o4MEY4eEZ3Rk1ha0dwNUwwamVGQUFRYlpzaE50a1krY2M1NlhR
+    amkKWE4wVGp4NkdBeDdvRlNSQUJTRmd6c2hZRDJJSHRqaFBMY2IwdytNZ3FlajBMaWhacFlKU0hX
+    NlVuREcydWhQWgplSEl5aVZOY095eDhzNU83a01HMjA3bVVoVkFiL0tSSmVRMUlrOWwwL0grei9t
+    UHdsTmtkbUZ6U1RSRkRlT3VKCkt6MEludHlOQWdNQkFBRUNnZ0VBQnBJUzZHY3RLOEVyUTkxbG85
+    Y1ZwQkZOMHZNN2lnaTEwRnpKMXRialYxZXQKYkx2Sm8wN29NS1J0ei9lSkdNaUJYUXZkMWVWbHRo
+    TXo5VWxaQUFJU2FrNnI4OXM1VmtCYVdGY01qSEVlVE5udApxMTJXZjI5eS8waHJ2YndlVjNXRmox
+    Z093MEtZcC9xRWlUTWNnWE1hRFM2WWxENzF3U3M3eVhsRUNPUVJYOFIxCkRoTGJnWTU2ejY3U3BP
+    VWpTOFMzenpsbGFUNjV1NnI0bWdRKzFCRUpOWHpoWkd0cDNPa0dqUnk3elhuV3llTXUKTWF2allC
+    eVJZd2NFVDYrS2ZxN2M4dWJLWDIzOWRiZy9rckNUMmNPa0NFdjR6Qm12b0NzRnBLVXRlamwxczlr
+    MQo2M2xwTjhNSmU3cDZ6QXJ4eTB3dndSdEdHR0pGc0VuUnM2Q2JBOUZ3ZndLQmdRRGV5a1NkdWdU
+    TEtvdWRuMVdSCnNXbkV0cy9WaGxySENPaUtJL2ZiaWZMTmQyaDkxM3dMSlVXcTN1eVVhSk5LelVY
+    QzhqdFE2ZVZFVGZrSmduZDEKY1Y1SkFZc1hDTm9WRnduaXhDZ0U3NkpxaW5WU3gxNnhIWXJxUlNH
+    R2pkMGxmRmNBM1F4anNWUWgyQ1VtUjJSWQp0WmMvSkdDQVdRN0VPR2xIblBVcUo0Smo1d0tCZ1FE
+    WWlmV0hodEdrOUd5VlRhM3lUdmlldkUyNzlOb0wzMU84ClZxTjArWjRIdnVwa25UNU1BS1luOTBD
+    eDZscjg0Q0VkY1dSRGpGeEJnNXVDUm5waHRSaUNDcU1kc0dKSC94bUsKWXlhMDRBMFlUOURaMmk4
+    T3FYazNGWlFJZVJhT3h2clZFSlhvbHRRSENZbzRoRGFjTkQ4MHdwMmVoc28rZ3loeQp5M3pVYUFT
+    dGF3S0JnUUNub0l5c0dEQlBKUDNUWlBVZkg5dXk5TkcvbU0xb2dCMW5BdFVVeStCeUUrdjg4MHNU
+    Cm44R2haUVdnVEdhMm0yaG4yNVlodFRxWmdBbG16RkZSZmpFd3dRYUVHRmJ1RTEyT3o0UkU0b0RU
+    cE1YTnVOQlkKZHgvMFVIdC9IL0pLcUJsV1B2dDVidzBjUWVNQndDbVNUVjgxVlF0K3hvTkR4Q1lD
+    aWVnMUJYRW45UUtCZ1FDeApESFFONE9Udkc4N2djTWdtRS8zaVJCTEcrSmVFRjVEdXNHUXIwNkVy
+    c2lVU0tTTnpueUE4RTBUNWM2WDdsd0pjCmdZYzZWN3hpOE1tb3hobHdaRkxxbU9udjczVWNhdTht
+    SUpYWVZFMUFzSm9TVmZ3ZDMrRzFjVlk5YTB4UFoxQlYKLzU2aXN4Z2Z2T1FmKzdKdkc2VUdiWTNV
+    dlY4RnA5WGRycFdkVW9Ob2l3S0JnUURlQjgvRzhMRyt4MlEwYUFkWgpteHFrQTQzYUtoQ01WZjFh
+    WVF0S3cwVDU0czNkdUNDTkY1cGJQeHpZWTFUeVNRS0ljS1hFZlBiRWhFdUZOTXpICnVRV0ZOT1Zh
+    VjRST25lWkNIVGFZbTRFekQ5SWJVRktEZXlpVW0zZXVaRG85dm16VldZd2ZyVUQwOXc3ZFRKTWYK
+    MmExcG5RVm84bVlCaFFCdFI2Tk9jTmtFQlE9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: http3-gateway
+  namespace: gateway-conformance-http3
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: http3-secret
+        namespace: gateway-conformance-http3
+  - name: http
+    protocol: HTTP
+    port: 80
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: http3-backend
+  namespace: gateway-conformance-http3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http3-backend
+  namespace: gateway-conformance-http3
+  labels:
+    service: http3-backend
+    app: http3-backend
+spec:
+  ports:
+  - name: http3
+    port: 3000
+    targetPort: 3000
+  selector:
+    app: http3-backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http3-backend
+  namespace: gateway-conformance-http3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http3-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: http3-backend
+        version: v1
+    spec:
+      serviceAccountName: http3-backend
+      containers:
+      - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        imagePullPolicy: IfNotPresent
+        name: backend
+        ports:
+        - containerPort: 3000
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-http3
+  namespace: gateway-conformance-http3
+spec:
+  http3: {}
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: http3-gateway
+    namespace: gateway-conformance-http3
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http3-route
+  namespace: gateway-conformance-http3
+spec:
+  parentRefs:
+    - name: http3-gateway
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - kind: Service
+          name: http3-backend
+          port: 3000
+          group: ""
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
