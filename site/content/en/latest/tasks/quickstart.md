@@ -94,6 +94,23 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 
 {{% /tab %}}
 {{< /tabs >}}
+=======
+## What to explore next?
+
+In this quickstart, you have:
+- Installed Envoy Gateway
+- Deployed a backend service, and a gateway
+- Configured the gateway using Kubernetes Gateway API resources [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) and [HttpRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) to direct incoming requests over HTTP to the backend service.
+
+Here is a suggested list of follow-on tasks to guide you in your exploration of Envoy Gateway:
+
+- [HTTP Routing](traffic/http-routing)
+- [Traffic Splitting](traffic/http-traffic-splitting)
+- [Secure Gateways](security/secure-gateways/)
+- [Global Rate Limit](traffic/global-rate-limit/)
+- [gRPC Routing](traffic/grpc-routing/)
+
+Review the [Tasks](./) section for the scenario matching your use case.  The Envoy Gateway tasks are organized by category: traffic management, security, extensibility, observability, and operations.
 
 ## Clean-Up
 
