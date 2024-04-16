@@ -20,7 +20,7 @@ accesslog:
     resources:
       "cluster_name": "cluster1"
     destination:
-      name: accesslog/envoy-gateway-system/otel-access-logging/sink/1
+      name: accesslog/envoy-gateway/gateway-1/sink/1
       settings:
       - addressType: FQDN
         endpoints:
@@ -35,7 +35,7 @@ accesslog:
     resources:
       "cluster_name": "cluster1"
     destination:
-      name: accesslog/envoy-gateway-system/otel-access-logging/sink/2
+      name: accesslog/envoy-gateway/gateway-1/sink/2
       settings:
       - addressType: IP
         endpoints:

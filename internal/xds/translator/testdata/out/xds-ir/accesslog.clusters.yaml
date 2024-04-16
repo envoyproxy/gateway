@@ -25,7 +25,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: accesslog/envoy-gateway-system/otel-access-logging/sink/1
+    clusterName: accesslog/envoy-gateway/gateway-1/sink/1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -36,8 +36,8 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: accesslog/envoy-gateway-system/otel-access-logging/sink/1/backend/0
-  name: accesslog/envoy-gateway-system/otel-access-logging/sink/1
+        region: accesslog/envoy-gateway/gateway-1/sink/1/backend/0
+  name: accesslog/envoy-gateway/gateway-1/sink/1
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -58,9 +58,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: accesslog/envoy-gateway-system/otel-access-logging/sink/2
+    serviceName: accesslog/envoy-gateway/gateway-1/sink/2
   lbPolicy: LEAST_REQUEST
-  name: accesslog/envoy-gateway-system/otel-access-logging/sink/2
+  name: accesslog/envoy-gateway/gateway-1/sink/2
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -51,7 +51,7 @@
         grpcService:
           envoyGrpc:
             authority: otel-collector.default.svc.cluster.local
-            clusterName: accesslog/envoy-gateway-system/otel-access-logging/sink/1
+            clusterName: accesslog/envoy-gateway/gateway-1/sink/1
         logName: otel_envoy_accesslog
         transportApiVersion: V3
       resourceAttributes:
@@ -83,7 +83,7 @@
       commonConfig:
         grpcService:
           envoyGrpc:
-            clusterName: accesslog/envoy-gateway-system/otel-access-logging/sink/2
+            clusterName: accesslog/envoy-gateway/gateway-1/sink/2
         logName: otel_envoy_accesslog
         transportApiVersion: V3
       resourceAttributes:
@@ -141,7 +141,7 @@
               grpcService:
                 envoyGrpc:
                   authority: otel-collector.default.svc.cluster.local
-                  clusterName: accesslog/envoy-gateway-system/otel-access-logging/sink/1
+                  clusterName: accesslog/envoy-gateway/gateway-1/sink/1
               logName: otel_envoy_accesslog
               transportApiVersion: V3
             resourceAttributes:
@@ -169,7 +169,7 @@
             commonConfig:
               grpcService:
                 envoyGrpc:
-                  clusterName: accesslog/envoy-gateway-system/otel-access-logging/sink/2
+                  clusterName: accesslog/envoy-gateway/gateway-1/sink/2
               logName: otel_envoy_accesslog
               transportApiVersion: V3
             resourceAttributes:

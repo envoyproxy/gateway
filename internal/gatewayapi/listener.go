@@ -45,7 +45,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
 		}
 
-		xdsIR[irKey].AccessLog = t.processAccessLog(infraIR[irKey].Proxy.Config, resources)
+		xdsIR[irKey].AccessLog = t.processAccessLog(gateway.Gateway, infraIR[irKey].Proxy.Config, resources)
 		xdsIR[irKey].Tracing = t.processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config, resources)
 		xdsIR[irKey].Metrics = t.processMetrics(infraIR[irKey].Proxy.Config)
 
@@ -165,7 +165,7 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 }
 
-func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *Resources) *ir.AccessLog {
+func (t *Translator) processAccessLog(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, resources *Resources) *ir.AccessLog {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
@@ -221,7 +221,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.OpenTelemetryAccessLog{
 					Resources: sink.OpenTelemetry.Resources,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog/%s/%s/sink/%d", envoyproxy.Namespace, envoyproxy.Name, index),
+						Name:     fmt.Sprintf("accesslog/%s/%s/sink/%d", gw.Namespace, gw.Name, index),
 						Settings: make([]*ir.DestinationSetting, 0, len(sink.OpenTelemetry.BackendRefs)),
 					},
 				}
@@ -273,7 +273,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		SamplingRate: 100.0,
 		CustomTags:   tracing.CustomTags,
 		Destination: ir.RouteDestination{
-			Name:     fmt.Sprintf("tracing/%s/%s", envoyproxy.Namespace, envoyproxy.Name),
+			Name:     fmt.Sprintf("tracing/%s/%s", gw.Namespace, gw.Name),
 			Settings: make([]*ir.DestinationSetting, 0, len(tracing.Provider.BackendRefs)),
 		},
 	}

@@ -135,7 +135,7 @@ xdsIR:
     accessLog:
       openTelemetry:
       - destination:
-          name: accesslog/envoy-gateway-system/test/sink/1
+          name: accesslog/envoy-gateway/gateway-1/sink/1
           settings:
           - addressType: FQDN
             endpoints:

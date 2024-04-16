@@ -39,7 +39,7 @@ func TestProcessTracing(t *testing.T) {
 			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-ep",
-					Namespace: "fake-ep-ns",
+					Namespace: "fake-ns",
 				},
 				Spec: egcfgv1a1.EnvoyProxySpec{
 					Telemetry: &egcfgv1a1.ProxyTelemetry{
@@ -51,7 +51,7 @@ func TestProcessTracing(t *testing.T) {
 				ServiceName:  "fake-gw.fake-ns",
 				SamplingRate: 100.0,
 				Destination: ir.RouteDestination{
-					Name:     "tracing/fake-ep-ns/fake-ep",
+					Name:     "tracing/fake-ns/fake-gw",
 					Settings: []*ir.DestinationSetting{},
 				},
 			},
@@ -83,7 +83,7 @@ func TestProcessTracing(t *testing.T) {
 				ServiceName:  "fake-gw.fake-ns",
 				SamplingRate: 100.0,
 				Destination: ir.RouteDestination{
-					Name: "tracing/envoy-gateway-system/fake-access-log",
+					Name: "tracing/fake-ns/fake-gw",
 					Settings: []*ir.DestinationSetting{
 						{
 							Weight:   ptr.To[uint32](1),
@@ -182,7 +182,7 @@ func TestProcessTracing(t *testing.T) {
 				ServiceName:  "fake-gw.fake-ns",
 				SamplingRate: 100.0,
 				Destination: ir.RouteDestination{
-					Name: "tracing/fake-ns/fake-eproxy",
+					Name: "tracing/fake-ns/fake-gw",
 					Settings: []*ir.DestinationSetting{
 						{
 							Weight:   ptr.To[uint32](1),
