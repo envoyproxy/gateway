@@ -151,7 +151,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 
 		addresses := sets.NewString()
 		for _, sink := range proxyMetrics.Sinks {
-			if sink.OpenTelemetry == nil || sink.OpenTelemetry.Host == nil {
+			if sink.OpenTelemetry == nil {
 				continue
 			}
 

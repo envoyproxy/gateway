@@ -100,7 +100,7 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 #	tools/hack/run-kube-local.sh
 
 .PHONY: conformance
-conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
+conformance: create-cluster kube-install-image kube-deploy install-e2e-telemetry run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
