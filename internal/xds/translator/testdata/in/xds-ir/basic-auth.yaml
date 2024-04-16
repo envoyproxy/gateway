@@ -28,9 +28,10 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
-    basicAuth:
-      name: securitypolicy/default/policy-for-http-route-1
-      users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+    security:
+      basicAuth:
+        name: securitypolicy/default/policy-for-http-route-1
+        users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
   - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
     backendWeights:
     hostname: www.foo.com
@@ -50,9 +51,10 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
-    basicAuth:
-      name: securitypolicy/default/policy-for-http-route-1
-      users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+    security:
+      basicAuth:
+        name: securitypolicy/default/policy-for-http-route-1
+        users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
   - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
     hostname: www.bar.com
     isHTTP2: false
@@ -72,6 +74,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
-    basicAuth:
-      name: securitypolicy/default/policy-for-gateway-1
-      users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=
+    security:
+      basicAuth:
+        name: securitypolicy/default/policy-for-gateway-1
+        users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=

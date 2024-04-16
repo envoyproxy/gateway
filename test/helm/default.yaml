@@ -524,4 +524,4 @@ spec:
         runAsNonRoot: true
         runAsUser: 65534
       serviceAccountName: eg-gateway-helm-certgen
-  ttlSecondsAfterFinished: 0
+  ttlSecondsAfterFinished: 30
