@@ -129,10 +129,9 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 			for _, container := range gatewayDeployment.Spec.Template.Spec.Containers {
 				var isTCPPortNameMatch, isHTTPPortNumberMatch bool
 
-				hashedPortName := utils.GetHashedName(newListenerTCPName, 6)
 				if container.Name == "envoy" {
 					for _, port := range container.Ports {
-						if port.Name == hashedPortName {
+						if port.Name == newListenerTCPName {
 							isTCPPortNameMatch = true
 						}
 
@@ -142,11 +141,11 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 					}
 
 					if !isTCPPortNameMatch {
-						t.Errorf("container expected TCP port name '%v' is not found", hashedPortName)
+						t.Errorf("container expected TCP port name '%v' is not found", newListenerTCPName)
 					}
 
 					if !isHTTPPortNumberMatch {
-						t.Errorf("container expected HTTP port number '%v' is not found", hashedPortName)
+						t.Errorf("container expected HTTP port number '%v' is not found", newListenerTCPName)
 					}
 				}
 			}
