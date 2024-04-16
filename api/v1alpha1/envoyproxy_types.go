@@ -118,6 +118,8 @@ type EnvoyProxySpec struct {
 }
 
 // FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
+// +kubebuilder:validation:XValidation:rule="has(self.before) && (has(self.after)", message="only one of before or after can be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.before) && !has(self.after)", message="one of before or after must be set"
 type FilterPosition struct {
 	// Name of the filter.
 	Name EnvoyFilter `json:"filter"`
@@ -136,17 +138,37 @@ type FilterPosition struct {
 type EnvoyFilter string
 
 const (
-	EnvoyFilterFault          EnvoyFilter = "envoy.filters.http.fault"
-	EnvoyFilterCORS           EnvoyFilter = "envoy.filters.http.cors"
-	EnvoyFilterExtAuthz       EnvoyFilter = "envoy.filters.http.ext_authz"
-	EnvoyFilterBasicAuthn     EnvoyFilter = "envoy.filters.http.basic_authn"
-	EnvoyFilterOAuth2         EnvoyFilter = "envoy.filters.http.oauth2"
-	EnvoyFilterJWTAuthn       EnvoyFilter = "envoy.filters.http.jwt_authn"
-	EnvoyFilterExtProc        EnvoyFilter = "envoy.filters.http.ext_proc"
-	EnvoyFilterWasm           EnvoyFilter = "envoy.filters.http.wasm"
+	// EnvoyFilterFault defines the Envoy HTTP fault filter.
+	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
+	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
+	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
+
+	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
+	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
+
+	// EnvoyFilterBasicAuthn defines the Envoy HTTP basic authentication filter.
+	EnvoyFilterBasicAuthn EnvoyFilter = "envoy.filters.http.basic_authn"
+
+	// EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.
+	EnvoyFilterOAuth2 EnvoyFilter = "envoy.filters.http.oauth2"
+
+	// EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.
+	EnvoyFilterJWTAuthn EnvoyFilter = "envoy.filters.http.jwt_authn"
+
+	// EnvoyFilterExtProc defines the Envoy HTTP external process filter.
+	EnvoyFilterExtProc EnvoyFilter = "envoy.filters.http.ext_proc"
+
+	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
+	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
+
+	// EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
-	EnvoyFilterRateLimit      EnvoyFilter = "envoy.filters.http.ratelimit"
-	EnvoyFilterRouter         EnvoyFilter = "envoy.filters.http.router"
+
+	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
+	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
+
+	// EnvoyFilterRouter defines the Envoy HTTP router filter.
+	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
 )
 
 type ProxyTelemetry struct {

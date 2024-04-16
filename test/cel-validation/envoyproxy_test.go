@@ -1219,6 +1219,60 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 		},
+		{
+			desc: "ProxyFilterOrder-with-before-and-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterRateLimit,
+							Before: ptr.To(egv1a1.EnvoyFilterCORS),
+							After:  ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of before or after can be set"},
+		},
+		{
+			desc: "ProxyFilterOrder-without-before-or-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name: egv1a1.EnvoyFilterRateLimit,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"one of before or after must be set"},
+		},
+		{
+			desc: "ProxyFilterOrder-with-before",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterRateLimit,
+							Before: ptr.To(egv1a1.EnvoyFilterCORS),
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "ProxyFilterOrder-with-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:  egv1a1.EnvoyFilterRateLimit,
+							After: ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+						},
+					},
+				}
+			},
+		},
 	}
 
 	for _, tc := range cases {
