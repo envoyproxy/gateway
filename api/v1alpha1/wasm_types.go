@@ -61,7 +61,7 @@ type WasmCodeSource struct {
 	// Type is the type of the source of the wasm code.
 	// Valid WasmCodeSourceType values are "HTTP" or "Image".
 	//
-	// +kubebuilder:validation:Enum=HTTP;Image
+	// +kubebuilder:validation:Enum=HTTP;Image;ConfigMap
 	// +unionDiscriminator
 	Type WasmCodeSourceType `json:"type"`
 
