@@ -47,6 +47,9 @@ consideration when debugging.
 
 ## Testing the Configuration
 
+{{< tabpane text=true >}}
+{{% tab header="Without LoadBalancer Support" %}}
+
 Get the name of the Envoy service created the by the example Gateway:
 
 ```shell
@@ -65,7 +68,9 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-### External LoadBalancer Support
+{{% /tab %}}
+
+{{% tab header="External LoadBalancer Support" %}}
 
 You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
 Envoy service, run:
@@ -82,6 +87,9 @@ Curl the example app through Envoy proxy:
 ```shell
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## What to explore next?
 
