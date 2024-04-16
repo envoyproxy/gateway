@@ -9,6 +9,7 @@ clientTrafficPolicies:
     headers:
       enableEnvoyHeaders: true
       withUnderscoresAction: Allow
+      forwardClientCertDetails: SanitizeSet
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -130,7 +131,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
-        ForwardClientCertDetails: Sanitize
+        ForwardClientCertDetails: SanitizeSet
         withUnderscoresAction: Allow
       hostnames:
       - '*'
@@ -143,7 +144,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
-        ForwardClientCertDetails: Sanitize
+        ForwardClientCertDetails: SanitizeSet
         withUnderscoresAction: Allow
       hostnames:
       - '*'

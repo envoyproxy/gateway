@@ -343,6 +343,24 @@ _Appears in:_
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path. |
 
 
+#### ClientCertDetailsConfiguration
+
+
+
+
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `forwardSubject` | _boolean_ |  true  | Whether to forward the subject of the client cert. |
+| `forwardCert` | _boolean_ |  true  | Whether to forward the entire client cert in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”. |
+| `forwardChain` | _boolean_ |  true  | Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”. |
+| `forwardDNS` | _boolean_ |  true  | Whether to forward the DNS type Subject Alternative Names of the client cert. |
+| `forwardURI` | _boolean_ |  true  | Whether to forward the URI type Subject Alternative Name of the client cert. |
+
+
 #### ClientIPDetectionSettings
 
 
@@ -1553,7 +1571,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
-| `forwardClientCertDetails` | _[ForwardClientCertDetails](#forwardclientcertdetails)_ |  true  | configure Envoy proxy to forward x-forwarded-client-cert (XFCC) HTTP header |
+| `forwardClientCertDetails` | _[ForwardClientCertDetails](#forwardclientcertdetails)_ |  false  | configure Envoy proxy to forward x-forwarded-client-cert (XFCC) HTTP header |
+| `clientCertDetailsConfiguration` | _[ClientCertDetailsConfiguration](#clientcertdetailsconfiguration)_ |  false  | specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header |
 
 
 #### HealthCheck

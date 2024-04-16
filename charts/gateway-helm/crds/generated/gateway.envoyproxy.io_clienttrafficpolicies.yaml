@@ -145,6 +145,33 @@ spec:
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
+                  clientCertDetailsConfiguration:
+                    description: specifies the fields in the client certificate to
+                      be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+                    properties:
+                      forwardCert:
+                        description: |-
+                          Whether to forward the entire client cert in URL encoded PEM format.
+                          This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.
+                        type: boolean
+                      forwardChain:
+                        description: |-
+                          Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.
+                          This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.
+                        type: boolean
+                      forwardDNS:
+                        description: Whether to forward the DNS type Subject Alternative
+                          Names of the client cert.
+                        type: boolean
+                      forwardSubject:
+                        description: Whether to forward the subject of the client
+                          cert.
+                        type: boolean
+                      forwardURI:
+                        description: Whether to forward the URI type Subject Alternative
+                          Name of the client cert.
+                        type: boolean
+                    type: object
                   enableEnvoyHeaders:
                     description: |-
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests

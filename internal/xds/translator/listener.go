@@ -260,6 +260,10 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		Tracing:                  hcmTracing,
 	}
 
+	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
+		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers)
+	}
+
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
 		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
 			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
@@ -793,4 +797,18 @@ func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnec
 		}
 	}
 	return hcmv3.HttpConnectionManager_SANITIZE
+}
+
+func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnectionManager_SetCurrentClientCertDetails {
+	if in != nil {
+		return &hcmv3.HttpConnectionManager_SetCurrentClientCertDetails{
+			Cert:    in.ClientCertDetailsConfiguration.ForwardCert,
+			Chain:   in.ClientCertDetailsConfiguration.ForwardChain,
+			Dns:     in.ClientCertDetailsConfiguration.ForwardDNS,
+			Subject: &wrapperspb.BoolValue{Value: in.ClientCertDetailsConfiguration.ForwardSubject},
+			Uri:     in.ClientCertDetailsConfiguration.ForwardURI,
+		}
+	}
+
+	return nil
 }

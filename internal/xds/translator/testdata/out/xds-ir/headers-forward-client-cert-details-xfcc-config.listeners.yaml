@@ -9,6 +9,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        forwardClientCertDetails: SANITIZE_SET
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
@@ -25,6 +26,8 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
+        setCurrentClientCertDetails:
+          subject: false
         statPrefix: http
         useRemoteAddress: true
   drainType: MODIFY_ONLY
@@ -41,6 +44,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        forwardClientCertDetails: SANITIZE_SET
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
@@ -57,6 +61,8 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
+        setCurrentClientCertDetails:
+          subject: true
         statPrefix: http
         useRemoteAddress: true
   drainType: MODIFY_ONLY
@@ -73,7 +79,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
-        forwardClientCertDetails: FORWARD_ONLY
+        forwardClientCertDetails: APPEND_FORWARD
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
@@ -90,6 +96,8 @@
             resourceApiVersion: V3
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
+        setCurrentClientCertDetails:
+          subject: false
         statPrefix: http
         useRemoteAddress: true
   drainType: MODIFY_ONLY
@@ -124,7 +132,8 @@
           routeConfigName: fourth-listener
         serverHeaderTransformation: PASS_THROUGH
         setCurrentClientCertDetails:
-          subject: false
+          cert: true
+          subject: true
         statPrefix: http
         useRemoteAddress: true
   drainType: MODIFY_ONLY
@@ -134,6 +143,45 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 8085
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        forwardClientCertDetails: APPEND_FORWARD
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: fifth-listener
+        serverHeaderTransformation: PASS_THROUGH
+        setCurrentClientCertDetails:
+          cert: true
+          chain: true
+          dns: true
+          subject: true
+          uri: true
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: fifth-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8086
   defaultFilterChain:
     filters:
     - name: envoy.filters.network.http_connection_manager
@@ -156,43 +204,14 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: fifth-listener
-        serverHeaderTransformation: PASS_THROUGH
-        setCurrentClientCertDetails:
-          subject: false
-        statPrefix: http
-        useRemoteAddress: true
-  drainType: MODIFY_ONLY
-  name: fifth-listener
-  perConnectionBufferLimitBytes: 32768
-- address:
-    socketAddress:
-      address: 0.0.0.0
-      portValue: 8086
-  defaultFilterChain:
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        forwardClientCertDetails: ALWAYS_FORWARD_ONLY
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        normalizePath: true
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
           routeConfigName: sixth-listener
         serverHeaderTransformation: PASS_THROUGH
+        setCurrentClientCertDetails:
+          cert: true
+          chain: true
+          dns: true
+          subject: true
+          uri: true
         statPrefix: http
         useRemoteAddress: true
   drainType: MODIFY_ONLY

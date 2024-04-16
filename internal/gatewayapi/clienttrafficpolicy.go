@@ -539,8 +539,13 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		return
 	}
 	httpIR.Headers = &ir.HeaderSettings{
-		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
-		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
+		EnableEnvoyHeaders:       ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+		WithUnderscoresAction:    ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
+		ForwardClientCertDetails: ir.ForwardClientCertDetails(ptr.Deref(headerSettings.ForwardClientCertDetails, egv1a1.ForwardClientCertDetailsSanitize)),
+	}
+
+	if httpIR.Headers.ForwardClientCertDetails == ir.ForwardClientCertDetailsAppendForward || httpIR.Headers.ForwardClientCertDetails == ir.ForwardClientCertDetailsSanitizeSet {
+		httpIR.Headers.ClientCertDetailsConfiguration = ir.ClientCertDetailsConfiguration(ptr.Deref(headerSettings.ClientCertDetailsConfiguration, egv1a1.ClientCertDetailsConfiguration{}))
 	}
 }
 

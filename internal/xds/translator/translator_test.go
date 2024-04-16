@@ -266,6 +266,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "headers-forward-client-cert-details",
 		},
 		{
+			name: "headers-forward-client-cert-details-xfcc-config",
+		},
+		{
 			name: "headers-with-underscores-action",
 		},
 		{

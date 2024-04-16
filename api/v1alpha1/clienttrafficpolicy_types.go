@@ -106,7 +106,12 @@ type HeaderSettings struct {
 	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
 
 	// configure Envoy proxy to forward x-forwarded-client-cert (XFCC) HTTP header
+	// +optional
 	ForwardClientCertDetails *ForwardClientCertDetails `json:"forwardClientCertDetails,omitempty"`
+
+	// specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+	// +optional
+	ClientCertDetailsConfiguration *ClientCertDetailsConfiguration `json:"clientCertDetailsConfiguration,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -145,6 +150,21 @@ const (
 	// client connection is mTLS.
 	ForwardClientCertDetailsAlwaysForwardOnly ForwardClientCertDetails = "AlwaysForwardOnly"
 )
+
+type ClientCertDetailsConfiguration struct {
+	// Whether to forward the subject of the client cert.
+	ForwardSubject bool `json:"forwardSubject,omitempty"`
+	// Whether to forward the entire client cert in URL encoded PEM format.
+	// This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.
+	ForwardCert bool `json:"forwardCert,omitempty"`
+	// Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.
+	// This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.
+	ForwardChain bool `json:"forwardChain,omitempty"`
+	// Whether to forward the DNS type Subject Alternative Names of the client cert.
+	ForwardDNS bool `json:"forwardDNS,omitempty"`
+	// Whether to forward the URI type Subject Alternative Name of the client cert.
+	ForwardURI bool `json:"forwardURI,omitempty"`
+}
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
