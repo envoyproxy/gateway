@@ -154,6 +154,85 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				"spec.targetRef: Invalid value: \"object\": this policy does not yet support the sectionName field",
 			},
 		},
+
+		// ExtProc
+		{
+			desc: "ExtProc with BackendRef",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendRef: egv1a1.ExtProcBackendRef{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Name: "grpc-proc-service",
+									Port: ptr.To(gwapiv1.PortNumber(80)),
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ExtProc with invalid BackendRef Group",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendRef: egv1a1.ExtProcBackendRef{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Group: ptr.To(gwapiv1.Group("unsupported")),
+									Name:  "grpc-proc-service",
+									Port:  ptr.To(gwapiv1.PortNumber(80)),
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"},
+		},
+		{
+			desc: "ExtProc with invalid BackendRef Kind",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendRef: egv1a1.ExtProcBackendRef{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Kind: ptr.To(gwapiv1.Kind("unsupported")),
+									Name: "grpc-proc-service",
+									Port: ptr.To(gwapiv1.PortNumber(80)),
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"},
+		},
 		{
 			desc: "ExtProc with invalid fields",
 			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
