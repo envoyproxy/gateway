@@ -138,7 +138,7 @@ spec:
                         - message: Must have port for Service reference
                           rule: '(size(self.group) == 0 && self.kind == ''Service'')
                             ? has(self.port) : true'
-                      maxItems: 2
+                      maxItems: 1
                       minItems: 1
                       type: array
                       x-kubernetes-validations:

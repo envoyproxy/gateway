@@ -15,7 +15,7 @@ type ExtProc struct {
 	// the access logs will be sent. Currently only Service is supported.
 	//
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs"`
