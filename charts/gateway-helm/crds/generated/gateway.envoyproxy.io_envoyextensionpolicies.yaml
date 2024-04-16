@@ -316,6 +316,7 @@ spec:
                           - enum:
                             - HTTP
                             - Image
+                            - ConfigMap
                           description: |-
                             Type is the type of the source of the wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
