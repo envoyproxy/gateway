@@ -19,7 +19,6 @@ import (
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
-	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -140,14 +139,20 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				GrpcService: &cfgcore.GrpcService{
 					TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{
 						EnvoyGrpc: &cfgcore.GrpcService_EnvoyGrpc{
-							ClusterName: buildClusterName("accesslog", otel.Host, otel.Port),
-							Authority:   otel.Host,
+							ClusterName: otel.Destination.Name,
 						},
 					},
 				},
 				TransportApiVersion: cfgcore.ApiVersion_V3,
 			},
 			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
+		}
+
+		// TODO: remove support for Host/Port in v1.2
+		if otel.Destination.Settings[0].AddressType != nil &&
+			*otel.Destination.Settings[0].AddressType == ir.FQDN {
+			al.CommonConfig.GrpcService.TargetSpecifier.(*cfgcore.GrpcService_EnvoyGrpc_).EnvoyGrpc.Authority =
+				otel.Destination.Settings[0].Endpoints[0].Host
 		}
 
 		format := EnvoyTextLogFormat
@@ -238,23 +243,24 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 		return nil
 	}
 
+	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
-		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
+		endpointType := EndpointTypeStatic
 
-		ds := &ir.DestinationSetting{
-			Weight:    ptr.To[uint32](1),
-			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
+		// TODO: remove support for Host/Port in v1.2
+		if otel.Destination.Settings[0].AddressType != nil &&
+			*otel.Destination.Settings[0].AddressType == ir.FQDN {
+			endpointType = EndpointTypeDNS
 		}
+
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         clusterName,
-			settings:     []*ir.DestinationSetting{ds},
+			name:         otel.Destination.Name,
+			settings:     otel.Destination.Settings,
 			tSocket:      nil,
-			endpointType: EndpointTypeDNS,
+			endpointType: endpointType,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
-
 	}
 
 	return nil

@@ -52,7 +52,7 @@
               grpcService:
                 envoyGrpc:
                   authority: otel-collector.monitoring.svc.cluster.local
-                  clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+                  clusterName: tracing/envoy-gateway-system/otel-access-logging
               serviceName: fake-name.fake-ns
           randomSampling:
             value: 90

@@ -87,3 +87,33 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: monitoring
+    name: otel-collector
+  spec:
+    ports:
+    - name: otlp
+      port: 4317
+      protocol: TCP
+      targetPort: 4317
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: otel-collector-1
+    namespace: monitoring
+    labels:
+      kubernetes.io/service-name: otel-collector
+  addressType: IPv4
+  ports:
+  - name: otlp
+    protocol: TCP
+    port: 4317
+  endpoints:
+  - addresses:
+    - "1.2.3.4"
+    conditions:
+      ready: true

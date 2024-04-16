@@ -10,3 +10,15 @@
     loadBalancingWeight: 1
     locality:
       region: direct-route-dest/backend/0
+- clusterName: accesslog/envoy-gateway-system/otel-access-logging/sink/2
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 4317
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog/envoy-gateway-system/otel-access-logging/sink/2/backend/0

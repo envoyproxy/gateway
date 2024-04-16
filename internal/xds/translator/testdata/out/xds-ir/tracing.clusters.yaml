@@ -25,7 +25,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+    clusterName: tracing/envoy-gateway-system/otel-access-logging
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -36,8 +36,8 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: tracing|otel-collector.monitoring.svc.cluster.local|4317/backend/0
-  name: tracing|otel-collector.monitoring.svc.cluster.local|4317
+        region: tracing/envoy-gateway-system/otel-access-logging/backend/0
+  name: tracing/envoy-gateway-system/otel-access-logging
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

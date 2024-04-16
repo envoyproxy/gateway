@@ -140,6 +140,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 		StatsMatcher     StatsMatcherParameters
 	)
 
+	// TODO (davidalger) push these through XDS?
 	if opts != nil && opts.ProxyMetrics != nil {
 		proxyMetrics := opts.ProxyMetrics
 
@@ -149,19 +150,19 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 
 		addresses := sets.NewString()
 		for _, sink := range proxyMetrics.Sinks {
-			if sink.OpenTelemetry == nil {
+			if sink.OpenTelemetry == nil || sink.OpenTelemetry.Host == nil {
 				continue
 			}
 
 			// skip duplicate sinks
-			addr := fmt.Sprintf("%s:%d", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
+			addr := fmt.Sprintf("%s:%d", *sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
 			if addresses.Has(addr) {
 				continue
 			}
 			addresses.Insert(addr)
 
 			metricSinks = append(metricSinks, metricSink{
-				Address: sink.OpenTelemetry.Host,
+				Address: *sink.OpenTelemetry.Host,
 				Port:    sink.OpenTelemetry.Port,
 			})
 		}

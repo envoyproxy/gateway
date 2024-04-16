@@ -19,8 +19,30 @@ accesslog:
       "response_code": "%RESPONSE_CODE%"
     resources:
       "cluster_name": "cluster1"
-    host: otel-collector.default.svc.cluster.local
-    port: 4317
+    destination:
+      name: accesslog/envoy-gateway-system/otel-access-logging/sink/1
+      settings:
+      - addressType: FQDN
+        endpoints:
+        - host: otel-collector.default.svc.cluster.local
+          port: 4317
+        protocol: GRPC
+        weight: 1
+  - text: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+    attributes:
+      "response_code": "%RESPONSE_CODE%"
+    resources:
+      "cluster_name": "cluster1"
+    destination:
+      name: accesslog/envoy-gateway-system/otel-access-logging/sink/2
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: "1.2.3.4"
+          port: 4317
+        protocol: GRPC
+        weight: 1
 http:
 - name: "first-listener"
   address: "0.0.0.0"

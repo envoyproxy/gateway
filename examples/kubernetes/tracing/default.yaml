@@ -21,8 +21,10 @@ spec:
       # sample 100% of requests
       samplingRate: 100
       provider:
-        host: otel-collector.monitoring.svc.cluster.local
-        port: 4317
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
         type: OpenTelemetry
       customTags:
         # This is an example of using a literal as a tag value

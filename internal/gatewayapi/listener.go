@@ -8,14 +8,15 @@ package gatewayapi
 import (
 	"fmt"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
-	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -44,9 +45,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
 		}
 
-		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Tracing = processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Metrics = processMetrics(infraIR[irKey].Proxy.Config)
+		xdsIR[irKey].AccessLog = t.processAccessLog(infraIR[irKey].Proxy.Config, resources)
+		xdsIR[irKey].Tracing = t.processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config, resources)
+		xdsIR[irKey].Metrics = t.processMetrics(infraIR[irKey].Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -164,7 +165,7 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 }
 
-func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
+func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *Resources) *ir.AccessLog {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
@@ -186,7 +187,7 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
 	for _, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
-		for _, sink := range accessLog.Sinks {
+		for index, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
 				if sink.File == nil {
@@ -217,18 +218,31 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 					continue
 				}
 
-				// TODO: remove support for Host/Port in v1.2
 				al := &ir.OpenTelemetryAccessLog{
-					Port:      uint32(sink.OpenTelemetry.Port),
 					Resources: sink.OpenTelemetry.Resources,
+					Destination: ir.RouteDestination{
+						Name:     fmt.Sprintf("accesslog/%s/%s/sink/%d", envoyproxy.Namespace, envoyproxy.Name, index),
+						Settings: make([]*ir.DestinationSetting, 0, len(sink.OpenTelemetry.BackendRefs)),
+					},
 				}
 
+				for _, backendRef := range sink.OpenTelemetry.BackendRefs {
+					al.Destination.Settings = append(al.Destination.Settings, t.processServiceDestination(backendRef, ir.GRPC, envoyproxy, resources))
+				}
+
+				// TODO: remove support for Host/Port in v1.2
 				if sink.OpenTelemetry.Host != nil {
-					al.Host = *sink.OpenTelemetry.Host
-				}
-
-				if len(sink.OpenTelemetry.BackendRefs) > 0 {
-					al.Host, al.Port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, envoyproxy.Namespace)
+					al.Destination.Settings = append(al.Destination.Settings, &ir.DestinationSetting{
+						Weight:   ptr.To(uint32(1)),
+						Protocol: ir.GRPC,
+						Endpoints: []*ir.DestinationEndpoint{
+							{
+								Port: uint32(sink.OpenTelemetry.Port),
+								Host: *sink.OpenTelemetry.Host,
+							},
+						},
+						AddressType: ptr.To(ir.FQDN),
+					})
 				}
 
 				switch accessLog.Format.Type {
@@ -246,39 +260,51 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	return irAccessLog
 }
 
-func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
+func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, resources *Resources) *ir.Tracing {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
 		return nil
 	}
+
 	tracing := envoyproxy.Spec.Telemetry.Tracing
+	tr := &ir.Tracing{
+		ServiceName:  naming.ServiceName(utils.NamespacedName(gw)),
+		SamplingRate: 100.0,
+		CustomTags:   tracing.CustomTags,
+		Destination: ir.RouteDestination{
+			Name:     fmt.Sprintf("tracing/%s/%s", envoyproxy.Namespace, envoyproxy.Name),
+			Settings: make([]*ir.DestinationSetting, 0, len(tracing.Provider.BackendRefs)),
+		},
+	}
+
+	for _, backendRef := range tracing.Provider.BackendRefs {
+		tr.Destination.Settings = append(tr.Destination.Settings, t.processServiceDestination(backendRef, ir.GRPC, envoyproxy, resources))
+	}
 
 	// TODO: remove support for Host/Port in v1.2
-	var host string
-	var port uint32
 	if tracing.Provider.Host != nil {
-		host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
-	}
-	if len(tracing.Provider.BackendRefs) > 0 {
-		host, port = net.BackendHostAndPort(tracing.Provider.BackendRefs[0].BackendObjectReference, gw.Namespace)
+		tr.Destination.Settings = append(tr.Destination.Settings, &ir.DestinationSetting{
+			Weight:   ptr.To(uint32(1)),
+			Protocol: ir.GRPC,
+			Endpoints: []*ir.DestinationEndpoint{
+				{
+					Port: uint32(tracing.Provider.Port),
+					Host: *tracing.Provider.Host,
+				},
+			},
+			AddressType: ptr.To(ir.FQDN),
+		})
 	}
 
-	samplingRate := 100.0
 	if tracing.SamplingRate != nil {
-		samplingRate = float64(*tracing.SamplingRate)
+		tr.SamplingRate = float64(*tracing.SamplingRate)
 	}
 
-	return &ir.Tracing{
-		ServiceName:  naming.ServiceName(utils.NamespacedName(gw)),
-		Host:         host,
-		Port:         port,
-		SamplingRate: samplingRate,
-		CustomTags:   tracing.CustomTags,
-	}
+	return tr
 }
 
-func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
+func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Metrics == nil {
@@ -286,5 +312,47 @@ func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 	}
 	return &ir.Metrics{
 		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
+	}
+}
+
+func (t *Translator) processServiceDestination(backendRef egv1a1.BackendRef, protocol ir.AppProtocol, envoyproxy *egv1a1.EnvoyProxy, resources *Resources) *ir.DestinationSetting {
+	var (
+		endpoints   []*ir.DestinationEndpoint
+		addrType    *ir.DestinationAddressType
+		servicePort v1.ServicePort
+		backendTLS  *ir.TLSUpstreamConfig
+	)
+
+	// TODO (davidalger) Handle case where Service referenced by backendRef doesn't exist
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, envoyproxy.Namespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	if servicePort.AppProtocol != nil &&
+		*servicePort.AppProtocol == "kubernetes.io/h2c" {
+		protocol = ir.HTTP2
+	}
+
+	// Route to endpoints by default
+	if !t.EndpointRoutingDisabled {
+		endpointSlices := resources.GetEndpointSlicesForBackend(serviceNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port))
+		endpoints = append(endpoints, ep)
+	}
+
+	return &ir.DestinationSetting{
+		Weight:      ptr.To(uint32(1)),
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+		TLS:         backendTLS,
 	}
 }

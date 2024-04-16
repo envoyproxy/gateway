@@ -52,7 +52,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: "otel-collector.monitoring.svc",
+								Host: ptr.To("otel-collector.monitoring.svc"),
 								Port: 4317,
 							},
 						},
