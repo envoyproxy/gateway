@@ -88,6 +88,7 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 			awaitOperation.Add(1)
 
 			newListenerTCPName := "custom-tcp"
+			containerPortName := "tcp-5432"
 			newListenerHTTPPort := int32(8001)
 
 			changedGatewayObj := &gwapiv1.Gateway{
@@ -129,7 +130,7 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 
 				if container.Name == "envoy" {
 					for _, port := range container.Ports {
-						if port.Name == newListenerTCPName {
+						if port.Name == containerPortName {
 							isTCPPortNameMatch = true
 						}
 
@@ -139,11 +140,11 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 					}
 
 					if !isTCPPortNameMatch {
-						t.Errorf("container expected TCP port name '%v' is not found", newListenerTCPName)
+						t.Errorf("container expected TCP port name '%v' is not found", containerPortName)
 					}
 
 					if !isHTTPPortNumberMatch {
-						t.Errorf("container expected HTTP port number '%v' is not found", newListenerTCPName)
+						t.Errorf("container expected HTTP port number '%d' is not found", newListenerHTTPPort)
 					}
 				}
 			}
