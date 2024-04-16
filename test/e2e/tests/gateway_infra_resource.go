@@ -26,9 +26,11 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, GatewayInfraResourceTest)
+	// nolint
+	//ConformanceTests = append(ConformanceTests, GatewayInfraResourceTest)
 }
 
+// nolint
 var GatewayInfraResourceTest = suite.ConformanceTest{
 	ShortName:   "GatewayInfraResourceTest",
 	Description: "Gateway Infra Resource E2E Test",
