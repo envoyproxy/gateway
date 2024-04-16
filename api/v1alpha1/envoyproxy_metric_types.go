@@ -79,7 +79,7 @@ type ProxyOpenTelemetrySink struct {
 type ProxyPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
-	// Configure the compression on Prometheus endpoint.
+	// Configure the compression on Prometheus endpoint. Compression is useful in situations when bandwidth is scarce and large payloads can be effectively compressed at the expense of higher CPU load.
 	// +optional
 	Compression *Compression `json:"compression,omitempty"`
 }

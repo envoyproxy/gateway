@@ -6229,6 +6229,9 @@ spec:
                         properties:
                           compression:
                             description: Configure the compression on Prometheus endpoint.
+                              Compression is useful in situations when bandwidth is
+                              scarce and large payloads can be effectively compressed
+                              at the expense of higher CPU load.
                             properties:
                               gzip:
                                 description: The configuration for GZIP compressor.
