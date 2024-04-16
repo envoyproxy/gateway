@@ -52,8 +52,8 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	)
 
 	for _, route := range irListener.Routes {
-		if route.BasicAuth != nil {
-			irBasicAuth = route.BasicAuth
+		if route.Security != nil && route.Security.BasicAuth != nil {
+			irBasicAuth = route.Security.BasicAuth
 			break
 		}
 	}
@@ -114,7 +114,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.BasicAuth == nil {
+	if irRoute.Security == nil || irRoute.Security.BasicAuth == nil {
 		return nil
 	}
 
@@ -133,7 +133,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	}
 
 	// Overwrite the HCM level filter config with the per route filter config.
-	basicAuthProto := basicAuthPerRouteConfig(irRoute.BasicAuth)
+	basicAuthProto := basicAuthPerRouteConfig(irRoute.Security.BasicAuth)
 	if err = basicAuthProto.ValidateAll(); err != nil {
 		return err
 	}
