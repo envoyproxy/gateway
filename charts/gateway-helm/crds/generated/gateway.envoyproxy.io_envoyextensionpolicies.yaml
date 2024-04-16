@@ -311,8 +311,8 @@ spec:
                         type:
                           allOf:
                           - enum:
-                            - Global
-                            - Local
+                            - HTTP
+                            - Image
                           - enum:
                             - HTTP
                             - Image

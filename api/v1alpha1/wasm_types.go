@@ -84,7 +84,7 @@ type WasmCodeSource struct {
 }
 
 // WasmCodeSourceType specifies the types of sources for the wasm code.
-// +kubebuilder:validation:Enum=Global;Local
+// +kubebuilder:validation:Enum=HTTP;Image
 type WasmCodeSourceType string
 
 const (
