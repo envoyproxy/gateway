@@ -282,7 +282,7 @@ type TLSConfig struct {
 	// CACertificate to verify the client
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	// RequiredClientCertificate to enforce client certificate
-	RequiredClientCertificate bool `json:"requiredClientCertificate,omitempty" yaml:"requiredClientCertificate,omitempty"`
+	RequireClientCertificate bool `json:"requireClientCertificate,omitempty" yaml:"requireClientCertificate,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
 	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
 	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
