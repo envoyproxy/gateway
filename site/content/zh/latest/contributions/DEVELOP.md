@@ -101,7 +101,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 #### 在 Mac 主机中 {#on-a-machost}
 
-由于 Mac 不支持将 Docker 网络[直接暴露][]到 Mac 主机，因此请使用以下方法之一运行一致性测试的解决方法：
+由于 Mac 不支持将 Docker 网络[直接暴露][]到 Mac 主机，因此请使用以下方法之一来运行一致性测试：
 
 * 在 [Kubernetes 支持][]下部署 Kubernetes 集群或使用 Docker Desktop 然后运行
   `TAG=latest make kube-deploy run-conformance`。
