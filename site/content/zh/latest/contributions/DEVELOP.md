@@ -71,7 +71,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 #### 可选 2：使用定制的镜像 {#use-a-custom-image}
 
-* 运行 `make kube-install-image` 从当前分支来构建一个镜像然后在 Kind 集群中载入。
+* 运行 `make kube-install-image` 来从当前分支来构建一个镜像，然后将镜像载入 Kind 集群中。
 * 运行 `IMAGE_PULL_POLICY=IfNotPresent make kube-deploy` 来使用定制化镜像安装 Envoy Gateway 到 Kind 集群中。
 
 ### 在 Kubernetes 中部署 Envoy Gateway {#deploying-envoy-gateway-inkubernetes}
