@@ -122,7 +122,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 export ENVOY_DEPLOYMENT=$(kubectl get deploy -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
 ```
 
-对管理员接口端口进行端口转发：
+对其管理端口进行端口转发：
 
 ```shell
 kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
