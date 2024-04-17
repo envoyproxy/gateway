@@ -114,4 +114,4 @@ helm uninstall eg -n envoy-gateway-system
 
 ## 接下来 {#next-steps}
 
-查看[开发者指南](../contributions/develop) 来参与该项目。
+浏览[开发者指南](../contributions/develop) ，了解如何参与项目。
