@@ -256,7 +256,6 @@ type KubernetesServiceSpec struct {
 	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
 	// This field may only be set for services with type LoadBalancer and will be cleared if the type
 	// is changed to any other type.
-	// +kubebuilder:validation:XValidation:message="loadBalancerSourceRange must be a valid IPv4 subnet",rule="self.all(lbsr, lbsr.matches(r\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|\\/\\d{1,2}$)){4})\"))"
 	// +optional
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 

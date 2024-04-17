@@ -5771,10 +5771,6 @@ spec:
                             items:
                               type: string
                             type: array
-                            x-kubernetes-validations:
-                            - message: loadBalancerSourceRange must be a valid IPv4
-                                subnet
-                              rule: self.all(lbsr, lbsr.matches(r"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|\/\d{1,2}$)){4})"))
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the service
