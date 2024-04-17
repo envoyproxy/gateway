@@ -62,7 +62,7 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	}
 
 	// We use the first route that contains the basicAuth config to build the filter.
-	// The HCM-level filter config doesn't matter since it is overwritten at the route level.
+	// The HCM-level filter config doesn't matter since it is overridden at the route level.
 	if filter, err = buildHCMBasicAuthFilter(irBasicAuth); err != nil {
 		return err
 	}
