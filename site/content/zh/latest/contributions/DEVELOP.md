@@ -56,7 +56,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 ### 构建和推送镜像 {#building-and-pushing-the-image}
 
 * 运行 `IMAGE=docker.io/you/gateway-dev make image` 来构建 Docker 镜像。
-* 运行 `IMAGE=docker.io/you/gateway-dev make push-multiarch` 来构建个推送多架构的 Docker 镜像。
+* 运行 `IMAGE=docker.io/you/gateway-dev make push-multiarch` 来构建和推送支持多架构的 Docker 镜像。
 
 **注意：** 使用您注册的镜像名称来替代 `IMAGE`。
 
