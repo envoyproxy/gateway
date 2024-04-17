@@ -13,7 +13,7 @@ description: 只需几个简单的步骤即可开始使用 Envoy Gateway。
 **注意：** 请参考[兼容性表格](../install/matrix)来查看所支持的 Kubernetes 版本。
 
 **注意：** 如果您的 Kubernetes 集群没有负载均衡器实现，我们建议安装一个
-`Gateway` 资源有一个与其关联的地址。我们推荐使用 [MetalLB](https://metallb.universe.tf/installation/)。
+，以便 Gateway 资源能够关联一个地址。我们推荐使用 [MetalLB](https://metallb.universe.tf/installation/)。
 
 ## 安装 {#installation}
 
