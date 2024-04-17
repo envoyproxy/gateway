@@ -14,8 +14,26 @@ import (
 //
 // ExtProc defines the configuration for External Processing filter.
 type ExtProc struct {
-	// Service defines the configuration of the external processing service
+	// BackendRef defines the configuration of the external processing service
 	BackendRef ExtProcBackendRef `json:"backendRef"`
+
+	// BackendRefs defines the configuration of the external processing service
+	//
+	// +optional
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+
+	// MessageTimeout is the timeout for a response to be returned from the external processor
+	// Default: 200ms
+	//
+	// +optional
+	MessageTimeout *gwapiv1.Duration `json:"messageTimeout,omitempty"`
+
+	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
+	// external processor are terminated or passed-through.
+	// Default: false
+	//
+	// +optional
+	FailOpen *bool `json:"failOpen,omitempty"`
 }
 
 // ExtProcService defines the gRPC External Processing service using the envoy grpc client
