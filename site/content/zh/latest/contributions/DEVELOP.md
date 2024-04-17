@@ -96,7 +96,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 #### 在 Linux 主机中 {#on-a-linux-host}
 
-* 运行 `TAG=latest make conformance` 来创建一个 Kind 集群, 使用最新的 [gateway-dev][] 镜像安装 Envoy Gateway
+* 运行 `TAG=latest make conformance` 来创建一个 Kind 集群, 使用最新的 [gateway-dev][] 镜像安装 Envoy Gateway，
   然后运行 Gateway API 一致性测试。
 
 #### 在 Mac 主机中 {#on-a-machost}
