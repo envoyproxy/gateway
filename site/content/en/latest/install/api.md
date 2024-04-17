@@ -26,7 +26,7 @@ The Helm chart for Envoy Gateway
 |-----|------|---------|-------------|
 | certgen.job.annotations | object | `{}` |  |
 | certgen.job.resources | object | `{}` |  |
-| certgen.job.ttlSecondsAfterFinished | int | `0` |  |
+| certgen.job.ttlSecondsAfterFinished | int | `30` |  |
 | certgen.rbac.annotations | object | `{}` |  |
 | certgen.rbac.labels | object | `{}` |  |
 | config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
