@@ -114,12 +114,13 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.router
 	//
 	// +optional
+	// +notImplementedHide
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
 }
 
 // FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
-// +kubebuilder:validation:XValidation:rule="has(self.before) && (has(self.after)", message="only one of before or after can be set"
-// +kubebuilder:validation:XValidation:rule="!has(self.before) && !has(self.after)", message="one of before or after must be set"
+// +kubebuilder:validation:XValidation:rule="(has(self.before) || has(self.after))",message="one of before or after must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.before) && !has(self.after)) || (!has(self.before) && has(self.after))",message="only one of before or after can be specified"
 type FilterPosition struct {
 	// Name of the filter.
 	Name EnvoyFilter `json:"filter"`

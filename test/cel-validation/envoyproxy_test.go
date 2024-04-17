@@ -1232,7 +1232,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"only one of before or after can be set"},
+			wantErrors: []string{"only one of before or after can be specified"},
 		},
 		{
 			desc: "ProxyFilterOrder-without-before-or-after",
@@ -1245,7 +1245,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"one of before or after must be set"},
+			wantErrors: []string{"one of before or after must be specified"},
 		},
 		{
 			desc: "ProxyFilterOrder-with-before",
@@ -1259,6 +1259,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "ProxyFilterOrder-with-after",
@@ -1272,6 +1273,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
+			wantErrors: []string{},
 		},
 	}
 
@@ -1291,7 +1293,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			}
 
 			if (len(tc.wantErrors) != 0) != (err != nil) {
-				t.Fatalf("Unexpected response while creating EnvoyProxy; got err=\n%v\n;want error=%v", err, tc.wantErrors != nil)
+				t.Fatalf("Unexpected response while creating EnvoyProxy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
 			}
 
 			var missingErrorStrings []string

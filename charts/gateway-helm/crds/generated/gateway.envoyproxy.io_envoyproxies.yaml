@@ -177,10 +177,11 @@ spec:
                   - filter
                   type: object
                   x-kubernetes-validations:
-                  - message: only one of before or after can be set
-                    rule: has(self.before) && (has(self.after)
-                  - message: one of before or after must be set
-                    rule: '!has(self.before) && !has(self.after)'
+                  - message: one of before or after must be specified
+                    rule: (has(self.before) || has(self.after))
+                  - message: only one of before or after can be specified
+                    rule: (has(self.before) && !has(self.after)) || (!has(self.before)
+                      && has(self.after))
                 type: array
               logging:
                 default:
