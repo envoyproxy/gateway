@@ -439,9 +439,14 @@ spec:
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
                       type: string
+                    rootID:
+                      description: |-
+                        RootID is a unique ID for a set of extensions in a VM which will share a
+                        RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
+                        If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
+                      type: string
                   required:
                   - code
-                  - config
                   - name
                   type: object
                 type: array

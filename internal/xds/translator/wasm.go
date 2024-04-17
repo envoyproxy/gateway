@@ -104,21 +104,27 @@ func wasmFilterName(wasm ir.Wasm) string {
 
 func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 	var (
-		uc        *urlCluster
-		configAny *anypb.Any
-		err       error
+		uc           *urlCluster
+		pluginConfig = ""
+		configAny    *anypb.Any
+		filterConfig *wasmfilterv3.Wasm
+		err          error
 	)
 
 	// We only support HTTP Wasm code source for now
 	if uc, err = url2Cluster(wasm.HTTPWasmCode.URL); err != nil {
 		return nil, err
 	}
-	configAny, err = anypb.New(wrapperspb.String(string(wasm.Config.Raw)))
-	if err != nil {
+
+	if wasm.Config != nil {
+		pluginConfig = string(wasm.Config.Raw)
+	}
+
+	if configAny, err = anypb.New(wrapperspb.String(pluginConfig)); err != nil {
 		return nil, err
 	}
 
-	return &wasmfilterv3.Wasm{
+	filterConfig = &wasmfilterv3.Wasm{
 		Config: &wasmv3.PluginConfig{
 			Name: wasm.WasmName,
 			Vm: &wasmv3.PluginConfig_VmConfig{
@@ -146,7 +152,13 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 			Configuration: configAny,
 			FailOpen:      wasm.FailOpen,
 		},
-	}, nil
+	}
+
+	if wasm.RootID != nil {
+		filterConfig.Config.RootId = *wasm.RootID
+	}
+
+	return filterConfig, nil
 }
 
 // routeContainsWasm returns true if Wasms exists for the provided route.

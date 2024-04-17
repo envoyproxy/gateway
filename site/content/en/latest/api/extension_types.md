@@ -3092,8 +3092,9 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging. |
+| `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s). |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
-| `config` | _[JSON](#json)_ |  true  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
+| `config` | _[JSON](#json)_ |  false  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. Otherwise, if it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error. |
 
 

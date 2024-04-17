@@ -498,6 +498,7 @@ func (t *Translator) buildWasm(name string, wasm egv1a1.Wasm) (*ir.Wasm, error) 
 
 	wasmIR := &ir.Wasm{
 		Name:         name,
+		RootID:       wasm.RootID,
 		WasmName:     wasm.Name,
 		Config:       wasm.Config,
 		FailOpen:     failOpen,

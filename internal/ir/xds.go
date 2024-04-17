@@ -1906,6 +1906,11 @@ type Wasm struct {
 	// The xds translator only generates one ExtProc filter for each unique name.
 	Name string `json:"name"`
 
+	// RootID is a unique ID for a set of extensions in a VM which will share a
+	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
+	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
+	RootID *string `json:"rootID,omitempty"`
+
 	// WasmName is used to identify the Wasm extension if multiple extensions are
 	// handled by the same vm_id and root_id.
 	// It's also used for logging/debugging.
