@@ -47,7 +47,7 @@ infraIR:
         name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10091
-          name: tls
+          name: tls-91
           protocol: TLS
           servicePort: 91
       metadata:
