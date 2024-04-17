@@ -110,7 +110,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 * 安装并执行 [Docker Mac Net Connect][mac_connect] 然后运行 `TAG=latest make conformance`。
 
 **注意：** 在命令前加上 `IMAGE` 或替换 `TAG` 以使用不同的 Envoy Gateway 镜像或标签。
-如果是 `TAG` 未指定，则使用当前分支的短 SHA。
+如果未指定 `TAG` ，则会默认使用当前分支的短 SHA。
 
 ### 调试 Envoy 配置 {#debugging-the-envoy-config}
 
