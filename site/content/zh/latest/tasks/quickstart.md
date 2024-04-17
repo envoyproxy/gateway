@@ -84,7 +84,7 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 
 - 完成 Envoy Gateway 的安装
 - 部署一个后端服务和一个网关
-- 使用 Kubernetes Gateway API 资源 [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) 和 [HttpRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) 配置网关。将通过 HTTP 传入的请求定向到后端服务。
+- 使用 Kubernetes Gateway API 资源 [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) 和 [HttpRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) 配置网关。将网关传入的 HTTP 请求转发到后端服务。
 
 以下是建议的后续任务列表，可指导您探索 Envoy Gateway：
 
