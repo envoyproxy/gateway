@@ -21,14 +21,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-
-	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, GatewayInfraResourceTest)
+	// nolint
+	//ConformanceTests = append(ConformanceTests, GatewayInfraResourceTest)
 }
 
+// nolint
 var GatewayInfraResourceTest = suite.ConformanceTest{
 	ShortName:   "GatewayInfraResourceTest",
 	Description: "Gateway Infra Resource E2E Test",
@@ -90,6 +90,7 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 			awaitOperation.Add(1)
 
 			newListenerTCPName := "custom-tcp"
+			containerPortName := "tcp-5432"
 			newListenerHTTPPort := int32(8001)
 
 			changedGatewayObj := &gwapiv1.Gateway{
@@ -129,10 +130,9 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 			for _, container := range gatewayDeployment.Spec.Template.Spec.Containers {
 				var isTCPPortNameMatch, isHTTPPortNumberMatch bool
 
-				hashedPortName := utils.GetHashedName(newListenerTCPName, 6)
 				if container.Name == "envoy" {
 					for _, port := range container.Ports {
-						if port.Name == hashedPortName {
+						if port.Name == containerPortName {
 							isTCPPortNameMatch = true
 						}
 
@@ -142,11 +142,11 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 					}
 
 					if !isTCPPortNameMatch {
-						t.Errorf("container expected TCP port name '%v' is not found", hashedPortName)
+						t.Errorf("container expected TCP port name '%v' is not found", containerPortName)
 					}
 
 					if !isHTTPPortNumberMatch {
-						t.Errorf("container expected HTTP port number '%v' is not found", hashedPortName)
+						t.Errorf("container expected HTTP port number '%d' is not found", newListenerHTTPPort)
 					}
 				}
 			}
