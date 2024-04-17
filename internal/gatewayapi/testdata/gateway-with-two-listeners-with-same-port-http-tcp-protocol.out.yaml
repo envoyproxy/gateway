@@ -110,14 +110,14 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: envoy-gateway/gateway-1/tcp
         ports:
         - containerPort: 10080
-          name: tcp
+          name: tcp-80
           protocol: TCP
           servicePort: 80
       metadata:
