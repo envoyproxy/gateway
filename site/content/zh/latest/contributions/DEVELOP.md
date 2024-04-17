@@ -76,7 +76,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 ### 在 Kubernetes 中部署 Envoy Gateway {#deploying-envoy-gateway-inkubernetes}
 
-* 运行 `TAG=latest make kube-deploy` 使用最新镜像将 Envoy Gateway 部署到 Kubernetes 集群中（链接到当前的 kube 上下文）。
+* 运行 `TAG=latest make kube-deploy` 使用最新镜像将 Envoy Gateway 部署到 Kubernetes 集群中（当前 kube 上下文指向的集群）。
   在命令前面加上 `IMAGE` 或替换 `TAG` 以使用不同的 Envoy Gateway 镜像或标签。
 * 运行 `make kube-undeploy` 在集群中卸载 Envoy Gateway。
 
