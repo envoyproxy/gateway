@@ -846,24 +846,22 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			)
 			continue
 		}
-		if len(udpRoute.Spec.Rules[0].BackendRefs) != 1 {
-			parentRef.SetCondition(udpRoute,
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				"InvalidBackend",
-				"One and only one backend is supported",
-			)
+
+		valid := true
+		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
+			ds, _ := t.processDestination(backendRef, parentRef, udpRoute, resources)
+			// Skip further processing if route destination is not valid
+			if ds == nil || len(ds.Endpoints) == 0 {
+				valid = false
+				continue
+			}
+
+			destSettings = append(destSettings, ds)
+		}
+		if !valid {
 			continue
 		}
 
-		backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
-		ds, _ := t.processDestination(backendRef, parentRef, udpRoute, resources)
-		// Skip further processing if route destination is not valid
-		if ds == nil || len(ds.Endpoints) == 0 {
-			continue
-		}
-
-		destSettings = append(destSettings, ds)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(udpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(udpRoute,
