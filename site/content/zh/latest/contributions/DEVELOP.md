@@ -10,7 +10,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 ### go {#go}
 
-* 版本：1.20
+* 版本：1.22
 * 安装指南：https://go.dev/doc/install
 
 ### make {#make}
