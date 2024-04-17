@@ -438,9 +438,8 @@ spec:
                           type: object
                         maxItems: 8
                         type: array
-                      required:
-                        default: true
-                        description: Required set to true means that Envoy will reject
+                      optional:
+                        description: Optional set to false means that Envoy will reject
                           connections without a valid client certificate.
                         type: boolean
                     type: object
