@@ -8,9 +8,9 @@ package v1alpha1
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
 
-	// AllowMissing determines whether a missing JWT is acceptable, defaulting to false if not specified.
-	// Note: Even if allowMissing is set to true, JWT authentication will still fail if an invalid JWT is presented.
-	AllowMissing *bool `json:"allowMissing,omitempty"`
+	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
+	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+	Optional *bool `json:"optional,omitempty"`
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
 	// When multiple JWT providers are specified, the JWT is considered valid if

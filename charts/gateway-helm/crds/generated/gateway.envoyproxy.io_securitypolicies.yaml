@@ -422,10 +422,10 @@ spec:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
                 properties:
-                  allowMissing:
+                  optional:
                     description: |-
-                      AllowMissing determines whether a missing JWT is acceptable, defaulting to false if not specified.
-                      Note: Even if allowMissing is set to true, JWT authentication will still fail if an invalid JWT is presented.
+                      Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
+                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
                     type: boolean
                   providers:
                     description: |-

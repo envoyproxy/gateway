@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, JWTTest, AllowMissingJWTTest)
+	ConformanceTests = append(ConformanceTests, JWTTest, OptionalJWTTest)
 }
 
 const (
@@ -111,13 +111,13 @@ var JWTTest = suite.ConformanceTest{
 	},
 }
 
-var AllowMissingJWTTest = suite.ConformanceTest{
-	ShortName:   "AllowMissingJWT",
-	Description: "Test allow missing JWT",
-	Manifests:   []string{"testdata/jwt-allow-missing.yaml"},
+var OptionalJWTTest = suite.ConformanceTest{
+	ShortName:   "OptionalJWT",
+	Description: "Test enable optional JWT",
+	Manifests:   []string{"testdata/jwt-optional.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "jwt-allow-missing", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "jwt-optional", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
