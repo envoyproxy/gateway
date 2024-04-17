@@ -119,8 +119,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				// hashed container port name including up to the 6 characters of the port name and the maximum of 15 characters.
-				Name:          utils.GetHashedName(p.Name, 6),
+				Name:          p.Name,
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}

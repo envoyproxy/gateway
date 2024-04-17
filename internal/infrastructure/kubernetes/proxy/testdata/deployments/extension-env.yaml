@@ -196,10 +196,10 @@ spec:
         name: envoy
         ports:
         - containerPort: 8080
-          name: EnvoyH-d76a15e2
+          name: EnvoyHTTPPort
           protocol: TCP
         - containerPort: 8443
-          name: EnvoyH-6658f727
+          name: EnvoyHTTPSPort
           protocol: TCP
         - containerPort: 19001
           name: metrics

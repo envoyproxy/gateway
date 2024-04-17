@@ -144,12 +144,8 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 		proto = ir.UDPProtocolType
 	}
 
-	infraPortName := string(listener.Name)
-	if t.MergeGateways {
-		infraPortName = irHTTPListenerName(listener)
-	}
 	infraPort := ir.ListenerPort{
-		Name:          infraPortName,
+		Name:          irListenerPortName(proto, servicePort.port),
 		Protocol:      proto,
 		ServicePort:   servicePort.port,
 		ContainerPort: servicePortToContainerPort(servicePort.port),
