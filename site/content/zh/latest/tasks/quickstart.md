@@ -98,7 +98,7 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 
 ## 清理 {#clean-up}
 
-使用本节（快速开始）的步骤来卸载与 Envoy Gateway 相关的一切。
+请按照本节中的步骤将快速入门中的所有内容卸载。
 
 删除 GatewayClass，Gateway，HTTPRoute 和示例应用：
 
