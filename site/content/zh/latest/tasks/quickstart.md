@@ -94,7 +94,7 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 - [全局流量限制](https://gateway.envoyproxy.io/latest/tasks/traffic/global-rate-limit/)
 - [gRPC 路由](https://gateway.envoyproxy.io/latest/tasks/traffic/grpc-routing/)
 
-查看[任务](./)部分以了解与您的用例匹配的场景。Envoy Gateway 任务按类别组织：流量管理、安全性、可扩展性、可观察性和操作。
+请查看与您使用情况相符的场景下的[任务](./)部分。Envoy Gateway 的任务按照流量管理、安全、扩展性、可观察性和运维等分类组织。
 
 ## 清理 {#clean-up}
 
