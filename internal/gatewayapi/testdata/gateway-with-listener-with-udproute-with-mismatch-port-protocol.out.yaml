@@ -45,7 +45,7 @@ infraIR:
         name: envoy-gateway/gateway-1/udp
         ports:
         - containerPort: 10162
-          name: udp
+          name: udp-162
           protocol: UDP
           servicePort: 162
       metadata:
