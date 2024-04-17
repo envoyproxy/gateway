@@ -114,7 +114,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统构建。我们的 CI 基于 
 
 ### 调试 Envoy 配置 {#debugging-the-envoy-config}
 
-查看 Envoy Gateway 正在使用的 Envoy 配置的一种简单方法是将端口转发到管理界面端口
+查看 Envoy Gateway 正在使用的 Envoy 配置的一种简单方法是将 Envoy 的管理端口（当前为 `19000`）转发到一个本地端口上，这样就可以直接在本地进行访问。
 （当前为 `19000`）在对应于网关的 Envoy 部署上，以便可以在本地访问它。
 
 获取 Envoy 部署的名称。下面是 Gateway `eg` 在 `default` 命名空间中的例子：
