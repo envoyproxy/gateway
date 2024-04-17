@@ -963,7 +963,6 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 
 func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tcpRoute.ParentRefs {
-
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -979,23 +978,21 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			)
 			continue
 		}
-		if len(tcpRoute.Spec.Rules[0].BackendRefs) != 1 {
-			parentRef.SetCondition(tcpRoute,
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				"InvalidBackend",
-				"One and only one backend is supported",
-			)
+
+		valid := true
+		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
+			ds, _ := t.processDestination(backendRef, parentRef, tcpRoute, resources)
+			// Skip further processing if route destination is not valid
+			if ds == nil || len(ds.Endpoints) == 0 {
+				valid = false
+				continue
+			}
+			destSettings = append(destSettings, ds)
+		}
+		if !valid {
 			continue
 		}
 
-		backendRef := tcpRoute.Spec.Rules[0].BackendRefs[0]
-		ds, _ := t.processDestination(backendRef, parentRef, tcpRoute, resources)
-		// Skip further processing if route destination is not valid
-		if ds == nil || len(ds.Endpoints) == 0 {
-			continue
-		}
-		destSettings = append(destSettings, ds)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(tcpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(tcpRoute,
