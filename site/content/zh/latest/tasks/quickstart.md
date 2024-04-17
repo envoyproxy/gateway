@@ -64,7 +64,7 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 
 ### 外部负载均衡器支持 {#external-loadbalancer-support}
 
-您还可以通过将流量发送到外部 IP 来测试相同的功能。获取外部 IP Envoy 服务，运行：
+您还可以通过将流量发送到外部 IP 来测试相同的功能。运行下面的命令可以获取 Envoy 服务的外部 IP 地址：
 
 ```shell
 export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
