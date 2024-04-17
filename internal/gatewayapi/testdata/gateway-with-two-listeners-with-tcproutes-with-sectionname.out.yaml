@@ -72,14 +72,14 @@ infraIR:
         name: envoy-gateway/gateway-1/tcp1
         ports:
         - containerPort: 10162
-          name: tcp1
+          name: tcp-162
           protocol: TCP
           servicePort: 162
       - address: null
         name: envoy-gateway/gateway-1/tcp2
         ports:
         - containerPort: 10163
-          name: tcp2
+          name: tcp-163
           protocol: TCP
           servicePort: 163
       metadata:

@@ -88,7 +88,7 @@ infraIR:
         name: default/gateway-1/https
         ports:
         - containerPort: 10443
-          name: https
+          name: https-443
           protocol: HTTPS
           servicePort: 443
       metadata:
