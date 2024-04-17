@@ -88,11 +88,11 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 
 以下是建议的后续任务列表，可指导您探索 Envoy Gateway：
 
-- [HTTP 路由](traffic/http-routing)
-- [流量分流](traffic/http-traffic-splitting)
-- [安全网关](security/secure-gateways/)
-- [全局流量限制](traffic/global-rate-limit/)
-- [gRPC 路由](traffic/grpc-routing/)
+- [HTTP 路由](../../../../latest/tasks/traffic/http-routing)
+- [流量分流](../../../../latest/tasks/traffic/http-traffic-splitting)
+- [安全网关](../../../../latest/tasks/security/secure-gateways/)
+- [全局流量限制](../../../../latest/tasks/traffic/global-rate-limit/)
+- [gRPC 路由](../../../../latest/tasks/traffic/grpc-routing/)
 
 查看[任务](./)部分以了解与您的用例匹配的场景。Envoy Gateway 任务按类别组织：流量管理、安全性、可扩展性、可观察性和操作。
 
