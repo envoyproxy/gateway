@@ -72,7 +72,7 @@ export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -
 
 在某些环境中，负载均衡器可能会公开主机名而不是 IP 地址，如果是这样，将上述命令中的 `ip` 替换为 `hostname` 。
 
-通过 Envoy Proxy，使用 curl 操作示例应用：
+使用 curl 来通过 Envoy Proxy 访问示例应用：
 
 ```shell
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
