@@ -70,7 +70,7 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
-在某些环境中，负载均衡器可能会使用主机名而不是 IP 地址来公开，如果是这样，将上述命令中的 `ip` 替换为 `hostname` 。
+在某些环境中，负载均衡器可能会公开主机名而不是 IP 地址，如果是这样，将上述命令中的 `ip` 替换为 `hostname` 。
 
 通过 Envoy Proxy，使用 curl 操作示例应用：
 
