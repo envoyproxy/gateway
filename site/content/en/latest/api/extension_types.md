@@ -1200,9 +1200,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Streamed` |  | 
-| `Buffered` |  | 
-| `BufferedPartial` |  | 
+| `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
+| `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
+| `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
 
 
 #### ExtProcProcessingMode

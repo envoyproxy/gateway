@@ -13,8 +13,11 @@ import (
 type ExtProcBodyProcessingMode string
 
 const (
+	// StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.
 	StreamedExtProcBodyProcessingMode          ExtProcBodyProcessingMode = "Streamed"
+	// BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.
 	BufferedExtProcBodyProcessingMode          ExtProcBodyProcessingMode = "Buffered"
+	// BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.
 	BufferedPartialExtBodyHeaderProcessingMode ExtProcBodyProcessingMode = "BufferedPartial"
 )
 
