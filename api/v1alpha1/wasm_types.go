@@ -31,6 +31,7 @@ type Wasm struct {
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
 	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
+	// RootID must match the root_id parameter used to register the Context in the Wasm code.
 	RootID *string `json:"rootID,omitempty"`
 
 	// Code is the wasm code for the extension.
