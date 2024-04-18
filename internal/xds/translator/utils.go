@@ -13,14 +13,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/xds/types"
-
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -160,4 +160,18 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 		return err
 	}
 	return nil
+}
+
+func ParseTLSProtocol(tlsVersion ir.TLSVersion) (tlsv3.TlsParameters_TlsProtocol, error) {
+	protocolMap := map[string]tlsv3.TlsParameters_TlsProtocol{
+		"AUTO": tlsv3.TlsParameters_TLS_AUTO,
+		"1.0":  tlsv3.TlsParameters_TLSv1_0,
+		"1.2":  tlsv3.TlsParameters_TLSv1_2,
+		"1.3":  tlsv3.TlsParameters_TLSv1_3,
+	}
+	protocol, ok := protocolMap[strings.ToUpper(string(tlsVersion))]
+	if !ok {
+		return 0, fmt.Errorf("invalid TLS protocol: %s", tlsVersion)
+	}
+	return protocol, nil
 }

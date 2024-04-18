@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -760,9 +761,33 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 
 	var tlsCtx *tlsv3.UpstreamTlsContext
 
+	tlsParams := &tlsv3.TlsParameters{
+		CipherSuites:        tlsConfig.Ciphers,
+		EcdhCurves:          tlsConfig.EcdhCurves,
+		SignatureAlgorithms: tlsConfig.SignatureAlgorithms,
+	}
+
+	if tlsConfig.MinVersion != nil {
+		tlsMin, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MinVersion, ""))
+		if err != nil {
+			return nil, err
+		}
+		tlsParams.TlsMinimumProtocolVersion = tlsMin
+	}
+
+	if tlsConfig.MaxVersion != nil {
+		tlsMax, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MaxVersion, ""))
+		if err != nil {
+			return nil, err
+		}
+		tlsParams.TlsMaximumProtocolVersion = tlsMax
+	}
+
 	if tlsConfig.UseSystemTrustStore {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
+				TlsParams:       tlsParams,
+				TlsCertificates: nil,
 				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 					ValidationContext: &tlsv3.CertificateValidationContext{
 						TrustedCa: &corev3.DataSource{
@@ -784,6 +809,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	} else {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
+				TlsParams:                      tlsParams,
 				TlsCertificateSdsSecretConfigs: nil,
 				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
