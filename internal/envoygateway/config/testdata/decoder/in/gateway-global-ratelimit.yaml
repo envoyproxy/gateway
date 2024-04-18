@@ -4,6 +4,12 @@ gateway:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 provider:
   type: Kubernetes
+  kubernetes:
+    leaderElection:
+      leaseDuration: 15s
+      renewDeadline: 10s
+      retryPeriod: 2s
+      disable: false
 rateLimit:
   timeout: 10ms
   failClosed: true

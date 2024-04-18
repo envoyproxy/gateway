@@ -110,6 +110,7 @@ rules:
   - clienttrafficpolicies
   - backendtrafficpolicies
   - securitypolicies
+  - envoyextensionpolicies
   verbs:
   - get
   - list
@@ -121,6 +122,7 @@ rules:
   - clienttrafficpolicies/status
   - backendtrafficpolicies/status
   - securitypolicies/status
+  - envoyextensionpolicies/status
   verbs:
   - update
 - apiGroups:
@@ -522,4 +524,4 @@ spec:
         runAsNonRoot: true
         runAsUser: 65534
       serviceAccountName: eg-gateway-helm-certgen
-  ttlSecondsAfterFinished: 0
+  ttlSecondsAfterFinished: 30

@@ -8,6 +8,8 @@ package runner
 import (
 	"context"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
@@ -41,14 +43,31 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
 	}
-	go r.subscribeToProxyInfraIR(ctx)
 
-	// Enable global ratelimit if it has been configured.
-	if r.EnvoyGateway.RateLimit != nil {
-		go r.enableRateLimitInfra(ctx)
+	var initInfra = func() {
+		go r.subscribeToProxyInfraIR(ctx)
+
+		// Enable global ratelimit if it has been configured.
+		if r.EnvoyGateway.RateLimit != nil {
+			go r.enableRateLimitInfra(ctx)
+		}
+		r.Logger.Info("started")
 	}
 
-	r.Logger.Info("started")
+	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
+	// to avoid multiple EG instances processing envoy proxy infra resources.
+	if !ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-r.Elected:
+				initInfra()
+			}
+		}()
+		return
+	}
+	initInfra()
 	return
 }
 

@@ -18,23 +18,13 @@ func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
 
 	// 1. Sort based on path match type
-	// Exact > PathPrefix > RegularExpression
+	// Exact > RegularExpression > PathPrefix
 	if x[i].PathMatch != nil && x[i].PathMatch.Exact != nil {
 		if x[j].PathMatch != nil {
+			if x[j].PathMatch.SafeRegex != nil {
+				return false
+			}
 			if x[j].PathMatch.Prefix != nil {
-				return false
-			}
-			if x[j].PathMatch.SafeRegex != nil {
-				return false
-			}
-		}
-	}
-	if x[i].PathMatch != nil && x[i].PathMatch.Prefix != nil {
-		if x[j].PathMatch != nil {
-			if x[j].PathMatch.Exact != nil {
-				return true
-			}
-			if x[j].PathMatch.SafeRegex != nil {
 				return false
 			}
 		}
@@ -45,6 +35,16 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 				return true
 			}
 			if x[j].PathMatch.Prefix != nil {
+				return false
+			}
+		}
+	}
+	if x[i].PathMatch != nil && x[i].PathMatch.Prefix != nil {
+		if x[j].PathMatch != nil {
+			if x[j].PathMatch.Exact != nil {
+				return true
+			}
+			if x[j].PathMatch.SafeRegex != nil {
 				return true
 			}
 		}
@@ -96,11 +96,11 @@ func pathMatchCount(pathMatch *ir.StringMatch) int {
 		if pathMatch.Exact != nil {
 			return len(*pathMatch.Exact)
 		}
-		if pathMatch.Prefix != nil {
-			return len(*pathMatch.Prefix)
-		}
 		if pathMatch.SafeRegex != nil {
 			return len(*pathMatch.SafeRegex)
+		}
+		if pathMatch.Prefix != nil {
+			return len(*pathMatch.Prefix)
 		}
 	}
 	return 0
