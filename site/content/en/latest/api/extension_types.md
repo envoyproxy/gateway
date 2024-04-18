@@ -222,7 +222,7 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves. |
 | `minVersion` | _string_ |  false  | MinVersion specifies the minimal tls protocol to allow. |
 | `maxVersion` | _string_ |  false  | MaxVersion specifies the maximal tls protocol version to allow |
-| `SignatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should support. |
+| `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should support. |
 
 
 #### BackendTrafficPolicy

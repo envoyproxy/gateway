@@ -43,6 +43,84 @@ spec:
           spec:
             description: EnvoyProxySpec defines the desired state of EnvoyProxy.
             properties:
+              backendTLS:
+                description: |-
+                  BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
+                  These settings are applied on backends for which TLS policies are specified.
+                properties:
+                  ciphers:
+                    description: Ciphers defines only support the specified cipher
+                      list when negotiating BackendTLS 1.0-1.2 (this setting has no
+                      effect when negotiating BackendTLS 1.3).
+                    items:
+                      type: string
+                    type: array
+                  clientCertificateRef:
+                    description: |-
+                      ClientCertificateRef defines the reference to a Kubernetes Secret that contains
+                      the client certificate and private key for Envoy to use when connecting to
+                      backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+                    properties:
+                      group:
+                        default: ""
+                        description: |-
+                          Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                          When unspecified or empty string, core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referenced object. When unspecified, the local
+                          namespace is inferred.
+
+
+                          Note that when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace to allow that
+                          namespace's owner to accept the reference. See the ReferenceGrant
+                          documentation for details.
+
+
+                          Support: Core
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  ecdhCurves:
+                    description: ECDHCurves specifies the set of supported ECDH curves.
+                    items:
+                      type: string
+                    type: array
+                  maxVersion:
+                    description: MaxVersion specifies the maximal tls protocol version
+                      to allow
+                    type: string
+                  minVersion:
+                    description: MinVersion specifies the minimal tls protocol to
+                      allow.
+                    type: string
+                  signatureAlgorithms:
+                    description: SignatureAlgorithms specifies which signature algorithms
+                      the listener should support.
+                    items:
+                      type: string
+                    type: array
+                type: object
               bootstrap:
                 description: |-
                   Bootstrap defines the Envoy Bootstrap as a YAML string.

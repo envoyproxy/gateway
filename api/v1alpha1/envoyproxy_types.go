@@ -144,7 +144,7 @@ type BackendTLSConfig struct {
 	MaxVersion string `json:"maxVersion,omitempty"`
 	// SignatureAlgorithms specifies which signature algorithms the listener should support.
 	// +optional
-	SignatureAlgorithms []string
+	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty"`
 }
 
 // FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
