@@ -87,10 +87,12 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	Retry *Retry `json:"retry,omitempty"`
 
-	// HTTP contains configuration options that are only relevant for backends that use the HTTP protocol
+	// UseClientProtocol configures Envoy to prefer sending requests to backends using
+	// the same HTTP protocol that the incoming request used. Defaults to false, which means
+	// that Envoy will use the protocol indicated by the attached BackendRef.
 	//
 	// +optional
-	HTTP *HTTPOptions `json:"http,omitempty"`
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
 	// Timeout settings for the backend connections.
 	//
@@ -102,15 +104,6 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
-}
-
-type HTTPOptions struct {
-	// UseClientProtocol configures Envoy to prefer sending requests to TLS enabled backends using
-	// the same HTTP protocol that the incoming request used. Defaults to false, which means
-	// that Envoy will use the protocol indicated by the attached BackendRef.
-	//
-	// +optional
-	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 }
 
 // +kubebuilder:object:root=true
