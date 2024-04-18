@@ -44,6 +44,9 @@ kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/
 
 ## 测试配置 {#testing-the-configuration}
 
+{{< tabpane text=true >}}
+{{% tab header="不使用负载均衡器" %}}
+
 获取由示例 Gateway 创建的 Envoy 服务的名称：
 
 ```shell
@@ -62,7 +65,9 @@ kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-### 外部负载均衡器支持 {#external-loadbalancer-support}
+{{% /tab %}}
+
+{{% tab header="使用外部负载均衡器" %}}
 
 您还可以通过将流量发送到外部 IP 来测试相同的功能。运行下面的命令可以获取 Envoy 服务的外部 IP 地址：
 
@@ -77,6 +82,9 @@ export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -
 ```shell
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## 接下来的探索？ {#what-to-explore-next}
 
