@@ -51,10 +51,11 @@ var WasmTest = suite.ConformanceTest{
 					Path: "/wasm-http",
 				},
 
+				// Set the expected request properties to empty strings.
 				// This is a workaround to avoid the test failure.
-				// The host and Namespace can't be extracted from the response
-				// body because the test wasm code adds a "Hello, world" text to
-				// the response body and the json unmarshal fails.
+				// These values can't be extracted from the json format response
+				// body because the test wasm code appends a "Hello, world" text
+				// to the response body, invalidating the json format.
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host:    "",
