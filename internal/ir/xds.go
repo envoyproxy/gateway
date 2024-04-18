@@ -1864,7 +1864,7 @@ type TLSUpstreamConfig struct {
 	EcdhCurves          []string          `json:"ecdhCurves,omitempty"`
 	MinVersion          *TLSVersion       `json:"minVersion,omitempty"`
 	MaxVersion          *TLSVersion       `json:"maxVersion,omitempty"`
-	SignatureAlgorithms []string
+	SignatureAlgorithms []string          `json:"signatureAlgorithms,omitempty"`
 }
 
 // Connection settings for downstream connections
