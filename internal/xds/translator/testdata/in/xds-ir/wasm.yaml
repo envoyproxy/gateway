@@ -72,6 +72,7 @@ http:
         url: https://www.example.com/wasm-filter-1.wasm
       name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
       wasmName: wasm-filter-1
+      rootID: my-root-id
     - config:
         parameter1: value1
         parameter2: value2

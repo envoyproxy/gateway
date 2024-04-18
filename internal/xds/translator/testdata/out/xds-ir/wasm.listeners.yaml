@@ -43,6 +43,7 @@
                 '@type': type.googleapis.com/google.protobuf.StringValue
                 value: '{"parameter1":{"key1":"value1","key2":"value2"},"parameter2":"value3"}'
               name: wasm-filter-1
+              rootId: my-root-id
               vmConfig:
                 code:
                   remote:

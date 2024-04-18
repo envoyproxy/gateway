@@ -310,6 +310,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "ext-proc",
 		},
+		{
+			name: "wasm",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -3128,7 +3128,6 @@ _Appears in:_
 | ----- | ----------- |
 | `HTTP` | HTTPWasmCodeSourceType allows the user to specify the wasm code in an HTTP URL.<br /> | 
 | `Image` | ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.<br /> | 
-| `ConfigMap` | ConfigMapCodeSourceType allows the user to specify the wasm code in a ConfigMap.<br /> | 
 
 
 #### WithUnderscoresAction

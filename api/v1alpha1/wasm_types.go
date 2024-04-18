@@ -95,9 +95,6 @@ const (
 
 	// ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.
 	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
-
-	// ConfigMapCodeSourceType allows the user to specify the wasm code in a ConfigMap.
-	ConfigMapWasmCodeSourceType WasmCodeSourceType = "ConfigMap"
 )
 
 // HTTPWasmCodeSource defines the HTTP URL containing the wasm code.

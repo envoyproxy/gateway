@@ -487,8 +487,6 @@ func (t *Translator) buildWasm(name string, wasm egv1a1.Wasm) (*ir.Wasm, error) 
 			URL:    wasm.Code.HTTP.URL,
 			SHA256: wasm.Code.SHA256,
 		}
-	case egv1a1.ConfigMapWasmCodeSourceType:
-		return nil, fmt.Errorf("ConfigMap Wasm code source is not supported yet")
 	case egv1a1.ImageWasmCodeSourceType:
 		return nil, fmt.Errorf("OCI image Wasm code source is not supported yet")
 	default:
