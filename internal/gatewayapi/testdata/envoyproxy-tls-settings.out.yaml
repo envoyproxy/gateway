@@ -115,9 +115,6 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           backendTLS:
-            SignatureAlgorithms:
-              - RSA-PSS-RSAE-SHA256
-              - ECDSA-SECP256R1-SHA256
             ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -131,6 +128,9 @@ infraIR:
               - ECDHE-ECDSA-AES256-GCM-SHA384
             maxVersion: tls1.3
             minVersion: tls1.2
+            signatureAlgorithms:
+              - RSA-PSS-RSAE-SHA256
+              - ECDSA-SECP256R1-SHA256
           logging: {}
         status: {}
       listeners:
@@ -138,7 +138,7 @@ infraIR:
           name: envoy-gateway/gateway-tls/
           ports:
             - containerPort: 10443
-              name: ""
+              name: https-443
               protocol: HTTPS
               servicePort: 443
       metadata:

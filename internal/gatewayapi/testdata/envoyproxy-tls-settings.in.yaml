@@ -12,10 +12,10 @@ gateways:
           tls:
             mode: Terminate
             certificateRefs:
-             - kind: Secret
-               namespace: envoy-gateway
-               group: ""
-               name: default-cert
+              - kind: Secret
+                namespace: envoy-gateway
+                group: ""
+                name: default-cert
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
@@ -27,7 +27,7 @@ httpRoutes:
         - namespace: envoy-gateway
           name: gateway-tls
       rules:
-         - backendRefs:
+        - backendRefs:
             - name: https-backend
               namespace: default
               port: 443
@@ -111,16 +111,16 @@ envoyproxy:
         namespace: default
         name: secret.yaml
       ciphers:
-      - ECDHE-RSA-AES128-GCM-SHA256
-      - ECDHE-ECDSA-AES256-GCM-SHA384
+        - ECDHE-RSA-AES128-GCM-SHA256
+        - ECDHE-ECDSA-AES256-GCM-SHA384
       ecdhCurves:
-      - ECDHE-RSA-AES128-GCM-SHA256
-      - ECDHE-ECDSA-AES256-GCM-SHA384
+        - ECDHE-RSA-AES128-GCM-SHA256
+        - ECDHE-ECDSA-AES256-GCM-SHA384
       maxVersion: tls1.3
       minVersion: tls1.2
       SignatureAlgorithms:
-      - RSA-PSS-RSAE-SHA256
-      - ECDSA-SECP256R1-SHA256
+        - RSA-PSS-RSAE-SHA256
+        - ECDSA-SECP256R1-SHA256
 secrets:
   - apiVersion: v1
     kind: Secret
