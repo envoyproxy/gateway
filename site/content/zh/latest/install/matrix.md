@@ -4,7 +4,7 @@ description: 本节包含关于 Envoy Gateway 的兼容性表格。
 ---
 
 Envoy Gateway 依赖于 Envoy Proxy 和 Gateway API，并在 Kubernetes 集群中运行。
-并非这些产品的所有版本都可以与 Envoy Gateway 一起运行。下面列出了支持的版本组合；
+这些产品的所有版本并非都可以与 Envoy Gateway 一起运行。下面列出了支持的版本组合；
 **粗体**类型表示实际编译到每个 Envoy Gateway 版本中的 Envoy Proxy 和 Gateway API 的版本。
 
 | Envoy Gateway 版本    | Envoy Proxy 版本            | Rate Limit 版本     | Gateway API 版本    | Kubernetes 版本             |
