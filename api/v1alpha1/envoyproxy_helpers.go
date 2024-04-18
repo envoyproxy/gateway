@@ -98,7 +98,7 @@ func (logging *ProxyLogging) DefaultEnvoyProxyLoggingLevel() LogLevel {
 		return logging.Level[LogComponentDefault]
 	}
 
-	return LogLevelDebug
+	return LogLevelWarn
 }
 
 // GetEnvoyProxyComponentLevel returns envoy proxy component log level args.

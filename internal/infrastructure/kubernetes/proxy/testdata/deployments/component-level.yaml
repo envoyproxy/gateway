@@ -44,7 +44,7 @@ spec:
         - --config-yaml test bootstrap config
         - --log-level error
         - --cpuset-threads
-        - --component-log-level filter:trace
+        - --component-log-level filter:info
         command:
         - envoy
         env:
@@ -69,10 +69,10 @@ spec:
         name: envoy
         ports:
         - containerPort: 8080
-          name: EnvoyHTTPPort
+          name: EnvoyH-d76a15e2
           protocol: TCP
         - containerPort: 8443
-          name: EnvoyHTTPSPort
+          name: EnvoyH-6658f727
           protocol: TCP
         - containerPort: 19001
           name: metrics
