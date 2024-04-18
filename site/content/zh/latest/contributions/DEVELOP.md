@@ -140,7 +140,7 @@ JWT 由 [JWT 调试器][]使用 `RS256` 算法创建。来自 JWT 的公钥验�
 JWK Creator 配置了匹配的设置，即 `Signing` 公钥使用和 `RS256` 算法。
 生成的 JWK 包装在 JWKS 结构中并被托管在仓库中。
 
-[快速开始]: https://gateway.envoyproxy.io/zh/latest/task/quickstart
+[快速开始]: ../../tasks/quickstart
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows
