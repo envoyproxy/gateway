@@ -36,7 +36,7 @@ make docs
 
 这将使用被构建的 HTML 页面创建 `site/public`。您可以通过运行以下命令来预览它：
 
-``` shell
+```shell
 make docs-serve
 ```
 
