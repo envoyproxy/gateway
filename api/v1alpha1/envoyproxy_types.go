@@ -117,14 +117,13 @@ type EnvoyProxySpec struct {
 	// +optional
 	// +notImplementedHide
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
-	// BackendTLS is the BackendTLS configuration for the Envoy proxy to use when connecting to
-	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
+	// These settings are applied on backends for which TLS policies are specified.
 	// +optional
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 }
 
 // BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
-// These settings are applied to all backend TLS policies if specified.
 type BackendTLSConfig struct {
 	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
 	// the client certificate and private key for Envoy to use when connecting to

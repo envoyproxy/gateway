@@ -211,7 +211,6 @@ _Appears in:_
 
 
 BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
-These settings are applied to all backend TLS policies if specified.
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
@@ -1133,7 +1132,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the BackendTLS configuration for the Envoy proxy to use when connecting to<br />backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc. |
+| `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 
 
 
