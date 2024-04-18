@@ -19,7 +19,6 @@ import (
 
 const (
 	defaultCleanUpRemoveEventsPeriod = 300 * time.Millisecond
-	defaultWaitForWriteEventsPeriod  = 100 * time.Millisecond
 )
 
 type Notifier struct {
@@ -30,7 +29,6 @@ type Notifier struct {
 	filesWatcher              *fsnotify.Watcher
 	dirsWatcher               *fsnotify.Watcher
 	cleanUpRemoveEventsPeriod time.Duration
-	waitForWriteEventsPeriod  time.Duration
 
 	logger logr.Logger
 }
@@ -51,7 +49,6 @@ func NewNotifier(logger logr.Logger) (*Notifier, error) {
 		filesWatcher:              fw,
 		dirsWatcher:               dw,
 		cleanUpRemoveEventsPeriod: defaultCleanUpRemoveEventsPeriod,
-		waitForWriteEventsPeriod:  defaultWaitForWriteEventsPeriod,
 		logger:                    logger,
 	}, nil
 }

@@ -8,27 +8,31 @@ package file
 import (
 	"context"
 
+	"github.com/fsnotify/fsnotify"
+
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
 type Provider struct {
-	paths     []string
-	notifier  *Notifier
-	resources *message.ProviderResources
+	paths          []string
+	notifier       *Notifier
+	resourcesStore *resourcesStore
 }
 
 func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
-	notifier, err := NewNotifier(svr.Logger.Logger)
+	logger := svr.Logger.Logger
+
+	notifier, err := NewNotifier(logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Provider{
-		paths:     svr.EnvoyGateway.Provider.Custom.Resource.File.Paths,
-		notifier:  notifier,
-		resources: resources,
+		paths:          svr.EnvoyGateway.Provider.Custom.Resource.File.Paths,
+		notifier:       notifier,
+		resourcesStore: newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
 	}, nil
 }
 
@@ -42,8 +46,12 @@ func (p *Provider) Start(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: initial load for resources-store
+	// Initially load resources from paths on host.
+	if err = p.resourcesStore.LoadAndStore(files.UnsortedList(), dirs.UnsortedList()); err != nil {
+		return err
+	}
 
+	// Start watchers in notifier.
 	p.notifier.Watch(ctx, dirs, files)
 	defer p.notifier.Close()
 
@@ -51,8 +59,17 @@ func (p *Provider) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-p.notifier.Events:
-			// TODO: ask resources-store to update according to the recv event
+		case event := <-p.notifier.Events:
+			switch event.Op {
+			case fsnotify.Create:
+				dirs.Insert(event.Name)
+				files.Insert(event.Name)
+			case fsnotify.Remove:
+				dirs.Delete(event.Name)
+				files.Delete(event.Name)
+			}
+
+			p.resourcesStore.HandleEvent(event, files.UnsortedList(), dirs.UnsortedList())
 		}
 	}
 }
