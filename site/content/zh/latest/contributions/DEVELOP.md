@@ -153,6 +153,6 @@ JWK Creator 配置了匹配的设置，即 `Signing` 公钥使用和 `RS256` 算
 [Envoy 管理接口]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin#operations-admin-interface
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
-[请求认证]: ../tasks/security/jwt-authentication
+[请求认证]: https://gateway.envoyproxy.io/latest/tasks/security/jwt-authentication/
 [JWT 调试器]: https://jwt.io/
 [JWK Creator]: https://russelldavies.github.io/jwk-creator/
