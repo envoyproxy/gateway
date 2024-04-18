@@ -47,7 +47,7 @@ func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
 	}
 
 	// TODO(sh2): For now, we assume that one file only contains one GatewayClass and all its other
-	// related resources, like Gateway, HTTPRoute, etc. If we manged to extend Resources structure,
+	// related resources, like Gateway, HTTPRoute, etc. If we managed to extend Resources structure,
 	// we also need to process all the resources and its relationship, like what is done in
 	// Kubernetes provider. However, this will cause us to maintain two places of the same logic
 	// in each provider. The ideal case is two different providers share the same resources process logic.
