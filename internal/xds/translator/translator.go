@@ -760,33 +760,36 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
 
 	var tlsCtx *tlsv3.UpstreamTlsContext
+	var tlsParams *tlsv3.TlsParameters
 
-	tlsParams := &tlsv3.TlsParameters{
-		CipherSuites:        tlsConfig.Ciphers,
-		EcdhCurves:          tlsConfig.EcdhCurves,
-		SignatureAlgorithms: tlsConfig.SignatureAlgorithms,
-	}
-
-	if tlsConfig.MinVersion != nil {
-		tlsMin, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MinVersion, ""))
-		if err != nil {
-			return nil, err
+	if len(tlsConfig.Ciphers) > 0 || len(tlsConfig.EcdhCurves) > 0 || len(tlsConfig.SignatureAlgorithms) > 0 ||
+		tlsConfig.MinVersion != nil || tlsConfig.MaxVersion != nil {
+		tlsParams = &tlsv3.TlsParameters{
+			CipherSuites:        tlsConfig.Ciphers,
+			EcdhCurves:          tlsConfig.EcdhCurves,
+			SignatureAlgorithms: tlsConfig.SignatureAlgorithms,
 		}
-		tlsParams.TlsMinimumProtocolVersion = tlsMin
-	}
 
-	if tlsConfig.MaxVersion != nil {
-		tlsMax, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MaxVersion, ""))
-		if err != nil {
-			return nil, err
+		if tlsConfig.MinVersion != nil {
+			tlsMin, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MinVersion, ""))
+			if err != nil {
+				return nil, err
+			}
+			tlsParams.TlsMinimumProtocolVersion = tlsMin
 		}
-		tlsParams.TlsMaximumProtocolVersion = tlsMax
+
+		if tlsConfig.MaxVersion != nil {
+			tlsMax, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MaxVersion, ""))
+			if err != nil {
+				return nil, err
+			}
+			tlsParams.TlsMaximumProtocolVersion = tlsMax
+		}
 	}
 
 	if tlsConfig.UseSystemTrustStore {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
-				TlsParams:       tlsParams,
 				TlsCertificates: nil,
 				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 					ValidationContext: &tlsv3.CertificateValidationContext{
@@ -809,7 +812,6 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	} else {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
-				TlsParams:                      tlsParams,
 				TlsCertificateSdsSecretConfigs: nil,
 				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
@@ -822,6 +824,9 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
+	if tlsParams != nil {
+		tlsCtx.CommonTlsContext.TlsParams = tlsParams
+	}
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
 		return nil, err
