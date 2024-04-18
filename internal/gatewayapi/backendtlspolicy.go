@@ -78,7 +78,26 @@ func (t *Translator) processBackendTLSPolicy(
 	}
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
-
+	// apply defaults as per envoyproxy
+	if resources.EnvoyProxy != nil {
+		if resources.EnvoyProxy.Spec.BackendTLS != nil {
+			if len(resources.EnvoyProxy.Spec.BackendTLS.Ciphers) > 0 {
+				tlsBundle.Ciphers = resources.EnvoyProxy.Spec.BackendTLS.Ciphers
+			}
+			if len(resources.EnvoyProxy.Spec.BackendTLS.EcdhCurves) > 0 {
+				tlsBundle.EcdhCurves = resources.EnvoyProxy.Spec.BackendTLS.EcdhCurves
+			}
+			if len(resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms) > 0 {
+				tlsBundle.SignatureAlgorithms = resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms
+			}
+			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != "" {
+				tlsBundle.MinVersion = ptr.To(ir.TLSVersion(resources.EnvoyProxy.Spec.BackendTLS.MinVersion))
+			}
+			if resources.EnvoyProxy.Spec.BackendTLS.MaxVersion != "" {
+				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(resources.EnvoyProxy.Spec.BackendTLS.MaxVersion))
+			}
+		}
+	}
 	return tlsBundle
 }
 
