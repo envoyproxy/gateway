@@ -433,6 +433,22 @@ func (t *Translator) buildExtProc(
 		extProcIR.FailOpen = extProc.FailOpen
 	}
 
+	if extProc.ProcessingMode != nil {
+		if extProc.ProcessingMode.Request != nil {
+			extProcIR.ProcessRequestHeaders = true
+			if extProc.ProcessingMode.Request.Body != nil {
+				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
+			}
+		}
+
+		if extProc.ProcessingMode.Response != nil {
+			extProcIR.ProcessResponseHeaders = true
+			if extProc.ProcessingMode.Response.Body != nil {
+				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
+			}
+		}
+	}
+
 	return extProcIR, err
 }
 

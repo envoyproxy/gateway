@@ -109,6 +109,14 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 				Seconds: defaultExtServiceRequestTimeout,
 			},
 		},
+		ProcessingMode: &extprocv3.ProcessingMode{
+			RequestHeaderMode:   extprocv3.ProcessingMode_SKIP,
+			ResponseHeaderMode:  extprocv3.ProcessingMode_SKIP,
+			RequestBodyMode:     extprocv3.ProcessingMode_NONE,
+			ResponseBodyMode:    extprocv3.ProcessingMode_NONE,
+			RequestTrailerMode:  extprocv3.ProcessingMode_SKIP,
+			ResponseTrailerMode: extprocv3.ProcessingMode_SKIP,
+		},
 	}
 
 	if extProc.FailOpen != nil {
@@ -117,6 +125,22 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 
 	if extProc.MessageTimeout != nil {
 		config.MessageTimeout = durationpb.New(extProc.MessageTimeout.Duration)
+	}
+
+	if extProc.RequestBodyProcessingMode != nil {
+		config.ProcessingMode.RequestBodyMode = buildExtProcBodyProcessingMode(extProc.RequestBodyProcessingMode)
+	}
+
+	if extProc.ProcessRequestHeaders {
+		config.ProcessingMode.RequestHeaderMode = extprocv3.ProcessingMode_SEND
+	}
+
+	if extProc.ResponseBodyProcessingMode != nil {
+		config.ProcessingMode.ResponseBodyMode = buildExtProcBodyProcessingMode(extProc.ResponseBodyProcessingMode)
+	}
+
+	if extProc.ProcessResponseHeaders {
+		config.ProcessingMode.ResponseHeaderMode = extprocv3.ProcessingMode_SEND
 	}
 
 	return config
@@ -182,4 +206,16 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 	}
 	return nil
+}
+
+func buildExtProcBodyProcessingMode(mode *ir.ExtProcBodyProcessingMode) extprocv3.ProcessingMode_BodySendMode {
+	lookup := map[ir.ExtProcBodyProcessingMode]extprocv3.ProcessingMode_BodySendMode{
+		ir.ExtProcBodyBuffered:        extprocv3.ProcessingMode_BUFFERED,
+		ir.ExtProcBodyBufferedPartial: extprocv3.ProcessingMode_BUFFERED_PARTIAL,
+		ir.ExtProcBodyStreamed:        extprocv3.ProcessingMode_STREAMED,
+	}
+	if r, found := lookup[*mode]; found {
+		return r
+	}
+	return extprocv3.ProcessingMode_NONE
 }

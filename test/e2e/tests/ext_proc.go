@@ -56,19 +56,25 @@ var ExtProcTest = suite.ConformanceTest{
 					Host: "www.example.com",
 					Path: "/processor",
 					Headers: map[string]string{
-						"x-request-ext-processed": "true", // header added by ext-processor to request
+						"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
+						"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
+						"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
 					},
 				},
 				Response: http.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"x-response-ext-processed": "true", // header added by ext-processor to request
+						"x-response-ext-processed": "true", // header added by ext-processor to client-bound response
 					},
 				},
 				Namespace: ns,
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			// add a request header that will be mutated by ext-proc
+			req.Headers["x-request-client-header"] = []string{"original"}
+
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
 				t.Errorf("failed to get expected response: %v", err)
@@ -79,9 +85,9 @@ var ExtProcTest = suite.ConformanceTest{
 			}
 		})
 
-		t.Run("http route without ext proc", func(t *testing.T) {
+		t.Run("http route without proc mode", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-proc", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-without-procmode", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -91,7 +97,7 @@ var ExtProcTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-proc-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-proc-no-procmode-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
@@ -102,6 +108,9 @@ var ExtProcTest = suite.ConformanceTest{
 				Request: http.Request{
 					Host: "www.example.com",
 					Path: "/no-processor",
+					Headers: map[string]string{
+						"x-request-client-header": "original",
+					},
 				},
 				Response: http.Response{
 					StatusCode:    200,
@@ -111,6 +120,10 @@ var ExtProcTest = suite.ConformanceTest{
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			// add a request header that will be mutated by ext-proc
+			req.Headers["x-request-client-header"] = []string{"original"}
+
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
 				t.Errorf("failed to get expected response: %v", err)

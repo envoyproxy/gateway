@@ -205,6 +205,11 @@ envoyExtensionPolicies:
       - Name: grpc-backend
         Namespace: envoy-gateway
         Port: 8000
+      processingMode:
+        request:
+          body: Buffered
+        response:
+          body: Streamed
       messageTimeout: 5s
       failOpen: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -222,3 +227,6 @@ envoyExtensionPolicies:
     - backendRefs:
       - Name: grpc-backend-2
         Port: 9000
+      processingMode:
+        request:
+        response:

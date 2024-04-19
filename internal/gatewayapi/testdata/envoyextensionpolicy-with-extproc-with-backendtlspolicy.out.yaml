@@ -76,6 +76,7 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-2
         port: 9000
+      processingMode: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -110,6 +111,11 @@ envoyExtensionPolicies:
         port: 8000
       failOpen: true
       messageTimeout: 5s
+      processingMode:
+        request:
+          body: Buffered
+        response:
+          body: Streamed
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

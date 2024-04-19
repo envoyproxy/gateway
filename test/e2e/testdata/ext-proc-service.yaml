@@ -225,6 +225,16 @@ data:
     		resp := &envoy_service_proc_v3.ProcessingResponse{}
     		switch v := req.Request.(type) {
     		case *envoy_service_proc_v3.ProcessingRequest_RequestHeaders:
+    			xrch := ""
+                if v.RequestHeaders != nil {
+                  hdrs := v.RequestHeaders.Headers.GetHeaders()
+                  for _, hdr := range hdrs {
+                    if hdr.Key == "x-request-client-header" {
+                        xrch = string(hdr.RawValue)
+                    }
+                  }
+                }
+
     			rhq := &envoy_service_proc_v3.HeadersResponse{
     				Response: &envoy_service_proc_v3.CommonResponse{
     					HeaderMutation: &envoy_service_proc_v3.HeaderMutation{
@@ -238,6 +248,23 @@ data:
     						},
     					},
     				},
+    			}
+
+    			if xrch != "" {
+                  rhq.Response.HeaderMutation.SetHeaders = append(rhq.Response.HeaderMutation.SetHeaders,
+                      &envoy_api_v3_core.HeaderValueOption{
+                          Header: &envoy_api_v3_core.HeaderValue{
+                              Key: "x-request-client-header",
+                              RawValue: []byte("mutated"),
+                          },
+                  })
+                  rhq.Response.HeaderMutation.SetHeaders = append(rhq.Response.HeaderMutation.SetHeaders,
+                      &envoy_api_v3_core.HeaderValueOption{
+                          Header: &envoy_api_v3_core.HeaderValue{
+                              Key: "x-request-client-header-received",
+                              RawValue: []byte(xrch),
+                          },
+                      })
     			}
 
     			resp = &envoy_service_proc_v3.ProcessingResponse{

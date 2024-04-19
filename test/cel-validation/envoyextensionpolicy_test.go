@@ -245,10 +245,12 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-proc-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
