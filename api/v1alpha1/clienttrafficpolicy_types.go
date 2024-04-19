@@ -63,10 +63,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty"`
-	// HTTP3 provides HTTP/3 configuration on the listener.
-	//
-	// +optional
-	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// TLS settings configure TLS termination settings with the downstream client.
 	//
 	// +optional
@@ -75,10 +71,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Path *PathSettings `json:"path,omitempty"`
-	// HTTP1 provides HTTP/1 configuration on the listener.
-	//
-	// +optional
-	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
 	// HeaderSettings provides configuration for header management.
 	//
 	// +optional
@@ -91,6 +83,18 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Connection *Connection `json:"connection,omitempty"`
+	// HTTP1 provides HTTP/1 configuration on the listener.
+	//
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
+	// HTTP2 provides HTTP/2 configuration on the listener.
+	//
+	// +optional
+	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+	// HTTP3 provides HTTP/3 configuration on the listener.
+	//
+	// +optional
+	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 }
 
 // HeaderSettings providess configuration options for headers on the listener.
@@ -198,6 +202,23 @@ type HTTP10Settings struct {
 	// it will be rejected.
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
+}
+
+// HTTP2Settings provides HTTP/2 configuration on the listener.
+type HTTP2Settings struct {
+	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
+	// If not set, the default value is 64 KiB(64*1024).
+	// +kubebuilder:validation:Minimum=65535
+	// +kubebuilder:validation:Maximum=2147483647
+	// +optional
+	InitialStreamWindowSize *uint32 `json:"initialStreamWindowSize,omitempty"`
+
+	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
+	// If not set, the default value is 1 MiB(1024*1024).
+	// +kubebuilder:validation:Minimum=65535
+	// +kubebuilder:validation:Maximum=2147483647
+	// +optional
+	InitialConnectionWindowSize *uint32 `json:"initialConnectionWindowSize,omitempty"`
 }
 
 const (
