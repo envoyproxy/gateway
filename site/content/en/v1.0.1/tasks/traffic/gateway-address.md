@@ -21,21 +21,22 @@ The Envoy Gateway deploys Envoy Proxy Service as `LoadBalancer` by default,
 so you can set the address of the Gateway directly (the address settings here are for reference only):
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/addresses",
-   "value": [{
-      "type": "IPAddress",
-      "value": "1.2.3.4"
-   }]
-}]'
+kubectl patch gateway eg --type=json --patch '
+- op: add
+  path: /spec/addresses
+  value:
+   - type: IPAddress
+     value: 1.2.3.4
+'
 ```
 
 Verify the Gateway status:
 
 ```shell
 kubectl get gateway
+```
 
+```console
 NAME   CLASS   ADDRESS   PROGRAMMED   AGE
 eg     eg      1.2.3.4   True         14m
 ```
@@ -44,7 +45,9 @@ Verify the Envoy Proxy Service status:
 
 ```shell
 kubectl get service -n envoy-gateway-system
+```
 
+```console
 NAME                            TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
 envoy-default-eg-64656661       LoadBalancer   10.96.236.219   1.2.3.4       80:31017/TCP   15m
 envoy-gateway                   ClusterIP      10.96.192.76    <none>        18000/TCP      15m

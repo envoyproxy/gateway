@@ -2,7 +2,7 @@
 title: "TLS Passthrough"
 ---
 
-This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring
+This task will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring
 Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself
 to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
 
@@ -53,17 +53,17 @@ Patch the Gateway from the Quickstart to include a TLS listener that listens on 
 TLS mode Passthrough:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "tls",
-      "protocol": "TLS",
-      "hostname": "passthrough.example.com",
-      "tls": {"mode": "Passthrough"}, 
-      "port": 6443,
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: tls
+      protocol: TLS
+      hostname: passthrough.example.com
+      port: 6443
+      tls:
+        mode: Passthrough
+   '
 ```
 
 ## Testing
