@@ -360,6 +360,9 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
 		}
+		if resources.EnvoyProxy != nil {
+			xTranslator.FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
+		}
 		xRes, err := xTranslator.Translate(val)
 		if err != nil {
 			return nil, fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)

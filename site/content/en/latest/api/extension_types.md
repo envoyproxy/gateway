@@ -1375,7 +1375,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `filter` | _[EnvoyFilter](#envoyfilter)_ |  true  | Name of the filter. |
+| `name` | _[EnvoyFilter](#envoyfilter)_ |  true  | Name of the filter. |
 | `before` | _[EnvoyFilter](#envoyfilter)_ |  true  | Before defines the filter that should come before the filter.<br />Only one of Before or After must be set. |
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 

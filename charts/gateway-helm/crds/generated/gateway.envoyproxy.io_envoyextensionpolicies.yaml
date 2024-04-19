@@ -269,6 +269,7 @@ spec:
                       the kind field or setting it to 'Service') is supported
                     rule: 'has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind
                       == ''Service'') : true'
+                maxItems: 16
                 type: array
               targetRef:
                 description: |-
@@ -478,6 +479,7 @@ spec:
                   - code
                   - name
                   type: object
+                maxItems: 16
                 type: array
             required:
             - targetRef
