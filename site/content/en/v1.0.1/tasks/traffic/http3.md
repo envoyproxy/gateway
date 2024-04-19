@@ -2,8 +2,8 @@
 title: "HTTP3"
 ---
 
-This guide will help you get started using HTTP3 using EG. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This task will help you get started using HTTP3 using EG.
+This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 ## Prerequisites
 
@@ -41,23 +41,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          group: ""
+          name: example-cert
+  '
 ```
 
 Apply the following ClientTrafficPolicy to enable HTTP3

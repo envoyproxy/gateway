@@ -63,10 +63,10 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 
 ### Customize Response
 
-* Lets use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
+* Use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
 the status code is `404`
 
-* Lets apply the configuration
+* Apply the configuration
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -94,10 +94,10 @@ spec:
           - filter:
               status_code_filter:
                 comparison:
-                 op: EQ
-                 value:
-                   default_value: 404
-                   runtime_key: key_b
+                  op: EQ
+                  value:
+                    default_value: 404
+                    runtime_key: key_b
             status_code: 406
             body:
               inline_string: "could not find what you are looking for"
@@ -133,27 +133,27 @@ spec:
           - filter:
               status_code_filter:
                 comparison:
-                 op: EQ
-                 value:
-                   default_value: 404
-                   runtime_key: key_b
+                  op: EQ
+                  value:
+                    default_value: 404
+                    runtime_key: key_b
             status_code: 406
             body:
               inline_string: "could not find what you are looking for"
 EOF
 ```
 
-* Lets edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
+* Edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
 
-```
-kubectl patch httproute backend --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/rules/0/matches/0/path/value",
-   "value": "/get",
-}]'
+```shell
+kubectl patch httproute backend --type=json --patch '
+  - op: add
+    path: /spec/rules/0/matches/0/path/value
+    value: /get
+  '
 ```
 
-* Lets test it out by specifying a path apart from `/get`
+* Test it out by specifying a path apart from `/get`
 
 ```
 $ curl --header "Host: www.example.com" http://localhost:8888/find
@@ -169,7 +169,7 @@ could not find what you are looking for
 `Accepted=True` and `Programmed=True` conditions are set to ensure that the policy has been
 applied to Envoy Proxy.
 
-```
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
