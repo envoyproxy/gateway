@@ -312,6 +312,8 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "wasm",
+    },
+			name: "jwt-optional",
 		},
 	}
 

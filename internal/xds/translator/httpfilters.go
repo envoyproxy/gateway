@@ -44,7 +44,7 @@ func registerHTTPFilter(filter httpFilter) {
 //   - PatchRouteWithPerRouteConfig: EG enables the corresponding filter for each
 //     route in the typedFilterConfig of that route.
 //
-// The filter types that haven't native per-route support: oauth2, basic authn, ext_authz.
+// The filter types that haven't native per-route support: oauth2, ext_authz.
 // Note: The filter types that have native per-route configuration support should
 // always se their own native per-route configuration.
 type httpFilter interface {
@@ -97,7 +97,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 2
 	case isFilterType(filter, extAuthFilter):
 		order = 3
-	case isFilterType(filter, basicAuthFilter):
+	case filter.Name == basicAuthFilter:
 		order = 4
 	case isFilterType(filter, oauth2Filter):
 		order = 5
