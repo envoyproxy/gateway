@@ -74,7 +74,7 @@ var WasmTest = suite.ConformanceTest{
 				},
 			}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, &expectedResponse)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route without wasm", func(t *testing.T) {
