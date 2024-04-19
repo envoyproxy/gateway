@@ -1494,7 +1494,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `initialStreamWindowSize` | _[Size](#size)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
+| `initialStreamWindowSize` | _[Size](#size)_ |  true  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
 | `initialConnectionWindowSize` | _[Size](#size)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB(1024*1024). |
 
 
