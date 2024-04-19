@@ -261,6 +261,10 @@ enable = true
 
   # i18n for Chinese
   [[languages.zh.menu.main]]
+    name = "贡献"
+    weight = -98
+    url = "/contributions"
+  [[languages.zh.menu.main]]
     name = "博客"
     weight = -99
     url = "/blog"
