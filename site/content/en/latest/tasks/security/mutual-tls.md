@@ -80,6 +80,7 @@ Create a [ClientTrafficPolicy][] to enforce client validation using the CA Certi
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -101,6 +102,7 @@ spec:
         name: "example-ca-cert"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -125,6 +127,7 @@ spec:
         group: ""
         name: "example-ca-cert"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

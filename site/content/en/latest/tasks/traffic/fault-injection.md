@@ -28,6 +28,7 @@ Allow requests with a valid faultInjection by creating an [BackendTrafficPolicy]
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -100,6 +101,7 @@ spec:
         value: /bar
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -175,6 +177,7 @@ spec:
         type: PathPrefix
         value: /bar
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -199,6 +202,7 @@ kubectl get backendtrafficpolicy/fault-injection-delay -o yaml
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -234,6 +238,7 @@ spec:
       weight: 1
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -272,6 +277,7 @@ spec:
       port: 9000
       weight: 1
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

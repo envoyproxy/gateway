@@ -38,6 +38,7 @@ with a value set to `one`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -63,6 +64,7 @@ spec:
           unit: Hour
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -91,6 +93,7 @@ spec:
           requests: 3
           unit: Hour
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -98,6 +101,7 @@ spec:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -121,6 +125,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -147,6 +152,7 @@ spec:
       name: backend
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -250,6 +256,7 @@ This example shows you how to rate limit all requests matching the HTTPRoute rul
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -271,6 +278,7 @@ spec:
           unit: Hour
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -295,6 +303,7 @@ spec:
           requests: 3
           unit: Hour
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -302,6 +311,7 @@ spec:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -325,6 +335,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -351,6 +362,7 @@ spec:
       name: backend
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

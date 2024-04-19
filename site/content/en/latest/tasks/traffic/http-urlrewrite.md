@@ -17,6 +17,7 @@ You can configure to rewrite the prefix in the url like below. In this example, 
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -43,6 +44,7 @@ spec:
         port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -72,6 +74,7 @@ spec:
       - name: backend
         port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -149,6 +152,7 @@ You can configure to rewrite the fullpath in the url like below. In this example
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -176,6 +180,7 @@ spec:
         port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -206,6 +211,7 @@ spec:
       - name: backend
         port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -277,6 +283,7 @@ You can configure to rewrite the hostname like below. In this example, any reque
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -302,6 +309,7 @@ spec:
         port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -330,6 +338,7 @@ spec:
       - name: backend
         port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

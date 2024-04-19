@@ -24,6 +24,7 @@ value of the header in the response.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -54,6 +55,7 @@ spec:
           value: "foo"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -87,6 +89,7 @@ spec:
         - name: "add-header"
           value: "foo"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -144,6 +147,7 @@ filter.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -174,6 +178,7 @@ spec:
           value: "foo"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -207,6 +212,7 @@ spec:
         - name: "set-header"
           value: "foo"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -253,6 +259,7 @@ filter.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -281,6 +288,7 @@ spec:
         - "remove-header"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -312,6 +320,7 @@ spec:
         remove:
         - "remove-header"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -353,6 +362,7 @@ Headers can be added/set/removed in a single filter on the same HTTPRoute and th
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -388,6 +398,7 @@ spec:
         - "removed-header"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -426,6 +437,7 @@ spec:
         remove:
         - "removed-header"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

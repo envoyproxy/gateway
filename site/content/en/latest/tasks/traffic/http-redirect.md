@@ -21,6 +21,7 @@ For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -42,6 +43,7 @@ spec:
           port: 443
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -66,6 +68,7 @@ spec:
           hostname: www.example.com
           port: 443
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -134,6 +137,7 @@ Define a https listener on the existing gateway
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -158,6 +162,7 @@ spec:
         name: example-com
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -185,6 +190,7 @@ spec:
       - kind: Secret
         name: example-com
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -198,6 +204,7 @@ Create two HTTPRoutes and attach them to the HTTP and HTTPS listeners using the 
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -240,6 +247,7 @@ spec:
             value: /
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -285,6 +293,7 @@ spec:
             type: PathPrefix
             value: /
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -309,6 +318,7 @@ below will issue a 302 redirect to all `path.redirect.example` requests whose pa
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -337,6 +347,7 @@ spec:
         port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -368,6 +379,7 @@ spec:
       - name: backend
         port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

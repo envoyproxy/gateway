@@ -58,6 +58,7 @@ Create a UDPRoute resource to route UDP traffic received on Gateway port 5300 to
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -74,6 +75,7 @@ spec:
           port: 53
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -93,6 +95,7 @@ spec:
         - name: coredns
           port: 53
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

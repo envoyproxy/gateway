@@ -31,6 +31,7 @@ Let's create an HTTPRoute that represents an application protected by OIDC.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -51,6 +52,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -74,6 +76,7 @@ spec:
     - name: backend
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -122,6 +125,7 @@ Note: please replace the ${CLIENT_ID} in the below yaml snippet with the actual 
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -143,6 +147,7 @@ spec:
     logoutPath: "/myapp/logout"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -167,6 +172,7 @@ spec:
     redirectURL: "http://www.example.com:8080/myapp/oauth2/callback"
     logoutPath: "/myapp/logout"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

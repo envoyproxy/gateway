@@ -25,6 +25,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -44,6 +45,7 @@ spec:
     probes: 3
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -66,6 +68,7 @@ spec:
     interval: 60s
     probes: 3
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -204,6 +207,7 @@ This example configures Proxy Protocol for downstream clients.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -220,6 +224,7 @@ spec:
   enableProxyProtocol: true
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -239,6 +244,7 @@ spec:
     namespace: default
   enableProxyProtocol: true
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -340,6 +346,7 @@ This example configures the number of additional ingress proxy hops from the rig
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -358,6 +365,7 @@ spec:
       numTrustedHops: 2
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -379,6 +387,7 @@ spec:
     xForwardedFor:
       numTrustedHops: 2
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -491,6 +500,7 @@ This example configures the HTTP request timeout for the client, please check ou
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -507,6 +517,7 @@ spec:
       requestReceivedTimeout: 2s
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -526,6 +537,7 @@ spec:
     http:
       requestReceivedTimeout: 2s
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

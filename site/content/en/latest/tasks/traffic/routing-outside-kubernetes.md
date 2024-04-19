@@ -16,6 +16,7 @@ Define a Service and EndpointSlice that represents https://httpbin.org
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -47,6 +48,7 @@ endpoints:
   - "httpbin.org"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -81,6 +83,7 @@ endpoints:
 - addresses:
   - "httpbin.org"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -103,6 +106,7 @@ Add a [TLSRoute][] that can route incoming traffic to the above backend that we 
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -119,6 +123,7 @@ spec:
       port: 443
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -138,6 +143,7 @@ spec:
     - name: httpbin
       port: 443
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

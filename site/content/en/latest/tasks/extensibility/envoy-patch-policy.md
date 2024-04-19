@@ -34,6 +34,7 @@ using a `ConfigMap`. In the next step, we will update this resource to enable En
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -53,6 +54,7 @@ data:
       enableEnvoyPatchPolicy: true
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -75,6 +77,7 @@ data:
     extensionApis:
       enableEnvoyPatchPolicy: true
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -95,6 +98,7 @@ the status code is `404`
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -130,6 +134,7 @@ spec:
               inline_string: "could not find what you are looking for"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -168,6 +173,7 @@ spec:
             body:
               inline_string: "could not find what you are looking for"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -176,6 +182,7 @@ Then the EnvoyPatchPolicy should target a specific GatewayClass.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -211,6 +218,7 @@ spec:
               inline_string: "could not find what you are looking for"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -249,6 +257,7 @@ spec:
             body:
               inline_string: "could not find what you are looking for"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

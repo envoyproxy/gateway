@@ -18,6 +18,7 @@ a second instance of the application deployed in the quickstart.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 ---
@@ -75,6 +76,7 @@ spec:
                   fieldPath: metadata.namespace
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -134,6 +136,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 Then create an `HTTPRoute` that uses a `HTTPRequestMirrorFilter` to send requests to the original
@@ -141,6 +144,7 @@ service from the quickstart, and mirror request to the service that was just dep
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -171,6 +175,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -204,6 +209,7 @@ spec:
       name: backend
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -266,6 +272,7 @@ When an `HTTPRoute` has multiple `backendRefs` and an `HTTPRequestMirrorFilter`,
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -300,6 +307,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -337,6 +345,7 @@ spec:
       name: backend-3
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -346,6 +355,7 @@ Multiple `HTTPRequestMirrorFilters` are not supported on the same `HTTPRoute` `r
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -382,6 +392,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -421,6 +432,7 @@ spec:
       name: backend
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

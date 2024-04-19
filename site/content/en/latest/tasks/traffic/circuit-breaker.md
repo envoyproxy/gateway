@@ -64,6 +64,7 @@ In order to fail fast, apply a `BackendTrafficPolicy` that limits concurrent req
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -81,6 +82,7 @@ spec:
     maxParallelRequests: 10
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -101,6 +103,7 @@ spec:
     maxPendingRequests: 0
     maxParallelRequests: 10
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

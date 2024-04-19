@@ -133,6 +133,7 @@ For this feature to work please make sure
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -196,6 +197,7 @@ spec:
             value: /
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -262,6 +264,7 @@ spec:
             type: PathPrefix
             value: /
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

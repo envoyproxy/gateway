@@ -24,6 +24,7 @@ The below example defines a SecurityPolicy that allows CORS for all HTTP request
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -50,6 +51,7 @@ spec:
     - "x-header-4"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -79,6 +81,7 @@ spec:
     - "x-header-3"
     - "x-header-4"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

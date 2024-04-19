@@ -37,6 +37,7 @@ we only want to sample `50%` of the trace data. We would configure it as follows
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -64,6 +65,7 @@ data:
             url: otel-svc.observability.svc.cluster.local:4318
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -94,6 +96,7 @@ data:
           provider:
             url: otel-svc.observability.svc.cluster.local:4318
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

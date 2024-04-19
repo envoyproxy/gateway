@@ -36,6 +36,7 @@ Create a new HTTPRoute resource to route traffic on the path `/myapp` to the bac
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -57,6 +58,7 @@ spec:
       port: 3000   
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -81,6 +83,7 @@ spec:
     - name: backend
       port: 3000   
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -99,6 +102,7 @@ is successfully authorized.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -118,6 +122,7 @@ spec:
       headersToBackend: ["x-current-user"]
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -140,6 +145,7 @@ spec:
         port: 9002
       headersToBackend: ["x-current-user"]
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -218,6 +224,7 @@ Create a new HTTPRoute resource to route traffic on the path `/myapp` to the bac
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -239,6 +246,7 @@ spec:
       port: 3000   
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -263,6 +271,7 @@ spec:
     - name: backend
       port: 3000   
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -279,6 +288,7 @@ It calls the gRPC external authorization service "grpc-ext-auth" on port 9002 fo
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -297,6 +307,7 @@ spec:
         port: 9002
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -318,6 +329,7 @@ spec:
         name: grpc-ext-auth
         port: 9002
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -332,6 +344,7 @@ the communication between the Envoy proxy and the gRPC auth service.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -352,6 +365,7 @@ spec:
     hostname: grpc-ext-auth
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -375,6 +389,7 @@ spec:
       kind: ConfigMap
     hostname: grpc-ext-auth
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

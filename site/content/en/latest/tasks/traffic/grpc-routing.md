@@ -97,6 +97,7 @@ as well as a match for all services with a method name `Ping` which matches `yag
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -125,6 +126,7 @@ spec:
           weight: 1
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -156,6 +158,7 @@ spec:
           port: 9000
           weight: 1
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -179,6 +182,7 @@ with match type `RegularExpression`. It matches all the services and methods wit
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -209,6 +213,7 @@ spec:
           weight: 1
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -242,6 +247,7 @@ spec:
           port: 9000
           weight: 1
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

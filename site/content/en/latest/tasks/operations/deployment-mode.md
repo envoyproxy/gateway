@@ -59,6 +59,7 @@ Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway contro
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -159,6 +160,7 @@ spec:
             value: /
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -262,6 +264,7 @@ spec:
             type: PathPrefix
             value: /
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -344,6 +347,7 @@ Lets create a `GatewayClass` linked to the product team's Envoy Gateway controll
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -444,6 +448,7 @@ spec:
             value: /
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -547,6 +552,7 @@ spec:
             type: PathPrefix
             value: /
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -824,6 +830,7 @@ Lets create also and additional `Gateway` linked to the GatewayClass and `backen
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -861,6 +868,7 @@ spec:
             value: /
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -901,6 +909,7 @@ spec:
             type: PathPrefix
             value: /
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

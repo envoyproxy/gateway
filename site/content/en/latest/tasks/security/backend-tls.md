@@ -83,6 +83,7 @@ Create a service that exposes port 443 on the backend service.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -103,6 +104,7 @@ spec:
     targetPort: 8443
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -126,6 +128,7 @@ spec:
     protocol: TCP
     targetPort: 8443
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -133,6 +136,7 @@ Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS conne
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -154,6 +158,7 @@ spec:
     hostname: www.example.com
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -178,6 +183,7 @@ spec:
       kind: ConfigMap
     hostname: www.example.com
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

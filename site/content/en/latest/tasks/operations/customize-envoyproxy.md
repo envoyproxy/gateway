@@ -17,6 +17,7 @@ First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Co
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -32,6 +33,7 @@ spec:
     namespace: envoy-gateway-system
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -50,6 +52,7 @@ spec:
     name: custom-proxy-config
     namespace: envoy-gateway-system
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -59,6 +62,7 @@ You can customize the EnvoyProxy Deployment Replicas via EnvoyProxy Config like:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -74,6 +78,7 @@ spec:
         replicas: 2
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -92,6 +97,7 @@ spec:
       envoyDeployment:
         replicas: 2
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -108,6 +114,7 @@ You can customize the EnvoyProxy Image via EnvoyProxy Config like:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -124,6 +131,7 @@ spec:
           image: envoyproxy/envoy:v1.25-latest
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -143,6 +151,7 @@ spec:
         container:
           image: envoyproxy/envoy:v1.25-latest
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -154,6 +163,7 @@ You can customize the EnvoyProxy Pod Annotations via EnvoyProxy Config like:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -172,6 +182,7 @@ spec:
             custom2: deploy-annotation2
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -193,6 +204,7 @@ spec:
             custom1: deploy-annotation1
             custom2: deploy-annotation2
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -204,6 +216,7 @@ You can customize the EnvoyProxy Deployment Resources via EnvoyProxy Config like
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -226,6 +239,7 @@ spec:
               memory: 1Gi
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -251,6 +265,7 @@ spec:
               cpu: 500m
               memory: 1Gi
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -260,6 +275,7 @@ You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -280,6 +296,7 @@ spec:
             value: env_b_value
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -303,6 +320,7 @@ spec:
           - name: env_b
             value: env_b_value
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -316,6 +334,7 @@ You can customize the EnvoyProxy Deployment Volumes or VolumeMounts via EnvoyPro
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -340,6 +359,7 @@ spec:
               secretName: envoy-cert
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -367,6 +387,7 @@ spec:
             secret:
               secretName: envoy-cert
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -378,6 +399,7 @@ You can customize the EnvoyProxy Service Annotations via EnvoyProxy Config like:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -395,6 +417,7 @@ spec:
           custom2: svc-annotation2
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -415,6 +438,7 @@ spec:
           custom1: svc-annotation1
           custom2: svc-annotation2
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -430,6 +454,7 @@ There are two ways to customize it:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -513,6 +538,7 @@ spec:
             name: runtime-0
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -599,6 +625,7 @@ spec:
               resource_api_version: V3
             name: runtime-0
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -617,6 +644,7 @@ Once confirmed, you can apply it via EnvoyProxy Config as shown below:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -640,6 +668,7 @@ spec:
             type: Resource
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -666,6 +695,7 @@ spec:
                 type: Utilization
             type: Resource
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -678,6 +708,7 @@ For example, the following configuration will add `--disable-extensions` arg in 
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -690,6 +721,7 @@ spec:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -705,6 +737,7 @@ spec:
   extraArgs:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -716,6 +749,7 @@ For example, the following configuration will add resource limits to the `envoy`
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -747,6 +781,7 @@ spec:
                         memory: 1024Mi
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -781,6 +816,7 @@ spec:
                         cpu: 200m
                         memory: 1024Mi
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

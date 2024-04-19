@@ -118,6 +118,7 @@ It required the node with 3rd generation Intel Xeon Scalable processor server pr
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -135,6 +136,7 @@ data:
       enableEnvoyPatchPolicy: true
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -155,6 +157,7 @@ data:
     extensionApis:
       enableEnvoyPatchPolicy: true
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -172,6 +175,7 @@ data:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -187,6 +191,7 @@ spec:
     namespace: envoy-gateway-system
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -205,6 +210,7 @@ spec:
     name: custom-proxy-config
     namespace: envoy-gateway-system
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -214,6 +220,7 @@ Using the envoyproxy image with contrib extensions and add qat resources request
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -242,6 +249,7 @@ spec:
               qat.intel.com/cy: '1'
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -273,6 +281,7 @@ spec:
               memory: 4096Mi
               qat.intel.com/cy: '1'
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -282,6 +291,7 @@ Using the envoyproxy image with contrib extensions and add the node affinity to 
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -324,6 +334,7 @@ spec:
                     operator: Exists
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -369,6 +380,7 @@ spec:
                   - key: feature.node.kubernetes.io/cpu-cpuid.AVX512VBMI2
                     operator: Exists
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -408,6 +420,7 @@ fortio load -c 10 -k -qps 0 -t 30s -keepalive=false https://www.example.com:${NO
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -445,6 +458,7 @@ spec:
         path: "/tls_certificate/private_key_provider/typed_config/private_key"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -485,6 +499,7 @@ spec:
         from: "/tls_certificate/private_key"
         path: "/tls_certificate/private_key_provider/typed_config/private_key"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -492,6 +507,7 @@ spec:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -529,6 +545,7 @@ spec:
         path: "/tls_certificate/private_key_provider/typed_config/private_key"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -569,6 +586,7 @@ spec:
         from: "/tls_certificate/private_key"
         path: "/tls_certificate/private_key_provider/typed_config/private_key"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

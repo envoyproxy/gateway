@@ -25,6 +25,7 @@ Install the GatewayClass and a `tcp-gateway` Gateway first.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 kind: GatewayClass
@@ -55,6 +56,7 @@ spec:
       - kind: TCPRoute
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -88,6 +90,7 @@ spec:
       kinds:
       - kind: TCPRoute
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -95,6 +98,7 @@ Install two services `foo` and `bar`, which are bound to `backend-1` and `backen
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -194,6 +198,7 @@ spec:
               value: bar
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -296,6 +301,7 @@ spec:
             - name: SERVICE_NAME
               value: bar
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -303,6 +309,7 @@ Install two TCPRoutes `tcp-app-1` and `tcp-app-2` with different `sectionName`:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -332,6 +339,7 @@ spec:
       port: 3002
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -364,6 +372,7 @@ spec:
     - name: bar
       port: 3002
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

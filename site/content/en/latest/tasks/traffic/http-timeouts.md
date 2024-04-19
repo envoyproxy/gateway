@@ -24,6 +24,7 @@ We configure the backend to delay responses by 3 seconds, then we set the reques
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -52,6 +53,7 @@ spec:
       request: "4s"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -83,6 +85,7 @@ spec:
     timeouts:
       request: "4s"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -102,6 +105,7 @@ Then we set the request timeout to 2 seconds. In this case, Envoy Gateway will r
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -130,6 +134,7 @@ spec:
       request: "2s"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -161,6 +166,7 @@ spec:
     timeouts:
       request: "2s"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

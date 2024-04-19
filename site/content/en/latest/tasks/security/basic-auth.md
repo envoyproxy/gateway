@@ -102,6 +102,7 @@ secret generated in the previous step.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -118,6 +119,7 @@ spec:
       name: "basic-auth"
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -137,6 +139,7 @@ spec:
     users:
       name: "basic-auth"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

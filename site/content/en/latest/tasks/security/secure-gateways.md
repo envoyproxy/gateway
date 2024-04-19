@@ -167,6 +167,7 @@ namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -184,6 +185,7 @@ spec:
     kind: Secret
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -204,6 +206,7 @@ spec:
   - group: ""
     kind: Secret
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -230,6 +233,7 @@ Update the Gateway HTTPS listener with `namespace: envoy-gateway-system`, for ex
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -254,6 +258,7 @@ spec:
             namespace: envoy-gateway-system
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -281,6 +286,7 @@ spec:
             name: example-cert
             namespace: envoy-gateway-system
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 

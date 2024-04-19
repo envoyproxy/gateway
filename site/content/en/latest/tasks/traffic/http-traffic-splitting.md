@@ -17,6 +17,7 @@ When a single backendRef is configured in a HTTPRoute, it will receive 100% of t
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -40,6 +41,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -66,6 +68,7 @@ spec:
       name: backend
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -119,6 +122,7 @@ First, create a second instance of the example app from the quickstart:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 ---
@@ -176,6 +180,7 @@ spec:
                   fieldPath: metadata.namespace
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resources to your cluster:
@@ -235,6 +240,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -242,6 +248,7 @@ Then create an HTTPRoute that uses both the app from the quickstart and the seco
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -269,6 +276,7 @@ spec:
       port: 3000
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -299,6 +307,7 @@ spec:
       name: backend-2
       port: 3000
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -346,6 +355,7 @@ backend-2 service.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -375,6 +385,7 @@ spec:
       weight: 2
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -407,6 +418,7 @@ spec:
       port: 3000
       weight: 2
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
@@ -428,6 +440,7 @@ with status code `500`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -457,6 +470,7 @@ spec:
       weight: 2
 EOF
 ```
+
 {{% /tab %}}
 {{% tab header="Apply from file" %}}
 Save and apply the following resource to your cluster:
@@ -489,6 +503,7 @@ spec:
       port: 9000
       weight: 2
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
