@@ -456,6 +456,7 @@ This can help reduce the bandwidth at the expense of higher CPU.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ProxyPrometheusProvider](#proxyprometheusprovider)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1166,6 +1167,7 @@ _Appears in:_
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs defines the configuration of the external processing service |
 | `messageTimeout` | _[Duration](#duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
+| `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 
 
 #### ExtProcBackendRef
@@ -1186,6 +1188,38 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+
+
+#### ExtProcBodyProcessingMode
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ProcessingModeOptions](#processingmodeoptions)
+
+| Value | Description |
+| ----- | ----------- |
+| `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
+| `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
+| `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcProcessingMode
+
+
+
+ExtProcProcessingMode defines if and how headers and bodies are sent to the service.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-processingmode
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `request` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines processing mode for requests. If present, request headers are sent. Request body is processed according<br />to the specified mode. |
+| `response` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines processing mode for responses. If present, response headers are sent. Response body is processed according<br />to the specified mode. |
 
 
 #### ExtensionAPISettings
@@ -1666,6 +1700,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `optional` | _boolean_ |  true  | Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.<br />Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented. |
 | `providers` | _[JWTProvider](#jwtprovider) array_ |  true  | Providers defines the JSON Web Token (JWT) authentication provider type.<br />When multiple JWT providers are specified, the JWT is considered valid if<br />any of the providers successfully validate the JWT. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
 
 
@@ -1845,6 +1880,7 @@ _Appears in:_
 | `type` | _[ServiceType](#servicetype)_ |  false  | Type determines how the Service is exposed. Defaults to LoadBalancer.<br />Valid options are ClusterIP, LoadBalancer and NodePort.<br />"LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).<br />"ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP.<br />"NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
 | `loadBalancerClass` | _string_ |  false  | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider<br />implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` | _boolean_ |  false  | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for<br />services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster<br />load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a<br />value), those requests will be respected, regardless of this field. This field may only be set for<br />services with type LoadBalancer and will be cleared if the type is changed to any other type. |
+| `loadBalancerSourceRanges` | _string array_ |  false  | LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as<br />firewall rules on the platform providers load balancer. This is not guaranteed to be working as<br />it happens outside of kubernetes and has to be supported and handled by the platform provider.<br />This field may only be set for services with type LoadBalancer and will be cleared if the type<br />is changed to any other type. |
 | `loadBalancerIP` | _string_ |  false  | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field<br />may be ignored if the load balancer provider does not support this feature.<br />This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud<br />providers such as GCP. |
 | `externalTrafficPolicy` | _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ |  false  | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options<br />are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node<br />receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to the service |
@@ -2136,6 +2172,20 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
+#### ProcessingModeOptions
+
+
+
+ProcessingModeOptions defines if headers or body should be processed by the external service
+
+_Appears in:_
+- [ExtProcProcessingMode](#extprocprocessingmode)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
+
+
 #### ProviderType
 
 _Underlying type:_ _string_
@@ -2360,6 +2410,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
+| `compression` | _[Compression](#compression)_ |  false  | Configure the compression on Prometheus endpoint. Compression is useful in situations when bandwidth is scarce and large payloads can be effectively compressed at the expense of higher CPU load. |
 
 
 #### ProxyProtocol

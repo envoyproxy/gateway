@@ -121,6 +121,56 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allocateLoadBalancerNodePorts can only be set for LoadBalancer type"},
 		},
 		{
+			desc: "loadBalancerSourceRanges-pass-case1",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerSourceRanges-pass-case2",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerSourceRanges-fail",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     ptr.To(egv1a1.ServiceTypeClusterIP),
+								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerSourceRanges can only be set for LoadBalancer type"},
+		},
+		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
