@@ -58,9 +58,8 @@ spec:
                     filter.
                   properties:
                     backendRefs:
-                      description: |-
-                        BackendRefs references a Kubernetes object that represents the gRPC service to which
-                        the access logs will be sent. Currently only Service is supported.
+                      description: BackendRefs defines the configuration of the external
+                        processing service
                       items:
                         description: BackendRef defines how an ObjectReference that
                           is specific to BackendRef.
@@ -158,9 +157,51 @@ spec:
                         Default: 200ms
                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                       type: string
+                    processingMode:
+                      description: |-
+                        ProcessingMode defines how request and response body is processed
+                        Default: header and body are not sent to the external processor
+                      properties:
+                        request:
+                          description: |-
+                            Defines processing mode for requests. If present, request headers are sent. Request body is processed according
+                            to the specified mode.
+                          properties:
+                            body:
+                              description: Defines body processing mode
+                              enum:
+                              - Streamed
+                              - Buffered
+                              - BufferedPartial
+                              type: string
+                          type: object
+                        response:
+                          description: |-
+                            Defines processing mode for responses. If present, response headers are sent. Response body is processed according
+                            to the specified mode.
+                          properties:
+                            body:
+                              description: Defines body processing mode
+                              enum:
+                              - Streamed
+                              - Buffered
+                              - BufferedPartial
+                              type: string
+                          type: object
+                      type: object
                   required:
                   - backendRefs
                   type: object
+                  x-kubernetes-validations:
+                  - message: group is invalid, only the core API group (specified
+                      by omitting the group field or setting it to an empty string)
+                      is supported
+                    rule: 'has(self.backendRef) ? (!has(self.backendRef.group) ||
+                      self.backendRef.group == "") : true'
+                  - message: kind is invalid, only Service (specified by omitting
+                      the kind field or setting it to 'Service') is supported
+                    rule: 'has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind
+                      == ''Service'') : true'
                 type: array
               targetRef:
                 description: |-

@@ -456,6 +456,7 @@ This can help reduce the bandwidth at the expense of higher CPU.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ProxyPrometheusProvider](#proxyprometheusprovider)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1162,11 +1163,44 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  true  | BackendRefs references a Kubernetes object that represents the gRPC service to which<br />the access logs will be sent. Currently only Service is supported. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  true  | BackendRefs defines the configuration of the external processing service |
 | `messageTimeout` | _[Duration](#duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
+| `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 
 
+
+
+#### ExtProcBodyProcessingMode
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ProcessingModeOptions](#processingmodeoptions)
+
+| Value | Description |
+| ----- | ----------- |
+| `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
+| `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
+| `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcProcessingMode
+
+
+
+ExtProcProcessingMode defines if and how headers and bodies are sent to the service.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-processingmode
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `request` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines processing mode for requests. If present, request headers are sent. Request body is processed according<br />to the specified mode. |
+| `response` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines processing mode for responses. If present, response headers are sent. Response body is processed according<br />to the specified mode. |
 
 
 #### ExtensionAPISettings
@@ -2117,6 +2151,20 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
+#### ProcessingModeOptions
+
+
+
+ProcessingModeOptions defines if headers or body should be processed by the external service
+
+_Appears in:_
+- [ExtProcProcessingMode](#extprocprocessingmode)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
+
+
 #### ProviderType
 
 _Underlying type:_ _string_
@@ -2341,6 +2389,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
+| `compression` | _[Compression](#compression)_ |  false  | Configure the compression on Prometheus endpoint. Compression is useful in situations when bandwidth is scarce and large payloads can be effectively compressed at the expense of higher CPU load. |
 
 
 #### ProxyProtocol
