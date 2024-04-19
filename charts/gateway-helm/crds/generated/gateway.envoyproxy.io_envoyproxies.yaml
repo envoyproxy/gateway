@@ -6325,6 +6325,24 @@ spec:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
                         properties:
+                          compression:
+                            description: Configure the compression on Prometheus endpoint.
+                              Compression is useful in situations when bandwidth is
+                              scarce and large payloads can be effectively compressed
+                              at the expense of higher CPU load.
+                            properties:
+                              gzip:
+                                description: The configuration for GZIP compressor.
+                                type: object
+                              type:
+                                description: CompressorType defines the compressor
+                                  type to use for compression.
+                                enum:
+                                - Gzip
+                                type: string
+                            required:
+                            - type
+                            type: object
                           disable:
                             description: Disable the Prometheus endpoint.
                             type: boolean

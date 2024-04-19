@@ -227,6 +227,38 @@ spec:
                         Default: 200ms
                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                       type: string
+                    processingMode:
+                      description: |-
+                        ProcessingMode defines how request and response body is processed
+                        Default: header and body are not sent to the external processor
+                      properties:
+                        request:
+                          description: |-
+                            Defines processing mode for requests. If present, request headers are sent. Request body is processed according
+                            to the specified mode.
+                          properties:
+                            body:
+                              description: Defines body processing mode
+                              enum:
+                              - Streamed
+                              - Buffered
+                              - BufferedPartial
+                              type: string
+                          type: object
+                        response:
+                          description: |-
+                            Defines processing mode for responses. If present, response headers are sent. Response body is processed according
+                            to the specified mode.
+                          properties:
+                            body:
+                              description: Defines body processing mode
+                              enum:
+                              - Streamed
+                              - Buffered
+                              - BufferedPartial
+                              type: string
+                          type: object
+                      type: object
                   required:
                   - backendRef
                   type: object
