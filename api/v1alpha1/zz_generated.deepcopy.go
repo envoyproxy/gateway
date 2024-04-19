@@ -1511,7 +1511,7 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		in, out := &in.TLS, &out.TLS
 		*out = new(EnvoyTLSConfig)
 		(*in).DeepCopyInto(*out)
-  }
+	}
 	if in.FilterOrder != nil {
 		in, out := &in.FilterOrder, &out.FilterOrder
 		*out = make([]FilterPosition, len(*in))
