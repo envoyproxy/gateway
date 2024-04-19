@@ -130,7 +130,7 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -227,9 +227,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        basicAuth:
-          name: securitypolicy/default/policy-for-http-route-1
-          users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -246,12 +243,13 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo1
+        security:
+          basicAuth:
+            name: securitypolicy/default/policy-for-http-route-1
+            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - backendWeights:
           invalid: 0
           valid: 0
-        basicAuth:
-          name: securitypolicy/default/policy-for-http-route-1
-          users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
         destination:
           name: httproute/default/httproute-1/rule/1
           settings:
@@ -268,12 +266,13 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo2
+        security:
+          basicAuth:
+            name: securitypolicy/default/policy-for-http-route-1
+            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - backendWeights:
           invalid: 0
           valid: 0
-        basicAuth:
-          name: securitypolicy/default/policy-for-gateway-1
-          users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -290,3 +289,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+        security:
+          basicAuth:
+            name: securitypolicy/default/policy-for-gateway-1
+            users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=

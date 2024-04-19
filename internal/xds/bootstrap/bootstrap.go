@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -62,6 +63,11 @@ type bootstrapParameters struct {
 	ReadyServer readyServerParameters
 	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
 	EnablePrometheus bool
+	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
+	EnablePrometheusCompression bool
+	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
+	PrometheusCompressionLibrary string
+
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
 	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
@@ -84,7 +90,7 @@ type metricSink struct {
 	// Address is the address of the XDS Server that Envoy is managed by.
 	Address string
 	// Port is the port of the XDS Server that Envoy is managed by.
-	Port int32
+	Port uint32
 }
 
 type adminServerParameters struct {
@@ -135,9 +141,11 @@ func (b *bootstrapConfig) render() error {
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
 func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, error) {
 	var (
-		enablePrometheus = true
-		metricSinks      []metricSink
-		StatsMatcher     StatsMatcherParameters
+		enablePrometheus             = true
+		enablePrometheusCompression  = false
+		PrometheusCompressionLibrary = "gzip"
+		metricSinks                  []metricSink
+		StatsMatcher                 StatsMatcherParameters
 	)
 
 	if opts != nil && opts.ProxyMetrics != nil {
@@ -145,6 +153,11 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 
 		if proxyMetrics.Prometheus != nil {
 			enablePrometheus = !proxyMetrics.Prometheus.Disable
+
+			if proxyMetrics.Prometheus.Compression != nil {
+				enablePrometheusCompression = true
+				PrometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+			}
 		}
 
 		addresses := sets.NewString()
@@ -154,15 +167,23 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 			}
 
 			// skip duplicate sinks
-			addr := fmt.Sprintf("%s:%d", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
+			var host string
+			var port uint32
+			if sink.OpenTelemetry.Host != nil {
+				host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
+			}
+			if len(sink.OpenTelemetry.BackendRefs) > 0 {
+				host, port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, "")
+			}
+			addr := fmt.Sprintf("%s:%d", host, port)
 			if addresses.Has(addr) {
 				continue
 			}
 			addresses.Insert(addr)
 
 			metricSinks = append(metricSinks, metricSink{
-				Address: sink.OpenTelemetry.Host,
-				Port:    sink.OpenTelemetry.Port,
+				Address: host,
+				Port:    port,
 			})
 		}
 
@@ -207,8 +228,10 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
-			EnablePrometheus: enablePrometheus,
-			OtelMetricSinks:  metricSinks,
+			EnablePrometheus:             enablePrometheus,
+			EnablePrometheusCompression:  enablePrometheusCompression,
+			PrometheusCompressionLibrary: PrometheusCompressionLibrary,
+			OtelMetricSinks:              metricSinks,
 		},
 	}
 	if opts != nil && opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {

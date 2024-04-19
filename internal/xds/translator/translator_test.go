@@ -112,6 +112,10 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "mutual-tls-required-client-certificate-disabled",
+			requireSecrets: true,
+		},
+		{
 			name:           "http3",
 			requireSecrets: true,
 		},
@@ -309,6 +313,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "ext-proc",
+		},
+		{
+			name: "jwt-optional",
 		},
 	}
 
