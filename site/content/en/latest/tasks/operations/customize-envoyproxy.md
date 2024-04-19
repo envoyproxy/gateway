@@ -15,6 +15,8 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Config:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -30,11 +32,33 @@ spec:
     namespace: envoy-gateway-system
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Customize EnvoyProxy Deployment Replicas
 
 You can customize the EnvoyProxy Deployment Replicas via EnvoyProxy Config like:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -50,6 +74,26 @@ spec:
         replicas: 2
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 After you apply the config, you should see the replicas of envoyproxy changes to 2.
 And also you can dynamically change the value.
@@ -62,6 +106,8 @@ kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg -n envoy-
 
 You can customize the EnvoyProxy Image via EnvoyProxy Config like:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -78,6 +124,27 @@ spec:
           image: envoyproxy/envoy:v1.25-latest
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          image: envoyproxy/envoy:v1.25-latest
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 After applying the config, you can get the deployment image, and see it has changed.
 
@@ -85,6 +152,8 @@ After applying the config, you can get the deployment image, and see it has chan
 
 You can customize the EnvoyProxy Pod Annotations via EnvoyProxy Config like:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -103,6 +172,29 @@ spec:
             custom2: deploy-annotation2
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          annotations:
+            custom1: deploy-annotation1
+            custom2: deploy-annotation2
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 After applying the config, you can get the envoyproxy pods, and see new annotations has been added.
 
@@ -110,6 +202,8 @@ After applying the config, you can get the envoyproxy pods, and see new annotati
 
 You can customize the EnvoyProxy Deployment Resources via EnvoyProxy Config like:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -132,11 +226,40 @@ spec:
               memory: 1Gi
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          resources:
+            requests:
+              cpu: 150m
+              memory: 640Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Customize EnvoyProxy Deployment Env
 
 You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -157,6 +280,31 @@ spec:
             value: env_b_value
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          env:
+          - name: env_a
+            value: env_a_value
+          - name: env_b
+            value: env_b_value
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 > Envoy Gateway has provided two initial `env` `ENVOY_GATEWAY_NAMESPACE` and `ENVOY_POD_NAME` for envoyproxy container.
 
@@ -166,6 +314,8 @@ After applying the config, you can get the envoyproxy deployment, and see resour
 
 You can customize the EnvoyProxy Deployment Volumes or VolumeMounts via EnvoyProxy Config like:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -190,6 +340,35 @@ spec:
               secretName: envoy-cert
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          volumeMounts:
+          - mountPath: /certs
+            name: certs
+            readOnly: true
+        pod:
+          volumes:
+          - name: certs
+            secret:
+              secretName: envoy-cert
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
 
@@ -197,6 +376,8 @@ After applying the config, you can get the envoyproxy deployment, and see resour
 
 You can customize the EnvoyProxy Service Annotations via EnvoyProxy Config like:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -212,9 +393,30 @@ spec:
         annotations:
           custom1: svc-annotation1
           custom2: svc-annotation2
-
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        annotations:
+          custom1: svc-annotation1
+          custom2: svc-annotation2
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 After applying the config, you can get the envoyproxy service, and see annotations has been added.
 
@@ -226,6 +428,8 @@ There are two ways to customize it:
 * Replace: the whole bootstrap config will be replaced by the config you provided.
 * Merge: the config you provided will be merged into the default bootstrap config.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -309,6 +513,94 @@ spec:
             name: runtime-0
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  bootstrap:
+    type: Replace
+    value: |
+      admin:
+        access_log:
+        - name: envoy.access_loggers.file
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/null
+        address:
+          socket_address:
+            address: 127.0.0.1
+            port_value: 20000
+      dynamic_resources:
+        ads_config:
+          api_type: DELTA_GRPC
+          transport_api_version: V3
+          grpc_services:
+          - envoy_grpc:
+              cluster_name: xds_cluster
+          set_node_on_first_message_only: true
+        lds_config:
+          ads: {}
+          resource_api_version: V3
+        cds_config:
+          ads: {}
+          resource_api_version: V3
+      static_resources:
+        clusters:
+        - connect_timeout: 10s
+          load_assignment:
+            cluster_name: xds_cluster
+            endpoints:
+            - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: envoy-gateway
+                      port_value: 18000
+          typed_extension_protocol_options:
+            "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
+               "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+               "explicit_http_config":
+                 "http2_protocol_options": {}
+          name: xds_cluster
+          type: STRICT_DNS
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+              common_tls_context:
+                tls_params:
+                  tls_maximum_protocol_version: TLSv1_3
+                tls_certificate_sds_secret_configs:
+                - name: xds_certificate
+                  sds_config:
+                    path_config_source:
+                      path: "/sds/xds-certificate.json"
+                    resource_api_version: V3
+                validation_context_sds_secret_config:
+                  name: xds_trusted_ca
+                  sds_config:
+                    path_config_source:
+                      path: "/sds/xds-trusted-ca.json"
+                    resource_api_version: V3
+      layered_runtime:
+        layers:
+        - name: runtime-0
+          rtds_layer:
+            rtds_config:
+              ads: {}
+              resource_api_version: V3
+            name: runtime-0
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 You can use [egctl translate][]
 to get the default xDS Bootstrap configuration used by Envoy Gateway.
@@ -323,6 +615,8 @@ You can enable [Horizontal Pod Autoscaler](https://github.com/envoyproxy/gateway
 
 Once confirmed, you can apply it via EnvoyProxy Config as shown below:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -346,6 +640,34 @@ spec:
             type: Resource
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyHpa:
+        minReplicas: 2
+        maxReplicas: 10
+        metrics:
+          - resource:
+              name: cpu
+              target:
+                averageUtilization: 60
+                type: Utilization
+            type: Resource
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is generated. However, upon activating the EnvoyProxy's HPA, the Envoy Gateway will no longer reference the `replicas` field specified in the `envoyDeployment`, as outlined [here](#customize-envoyproxy-deployment-replicas).
 
@@ -354,6 +676,8 @@ After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is gen
 You can customize the EnvoyProxy Command line options via `spec.extraArgs` in EnvoyProxy Config.
 For example, the following configuration will add `--disable-extensions` arg in order to disable `envoy.access_loggers/envoy.access_loggers.wasm` extension:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -366,6 +690,23 @@ spec:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  extraArgs:
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Customize EnvoyProxy with Patches
 
@@ -373,6 +714,8 @@ You can customize the EnvoyProxy using patches.
 
 For example, the following configuration will add resource limits to the `envoy` and the `shutdown-manager` containers in the `envoyproxy` deployment:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -404,6 +747,42 @@ spec:
                         memory: 1024Mi
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                  - name: envoy
+                    resources:
+                      limits:
+                        cpu: 500m
+                        memory: 1024Mi
+                  - name: shutdown-manager
+                    resources:
+                      limits:
+                        cpu: 200m
+                        memory: 1024Mi
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 After applying the configuration, you will see the change in both containers in the `envoyproxy` deployment.
 

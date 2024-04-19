@@ -165,6 +165,8 @@ Before proceeding, ensure you can query the HTTPS backend service from the [Test
 To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default"
 namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -182,6 +184,28 @@ spec:
     kind: Secret
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: example
+  namespace: envoy-gateway-system
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    namespace: default
+  to:
+  - group: ""
+    kind: Secret
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 Delete the previously created Secret:
 
@@ -204,6 +228,8 @@ kubectl create secret tls example-cert -n envoy-gateway-system --key=www.example
 
 Update the Gateway HTTPS listener with `namespace: envoy-gateway-system`, for example:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -228,6 +254,35 @@ spec:
             namespace: envoy-gateway-system
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+            namespace: envoy-gateway-system
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 The Gateway HTTPS listener status should now surface the `Ready: True` condition and you should once again be able to
 query the HTTPS backend through the Gateway.

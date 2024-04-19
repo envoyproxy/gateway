@@ -59,8 +59,10 @@ kubectl patch gateway eg --type=json --patch '
 
 Apply the following ClientTrafficPolicy to enable HTTP3
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 ```shell
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -74,6 +76,26 @@ spec:
     namespace: default
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-http3
+spec:
+  http3: {}
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the Gateway status:
 
