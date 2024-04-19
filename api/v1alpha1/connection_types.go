@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -21,9 +20,8 @@ type Connection struct {
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Default: 32768 bytes.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
-	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
+	BufferLimit *Size `json:"bufferLimit,omitempty"`
 }
 
 type ConnectionLimit struct {

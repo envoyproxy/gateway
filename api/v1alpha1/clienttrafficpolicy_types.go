@@ -208,17 +208,13 @@ type HTTP10Settings struct {
 type HTTP2Settings struct {
 	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
 	// If not set, the default value is 64 KiB(64*1024).
-	// +kubebuilder:validation:Minimum=65535
-	// +kubebuilder:validation:Maximum=2147483647
 	// +optional
-	InitialStreamWindowSize *uint32 `json:"initialStreamWindowSize,omitempty"`
+	InitialStreamWindowSize *Size `json:"initialStreamWindowSize,omitempty"`
 
 	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
 	// If not set, the default value is 1 MiB(1024*1024).
-	// +kubebuilder:validation:Minimum=65535
-	// +kubebuilder:validation:Maximum=2147483647
 	// +optional
-	InitialConnectionWindowSize *uint32 `json:"initialConnectionWindowSize,omitempty"`
+	InitialConnectionWindowSize *Size `json:"initialConnectionWindowSize,omitempty"`
 }
 
 const (
