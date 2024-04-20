@@ -6300,9 +6300,7 @@ spec:
                     properties:
                       enablePerEndpointStats:
                         description: |-
-                          EnablePerEndpointStats enables envoy stats metrics for peer endpoint
-                          WARNING: This field will let Envoy record the statistics of each endpoint.
-                          When the number of endpoints reaches a certain number, this may cause performance problems.
+                          EnablePerEndpointStats enables per endpoint envoy stats metrics.
                           Please use with caution.
                         type: boolean
                       enableVirtualHostStats:

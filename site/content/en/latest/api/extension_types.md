@@ -2381,7 +2381,7 @@ _Appears in:_
 | `sinks` | _[ProxyMetricSink](#proxymetricsink) array_ |  true  | Sinks defines the metric sinks where metrics are sent to. |
 | `matches` | _[StringMatch](#stringmatch) array_ |  true  | Matches defines configuration for selecting specific metrics instead of generating all metrics stats<br />that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats<br />may after critical functionality. Here are the stats that we strongly recommend not disabling:<br />`cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`,<br />`cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856,<br />https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` | _boolean_ |  true  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
-| `enablePerEndpointStats` | _boolean_ |  true  | EnablePerEndpointStats enables envoy stats metrics for peer endpoint<br />WARNING: This field will let Envoy record the statistics of each endpoint.<br />When the number of endpoints reaches a certain number, this may cause performance problems.<br />Please use with caution. |
+| `enablePerEndpointStats` | _boolean_ |  true  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 
 
 #### ProxyOpenTelemetrySink
