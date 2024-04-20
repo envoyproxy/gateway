@@ -30,7 +30,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: ForwardOnly
         caCertificateRefs:
         - kind: ConfigMap
@@ -49,7 +49,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: AppendForward
         caCertificateRefs:
         - kind: ConfigMap
@@ -68,7 +68,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: SanitizeSet
         caCertificateRefs:
         - kind: ConfigMap
@@ -87,7 +87,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: AlwaysForwardOnly
         caCertificateRefs:
         - kind: ConfigMap

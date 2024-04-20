@@ -143,7 +143,6 @@ type ForwardClientCert struct {
 	Mode *ForwardMode `json:"mode,omitempty"`
 
 	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-	// +kubebuilder:validation:UniqueItems=true
 	// +kubebuilder:validation:MaxItems=5
 	// +optional
 	Set []ClientCertData `json:"set,omitempty"`

@@ -469,7 +469,6 @@ spec:
                               type: string
                             maxItems: 5
                             type: array
-                            uniqueItems: true
                         type: object
                       optional:
                         description: |-

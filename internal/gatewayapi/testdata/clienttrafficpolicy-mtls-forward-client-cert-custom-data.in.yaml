@@ -32,7 +32,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: ForwardOnly
           set:
           - cert
@@ -53,7 +53,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: AppendForward
           set:
           - cert
@@ -74,7 +74,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: SanitizeSet
           set:
           - cert
@@ -97,7 +97,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
     tls:
       clientValidation:
-        forwardClientCert: 
+        forwardClientCert:
           mode: SanitizeSet
           set:
           - cert
