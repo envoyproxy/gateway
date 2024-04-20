@@ -1379,6 +1379,22 @@ _Appears in:_
 | `path` | _string_ |  true  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### FilterPosition
+
+
+
+FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `filter` | _[EnvoyFilter](#envoyfilter)_ |  true  | Name of the filter. |
+| `before` | _[EnvoyFilter](#envoyfilter)_ |  true  | Before defines the filter that should come before the filter.<br />Only one of Before or After must be set. |
+| `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
+
+
 #### ForwardClientCertDetails
 
 _Underlying type:_ _string_
@@ -1395,20 +1411,6 @@ _Appears in:_
 | `AppendForward` | When the client connection is mTLS, append the client certificate<br />information to the request’s XFCC header and forward it.<br /> | 
 | `SanitizeSet` | When the client connection is mTLS, reset the XFCC header with the client<br />certificate information and send it to the next hop.<br /> | 
 | `AlwaysForwardOnly` | Always forward the XFCC header in the request, regardless of whether the<br />client connection is mTLS.<br /> | 
-#### FilterPosition
-
-
-
-FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
-
-_Appears in:_
-- [EnvoyProxySpec](#envoyproxyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `filter` | _[EnvoyFilter](#envoyfilter)_ |  true  | Name of the filter. |
-| `before` | _[EnvoyFilter](#envoyfilter)_ |  true  | Before defines the filter that should come before the filter.<br />Only one of Before or After must be set. |
-| `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
 #### GRPCExtAuthService
