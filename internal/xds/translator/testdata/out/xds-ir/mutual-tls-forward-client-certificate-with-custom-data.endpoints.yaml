@@ -4,8 +4,8 @@
     - endpoint:
         address:
           socketAddress:
-            address: 1.1.1.1
-            portValue: 8081
+            address: 10.0.0.1
+            portValue: 10001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
@@ -16,8 +16,8 @@
     - endpoint:
         address:
           socketAddress:
-            address: 2.2.2.2
-            portValue: 8082
+            address: 10.0.0.1
+            portValue: 10002
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
@@ -28,8 +28,8 @@
     - endpoint:
         address:
           socketAddress:
-            address: 3.3.3.3
-            portValue: 8083
+            address: 10.0.0.1
+            portValue: 10003
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
@@ -40,8 +40,8 @@
     - endpoint:
         address:
           socketAddress:
-            address: 4.4.4.4
-            portValue: 8084
+            address: 10.0.0.1
+            portValue: 10004
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
@@ -52,21 +52,9 @@
     - endpoint:
         address:
           socketAddress:
-            address: 5.5.5.5
-            portValue: 8085
+            address: 10.0.0.1
+            portValue: 10005
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
       region: fifth-route-dest/backend/0
-- clusterName: sixth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 6.6.6.6
-            portValue: 8086
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: sixth-route-dest/backend/0

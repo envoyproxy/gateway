@@ -115,6 +115,10 @@ type ClientValidationContext struct {
 	// +optional
 	Optional bool `json:"optional,omitempty"`
 
+	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// +optional
+	ForwardClientCert *ForwardClientCert `json:"forwardClientCert,omitempty"`
+
 	// CACertificateRefs contains one or more references to
 	// Kubernetes objects that contain TLS certificates of
 	// the Certificate Authorities that can be used
@@ -131,3 +135,56 @@ type ClientValidationContext struct {
 	// +optional
 	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }
+
+// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+type ForwardClientCert struct {
+	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// +optional
+	Mode *ForwardMode `json:"mode,omitempty"`
+
+	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+	// +kubebuilder:validation:UniqueItems=true
+	// +kubebuilder:validation:MaxItems=5
+	// +optional
+	Set []ClientCertData `json:"set,omitempty"`
+}
+
+// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +kubebuilder:validation:Enum=Sanitize;ForwardOnly;AppendForward;SanitizeSet;AlwaysForwardOnly
+type ForwardMode string
+
+const (
+	// Do not send the XFCC header to the next hop. This is the default value.
+	ForwardModeSanitize ForwardMode = "Sanitize"
+	// When the client connection is mTLS (Mutual TLS), forward the XFCC header
+	// in the request.
+	ForwardModeForwardOnly ForwardMode = "ForwardOnly"
+	// When the client connection is mTLS, append the client certificate
+	// information to the request’s XFCC header and forward it.
+	ForwardModeAppendForward ForwardMode = "AppendForward"
+	// When the client connection is mTLS, reset the XFCC header with the client
+	// certificate information and send it to the next hop.
+	ForwardModeSanitizeSet ForwardMode = "SanitizeSet"
+	// Always forward the XFCC header in the request, regardless of whether the
+	// client connection is mTLS.
+	ForwardModeAlwaysForwardOnly ForwardMode = "AlwaysForwardOnly"
+)
+
+// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+// +kubebuilder:validation:Enum=subject;cert;chain;dns;uri
+type ClientCertData string
+
+const (
+	// Whether to forward the subject of the client cert.
+	ClientCertDataSubject ClientCertData = "subject"
+	// Whether to forward the entire client cert in URL encoded PEM format.
+	// This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.
+	ClientCertDataCert ClientCertData = "cert"
+	// Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.
+	// This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.
+	ClientCertDataChain ClientCertData = "chain"
+	// Whether to forward the DNS type Subject Alternative Names of the client cert.
+	ClientCertDataDNS ClientCertData = "dns"
+	// Whether to forward the URI type Subject Alternative Name of the client cert.
+	ClientCertDataURI ClientCertData = "uri"
+)

@@ -1,9 +1,10 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 8081
-  defaultFilterChain:
-    filters:
+      portValue: 10001
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -18,56 +19,49 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+        mergeSlashes: true
         normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: https
         useRemoteAddress: true
-  drainType: MODIFY_ONLY
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          validationContextSdsSecretConfig:
+            name: ca-cert
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        requireClientCertificate: false
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 8082
-  defaultFilterChain:
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        normalizePath: true
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: second-listener
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
-        useRemoteAddress: true
+      portValue: 10002
   drainType: MODIFY_ONLY
-  name: second-listener
-  perConnectionBufferLimitBytes: 32768
-- address:
-    socketAddress:
-      address: 0.0.0.0
-      portValue: 8083
-  defaultFilterChain:
-    filters:
+  filterChains:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -83,24 +77,49 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+        mergeSlashes: true
         normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: third-listener
+          routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: https
         useRemoteAddress: true
-  drainType: MODIFY_ONLY
-  name: third-listener
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          validationContextSdsSecretConfig:
+            name: ca-cert
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        requireClientCertificate: false
+  name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 8084
-  defaultFilterChain:
-    filters:
+      portValue: 10003
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -116,26 +135,49 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+        mergeSlashes: true
         normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: fourth-listener
+          routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
-        setCurrentClientCertDetails:
-          subject: false
-        statPrefix: http
+        statPrefix: https
         useRemoteAddress: true
-  drainType: MODIFY_ONLY
-  name: fourth-listener
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          validationContextSdsSecretConfig:
+            name: ca-cert
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        requireClientCertificate: false
+  name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 8085
-  defaultFilterChain:
-    filters:
+      portValue: 10004
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -151,26 +193,49 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+        mergeSlashes: true
         normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: fifth-listener
+          routeConfigName: fourth-listener
         serverHeaderTransformation: PASS_THROUGH
-        setCurrentClientCertDetails:
-          subject: false
-        statPrefix: http
+        statPrefix: https
         useRemoteAddress: true
-  drainType: MODIFY_ONLY
-  name: fifth-listener
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          validationContextSdsSecretConfig:
+            name: ca-cert
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        requireClientCertificate: false
+  name: fourth-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 8086
-  defaultFilterChain:
-    filters:
+      portValue: 10005
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -186,15 +251,39 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+        mergeSlashes: true
         normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: sixth-listener
+          routeConfigName: fifth-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: https
         useRemoteAddress: true
-  drainType: MODIFY_ONLY
-  name: sixth-listener
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          validationContextSdsSecretConfig:
+            name: ca-cert
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        requireClientCertificate: false
+  name: fifth-listener
   perConnectionBufferLimitBytes: 32768

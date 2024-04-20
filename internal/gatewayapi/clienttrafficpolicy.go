@@ -539,13 +539,8 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		return
 	}
 	httpIR.Headers = &ir.HeaderSettings{
-		EnableEnvoyHeaders:       ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
-		WithUnderscoresAction:    ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
-		ForwardClientCertDetails: ir.ForwardClientCertDetails(ptr.Deref(headerSettings.ForwardClientCertDetails, egv1a1.ForwardClientCertDetailsSanitize)),
-	}
-
-	if httpIR.Headers.ForwardClientCertDetails == ir.ForwardClientCertDetailsAppendForward || httpIR.Headers.ForwardClientCertDetails == ir.ForwardClientCertDetailsSanitizeSet {
-		httpIR.Headers.ClientCertDetailsConfiguration = ir.ClientCertDetailsConfiguration(ptr.Deref(headerSettings.ClientCertDetailsConfiguration, egv1a1.ClientCertDetailsConfiguration{}))
+		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
 	}
 }
 
@@ -677,9 +672,27 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 			}
 		}
 
+		forwardClientCert := &ir.ForwardClientCert{}
+
+		if tlsParams.ClientValidation.ForwardClientCert != nil {
+			forwardClientCert.Mode = ir.ForwardMode(ptr.Deref(tlsParams.ClientValidation.ForwardClientCert.Mode, egv1a1.ForwardModeSanitize))
+
+			var Set []ir.ClientCertData
+			if forwardClientCert.Mode == ir.ForwardModeAppendForward || forwardClientCert.Mode == ir.ForwardModeSanitizeSet {
+				for _, data := range tlsParams.ClientValidation.ForwardClientCert.Set {
+					Set = append(Set, ir.ClientCertData(data))
+				}
+			}
+
+			forwardClientCert.Set = Set
+		}
+
 		if len(irCACert.Certificate) > 0 {
 			httpIR.TLS.CACertificate = irCACert
 			httpIR.TLS.RequireClientCertificate = !tlsParams.ClientValidation.Optional
+			if tlsParams.ClientValidation.ForwardClientCert != nil {
+				httpIR.TLS.ForwardClientCert = forwardClientCert
+			}
 		}
 	}
 

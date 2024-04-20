@@ -295,6 +295,9 @@ type TLSConfig struct {
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
 	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
+	ForwardClientCert *ForwardClientCert `json:"forwardClientCert,omitempty" yaml:"forwardClientCert,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -368,19 +371,38 @@ const (
 	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
 )
 
-type ForwardClientCertDetails egv1a1.ForwardClientCertDetails
+// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +k8s:deepcopy-gen=true
+type ForwardClientCert struct {
+	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	Mode ForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
+	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+	Set []ClientCertData `json:"set,omitempty" yaml:"set,omitempty"`
+}
+
+// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +k8s:deepcopy-gen=true
+type ForwardMode egv1a1.ForwardMode
 
 const (
-	ForwardClientCertDetailsSanitize          = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsSanitize)
-	ForwardClientCertDetailsForwardOnly       = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsForwardOnly)
-	ForwardClientCertDetailsAppendForward     = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsAppendForward)
-	ForwardClientCertDetailsSanitizeSet       = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsSanitizeSet)
-	ForwardClientCertDetailsAlwaysForwardOnly = ForwardClientCertDetails(egv1a1.ForwardClientCertDetailsAlwaysForwardOnly)
+	ForwardModeSanitize          = ForwardMode(egv1a1.ForwardModeSanitize)
+	ForwardModeForwardOnly       = ForwardMode(egv1a1.ForwardModeForwardOnly)
+	ForwardModeAppendForward     = ForwardMode(egv1a1.ForwardModeAppendForward)
+	ForwardModeSanitizeSet       = ForwardMode(egv1a1.ForwardModeSanitizeSet)
+	ForwardModeAlwaysForwardOnly = ForwardMode(egv1a1.ForwardModeAlwaysForwardOnly)
 )
 
-// specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
 // +k8s:deepcopy-gen=true
-type ClientCertDetailsConfiguration egv1a1.ClientCertDetailsConfiguration
+type ClientCertData egv1a1.ClientCertData
+
+const (
+	ClientCertDataSubject = ClientCertData(egv1a1.ClientCertDataSubject)
+	ClientCertDataCert    = ClientCertData(egv1a1.ClientCertDataCert)
+	ClientCertDataChain   = ClientCertData(egv1a1.ClientCertDataChain)
+	ClientCertDataDNS     = ClientCertData(egv1a1.ClientCertDataDNS)
+	ClientCertDataURI     = ClientCertData(egv1a1.ClientCertDataURI)
+)
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
@@ -415,14 +437,6 @@ type HeaderSettings struct {
 	// The default is to suppress these headers.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
-
-	// configure Envoy proxy to forward x-forwarded-client-cert (XFCC) HTTP header
-	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
-	ForwardClientCertDetails ForwardClientCertDetails `json:"forwardClientCertDetails,omitempty" yaml:"forwardClientCertDetails,omitempty"`
-
-	// specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-msg-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-setcurrentclientcertdetails
-	ClientCertDetailsConfiguration ClientCertDetailsConfiguration `json:"clientCertDetailsConfiguration,omitempty"  yaml:"clientCertDetailsConfiguration,omitempty"`
 
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.

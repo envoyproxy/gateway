@@ -68,17 +68,3 @@
         cluster: fifth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
-- ignorePortInHostMatching: true
-  name: sixth-listener
-  virtualHosts:
-  - domains:
-    - '*'
-    name: sixth-listener/*
-    routes:
-    - match:
-        prefix: /
-      name: sixth-route
-      route:
-        cluster: sixth-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket

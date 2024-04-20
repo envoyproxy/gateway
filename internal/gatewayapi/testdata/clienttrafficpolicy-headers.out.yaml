@@ -130,7 +130,6 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
-        ForwardClientCertDetails: Sanitize
         withUnderscoresAction: Allow
       hostnames:
       - '*'
@@ -143,7 +142,6 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
-        ForwardClientCertDetails: Sanitize
         withUnderscoresAction: Allow
       hostnames:
       - '*'

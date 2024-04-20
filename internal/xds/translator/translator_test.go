@@ -116,6 +116,14 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "mutual-tls-forward-client-certificate",
+			requireSecrets: true,
+		},
+		{
+			name:           "mutual-tls-forward-client-certificate-with-custom-data",
+			requireSecrets: true,
+		},
+		{
 			name:           "http3",
 			requireSecrets: true,
 		},
@@ -265,12 +273,6 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "fault-injection",
-		},
-		{
-			name: "headers-forward-client-cert-details",
-		},
-		{
-			name: "headers-forward-client-cert-details-xfcc-config",
 		},
 		{
 			name: "headers-with-underscores-action",
