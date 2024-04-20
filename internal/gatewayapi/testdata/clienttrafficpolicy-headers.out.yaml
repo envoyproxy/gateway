@@ -8,6 +8,7 @@ clientTrafficPolicies:
   spec:
     headers:
       enableEnvoyHeaders: true
+      preserveExternalRequestID: true
       withUnderscoresAction: Allow
     targetRef:
       group: gateway.networking.k8s.io
@@ -129,6 +130,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
+        preserveExternalRequestID: true
         withUnderscoresAction: Allow
       hostnames:
       - '*'
@@ -141,6 +143,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
+        preserveExternalRequestID: true
         withUnderscoresAction: Allow
       hostnames:
       - '*'

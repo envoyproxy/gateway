@@ -108,6 +108,13 @@ type HeaderSettings struct {
 	// is encountered. The default action is to reject the request.
 	// +optional
 	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
+
+	// PreserveExternalRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
+	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
+	// It defaults to false.
+	//
+	// +optional
+	PreserveExternalRequestID *bool `json:"preserveExternalRequestID,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores

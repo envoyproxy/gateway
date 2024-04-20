@@ -545,8 +545,9 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		return
 	}
 	httpIR.Headers = &ir.HeaderSettings{
-		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
-		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
+		EnableEnvoyHeaders:        ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
+		WithUnderscoresAction:     ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
+		PreserveExternalRequestID: ptr.Deref(headerSettings.PreserveExternalRequestID, false),
 	}
 }
 
