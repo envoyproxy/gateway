@@ -1096,6 +1096,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `envoyDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  | EnvoyDeployment defines the desired state of the Envoy deployment resource.<br />If unspecified, default settings for the managed Envoy deployment resource<br />are applied. |
+| `envoyDaemonSet` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  | EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.<br />Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  | EnvoyService defines the desired state of the Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
 | `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.<br />Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
 
@@ -1817,6 +1818,7 @@ _Appears in:_
 KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
@@ -1826,6 +1828,23 @@ _Appears in:_
 | `securityContext` | _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#securitycontext-v1-core)_ |  false  | SecurityContext defines the security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `image` | _string_ |  false  | Image specifies the EnvoyProxy container image to be used, instead of the default image. |
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volumemount-v1-core) array_ |  false  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
+
+
+#### KubernetesDaemonSetSpec
+
+
+
+KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+
+_Appears in:_
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to daemonset |
+| `strategy` | _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#daemonsetupdatestrategy-v1-apps)_ |  false  | The daemonset strategy to use to replace existing pods with new ones. |
+| `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
+| `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  | Container defines the desired specification of main container. |
 
 
 #### KubernetesDeployMode
@@ -1887,6 +1906,7 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
@@ -1903,6 +1923,7 @@ _Appears in:_
 KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
