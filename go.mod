@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.22
+go 1.22.2
 
 require (
 	fortio.org/fortio v1.63.7
@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.12.1-0.20240322155512-db0b36a50fa8
+	github.com/envoyproxy/go-control-plane v0.12.1-0.20240410145647-bdba4bba15fc
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/fatih/color v1.16.0
@@ -21,7 +21,7 @@ require (
 	github.com/grafana/tempo v1.5.0
 	github.com/miekg/dns v1.1.58
 	github.com/prometheus/client_golang v1.19.0
-	github.com/prometheus/common v0.52.2
+	github.com/prometheus/common v0.52.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
@@ -37,11 +37,11 @@ require (
 	go.opentelemetry.io/proto/otlp v1.2.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.14.3
+	helm.sh/helm/v3 v3.14.4
 	k8s.io/api v0.29.3
 	k8s.io/apiextensions-apiserver v0.29.3
 	k8s.io/apimachinery v0.29.3
@@ -49,7 +49,7 @@ require (
 	k8s.io/client-go v0.29.3
 	k8s.io/kubectl v0.29.3
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
-	sigs.k8s.io/controller-runtime v0.17.2
+	sigs.k8s.io/controller-runtime v0.17.3
 	sigs.k8s.io/gateway-api v1.0.0
 	sigs.k8s.io/mcs-api v0.1.0
 	sigs.k8s.io/yaml v1.4.0
@@ -72,7 +72,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/docker/cli v24.0.6+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v24.0.7+incompatible // indirect
+	github.com/docker/docker v24.0.9+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -99,7 +99,7 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
-	github.com/planetscale/vtprotobuf v0.5.1-0.20231212170721-e7d721933795 // indirect
+	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rubenv/sql-migrate v1.5.2 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
@@ -108,7 +108,7 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
 	k8s.io/apiserver v0.29.3 // indirect
 	oras.land/oras-go v1.2.4 // indirect
 )
@@ -171,10 +171,10 @@ require (
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/net v0.23.0
+	golang.org/x/net v0.24.0
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
+	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.19.0 // indirect

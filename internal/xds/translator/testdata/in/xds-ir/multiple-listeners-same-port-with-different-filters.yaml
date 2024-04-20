@@ -33,9 +33,10 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
-        basicAuth:
-          name: securitypolicy/default/policy-for-http-route-1
-          users: "dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo="
+        security:
+          basicAuth:
+            name: securitypolicy/default/policy-for-http-route-1
+            users: "dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo="
       - name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
         hostname: www.foo.com
         isHTTP2: false
@@ -55,24 +56,25 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
-        extAuth:
-          name: securitypolicy/default/policy-for-http-route-2
-          failOpen: true
-          http:
-            authority: http-backend.envoy-gateway:80
-            destination:
-              name: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
-              settings:
-                - addressType: IP
-                  endpoints:
-                    - host: 7.7.7.7
-                      port: 80
-                  protocol: HTTP
-                  weight: 1
-            headersToBackend:
-              - header1
-              - header2
-            path: /auth
+        security:
+          extAuth:
+            name: securitypolicy/default/policy-for-http-route-2
+            failOpen: true
+            http:
+              authority: http-backend.envoy-gateway:80
+              destination:
+                name: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
+                settings:
+                  - addressType: IP
+                    endpoints:
+                      - host: 7.7.7.7
+                        port: 80
+                    protocol: HTTP
+                    weight: 1
+              headersToBackend:
+                - header1
+                - header2
+              path: /auth
   - name: default/gateway-2/http
     address: 0.0.0.0
     hostnames:
@@ -102,18 +104,19 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
-        oidc:
-          name: securitypolicy/default/policy-for-gateway-2
-          clientID: client.oauth.foo.com
-          clientSecret: Y2xpZW50MTpzZWNyZXQK
-          provider:
-            authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-            tokenEndpoint: https://oauth.foo.com/token
-          scopes:
-            - openid
-            - email
-            - profile
-          redirectURL: "https://www.example.com/foo/oauth2/callback"
-          redirectPath: "/foo/oauth2/callback"
-          logoutPath: "/foo/logout"
-          cookieSuffix: 5F93C2E4
+        security:
+          oidc:
+            name: securitypolicy/default/policy-for-gateway-2
+            clientID: client.oauth.foo.com
+            clientSecret: Y2xpZW50MTpzZWNyZXQK
+            provider:
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              tokenEndpoint: https://oauth.foo.com/token
+            scopes:
+              - openid
+              - email
+              - profile
+            redirectURL: "https://www.example.com/foo/oauth2/callback"
+            redirectPath: "/foo/oauth2/callback"
+            logoutPath: "/foo/logout"
+            cookieSuffix: 5F93C2E4

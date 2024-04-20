@@ -406,14 +406,14 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: default/gateway-1/http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: default/gateway-2/http
         ports:
         - containerPort: 10081
-          name: default/gateway-2/http
+          name: http-81
           protocol: HTTP
           servicePort: 81
       metadata:
@@ -519,21 +519,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -550,6 +535,22 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
         tcpKeepalive:
           idleTime: 1200
           interval: 60
@@ -570,21 +571,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -601,6 +587,22 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
         tcpKeepalive:
           idleTime: 1200
           interval: 60
@@ -621,21 +623,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
         destination:
           name: httproute/default/httproute-3/rule/0
           settings:
@@ -652,6 +639,22 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
     - address: 0.0.0.0
       hostnames:
       - foo.example.com

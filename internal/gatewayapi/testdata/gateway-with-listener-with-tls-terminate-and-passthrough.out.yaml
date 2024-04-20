@@ -119,14 +119,14 @@ infraIR:
         name: envoy-gateway/gateway-1/tls-passthrough
         ports:
         - containerPort: 10090
-          name: tls-passthrough
+          name: tls-90
           protocol: TLS
           servicePort: 90
       - address: null
         name: envoy-gateway/gateway-1/tls-terminate
         ports:
         - containerPort: 10443
-          name: tls-terminate
+          name: https-443
           protocol: HTTPS
           servicePort: 443
       metadata:

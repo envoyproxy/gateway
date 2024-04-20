@@ -505,7 +505,7 @@ infraIR:
         name: another-namespace/not-same-namespace-gateway/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -520,7 +520,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -535,14 +535,14 @@ infraIR:
         name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: envoy-gateway/gateway-2/tcp
         ports:
         - containerPort: 10053
-          name: tcp
+          name: tcp-53
           protocol: TCP
           servicePort: 53
       metadata:

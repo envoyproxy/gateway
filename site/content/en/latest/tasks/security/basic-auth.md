@@ -49,23 +49,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+  '
 ```
 
 ### Create a .htpasswd file
@@ -188,9 +185,9 @@ kubectl delete secret/example-cert
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../contributions/design/security-policy/
+[SecurityPolicy]: ../../../contributions/design/security-policy
 [http Basic authentication]: https://tools.ietf.org/html/rfc2617
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

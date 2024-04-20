@@ -45,7 +45,7 @@ infraIR:
         name: envoy-gateway/gateway-1/tcp
         ports:
         - containerPort: 10162
-          name: tcp
+          name: tcp-162
           protocol: TCP
           servicePort: 162
       metadata:

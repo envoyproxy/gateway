@@ -180,12 +180,8 @@ func (x Xds) Printable() *Xds {
 
 		for _, route := range listener.Routes {
 			// Omit field
-			if route.OIDC != nil {
-				route.OIDC.ClientSecret = redacted
-				route.OIDC.HMACSecret = redacted
-			}
-			if route.BasicAuth != nil {
-				route.BasicAuth.Users = redacted
+			if route.Security != nil {
+				route.Security = route.Security.Printable()
 			}
 		}
 	}
@@ -285,6 +281,8 @@ type TLSConfig struct {
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
 	// CACertificate to verify the client
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+	// RequireClientCertificate to enforce client certificate
+	RequireClientCertificate bool `json:"requireClientCertificate,omitempty" yaml:"requireClientCertificate,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
 	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
 	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
@@ -467,18 +465,8 @@ type HTTPRoute struct {
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
-	// CORS policy for the route.
-	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
-	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
-	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
-	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
-	// BasicAuth defines the schema for the HTTP Basic Authentication.
-	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
-	// ExtAuth defines the schema for the external authorization.
-	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
@@ -495,6 +483,63 @@ type HTTPRoute struct {
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 	// External Processing extensions
 	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
+	// Wasm extensions
+	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+
+	// Security holds the features associated with SecurityPolicy
+	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+}
+
+// SecurityFeatures holds the information associated with the Security Policy.
+// +k8s:deepcopy-gen=true
+type SecurityFeatures struct {
+	// CORS policy for the route.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
+	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
+	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// BasicAuth defines the schema for the HTTP Basic Authentication.
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	// ExtAuth defines the schema for the external authorization.
+	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
+}
+
+// Empty returns true if all the features are not set.
+func (s *SecurityFeatures) Empty() bool {
+	if s == nil {
+		return true
+	}
+
+	return s.CORS == nil &&
+		s.JWT == nil &&
+		s.OIDC == nil &&
+		s.BasicAuth == nil &&
+		s.ExtAuth == nil
+}
+
+func (s *SecurityFeatures) Printable() *SecurityFeatures {
+	out := s.DeepCopy()
+	if out.OIDC != nil {
+		out.OIDC.ClientSecret = redacted
+		out.OIDC.HMACSecret = redacted
+	}
+	if out.BasicAuth != nil {
+		out.BasicAuth.Users = redacted
+	}
+	return out
+}
+
+func (s *SecurityFeatures) Validate() error {
+	var errs error
+
+	if s.JWT != nil {
+		if err := s.JWT.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -529,6 +574,10 @@ type CORS struct {
 //
 // +k8s:deepcopy-gen=true
 type JWT struct {
+	// AllowMissing determines whether a missing JWT is acceptable.
+	//
+	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
+
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
@@ -810,8 +859,8 @@ func (h HTTPRoute) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-	if h.JWT != nil {
-		if err := h.JWT.validate(); err != nil {
+	if h.Security != nil {
+		if err := h.Security.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -824,7 +873,7 @@ func (h HTTPRoute) Validate() error {
 	return errs
 }
 
-func (j *JWT) validate() error {
+func (j *JWT) Validate() error {
 	var errs error
 
 	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
@@ -1380,9 +1429,11 @@ type JSONPatchOperation struct {
 // Tracing defines the configuration for tracing a Envoy xDS Resource
 // +k8s:deepcopy-gen=true
 type Tracing struct {
-	ServiceName string `json:"serviceName"`
-
-	egv1a1.ProxyTracing
+	ServiceName  string                      `json:"serviceName"`
+	Host         string                      `json:"host"`
+	Port         uint32                      `json:"port"`
+	SamplingRate float64                     `json:"samplingRate,omitempty"`
+	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -1823,7 +1874,6 @@ type TLSUpstreamConfig struct {
 // Connection settings for downstream connections
 // +k8s:deepcopy-gen=true
 type Connection struct {
-	//
 	// ConnectionLimit is the limit of number of connections
 	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
@@ -1854,4 +1904,42 @@ type ExtProc struct {
 
 	// Authority is the hostname:port of the HTTP External Processing service.
 	Authority string `json:"authority"`
+}
+
+// Wasm holds the information associated with the Wasm extensions.
+// +k8s:deepcopy-gen=true
+type Wasm struct {
+	// Name is a unique name for an Wasm configuration.
+	// The xds translator only generates one ExtProc filter for each unique name.
+	Name string `json:"name"`
+
+	// RootID is a unique ID for a set of extensions in a VM which will share a
+	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
+	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
+	RootID *string `json:"rootID,omitempty"`
+
+	// WasmName is used to identify the Wasm extension if multiple extensions are
+	// handled by the same vm_id and root_id.
+	// It's also used for logging/debugging.
+	WasmName string `json:"wasmName"`
+
+	// Config is the configuration for the Wasm extension.
+	// This configuration will be passed as a JSON string to the Wasm extension.
+	Config *apiextensionsv1.JSON `json:"config"`
+
+	// FailOpen is a switch used to control the behavior when a fatal error occurs
+	// during the initialization or the execution of the Wasm extension.
+	FailOpen bool `json:"failOpen"`
+
+	// HTTPWasmCode is the HTTP Wasm code source.
+	HTTPWasmCode *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+}
+
+// HTTPWasmCode holds the information associated with the HTTP Wasm code source.
+type HTTPWasmCode struct {
+	// URL is the URL of the Wasm code.
+	URL string `json:"url"`
+
+	// SHA256 checksum that will be used to verify the wasm code.
+	SHA256 string `json:"sha256"`
 }
