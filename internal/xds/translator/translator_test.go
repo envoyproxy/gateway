@@ -315,6 +315,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "ext-proc",
 		},
 		{
+			name: "wasm",
+		},
+		{
 			name: "jwt-optional",
 		},
 	}
