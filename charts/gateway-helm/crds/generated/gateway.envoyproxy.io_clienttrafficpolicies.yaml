@@ -475,6 +475,11 @@ spec:
                           type: object
                         maxItems: 8
                         type: array
+                      optional:
+                        description: |-
+                          Optional set to true accepts connections even when a client doesn't present a certificate.
+                          Defaults to false, which rejects connections without a valid client certificate.
+                        type: boolean
                     type: object
                   ecdhCurves:
                     description: |-

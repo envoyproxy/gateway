@@ -85,6 +85,104 @@ spec:
                 items:
                   type: string
                 type: array
+              filterOrder:
+                description: |-
+                  FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+                  If unspecified, the default filter order is applied.
+                  Default filter order is:
+
+
+                  - envoy.filters.http.fault
+
+
+                  - envoy.filters.http.cors
+
+
+                  - envoy.filters.http.ext_authz
+
+
+                  - envoy.filters.http.basic_authn
+
+
+                  - envoy.filters.http.oauth2
+
+
+                  - envoy.filters.http.jwt_authn
+
+
+                  - envoy.filters.http.ext_proc
+
+
+                  - envoy.filters.http.wasm
+
+
+                  - envoy.filters.http.local_ratelimit
+
+
+                  - envoy.filters.http.ratelimit
+
+
+                  - envoy.filters.http.router
+                items:
+                  description: FilterPosition defines the position of an Envoy HTTP
+                    filter in the filter chain.
+                  properties:
+                    after:
+                      description: |-
+                        After defines the filter that should come after the filter.
+                        Only one of Before or After must be set.
+                      enum:
+                      - envoy.filters.http.cors
+                      - envoy.filters.http.ext_authz
+                      - envoy.filters.http.basic_authn
+                      - envoy.filters.http.oauth2
+                      - envoy.filters.http.jwt_authn
+                      - envoy.filters.http.fault
+                      - envoy.filters.http.local_ratelimit
+                      - envoy.filters.http.ratelimit
+                      - envoy.filters.http.wasm
+                      - envoy.filters.http.ext_proc
+                      type: string
+                    before:
+                      description: |-
+                        Before defines the filter that should come before the filter.
+                        Only one of Before or After must be set.
+                      enum:
+                      - envoy.filters.http.cors
+                      - envoy.filters.http.ext_authz
+                      - envoy.filters.http.basic_authn
+                      - envoy.filters.http.oauth2
+                      - envoy.filters.http.jwt_authn
+                      - envoy.filters.http.fault
+                      - envoy.filters.http.local_ratelimit
+                      - envoy.filters.http.ratelimit
+                      - envoy.filters.http.wasm
+                      - envoy.filters.http.ext_proc
+                      type: string
+                    filter:
+                      description: Name of the filter.
+                      enum:
+                      - envoy.filters.http.cors
+                      - envoy.filters.http.ext_authz
+                      - envoy.filters.http.basic_authn
+                      - envoy.filters.http.oauth2
+                      - envoy.filters.http.jwt_authn
+                      - envoy.filters.http.fault
+                      - envoy.filters.http.local_ratelimit
+                      - envoy.filters.http.ratelimit
+                      - envoy.filters.http.wasm
+                      - envoy.filters.http.ext_proc
+                      type: string
+                  required:
+                  - filter
+                  type: object
+                  x-kubernetes-validations:
+                  - message: one of before or after must be specified
+                    rule: (has(self.before) || has(self.after))
+                  - message: only one of before or after can be specified
+                    rule: (has(self.before) && !has(self.after)) || (!has(self.before)
+                      && has(self.after))
+                type: array
               logging:
                 default:
                   level:
@@ -5761,6 +5859,16 @@ spec:
                             x-kubernetes-validations:
                             - message: loadBalancerIP must be a valid IPv4 address
                               rule: self.matches(r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+                          loadBalancerSourceRanges:
+                            description: |-
+                              LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
+                              firewall rules on the platform providers load balancer. This is not guaranteed to be working as
+                              it happens outside of kubernetes and has to be supported and handled by the platform provider.
+                              This field may only be set for services with type LoadBalancer and will be cleared if the type
+                              is changed to any other type.
+                            items:
+                              type: string
+                            type: array
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the service
@@ -5797,6 +5905,10 @@ spec:
                         - message: allocateLoadBalancerNodePorts can only be set for
                             LoadBalancer type
                           rule: '!has(self.allocateLoadBalancerNodePorts) || self.type
+                            == ''LoadBalancer'''
+                        - message: loadBalancerSourceRanges can only be set for LoadBalancer
+                            type
+                          rule: '!has(self.loadBalancerSourceRanges) || self.type
                             == ''LoadBalancer'''
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
@@ -6227,6 +6339,24 @@ spec:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
                         properties:
+                          compression:
+                            description: Configure the compression on Prometheus endpoint.
+                              Compression is useful in situations when bandwidth is
+                              scarce and large payloads can be effectively compressed
+                              at the expense of higher CPU load.
+                            properties:
+                              gzip:
+                                description: The configuration for GZIP compressor.
+                                type: object
+                              type:
+                                description: CompressorType defines the compressor
+                                  type to use for compression.
+                                enum:
+                                - Gzip
+                                type: string
+                            required:
+                            - type
+                            type: object
                           disable:
                             description: Disable the Prometheus endpoint.
                             type: boolean

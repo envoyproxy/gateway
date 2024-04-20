@@ -220,6 +220,7 @@ const (
 
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
@@ -249,6 +250,14 @@ type KubernetesServiceSpec struct {
 	// services with type LoadBalancer and will be cleared if the type is changed to any other type.
 	// +optional
 	AllocateLoadBalancerNodePorts *bool `json:"allocateLoadBalancerNodePorts,omitempty"`
+
+	// LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
+	// firewall rules on the platform providers load balancer. This is not guaranteed to be working as
+	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
+	// This field may only be set for services with type LoadBalancer and will be cleared if the type
+	// is changed to any other type.
+	// +optional
+	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 
 	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
 	// may be ignored if the load balancer provider does not support this feature.

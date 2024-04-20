@@ -8,6 +8,7 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
@@ -113,6 +114,18 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 			spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.AllocateLoadBalancerNodePorts; serviceType != nil && serviceAllocateLoadBalancerNodePorts != nil {
 			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
 				errs = append(errs, fmt.Errorf("allocateLoadBalancerNodePorts can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+		}
+		if serviceType, serviceLoadBalancerSourceRanges :=
+			spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerSourceRanges; serviceType != nil && serviceLoadBalancerSourceRanges != nil {
+			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
+				errs = append(errs, fmt.Errorf("loadBalancerSourceRanges can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+
+			for _, serviceLoadBalancerSourceRange := range serviceLoadBalancerSourceRanges {
+				if ip, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil || ip.To4() == nil {
+					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IPv4 subnet", serviceLoadBalancerSourceRange))
+				}
 			}
 		}
 		if serviceType, serviceLoadBalancerIP := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerIP; serviceType != nil && serviceLoadBalancerIP != nil {
