@@ -2,8 +2,8 @@
 title: "Mutual TLS: External Clients to the Gateway"
 ---
 
-This guide demonstrates how mutual TLS can be achieved between external clients and the Gateway. The guide uses a self-signed CA, so it should be used for
-testing and demonstration purposes only.
+This task demonstrates how mutual TLS can be achieved between external clients and the Gateway.
+This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 ## Prerequisites
 
@@ -54,23 +54,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+  '
 ```
 
 Verify the Gateway status:
