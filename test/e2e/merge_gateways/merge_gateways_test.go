@@ -18,6 +18,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
+	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -50,11 +51,16 @@ func TestMergeGateways(t *testing.T) {
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		FS:                   &e2e.Manifests,
 		RunTest:              *flags.RunTest,
 	})
 
-	cSuite.Setup(t)
+	// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
+	// since this test suite reuse the base resources of previous test suite.
+	cSuite.Applier.FS = e2e.Manifests
+	cSuite.Applier.GatewayClass = *flags.GatewayClassName
+	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t,
+		cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
+
 	t.Logf("Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
 	cSuite.Run(t, tests.MergeGatewaysTests)
 }
