@@ -428,4 +428,5 @@ type BackendRef struct {
 
 // Size is a wrapper around resource.Quantity to provide a more descriptive name and validation.
 // +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="size must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
-type Size resource.Quantity
+// +k8s:deepcopy-gen=false
+type Size = resource.Quantity
