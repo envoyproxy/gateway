@@ -284,7 +284,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 		})
 	}
 
-	return resource.ExpectedDeploymentVolumes(rateLimitDeployment.Pod, volumes)
+	return resource.ExpectedVolumes(rateLimitDeployment.Pod, volumes)
 }
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.

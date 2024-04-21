@@ -48,7 +48,32 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		return err
 	}
 
+	// delete the deployment and return early
+	// this handles the case where a daemonset has been
+	// congured
+	if deployment == nil {
+		return i.deleteDeployment(ctx, r)
+	}
+
 	return i.Client.ServerSideApply(ctx, deployment)
+}
+
+// createOrUpdateDaemonSet creates a DaemonSet in the kube api server based on the provided
+// ResourceRender, if it doesn't exist and updates it if it does.
+func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) error {
+	daemonSet, err := r.DaemonSet()
+	if err != nil {
+		return err
+	}
+
+	// delete the daemonset and return early
+	// this handles the case where a deployment has been
+	// congured
+	if daemonSet == nil {
+		return i.deleteDaemonSet(ctx, r)
+	}
+
+	return i.Client.ServerSideApply(ctx, daemonSet)
 }
 
 // createOrUpdateHPA creates HorizontalPodAutoscaler object in the kube api server based on
@@ -102,6 +127,18 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) error {
 	}
 
 	return i.Client.Delete(ctx, deployment)
+}
+
+// deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
+func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) error {
+	daemonSet := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      r.Name(),
+		},
+	}
+
+	return i.Client.Delete(ctx, daemonSet)
 }
 
 // deleteConfigMap deletes the ConfigMap in the kube api server, if it exists.
