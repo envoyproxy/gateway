@@ -221,7 +221,7 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, inputFile)
 			out := BuildRateLimitServiceConfig(in)
 			if *overrideTestData {
-				require.NoError(t, file.Write(requireYamlRootToYAMLString(t, out), inputFile))
+				require.NoError(t, file.Write(requireYamlRootToYAMLString(t, out), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".yaml")))
 			}
 			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".yaml"), requireYamlRootToYAMLString(t, out))
 		})
@@ -250,14 +250,10 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]
 			if !ok {
-				cfg = testFileConfig{
-					dnsDomain:                 "",
-					requireSecrets:            true, // default: true
-					requireEnvoyPatchPolicies: false,
-				}
+				cfg = testFileConfig{requireSecrets: true}
 			}
 
-			// Testdata for the extension tests is similar to the ir test dat
+			// Testdata for the extension tests is similar to the ir test data
 			// New directory is just to keep them separate and easy to understand
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
