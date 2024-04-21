@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-
 	"testing"
 	"time"
 
@@ -216,6 +215,7 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 		}
 
 		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			t.Logf("EnvoyExtensionPolicy has been accepted: %v", policy)
 			return true, nil
 		}
 

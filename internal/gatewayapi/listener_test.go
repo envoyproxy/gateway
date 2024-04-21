@@ -19,8 +19,9 @@ import (
 
 func TestProcessTracing(t *testing.T) {
 	cases := []struct {
-		gw    gwapiv1.Gateway
-		proxy *egcfgv1a1.EnvoyProxy
+		gw       gwapiv1.Gateway
+		proxy    *egcfgv1a1.EnvoyProxy
+		mergedgw bool
 
 		expected *ir.Tracing
 	}{
@@ -41,6 +42,29 @@ func TestProcessTracing(t *testing.T) {
 			},
 			expected: &ir.Tracing{
 				ServiceName:  "fake-gw.fake-ns",
+				SamplingRate: 100.0,
+			},
+		},
+		{
+			gw: gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-gw",
+					Namespace: "fake-ns",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "fake-gateway-class",
+				},
+			},
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Tracing: &egcfgv1a1.ProxyTracing{},
+					},
+				},
+			},
+			mergedgw: true,
+			expected: &ir.Tracing{
+				ServiceName:  "fake-gateway-class",
 				SamplingRate: 100.0,
 			},
 		},
@@ -149,7 +173,7 @@ func TestProcessTracing(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run("", func(t *testing.T) {
-			got := processTracing(&c.gw, c.proxy)
+			got := processTracing(&c.gw, c.proxy, c.mergedgw)
 			assert.Equal(t, c.expected, got)
 		})
 	}
@@ -178,6 +202,21 @@ func TestProcessMetrics(t *testing.T) {
 			},
 			expected: &ir.Metrics{
 				EnableVirtualHostStats: true,
+			},
+		},
+		{
+			name: "peer endpoint stats enabled",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Metrics: &egcfgv1a1.ProxyMetrics{
+							EnablePerEndpointStats: true,
+						},
+					},
+				},
+			},
+			expected: &ir.Metrics{
+				EnablePerEndpointStats: true,
 			},
 		},
 	}
