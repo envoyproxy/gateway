@@ -119,7 +119,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	}, nil
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing) error {
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
 	if tracing == nil {
 		return nil
 	}
@@ -136,6 +136,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      nil,
 		endpointType: EndpointTypeDNS,
+		metrics:      metrics,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

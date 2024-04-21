@@ -1440,6 +1440,7 @@ type Tracing struct {
 // +k8s:deepcopy-gen=true
 type Metrics struct {
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats" yaml:"enableVirtualHostStats"`
+	EnablePerEndpointStats bool `json:"enablePerEndpointStats" yaml:"enablePerEndpointStats"`
 }
 
 // TCPKeepalive define the TCP Keepalive configuration.

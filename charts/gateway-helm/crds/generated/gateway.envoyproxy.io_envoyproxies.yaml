@@ -9905,6 +9905,11 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      enablePerEndpointStats:
+                        description: |-
+                          EnablePerEndpointStats enables per endpoint envoy stats metrics.
+                          Please use with caution.
+                        type: boolean
                       enableVirtualHostStats:
                         description: EnableVirtualHostStats enables envoy stat metrics
                           for virtual hosts.

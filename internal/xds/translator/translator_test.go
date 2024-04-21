@@ -315,6 +315,24 @@ func TestTranslateXds(t *testing.T) {
 			name: "ext-proc",
 		},
 		{
+			name: "http-endpoint-stats",
+		},
+		{
+			name: "tcp-endpoint-stats",
+		},
+		{
+			name: "udp-endpoint-stats",
+		},
+		{
+			name: "tracing-endpoint-stats",
+		},
+		{
+			name: "accesslog-endpoint-stats",
+		},
+		{
+			name: "ratelimit-endpoint-stats",
+		},
+		{
 			name: "wasm",
 		},
 		{
