@@ -45,6 +45,43 @@ type ExtProcProcessingMode struct {
 	Response *ProcessingModeOptions `json:"response,omitempty"`
 }
 
+// ExtProcAttributes defines which envoy attributes are sent for requests and responses to the external processor
+type ExtProcAttributes struct {
+	// defines attributes to send for Request processing
+	//
+	// +optional
+	Request []string `json:"request,omitempty"`
+
+	// defines attributes to send for Response processing
+	//
+	// +optional
+	Response []string `json:"response,omitempty"`
+}
+
+// MetadataNamespaces defines metadata namespaces that can be used to forward or receive dynamic metadata from the
+// external processor
+type MetadataNamespaces struct {
+	// Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service
+	// as an opaque protobuf::Struct.
+	//
+	// +optional
+	Untyped []string `json:"untyped,omitempty"`
+}
+
+// ExtProcMetadataOptions defines options related to the sending and receiving of dynamic metadata to and from the
+// external processor service
+type ExtProcMetadataOptions struct {
+	// metadata namespaces forwarded to external processor
+	//
+	// +optional
+	ForwardingNamespaces *MetadataNamespaces `json:"forwardingNamespaces,omitempty"`
+
+	// metadata namespaces updatable by external processor
+	//
+	// +optional
+	ReceivingNamespaces *MetadataNamespaces `json:"receivingNamespaces,omitempty"`
+}
+
 // +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.group) || self.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
 // +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
 //
@@ -76,6 +113,18 @@ type ExtProc struct {
 	//
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
+
+	// Attributes defines which envoy request and response attributes are provided as context to external processor
+	// Default: no attributes are sent
+	//
+	// +optional
+	Attributes *ExtProcAttributes `json:"attributes,omitempty"`
+
+	// MetadataOptions defines options related to the sending and receiving of dynamic metadata
+	// Default: no metadata context is sent or received
+	//
+	// +optional
+	MetadataOptions *ExtProcMetadataOptions `json:"metadataOptions,omitempty"`
 }
 
 // ExtProcService defines the gRPC External Processing service using the envoy grpc client

@@ -1170,6 +1170,23 @@ _Appears in:_
 | `messageTimeout` | _[Duration](#duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
+| `attributes` | _[ExtProcAttributes](#extprocattributes)_ |  false  | Attributes defines which envoy request and response attributes are provided as context to external processor<br />Default: no attributes are sent |
+| `metadataOptions` | _[ExtProcMetadataOptions](#extprocmetadataoptions)_ |  false  | MetadataOptions defines options related to the sending and receiving of dynamic metadata<br />Default: no metadata context is sent or received |
+
+
+#### ExtProcAttributes
+
+
+
+ExtProcAttributes defines which envoy attributes are sent for requests and responses to the external processor
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `request` | _string array_ |  false  | defines attributes to send for Request processing |
+| `response` | _string array_ |  false  | defines attributes to send for Response processing |
 
 
 #### ExtProcBackendRef
@@ -1206,6 +1223,22 @@ _Appears in:_
 | `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
 | `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
 | `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcMetadataOptions
+
+
+
+ExtProcMetadataOptions defines options related to the sending and receiving of dynamic metadata to and from the
+external processor service
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `forwardingNamespaces` | _[MetadataNamespaces](#metadatanamespaces)_ |  false  | metadata namespaces forwarded to external processor |
+| `receivingNamespaces` | _[MetadataNamespaces](#metadatanamespaces)_ |  false  | metadata namespaces updatable by external processor |
 
 
 #### ExtProcProcessingMode
@@ -2031,6 +2064,21 @@ _Appears in:_
 | `error` | LogLevelError defines the "Error" logging level.<br /> | 
 
 
+
+
+#### MetadataNamespaces
+
+
+
+MetadataNamespaces defines metadata namespaces that can be used to forward or receive dynamic metadata from the
+external processor
+
+_Appears in:_
+- [ExtProcMetadataOptions](#extprocmetadataoptions)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `untyped` | _string array_ |  false  | Specifies a list of metadata namespaces whose values, if present, will be passed to the ext_proc service<br />as an opaque protobuf::Struct. |
 
 
 #### MetricSinkType
