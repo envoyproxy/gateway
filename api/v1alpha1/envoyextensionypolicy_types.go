@@ -38,11 +38,10 @@ type EnvoyExtensionPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
 	//
-	// TargetRef is the name of the Gateway resource this policy
+	// TargetRef is the name of the resource this policy
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway.
-	// TargetRef
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// Wasm is a list of Wasm extensions to be loaded by the Gateway.
