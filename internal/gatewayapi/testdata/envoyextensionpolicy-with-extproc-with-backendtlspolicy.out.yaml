@@ -355,6 +355,10 @@ xdsIR:
           failOpen: true
           messageTimeout: 5s
           name: envoyextensionpolicy/default/policy-for-gateway/0
+          processRequestHeaders: true
+          requestBodyProcessingMode: Buffered
+          responseBodyProcessingMode: Streamed
+          responseHeaderProcessingMode: true
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
