@@ -111,6 +111,10 @@ spec:
                       Default: 32768 bytes.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: size must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                        : type(self) == int'
                   connectionLimit:
                     description: ConnectionLimit defines limits related to connections
                     properties:
@@ -194,6 +198,10 @@ spec:
                       If not set, the default value is 1 MiB(1024*1024).
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: size must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                        : type(self) == int'
                   initialStreamWindowSize:
                     anyOf:
                     - type: integer
@@ -203,6 +211,16 @@ spec:
                       If not set, the default value is 64 KiB(64*1024).
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: size must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                        : type(self) == int'
+                  maxConcurrentStreams:
+                    description: |-
+                      MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+                      If not set, the default value is 100.
+                    format: int32
+                    type: integer
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.

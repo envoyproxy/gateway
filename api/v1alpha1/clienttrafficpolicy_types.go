@@ -215,6 +215,10 @@ type HTTP2Settings struct {
 	// If not set, the default value is 1 MiB(1024*1024).
 	// +optional
 	InitialConnectionWindowSize *Size `json:"initialConnectionWindowSize,omitempty"`
+
+	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+	// If not set, the default value is 100.
+	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
 }
 
 const (

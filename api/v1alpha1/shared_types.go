@@ -429,4 +429,20 @@ type BackendRef struct {
 // Size is a wrapper around resource.Quantity to provide a more descriptive name and validation.
 // +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="size must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 // +k8s:deepcopy-gen=false
-type Size = resource.Quantity
+type Size resource.Quantity
+
+// DeepCopy returns a deep copy of the Size.
+func (s Size) DeepCopy() Size {
+	q := resource.Quantity(s)
+	return Size(q.DeepCopy())
+}
+
+// AsInt64 returns a representation of the current value as an int64.
+func (s Size) AsInt64() (int64, bool) {
+	return (*resource.Quantity)(&s).AsInt64()
+}
+
+// String formats the Quantity as a string, caching the result if not calculated.
+func (s Size) String() string {
+	return (*resource.Quantity)(&s).String()
+}

@@ -707,7 +707,6 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 
 	if connection.BufferLimit != nil {
 		bufferLimit, ok := connection.BufferLimit.AsInt64()
-		connection.BufferLimit.DeepCopy()
 		if !ok {
 			return fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
 		}
