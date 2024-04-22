@@ -74,13 +74,3 @@ type ExtProc struct {
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
 }
-
-// ExtProcService defines the gRPC External Processing service using the envoy grpc client
-// The processing request and response messages are defined in
-// https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/ext_proc/v3/external_processor.proto
-type ExtProcBackendRef struct {
-	// BackendObjectReference references a Kubernetes object that represents the
-	// backend server to which the processing requests will be sent.
-	// Only service Kind is supported for now.
-	gwapiv1.BackendObjectReference `json:",inline"`
-}

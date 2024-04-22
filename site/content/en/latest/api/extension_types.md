@@ -1171,8 +1171,6 @@ _Appears in:_
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 
 
-
-
 #### ExtProcBodyProcessingMode
 
 _Underlying type:_ _string_
