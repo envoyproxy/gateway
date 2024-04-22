@@ -19,9 +19,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -438,6 +435,11 @@ spec:
                           type: object
                         maxItems: 8
                         type: array
+                      optional:
+                        description: |-
+                          Optional set to true accepts connections even when a client doesn't present a certificate.
+                          Defaults to false, which rejects connections without a valid client certificate.
+                        type: boolean
                     type: object
                   ecdhCurves:
                     description: |-

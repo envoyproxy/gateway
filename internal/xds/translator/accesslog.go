@@ -233,7 +233,7 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	return keyValueList
 }
 
-func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog) error {
+func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog, metrics *ir.Metrics) error {
 	if al == nil {
 		return nil
 	}
@@ -251,6 +251,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      nil,
 			endpointType: EndpointTypeDNS,
+			metrics:      metrics,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}

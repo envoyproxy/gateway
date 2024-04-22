@@ -24,6 +24,13 @@ func DefaultKubernetesDeploymentStrategy() *appv1.DeploymentStrategy {
 	}
 }
 
+// DefaultKubernetesDaemonSetStrategy returns the default daemonset strategy settings.
+func DefaultKubernetesDaemonSetStrategy() *appv1.DaemonSetUpdateStrategy {
+	return &appv1.DaemonSetUpdateStrategy{
+		Type: appv1.RollingUpdateDaemonSetStrategyType,
+	}
+}
+
 // DefaultKubernetesContainerImage returns the default envoyproxy image.
 func DefaultKubernetesContainerImage(image string) *string {
 	return ptr.To(image)
@@ -33,6 +40,15 @@ func DefaultKubernetesContainerImage(image string) *string {
 func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
 		Strategy:  DefaultKubernetesDeploymentStrategy(),
+		Pod:       DefaultKubernetesPod(),
+		Container: DefaultKubernetesContainer(image),
+	}
+}
+
+// DefaultKubernetesDaemonSet returns a new DefaultKubernetesDaemonSet with default settings.
+func DefaultKubernetesDaemonSet(image string) *KubernetesDaemonSetSpec {
+	return &KubernetesDaemonSetSpec{
+		Strategy:  DefaultKubernetesDaemonSetStrategy(),
 		Pod:       DefaultKubernetesPod(),
 		Container: DefaultKubernetesContainer(image),
 	}
@@ -110,6 +126,29 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 	}
 }
 
+// defaultKubernetesDaemonSetSpec fill a default KubernetesDaemonSetSpec if unspecified.
+func (daemonset *KubernetesDaemonSetSpec) defaultKubernetesDaemonSetSpec(image string) {
+	if daemonset.Strategy == nil {
+		daemonset.Strategy = DefaultKubernetesDaemonSetStrategy()
+	}
+
+	if daemonset.Pod == nil {
+		daemonset.Pod = DefaultKubernetesPod()
+	}
+
+	if daemonset.Container == nil {
+		daemonset.Container = DefaultKubernetesContainer(image)
+	}
+
+	if daemonset.Container.Resources == nil {
+		daemonset.Container.Resources = DefaultResourceRequirements()
+	}
+
+	if daemonset.Container.Image == nil {
+		daemonset.Container.Image = DefaultKubernetesContainerImage(image)
+	}
+}
+
 // setDefault fill a default HorizontalPodAutoscalerSpec if unspecified
 func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 	if len(hpa.Metrics) == 0 {
@@ -151,6 +190,42 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 	}
 
 	return &patchedDeployment, nil
+}
+
+// ApplyMergePatch applies a merge patch to a daemonset based on the merge type
+func (daemonset *KubernetesDaemonSetSpec) ApplyMergePatch(old *appv1.DaemonSet) (*appv1.DaemonSet, error) {
+	if daemonset.Patch == nil {
+		return old, nil
+	}
+
+	var patchedJSON []byte
+	var err error
+
+	// Serialize the current daemonset to JSON
+	originalJSON, err := json.Marshal(old)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling original daemonset: %w", err)
+	}
+
+	switch {
+	case daemonset.Patch.Type == nil || *daemonset.Patch.Type == StrategicMerge:
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, daemonset.Patch.Value.Raw, appv1.DaemonSet{})
+	case *daemonset.Patch.Type == JSONMerge:
+		patchedJSON, err = jsonpatch.MergePatch(originalJSON, daemonset.Patch.Value.Raw)
+	default:
+		return nil, fmt.Errorf("unsupported merge type: %s", *daemonset.Patch.Type)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error applying merge patch: %w", err)
+	}
+
+	// Deserialize the patched JSON into a new daemonset object
+	var patchedDaemonSet appv1.DaemonSet
+	if err := json.Unmarshal(patchedJSON, &patchedDaemonSet); err != nil {
+		return nil, fmt.Errorf("error unmarshaling patched daemonset: %w", err)
+	}
+
+	return &patchedDaemonSet, nil
 }
 
 // ApplyMergePatch applies a merge patch to a service based on the merge type

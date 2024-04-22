@@ -674,6 +674,7 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 
 		if len(irCACert.Certificate) > 0 {
 			httpIR.TLS.CACertificate = irCACert
+			httpIR.TLS.RequireClientCertificate = !tlsParams.ClientValidation.Optional
 		}
 	}
 

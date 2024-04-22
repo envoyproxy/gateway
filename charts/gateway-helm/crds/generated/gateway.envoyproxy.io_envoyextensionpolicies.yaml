@@ -17,9 +17,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -260,7 +257,7 @@ spec:
                   rule: '!has(self.sectionName)'
               wasm:
                 description: |-
-                  WASM is a list of Wasm extensions to be loaded by the Gateway.
+                  Wasm is a list of Wasm extensions to be loaded by the Gateway.
                   Order matters, as the extensions will be loaded in the order they are
                   defined in this list.
                 items:
@@ -346,6 +343,13 @@ spec:
                           - pullSecret
                           - url
                           type: object
+                        sha256:
+                          description: |-
+                            SHA256 checksum that will be used to verify the wasm code.
+
+
+                            kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+                          type: string
                         type:
                           allOf:
                           - enum:
@@ -354,11 +358,13 @@ spec:
                           - enum:
                             - HTTP
                             - Image
+                            - ConfigMap
                           description: |-
                             Type is the type of the source of the wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
                           type: string
                       required:
+                      - sha256
                       - type
                       type: object
                     config:
@@ -382,9 +388,15 @@ spec:
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
                       type: string
+                    rootID:
+                      description: |-
+                        RootID is a unique ID for a set of extensions in a VM which will share a
+                        RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
+                        If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
+                        RootID must match the root_id parameter used to register the Context in the Wasm code.
+                      type: string
                   required:
                   - code
-                  - config
                   - name
                   type: object
                 type: array

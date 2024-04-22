@@ -43,10 +43,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		if resources.EnvoyProxy != nil {
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
 		}
-
-		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Tracing = processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Metrics = processMetrics(infraIR[irKey].Proxy.Config)
+		t.processProxyObservability(gateway.Gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -128,6 +125,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			}
 		}
 	}
+}
+
+func (t *Translator) processProxyObservability(gw *gwapiv1.Gateway, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
+	xdsIR.AccessLog = processAccessLog(envoyProxy)
+	xdsIR.Tracing = processTracing(gw, envoyProxy, t.MergeGateways)
+	xdsIR.Metrics = processMetrics(envoyProxy)
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR InfraIRMap, irKey string, servicePort *protocolPort) {
@@ -242,7 +245,7 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	return irAccessLog
 }
 
-func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
+func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool) *ir.Tracing {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
@@ -265,8 +268,13 @@ func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Trac
 		samplingRate = float64(*tracing.SamplingRate)
 	}
 
+	serviceName := naming.ServiceName(utils.NamespacedName(gw))
+	if mergeGateways {
+		serviceName = string(gw.Spec.GatewayClassName)
+	}
+
 	return &ir.Tracing{
-		ServiceName:  naming.ServiceName(utils.NamespacedName(gw)),
+		ServiceName:  serviceName,
 		Host:         host,
 		Port:         port,
 		SamplingRate: samplingRate,
@@ -282,5 +290,6 @@ func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 	}
 	return &ir.Metrics{
 		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
+		EnablePerEndpointStats: envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
 	}
 }
