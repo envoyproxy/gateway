@@ -54,6 +54,8 @@ type EnvoyExtensionPolicySpec struct {
 
 	// ExtProc is an ordered list of external processing filters
 	// that should added to the envoy filter chain
+	//
+	// +optional
 	ExtProc []ExtProc `json:"extProc,omitempty"`
 }
 
