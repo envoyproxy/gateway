@@ -459,14 +459,14 @@ func (t *Translator) buildExtProc(
 
 	if extProc.ProcessingMode != nil {
 		if extProc.ProcessingMode.Request != nil {
-			extProcIR.ProcessRequestHeaders = true
+			extProcIR.RequestHeaderProcessing = true
 			if extProc.ProcessingMode.Request.Body != nil {
 				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
 			}
 		}
 
 		if extProc.ProcessingMode.Response != nil {
-			extProcIR.ProcessResponseHeaders = true
+			extProcIR.ResponseHeaderProcessing = true
 			if extProc.ProcessingMode.Response.Body != nil {
 				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
 			}

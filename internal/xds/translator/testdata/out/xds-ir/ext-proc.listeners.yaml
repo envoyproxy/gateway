@@ -47,7 +47,7 @@
               requestBodyMode: BUFFERED_PARTIAL
               requestHeaderMode: SKIP
               requestTrailerMode: SKIP
-              responseHeaderMode: SKIP
+              responseHeaderMode: SEND
               responseTrailerMode: SKIP
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0

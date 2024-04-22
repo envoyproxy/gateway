@@ -1923,14 +1923,14 @@ type ExtProc struct {
 	// external processor are terminated or passed-through.
 	FailOpen *bool `json:"failOpen,omitempty" yaml:"failOpen,omitempty"`
 
-	// ProcessRequestHeaders Defines if request headers are processed
-	ProcessRequestHeaders bool `json:"processRequestHeaders,omitempty" yaml:"processRequestHeaders,omitempty"`
+	// RequestHeaderProcessing Defines if request headers are processed
+	RequestHeaderProcessing bool `json:"requestHeaderProcessing,omitempty" yaml:"requestHeaderProcessing,omitempty"`
 
 	// RequestBodyProcessingMode Defines request body processing
 	RequestBodyProcessingMode *ExtProcBodyProcessingMode `json:"requestBodyProcessingMode,omitempty" yaml:"requestBodyProcessingMode,omitempty"`
 
 	// ResponseHeaderProcessingMode Defines if response headers are processed
-	ProcessResponseHeaders bool `json:"responseHeaderProcessingMode,omitempty" yaml:"responseHeaderProcessingMode,omitempty"`
+	ResponseHeaderProcessing bool `json:"responseHeaderProcessing,omitempty" yaml:"responseHeaderProcessing,omitempty"`
 
 	// ResponseBodyProcessingMode Defines response body processing
 	ResponseBodyProcessingMode *ExtProcBodyProcessingMode `json:"responseBodyProcessingMode,omitempty" yaml:"responseBodyProcessingMode,omitempty"`

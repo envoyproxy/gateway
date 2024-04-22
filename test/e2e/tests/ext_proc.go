@@ -121,7 +121,7 @@ var ExtProcTest = suite.ConformanceTest{
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			// add a request header that will be mutated by ext-proc
+			// add a request header that will be mutated by ext-proc if the request headers are sent
 			req.Headers["x-request-client-header"] = []string{"original"}
 
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)

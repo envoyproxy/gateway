@@ -25,7 +25,7 @@ http:
           - name: envoyextensionpolicy/default/policy-for-route-2/0
             failOpen: true
             messageTimeout: 5s
-            processRequestHeaders: true
+            requestHeaderProcessing: true
             requestBodyProcessingMode: Buffered
             responseBodyProcessingMode: Streamed
             authority: grpc-backend-4.default:4000
@@ -37,7 +37,7 @@ http:
           - name: envoyextensionpolicy/default/policy-for-route-1/0
             failOpen: true
             messageTimeout: 5s
-            processResponseHeaders: true
+            responseHeaderProcessing: true
             requestBodyProcessingMode: BufferedPartial
             authority: grpc-backend-2.default:8000
             destination:

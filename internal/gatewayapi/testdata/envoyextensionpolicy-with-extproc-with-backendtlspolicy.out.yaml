@@ -76,7 +76,9 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-2
         port: 9000
-      processingMode: {}
+      processingMode:
+        request: {}
+        response: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -320,6 +322,8 @@ xdsIR:
                 sni: grpc-backend-2
               weight: 1
           name: envoyextensionpolicy/default/policy-for-http-route/0
+          requestHeaderProcessing: true
+          responseHeaderProcessing: true
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -355,10 +359,10 @@ xdsIR:
           failOpen: true
           messageTimeout: 5s
           name: envoyextensionpolicy/default/policy-for-gateway/0
-          processRequestHeaders: true
           requestBodyProcessingMode: Buffered
+          requestHeaderProcessing: true
           responseBodyProcessingMode: Streamed
-          responseHeaderProcessingMode: true
+          responseHeaderProcessing: true
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com

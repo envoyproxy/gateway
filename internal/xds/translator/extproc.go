@@ -131,7 +131,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 		config.ProcessingMode.RequestBodyMode = buildExtProcBodyProcessingMode(extProc.RequestBodyProcessingMode)
 	}
 
-	if extProc.ProcessRequestHeaders {
+	if extProc.RequestHeaderProcessing {
 		config.ProcessingMode.RequestHeaderMode = extprocv3.ProcessingMode_SEND
 	}
 
@@ -139,7 +139,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 		config.ProcessingMode.ResponseBodyMode = buildExtProcBodyProcessingMode(extProc.ResponseBodyProcessingMode)
 	}
 
-	if extProc.ProcessResponseHeaders {
+	if extProc.ResponseHeaderProcessing {
 		config.ProcessingMode.ResponseHeaderMode = extprocv3.ProcessingMode_SEND
 	}
 
