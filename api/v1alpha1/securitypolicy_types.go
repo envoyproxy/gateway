@@ -72,17 +72,6 @@ type SecurityPolicySpec struct {
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
 }
 
-// SecurityPolicyStatus defines the state of SecurityPolicy
-type SecurityPolicyStatus struct {
-	// Conditions describe the current conditions of the SecurityPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
 //+kubebuilder:object:root=true
 
 // SecurityPolicyList contains a list of SecurityPolicy resources.

@@ -20,7 +20,7 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-//
+
 // BackendTrafficPolicy allows the user to configure the behavior of the connection
 // between the Envoy Proxy listener and the backend service.
 type BackendTrafficPolicy struct {
@@ -34,7 +34,7 @@ type BackendTrafficPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// spec defines the desired state of BackendTrafficPolicy.
+// BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
@@ -100,6 +100,7 @@ type BackendTrafficPolicySpec struct {
 }
 
 // +kubebuilder:object:root=true
+
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
