@@ -24,11 +24,7 @@ import (
 )
 
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
-	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind,
-) bool {
-	if !t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind) {
-		return false
-	}
+	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind) bool {
 	backendRef := GetBackendRef(backendRefContext)
 
 	if !t.validateBackendRefGroup(backendRef, parentRef, route) {
@@ -93,6 +89,7 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 	return true
 }
 
+<<<<<<< HEAD
 func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, parentRef *RouteParentContext, route RouteContext, routeKind gwapiv1.Kind) bool {
 	var filtersLen int
 	switch routeKind {
@@ -122,6 +119,8 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	return true
 }
 
+=======
+>>>>>>> b0aad73a (feat: support for BackendRef HTTP filters)
 func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
 	resources *Resources, routeKind gwapiv1.Kind,
 ) bool {

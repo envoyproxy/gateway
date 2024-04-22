@@ -153,6 +153,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -164,6 +165,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         - name: httproute/default/httproute-1/rule/0-mirror-2
@@ -172,6 +174,7 @@ xdsIR:
             endpoints:
             - host: 7.6.5.4
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io

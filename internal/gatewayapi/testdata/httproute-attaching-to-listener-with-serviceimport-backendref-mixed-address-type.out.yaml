@@ -119,6 +119,7 @@ xdsIR:
               port: 8080
             - host: foo.bar
               port: 8081
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: '*'

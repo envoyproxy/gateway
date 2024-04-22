@@ -373,6 +373,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: foo.com
@@ -399,6 +400,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: bar.com
@@ -425,6 +427,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: foo1.com
@@ -451,6 +454,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: bar1.com
@@ -477,6 +481,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: foo2.com
@@ -503,6 +508,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: bar2.com
@@ -529,6 +535,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: foo3.com
@@ -555,6 +562,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: bar3.com

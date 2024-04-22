@@ -1226,14 +1226,60 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			"Mixed endpointslice address type for the same backendRef is not supported")
 	}
 
+	var destFilters *ir.DestinationFilters
+	backendFilters := getBackendFilters(routeType, backendRefContext)
+	if backendFilters != nil {
+		httpFiltersContext := t.processFilters(backendFilters, parentRef, route, resources)
+		destFilters = assignDestinationFilters(httpFiltersContext)
+
+	}
+
 	ds = &ir.DestinationSetting{
 		Weight:      &weight,
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
 		TLS:         backendTLS,
+		Filters:     destFilters,
 	}
 	return ds
+}
+
+func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
+	switch routeType {
+	case KindHTTPRoute:
+		backendFilters = GetFilters(backendRefContext).([]gwapiv1.HTTPRouteFilter)
+	case KindGRPCRoute:
+		backendFilters = GetFilters(backendRefContext).([]gwapiv1a2.GRPCRouteFilter)
+	}
+	return
+}
+
+func (t *Translator) processFilters(backendFilters any, parentRef *RouteParentContext, route RouteContext, resources *Resources) *HTTPFiltersContext {
+	var httpFilters []gwapiv1.HTTPRouteFilter
+	var grpcFilters []gwapiv1a2.GRPCRouteFilter
+
+	switch filters := backendFilters.(type) {
+	case []gwapiv1.HTTPRouteFilter:
+		httpFilters = append(httpFilters, filters...)
+		return t.ProcessHTTPFilters(parentRef, route, httpFilters, 0, resources)
+
+	case []gwapiv1a2.GRPCRouteFilter:
+		grpcFilters = append(grpcFilters, filters...)
+		return t.ProcessGRPCFilters(parentRef, route, grpcFilters, resources)
+	}
+
+	return nil
+}
+
+func assignDestinationFilters(httpFiltersContext *HTTPFiltersContext) *ir.DestinationFilters {
+	destFilters := &ir.DestinationFilters{}
+	destFilters.AddRequestHeaders = httpFiltersContext.HTTPFilterIR.AddRequestHeaders
+	destFilters.RemoveRequestHeaders = httpFiltersContext.HTTPFilterIR.RemoveRequestHeaders
+	destFilters.AddResponseHeaders = httpFiltersContext.HTTPFilterIR.AddResponseHeaders
+	destFilters.RemoveResponseHeaders = httpFiltersContext.HTTPFilterIR.RemoveResponseHeaders
+
+	return destFilters
 }
 
 func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {

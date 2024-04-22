@@ -121,12 +121,14 @@ xdsIR:
             endpoints:
             - host: foo.bar
               port: 8080
+            filters: {}
             protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 1.2.3.4
               port: 8081
+            filters: {}
             protocol: HTTP
             weight: 1
         hostname: '*'

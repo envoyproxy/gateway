@@ -53,13 +53,29 @@ httpRoutes:
     rules:
     - backendRefs:
       - filters:
-        - responseHeaderModifier:
-            set:
-            - name: set-header-1
+        - requestHeaderModifier:
+            add:
+            - name: add-header-1
               value: some-value
-          type: ResponseHeaderModifier
+            - name: add-header-2
+              value: some-value
+          type: RequestHeaderModifier
+        - requestHeaderModifier:
+            add:
+            - name: add-header-1
+              value: some-value
+            - name: add-header-3
+              value: some-value
+          type: RequestHeaderModifier
         name: service-1
         port: 8080
+        weight: 1
+      - name: service-2
+        port: 8080
+        weight: 2
+      - name: service-3
+        port: 8080
+        weight: 3
       matches:
       - path:
           type: Exact
@@ -73,9 +89,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: The filters field within BackendRef is not supported
-        reason: UnsupportedRefValue
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -113,16 +129,47 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - weight: 1
-        directResponse:
-          statusCode: 500
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters:
+              addRequestHeaders:
+              - append: true
+                name: add-header-1
+                value: some-value
+              - append: true
+                name: add-header-2
+                value: some-value
+              - append: true
+                name: add-header-3
+                value: some-value
+            protocol: HTTP
+            weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters: {}
+            protocol: HTTP
+            weight: 2
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters: {}
+            protocol: HTTP
+            weight: 3
         hostname: '*'
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
-          exact: /exact
           name: ""
+          prefix: /

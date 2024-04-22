@@ -146,6 +146,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 8080
+            filters: {}
             protocol: HTTP
             tls:
               sni: example.com
