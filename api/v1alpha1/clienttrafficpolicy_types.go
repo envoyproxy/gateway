@@ -93,7 +93,7 @@ type ClientTrafficPolicySpec struct {
 	Connection *Connection `json:"connection,omitempty"`
 }
 
-// HeaderSettings providess configuration options for headers on the listener.
+// HeaderSettings provides configuration options for headers on the listener.
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
@@ -151,7 +151,7 @@ type XForwardedForSettings struct {
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
 }
 
-// CustomHeader provides configuration for determining the client IP address for a request based on
+// CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
 // a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 // Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 // for more details.

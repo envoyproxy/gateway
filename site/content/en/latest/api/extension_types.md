@@ -244,7 +244,7 @@ BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 
 
 
-spec defines the desired state of BackendTrafficPolicy.
+BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 
 _Appears in:_
 - [BackendTrafficPolicy](#backendtrafficpolicy)
@@ -539,7 +539,7 @@ _Appears in:_
 
 
 
-CustomHeader provides configuration for determining the client IP address for a request based on
+CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
 a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 for more details.
@@ -647,7 +647,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
 | `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
-| `extProc` | _[ExtProc](#extproc) array_ |  true  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
+| `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
 
 
 #### EnvoyFilter
@@ -1606,7 +1606,7 @@ _Appears in:_
 
 
 
-HeaderSettings providess configuration options for headers on the listener.
+HeaderSettings provides configuration options for headers on the listener.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
@@ -2876,8 +2876,6 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
-
-
 
 
 #### ServiceExternalTrafficPolicy
