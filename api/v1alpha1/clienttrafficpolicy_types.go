@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -207,13 +208,17 @@ type HTTP10Settings struct {
 type HTTP2Settings struct {
 	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
 	// If not set, the default value is 64 KiB(64*1024).
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
-	InitialStreamWindowSize *Size `json:"initialStreamWindowSize,omitempty"`
+	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
 
 	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
-	// If not set, the default value is 1 MiB(1024*1024).
+	// If not set, the default value is 1 MiB.
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
-	InitialConnectionWindowSize *Size `json:"initialConnectionWindowSize,omitempty"`
+	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
 
 	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
 	// If not set, the default value is 100.

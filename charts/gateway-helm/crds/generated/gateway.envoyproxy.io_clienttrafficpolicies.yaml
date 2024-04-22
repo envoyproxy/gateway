@@ -109,7 +109,7 @@ spec:
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                     x-kubernetes-validations:
-                    - message: size must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                    - message: bufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
                       rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
                         : type(self) == int'
                   connectionLimit:
@@ -192,11 +192,11 @@ spec:
                     - type: string
                     description: |-
                       InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
-                      If not set, the default value is 1 MiB(1024*1024).
+                      If not set, the default value is 1 MiB.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                     x-kubernetes-validations:
-                    - message: size must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                    - message: initialConnectionWindowSize must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
                       rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
                         : type(self) == int'
                   initialStreamWindowSize:
@@ -209,7 +209,7 @@ spec:
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                     x-kubernetes-validations:
-                    - message: size must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                    - message: initialStreamWindowSize must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
                       rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
                         : type(self) == int'
                   maxConcurrentStreams:
