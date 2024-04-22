@@ -244,7 +244,7 @@ BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 
 
 
-spec defines the desired state of BackendTrafficPolicy.
+BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 
 _Appears in:_
 - [BackendTrafficPolicy](#backendtrafficpolicy)
@@ -539,7 +539,7 @@ _Appears in:_
 
 
 
-CustomHeader provides configuration for determining the client IP address for a request based on
+CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
 a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 for more details.
@@ -1606,7 +1606,7 @@ _Appears in:_
 
 
 
-HeaderSettings providess configuration options for headers on the listener.
+HeaderSettings provides configuration options for headers on the listener.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
@@ -2876,8 +2876,6 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
-
-
 
 
 #### ServiceExternalTrafficPolicy
