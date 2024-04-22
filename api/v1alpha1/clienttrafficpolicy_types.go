@@ -222,6 +222,9 @@ type HTTP2Settings struct {
 
 	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
 	// If not set, the default value is 100.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483647
+	// +optional
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
 }
 
