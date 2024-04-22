@@ -94,6 +94,28 @@ type KubernetesDeploymentSpec struct {
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
+// KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+type KubernetesDaemonSetSpec struct {
+	// Patch defines how to perform the patch operation to daemonset
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
+
+	// The daemonset strategy to use to replace existing pods with new ones.
+	// +optional
+	Strategy *appv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
+
+	// Pod defines the desired specification of pod.
+	//
+	// +optional
+	Pod *KubernetesPodSpec `json:"pod,omitempty"`
+
+	// Container defines the desired specification of main container.
+	//
+	// +optional
+	Container *KubernetesContainerSpec `json:"container,omitempty"`
+}
+
 // KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
 type KubernetesPodSpec struct {
 	// Annotations are the annotations that should be appended to the pods.

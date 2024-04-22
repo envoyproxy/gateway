@@ -32,9 +32,9 @@ type extProc struct {
 
 var _ httpFilter = &extProc{}
 
-// patchHCM builds and appends the ext_authz Filters to the HTTP Connection Manager
+// patchHCM builds and appends the ext_proc Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: this method creates an ext_authz filter for each route that contains an ExtAuthz config.
+// Note: this method creates an ext_proc filter for each route that contains an ExtAuthz config.
 // The filter is disabled by default. It is enabled on the route level.
 func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
@@ -70,7 +70,7 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 	return errs
 }
 
-// buildHCMExtProcFilter returns an ext_authp HTTP filter from the provided IR HTTPRoute.
+// buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
 	extAuthProto := extProcConfig(extProc)
 	if err := extAuthProto.ValidateAll(); err != nil {
@@ -128,7 +128,7 @@ func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 	return len(irRoute.ExtProcs) > 0
 }
 
-// patchResources patches the cluster resources for the external auth services.
+// patchResources patches the cluster resources for the external services.
 func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 	routes []*ir.HTTPRoute) error {
 	if tCtx == nil || tCtx.XdsResources == nil {

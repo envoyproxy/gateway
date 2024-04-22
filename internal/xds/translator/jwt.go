@@ -265,47 +265,16 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 		return errors.New("xds resource table is nil")
 	}
 
-	var errs error
+	var err, errs error
 	for _, route := range routes {
 		if !routeContainsJWTAuthn(route) {
 			continue
 		}
 
 		for i := range route.Security.JWT.Providers {
-			var (
-				jwks    *urlCluster
-				ds      *ir.DestinationSetting
-				tSocket *corev3.TransportSocket
-				err     error
-			)
-
 			provider := route.Security.JWT.Providers[i]
-			jwks, err = url2Cluster(provider.RemoteJWKS.URI)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
 
-			ds = &ir.DestinationSetting{
-				Weight:    ptr.To[uint32](1),
-				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
-			}
-
-			clusterArgs := &xdsClusterArgs{
-				name:         jwks.name,
-				settings:     []*ir.DestinationSetting{ds},
-				endpointType: jwks.endpointType,
-			}
-			if jwks.tls {
-				tSocket, err = buildXdsUpstreamTLSSocket(jwks.hostname)
-				if err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-				clusterArgs.tSocket = tSocket
-			}
-
-			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

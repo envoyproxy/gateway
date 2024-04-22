@@ -103,12 +103,14 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 5
 	case filter.Name == jwtAuthn:
 		order = 6
-	case filter.Name == extProcFilter:
+	case isFilterType(filter, extProcFilter):
 		order = 7
-	case filter.Name == localRateLimitFilter:
+	case isFilterType(filter, wasmFilter):
 		order = 8
-	case filter.Name == wellknown.HTTPRateLimit:
+	case filter.Name == localRateLimitFilter:
 		order = 9
+	case filter.Name == wellknown.HTTPRateLimit:
+		order = 10
 	case filter.Name == wellknown.Router:
 		order = 100
 	}
