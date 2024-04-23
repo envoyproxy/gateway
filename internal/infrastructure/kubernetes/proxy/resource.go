@@ -169,7 +169,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		fmt.Sprintf("--service-cluster %s", infra.Name),
 		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
-		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
+		fmt.Sprintf("--log-level %s", "debug"),
 		"--cpuset-threads",
 	}
 
