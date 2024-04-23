@@ -295,6 +295,11 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(Retry)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.UseClientProtocol != nil {
+		in, out := &in.UseClientProtocol, &out.UseClientProtocol
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Timeout != nil {
 		in, out := &in.Timeout, &out.Timeout
 		*out = new(Timeout)
