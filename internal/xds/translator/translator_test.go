@@ -42,47 +42,18 @@ var (
 )
 
 type testFileConfig struct {
-	dnsDomain                 string
-	requireSecrets            bool
 	requireEnvoyPatchPolicies bool
+	dnsDomain                 string
 	errMsg                    string
 }
 
 func TestTranslateXds(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
-		"http-route-with-tls-system-truststore": {
-			requireSecrets: true,
-		},
-		"http-route-with-tlsbundle": {
-			requireSecrets: true,
-		},
-		"http-route-with-tlsbundle-multiple-certs": {
-			requireSecrets: true,
-		},
-		"simple-tls": {
-			requireSecrets: true,
-		},
-		"mutual-tls": {
-			requireSecrets: true,
-		},
-		"mixed-tls-jwt-authn": {
-			requireSecrets: true,
-		},
-		"mutual-tls-required-client-certificate-disabled": {
-			requireSecrets: true,
-		},
-		"http3": {
-			requireSecrets: true,
-		},
-		"multiple-listeners-same-port": {
-			requireSecrets: true,
-		},
 		"ratelimit-custom-domain": {
 			dnsDomain: "example-cluster.local",
 		},
 		"jsonpatch": {
 			requireEnvoyPatchPolicies: true,
-			requireSecrets:            true,
 		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
@@ -98,9 +69,6 @@ func TestTranslateXds(t *testing.T) {
 		"jsonpatch-move-op-with-value": {
 			requireEnvoyPatchPolicies: true,
 			errMsg:                    "the value field can not be set for the remove operation",
-		},
-		"oidc": {
-			requireSecrets: true,
 		},
 		"http-route-invalid": {
 			errMsg: "validation failed for xds resource",
@@ -126,9 +94,6 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
-		{
-			name: "http2",
-		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
@@ -141,9 +106,8 @@ func TestTranslateXds(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]
 			if !ok {
 				cfg = testFileConfig{
-					dnsDomain:                 "",
-					requireSecrets:            false,
 					requireEnvoyPatchPolicies: false,
+					dnsDomain:                 "",
 					errMsg:                    "",
 				}
 			}
@@ -184,8 +148,8 @@ func TestTranslateXds(t *testing.T) {
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 
-			if cfg.requireSecrets {
-				secrets := tCtx.XdsResources[resourcev3.SecretType]
+			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
+			if ok && len(secrets) > 0 {
 				if *overrideTestData {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
 				}
@@ -253,7 +217,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]
 			if !ok {
-				cfg = testFileConfig{requireSecrets: true}
+				cfg = testFileConfig{}
 			}
 
 			// Testdata for the extension tests is similar to the ir test data
@@ -305,8 +269,9 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routes))
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
-				if cfg.requireSecrets {
-					secrets := tCtx.XdsResources[resourcev3.SecretType]
+
+				secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
+				if ok {
 					if *overrideTestData {
 						require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".secrets.yaml")))
 					}
