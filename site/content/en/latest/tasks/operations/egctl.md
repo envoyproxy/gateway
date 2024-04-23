@@ -884,11 +884,11 @@ We can specify to install only CRDs resources via `--only-crds`
 egctl x install --only-crds
 ```
 
-We can specify `--release-name` and `--namespace` to install envoy-gateway in different places to support multi-tenant mode.
+We can specify `--name` and `--namespace` to install envoy-gateway in different places to support multi-tenant mode.
 > Note: If CRDs are already installed, then we need to specify `--skip-crds` to avoid repeated installation of CRDs resources.
 
 ```bash
-egctl x install --release-name shop-backend --namespace shop
+egctl x install --name shop-backend --namespace shop
 ```
 
 

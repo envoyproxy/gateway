@@ -244,7 +244,7 @@ BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 
 
 
-spec defines the desired state of BackendTrafficPolicy.
+BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 
 _Appears in:_
 - [BackendTrafficPolicy](#backendtrafficpolicy)
@@ -422,13 +422,14 @@ _Appears in:_
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection.<br />If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.<br />Disabled by default. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the<br />Client Address into the X-Forwarded-For header.<br />Note Proxy Protocol must be present when this field is set, else the connection<br />is closed. |
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
-| `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `tls` | _[TLSSettings](#tlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
-| `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
 | `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
+| `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
+| `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration on the listener. |
+| `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
 
 
 #### ClientValidationContext
@@ -539,7 +540,7 @@ _Appears in:_
 
 
 
-CustomHeader provides configuration for determining the client IP address for a request based on
+CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
 a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 for more details.
@@ -647,7 +648,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
 | `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
-| `extProc` | _[ExtProc](#extproc) array_ |  true  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
+| `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
 
 
 #### EnvoyFilter
@@ -1483,6 +1484,22 @@ _Appears in:_
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
+#### HTTP2Settings
+
+
+
+HTTP2Settings provides HTTP/2 configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `initialStreamWindowSize` | _[Quantity](#quantity)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
+| `initialConnectionWindowSize` | _[Quantity](#quantity)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
+| `maxConcurrentStreams` | _integer_ |  true  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
+
+
 #### HTTP3Settings
 
 
@@ -1606,7 +1623,7 @@ _Appears in:_
 
 
 
-HeaderSettings providess configuration options for headers on the listener.
+HeaderSettings provides configuration options for headers on the listener.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
@@ -2876,8 +2893,6 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
-
-
 
 
 #### ServiceExternalTrafficPolicy

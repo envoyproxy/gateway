@@ -286,6 +286,46 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"spec.connection.bufferLimit: Invalid value: \"\": bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
 			},
 		},
+		{
+			desc: "invalid InitialStreamWindowSize format",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HTTP2: &egv1a1.HTTP2Settings{
+						InitialStreamWindowSize: ptr.To(resource.MustParse("15m")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http2.initialStreamWindowSize: Invalid value: \"\": initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
+			},
+		},
+		{
+			desc: "invalid InitialConnectionWindowSize format",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					HTTP2: &egv1a1.HTTP2Settings{
+						InitialConnectionWindowSize: ptr.To(resource.MustParse("15m")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http2.InitialConnectionWindowSize: Invalid value: \"\": initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
+			},
+		},
 	}
 
 	for _, tc := range cases {
