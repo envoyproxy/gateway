@@ -102,8 +102,8 @@ spec:
                     rule: (has(self.socketAddress) || has(self.unixDomainSocketAddress))
                   - message: only one of socketAddress or unixDomainSocketAddress
                       can be specified
-                    rule: (has(self.SocketAddress) && !has(self.UnixDomainSocketAddress))
-                      || (!has(self.SocketAddress) && has(self.UnixDomainSocketAddress))
+                    rule: (has(self.socketAddress) && !has(self.unixDomainSocketAddress))
+                      || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))
                 type: array
             type: object
           status:

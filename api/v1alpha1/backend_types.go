@@ -55,7 +55,7 @@ type Backend struct {
 // corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) || has(self.unixDomainSocketAddress))",message="one of socketAddress or unixDomainSocketAddress must be specified"
-// +kubebuilder:validation:XValidation:rule="(has(self.SocketAddress) && !has(self.UnixDomainSocketAddress)) || (!has(self.SocketAddress) && has(self.UnixDomainSocketAddress))",message="only one of socketAddress or unixDomainSocketAddress can be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) && !has(self.unixDomainSocketAddress)) || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))",message="only one of socketAddress or unixDomainSocketAddress can be specified"
 type BackendAddress struct {
 	// Name is the unique name of the backend address
 	Name string `json:"name,omitempty"`
