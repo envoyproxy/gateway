@@ -47,7 +47,7 @@ var OIDCTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with oidc authentication", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-oidc-myapp", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -57,7 +57,8 @@ var OIDCTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test-myapp", Namespace: ns}, suite.ControllerName, ancestorRef)
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test-foo", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 
@@ -101,6 +102,13 @@ var OIDCTest = suite.ConformanceTest{
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			require.Contains(t, string(body), "infra-backend-v1", "Expected response from the application")
 
+			// Myapp and bar are using the same OIDC configuration, so the client
+			// should be able to access bar without logging in again
+			res, err = client.Get("http://www.example.com/foo", false)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Contains(t, string(body), "infra-backend-v1", "Expected response from the application")
+
 			// Verify that we can logout
 			// Note: OAuth2 filter just clears its cookies and does not log out from the IdP.
 			res, err = client.Get(logoutURL, false)
@@ -136,7 +144,7 @@ var OIDCTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test-myapp", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)

@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-with-oidc
+  name: http-with-oidc-myapp
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -13,6 +13,24 @@ spec:
     - path:
         type: PathPrefix
         value: /myapp              # This is the path that will be protected by OIDC
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-oidc-foo
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo              # This is the path that will be protected by OIDC
     backendRefs:
     - name: infra-backend-v1
       port: 8080
@@ -60,13 +78,34 @@ data:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: oidc-test
+  name: oidc-test-myapp
   namespace: gateway-conformance-infra
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-with-oidc
+    name: http-with-oidc-myapp
+  oidc:
+    provider:
+      issuer: "http://keycloak.gateway-conformance-infra/realms/master"
+      authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
+    clientID: "oidctest"
+    clientSecret:
+      name: "oidctest-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-test-foo
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-oidc-foo
   oidc:
     provider:
       issuer: "http://keycloak.gateway-conformance-infra/realms/master"
