@@ -338,6 +338,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "jwt-optional",
 		},
+		{
+			name: "http2",
+		},
 	}
 
 	for _, tc := range testCases {

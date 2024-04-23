@@ -204,7 +204,7 @@ TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/
 Test routing to the `foo-svc` backend by specifying a JWT Token with a claim `name: John Doe`.
 
 ```shell
-curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
+curl -sS -H "Host: foo.example.com" -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/login" | jq .pod
 "foo-backend-6df8cc6b9f-fmwcg"
 ```
 
@@ -217,7 +217,7 @@ TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/
 Test HTTP routing to the `bar-svc` backend by specifying a JWT Token with a claim `name: Tom`.
 
 ```shell
-curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
+curl -sS -H "Host: bar.example.com" -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
 "bar-backend-6688b8944c-s8htr"
 ```
 
