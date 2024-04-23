@@ -1476,7 +1476,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `initialStreamWindowSize` | _[Quantity](#quantity)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
 | `initialConnectionWindowSize` | _[Quantity](#quantity)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
-| `maxConcurrentStreams` | _integer_ |  true  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
+| `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
 
 
 #### HTTP3Settings
