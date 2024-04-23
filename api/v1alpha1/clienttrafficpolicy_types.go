@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -18,7 +19,6 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=ctp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // ClientTrafficPolicy allows the user to configure the behavior of the connection
@@ -63,10 +63,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty"`
-	// HTTP3 provides HTTP/3 configuration on the listener.
-	//
-	// +optional
-	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// TLS settings configure TLS termination settings with the downstream client.
 	//
 	// +optional
@@ -75,10 +71,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Path *PathSettings `json:"path,omitempty"`
-	// HTTP1 provides HTTP/1 configuration on the listener.
-	//
-	// +optional
-	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
 	// HeaderSettings provides configuration for header management.
 	//
 	// +optional
@@ -91,9 +83,21 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Connection *Connection `json:"connection,omitempty"`
+	// HTTP1 provides HTTP/1 configuration on the listener.
+	//
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
+	// HTTP2 provides HTTP/2 configuration on the listener.
+	//
+	// +optional
+	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+	// HTTP3 provides HTTP/3 configuration on the listener.
+	//
+	// +optional
+	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 }
 
-// HeaderSettings providess configuration options for headers on the listener.
+// HeaderSettings provides configuration options for headers on the listener.
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
@@ -151,7 +155,7 @@ type XForwardedForSettings struct {
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
 }
 
-// CustomHeader provides configuration for determining the client IP address for a request based on
+// CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
 // a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 // Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 // for more details.
@@ -198,6 +202,30 @@ type HTTP10Settings struct {
 	// it will be rejected.
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
+}
+
+// HTTP2Settings provides HTTP/2 configuration on the listener.
+type HTTP2Settings struct {
+	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
+	// If not set, the default value is 64 KiB(64*1024).
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +optional
+	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
+
+	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
+	// If not set, the default value is 1 MiB.
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +optional
+	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
+
+	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+	// If not set, the default value is 100.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483647
+	// +optional
+	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
 }
 
 const (

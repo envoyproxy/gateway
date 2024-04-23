@@ -79,16 +79,20 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	return r
 }
 
-func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
+func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
+	if opts == nil {
+		opts = &ir.HTTP2Settings{}
+	}
+
 	return &corev3.Http2ProtocolOptions{
 		MaxConcurrentStreams: &wrappers.UInt32Value{
-			Value: http2MaxConcurrentStreamsLimit,
+			Value: ptr.Deref(opts.MaxConcurrentStreams, http2MaxConcurrentStreamsLimit),
 		},
 		InitialStreamWindowSize: &wrappers.UInt32Value{
-			Value: http2InitialStreamWindowSize,
+			Value: ptr.Deref(opts.InitialStreamWindowSize, http2InitialStreamWindowSize),
 		},
 		InitialConnectionWindowSize: &wrappers.UInt32Value{
-			Value: http2InitialConnectionWindowSize,
+			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
 		},
 	}
 }
@@ -244,7 +248,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
-		Http2ProtocolOptions: http2ProtocolOptions(),
+		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress:              &wrappers.BoolValue{Value: useRemoteAddress},
 		XffNumTrustedHops:             xffNumTrustedHops(irListener.ClientIPDetection),
@@ -543,7 +547,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 	}
 
 	if tlsConfig.CACertificate != nil {
-		tlsCtx.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.RequireClientCertificate = &wrappers.BoolValue{Value: tlsConfig.RequireClientCertificate}
 		tlsCtx.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
 				Name:      tlsConfig.CACertificate.Name,

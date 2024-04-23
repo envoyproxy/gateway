@@ -19,9 +19,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -422,6 +419,11 @@ spec:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
                 properties:
+                  optional:
+                    description: |-
+                      Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
+                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+                    type: boolean
                   providers:
                     description: |-
                       Providers defines the JSON Web Token (JWT) authentication provider type.

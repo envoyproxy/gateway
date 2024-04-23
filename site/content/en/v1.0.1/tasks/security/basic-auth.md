@@ -2,7 +2,7 @@
 title: "Basic Authentication"
 ---
 
-This guide provides instructions for configuring [HTTP Basic authentication][http Basic authentication]. 
+This task provides instructions for configuring [HTTP Basic authentication][http Basic authentication].
 HTTP Basic authentication checks if an incoming request has a valid username and password before routing the request to 
 a backend service.
 
@@ -12,7 +12,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
@@ -49,23 +49,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+  '
 ```
 
 ### Create a .htpasswd file
@@ -128,7 +125,7 @@ kubectl get securitypolicy/basic-auth-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -176,7 +173,7 @@ The request should be allowed and you should see the response from the backend s
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the SecurityPolicy and the secret
 
