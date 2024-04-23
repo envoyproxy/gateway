@@ -141,14 +141,14 @@ spec:
 [internal listeners]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/internal_listener
 [unix domain sockets]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#envoy-v3-api-msg-config-core-v3-pipe
 [Resource Backends]: https://kubernetes.io/docs/concepts/services-networking/ingress/#resource-backend
-[Services and FQDN endpoints]: https://gateway.envoyproxy.io/latest/user/traffic/routing-outside-kubernetes/
+[Services and FQDN endpoints]: https://gateway.envoyproxy.io/v1.0.1/tasks/traffic/routing-outside-kubernetes/
 [Service Entry]: https://istio.io/latest/docs/reference/config/networking/service-entry/
 [Upstream]: https://docs.solo.io/gloo-edge/1.7.23/reference/api/github.com/solo-io/gloo/projects/gloo/api/v1/upstream.proto.sk/
 [External Services]: https://developer.hashicorp.com/consul/tutorials/developer-mesh/terminating-gateways-connect-external-services
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/geps/gep-1897/
 [BackendLBPolicy]: https://gateway-api.sigs.k8s.io/geps/gep-1619/
 [Backend Protocol Selection]: https://gateway-api.sigs.k8s.io/geps/gep-1911/
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[EnvoyProxy]:../../latest/api/extension_types#envoyproxy
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[Envoy Patch Policy]: ../../api/extension_types#envoypatchpolicy
+[Envoy Patch Policy]: ../../latest/api/extension_types#envoypatchpolicy
 [Envoy Extension Manager]: ./extending-envoy-gateway
