@@ -304,6 +304,10 @@ func extendStatusBodyWithNamespaceAndName(body [][]string, namespace, name strin
 	return body
 }
 
+func kindName(kind, name string) string {
+	return strings.ToLower(kind) + "/" + name
+}
+
 func fetchStatusHeader(resourceKind string, verbose, needNamespace bool) (header []string) {
 	defaultHeader := []string{"NAME", "TYPE", "STATUS", "REASON"}
 	xRouteHeader := []string{"NAME", "PARENT", "TYPE", "STATUS", "REASON"}
@@ -333,7 +337,7 @@ func fetchStatusBody(resourcesList client.ObjectList, resourceKind string, quiet
 		)
 
 		if typedName {
-			name = strings.ToLower(resourceKind) + "/" + nameField.String()
+			name = kindName(resourceKind, nameField.String())
 		} else {
 			name = nameField.String()
 		}
@@ -353,9 +357,10 @@ func fetchStatusBody(resourcesList client.ObjectList, resourceKind string, quiet
 
 				// Extend conditions with parent.
 				parentRef := parentItem.FieldByName("ParentRef")
-				parentName := fmt.Sprintf("%s/%s",
+				parentName := kindName(
 					parentRef.FieldByName("Kind").Elem().String(),
-					parentRef.FieldByName("Name").String())
+					parentRef.FieldByName("Name").String(),
+				)
 				for k := 0; k < len(conditions); k++ {
 					conditions[k] = append([]string{parentName}, conditions[k]...)
 					parentName = ""
@@ -373,9 +378,10 @@ func fetchStatusBody(resourcesList client.ObjectList, resourceKind string, quiet
 
 				// Extend conditions with ancestor.
 				ancestorRef := policyAncestorStatus.FieldByName("AncestorRef")
-				ancestorName := fmt.Sprintf("%s/%s",
+				ancestorName := kindName(
 					ancestorRef.FieldByName("Kind").Elem().String(),
-					ancestorRef.FieldByName("Name").String())
+					ancestorRef.FieldByName("Name").String(),
+				)
 				for k := 0; k < len(conditions); k++ {
 					conditions[k] = append([]string{ancestorName}, conditions[k]...)
 					ancestorName = ""
