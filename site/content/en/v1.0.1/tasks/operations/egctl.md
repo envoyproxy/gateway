@@ -769,7 +769,7 @@ display the latest condition, or add `--verbose` to display more details about c
 {{% alert title="Note" color="primary" %}}
 
 Currently, this subcommand only supports: `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`,
-`TLSRoute`, `TCPRoute`, `UDPRoute`, `BackendTLSPolicy`,
+`TLSRoute`, `TCPRoute`, `UDPRoute`, `BackendTLSPolicy`, 
 `BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy` resource types and `all`.
 
 {{% /alert %}}

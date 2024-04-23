@@ -381,9 +381,9 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 			allNamespaces:      true,
 			typedName:          false,
 			outputs: `NAMESPACE   NAME      PARENT           TYPE      STATUS          REASON
-default1    http1     Gateway/test-1   foobar2   test-status-2   test reason 2
+default1    http1     gateway/test-1   foobar2   test-status-2   test reason 2
                                        foobar1   test-status-1   test reason 1
-default2    http2     Gateway/test-2   foobar4   test-status-4   test reason 4
+default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
                                        foobar3   test-status-3   test reason 3
 `,
 		},
@@ -473,8 +473,8 @@ default2    http2     Gateway/test-2   foobar4   test-status-4   test reason 4
 			typedName:          false,
 			namespace:          "default1",
 			outputs: `NAME      PARENT           TYPE      STATUS          REASON
-http1     Gateway/test-1   foobar2   test-status-2   test reason 2
-http2     Gateway/test-2   foobar4   test-status-4   test reason 4
+http1     gateway/test-1   foobar2   test-status-2   test reason 2
+http2     gateway/test-2   foobar4   test-status-4   test reason 4
 `,
 		},
 		{
@@ -524,7 +524,7 @@ http2     Gateway/test-2   foobar4   test-status-4   test reason 4
 			allNamespaces:      false,
 			typedName:          false,
 			outputs: `NAME      ANCESTOR REFERENCE   TYPE      STATUS          REASON
-btls      Gateway/test         foobar2   test-status-2   test reason 2
+btls      gateway/test         foobar2   test-status-2   test reason 2
                                foobar1   test-status-1   test reason 1
 `,
 		},
@@ -661,13 +661,13 @@ btls      Gateway/test         foobar2   test-status-2   test reason 2
 			allNamespaces:      true,
 			typedName:          false,
 			outputs: `NAMESPACE   NAME      PARENT           TYPE      STATUS          REASON
-default1    http1     Gateway/test-1   foobar2   test-status-2   test reason 2
+default1    http1     gateway/test-1   foobar2   test-status-2   test reason 2
                                        foobar1   test-status-1   test reason 1
-                      Gateway/test-2   foobar4   test-status-4   test reason 4
+                      gateway/test-2   foobar4   test-status-4   test reason 4
                                        foobar3   test-status-3   test reason 3
-default2    http2     Gateway/test-3   foobar6   test-status-6   test reason 6
+default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
                                        foobar5   test-status-5   test reason 5
-                      Gateway/test-4   foobar8   test-status-8   test reason 8
+                      gateway/test-4   foobar8   test-status-8   test reason 8
                                        foobar7   test-status-7   test reason 7
 `,
 		},
@@ -800,13 +800,13 @@ default2    http2     Gateway/test-3   foobar6   test-status-6   test reason 6
 			allNamespaces:      false,
 			typedName:          false,
 			outputs: `NAME      ANCESTOR REFERENCE   TYPE      STATUS          REASON
-btp-1     Gateway/test-1       foobar2   test-status-2   test reason 2
+btp-1     gateway/test-1       foobar2   test-status-2   test reason 2
                                foobar1   test-status-1   test reason 1
-          HTTPRoute/test-2     foobar4   test-status-4   test reason 4
+          httproute/test-2     foobar4   test-status-4   test reason 4
                                foobar3   test-status-3   test reason 3
-btp-2     Gateway/test-3       foobar6   test-status-6   test reason 6
+btp-2     gateway/test-3       foobar6   test-status-6   test reason 6
                                foobar5   test-status-5   test reason 5
-          GRPCRoute/test-4     foobar8   test-status-8   test reason 8
+          grpcroute/test-4     foobar8   test-status-8   test reason 8
                                foobar7   test-status-7   test reason 7
 `,
 		},
