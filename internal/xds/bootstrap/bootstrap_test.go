@@ -43,6 +43,18 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "enable-prometheus-gzip-compression",
+			opts: &RenderBootsrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: "gzip",
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "otel-metrics",
 			opts: &RenderBootsrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{

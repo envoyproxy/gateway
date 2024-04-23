@@ -50,6 +50,7 @@ type PackageOptions struct {
 	ReleaseNamespace string
 	OnlyCRD          bool
 	WithCRD          bool
+	Output           string
 }
 
 type PackageTool struct {
@@ -128,7 +129,8 @@ func (pt *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *Pa
 
 	installCmd.Flags().DurationVar(&opts.Timeout, "timeout", helmOperateTimeout, "time to wait for any individual Kubernetes operation")
 	installCmd.Flags().StringVar(&opts.Version, "version", egChartVersion, "specify a version constraint for the envoy gateway version to use")
-	installCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the envoy-gateway release to install")
+	installCmd.Flags().StringVar(&opts.ReleaseName, "name", egReleaseName, "name of the envoy-gateway release to install")
+	installCmd.Flags().StringVarP(&opts.Output, "output", "o", "", "if set, the manifest will be output to the specified file.")
 	installCmd.Flags().StringVarP(&opts.ReleaseNamespace, "namespace", "n", egReleaseNamespace, "if set, specify the namespace where envoy gateway is installed")
 	installCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "console output only, make no changes")
 	installCmd.Flags().BoolVar(&opts.SkipCRD, "skip-crds", false, "if set, no CRDs will be installed. By default, CRDs are installed if not already present")
@@ -144,7 +146,7 @@ func (pt *PackageTool) SetInstallEnvSettings(installCmd *cobra.Command, opts *Pa
 func (pt *PackageTool) SetUninstallEnvSetting(uninstallCmd *cobra.Command, opts *PackageOptions) {
 
 	uninstallCmd.Flags().DurationVar(&opts.Timeout, "timeout", helmOperateTimeout, "time to wait for any individual Kubernetes operation")
-	uninstallCmd.Flags().StringVar(&opts.ReleaseName, "release-name", egReleaseName, "name of the envoy-gateway release to uninstall")
+	uninstallCmd.Flags().StringVar(&opts.ReleaseName, "name", egReleaseName, "name of the envoy-gateway release to uninstall")
 	uninstallCmd.Flags().StringVarP(&opts.ReleaseNamespace, "namespace", "n", "", "if set, specify the namespace where envoy gateway is uninstalled")
 	uninstallCmd.Flags().BoolVar(&opts.Wait, "wait", false, "if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment, StatefulSet, or ReplicaSet are in a ready state before marking the release as successful. It will wait for as long as --timeout")
 	uninstallCmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "console output only, make no changes")
@@ -222,7 +224,7 @@ func (pt *PackageTool) RunInstall(opts *PackageOptions) error {
 
 	// Before we install CRDs, we need to ensure that CRDs do not exist in the cluster
 	// After we install CRDs, we need to ensure that the CRDs are successfully installed into the cluster
-	if !opts.SkipCRD {
+	if !opts.SkipCRD && !opts.DryRun {
 
 		if len(crdInfo) == 0 {
 			return fmt.Errorf("CRDs not found in the envoy gateway chart")
@@ -262,6 +264,18 @@ func (pt *PackageTool) RunInstall(opts *PackageOptions) error {
 	release, err := pt.actionInstall.Run(egChart, egChartValues)
 	if err != nil {
 		return fmt.Errorf("failed to install envoy gateway resource: %w", err)
+	}
+
+	if len(opts.Output) != 0 {
+		var outputErr error
+		var outputFile *os.File
+
+		if outputFile, outputErr = os.OpenFile(opts.Output, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666); outputErr == nil {
+			_, outputErr = fmt.Fprint(outputFile, release.Manifest)
+		}
+		if outputErr != nil {
+			pt.logger.Println(fmt.Errorf("failed to output manifests to specified file: %w", outputErr).Error())
+		}
 	}
 
 	if opts.DryRun {
