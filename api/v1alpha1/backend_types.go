@@ -92,6 +92,7 @@ type UnixDomainSocketAddress struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 type BackendSpec struct {
+	// +kubebuilder:validation:MaxItems=1
 	BackendAddresses []BackendAddress `json:"addresses,omitempty"`
 }
 

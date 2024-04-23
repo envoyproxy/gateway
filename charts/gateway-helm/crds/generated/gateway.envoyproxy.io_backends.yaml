@@ -104,6 +104,7 @@ spec:
                       can be specified
                     rule: (has(self.socketAddress) && !has(self.unixDomainSocketAddress))
                       || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))
+                maxItems: 1
                 type: array
             type: object
           status:
