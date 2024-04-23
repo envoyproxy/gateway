@@ -341,6 +341,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "http2",
 		},
+		{
+			name: "http-preserve-client-protocol",
+		},
 	}
 
 	for _, tc := range testCases {
