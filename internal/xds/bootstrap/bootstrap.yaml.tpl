@@ -86,6 +86,29 @@ static_resources:
                   prefix: /stats/prometheus
                 route:
                   cluster: prometheus_stats
+                {{- if .EnablePrometheusCompression }}
+                typed_per_filter_config:
+                  envoy.filters.http.compression:
+                    "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+                    {{- if eq .PrometheusCompressionLibrary "gzip"}}
+                    compressor_library:
+                      name: text_optimized
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+                    {{- end }}
+                    {{- if eq .PrometheusCompressionLibrary "brotli"}}
+                    compressor_library:
+                      name: text_optimized
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
+                    {{- end }}
+                    {{- if eq .PrometheusCompressionLibrary "zstd"}}
+                    compressor_library:
+                      name: text_optimized
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+                    {{- end }}
+                {{- end }}
             {{- end }}
           http_filters:
           - name: envoy.filters.http.health_check
@@ -176,3 +199,27 @@ static_resources:
               path_config_source:
                 path: "/sds/xds-trusted-ca.json"
               resource_api_version: V3
+overload_manager:
+  refresh_interval: 0.25s
+  resource_monitors:
+  - name: "envoy.resource_monitors.global_downstream_max_connections"
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+      max_active_downstream_connections: 50000
+  {{- with .OverloadManager.MaxHeapSizeBytes }}
+  - name: "envoy.resource_monitors.fixed_heap"
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.resource_monitors.fixed_heap.v3.FixedHeapConfig
+      max_heap_size_bytes: {{ . }}
+  actions:
+  - name: "envoy.overload_actions.shrink_heap"
+    triggers:
+    - name: "envoy.resource_monitors.fixed_heap"
+      threshold:
+        value: 0.95
+  - name: "envoy.overload_actions.stop_accepting_requests"
+    triggers:
+    - name: "envoy.resource_monitors.fixed_heap"
+      threshold:
+        value: 0.98
+  {{- end }}

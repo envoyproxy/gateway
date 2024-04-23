@@ -110,6 +110,11 @@ const (
 // to the Gateway.
 // By default, no client specific configuration is validated.
 type ClientValidationContext struct {
+	// Optional set to true accepts connections even when a client doesn't present a certificate.
+	// Defaults to false, which rejects connections without a valid client certificate.
+	// +optional
+	Optional bool `json:"optional,omitempty"`
+
 	// CACertificateRefs contains one or more references to
 	// Kubernetes objects that contain TLS certificates of
 	// the Certificate Authorities that can be used

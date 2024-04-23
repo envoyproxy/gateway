@@ -49,6 +49,7 @@ type xdsClusterArgs struct {
 	http1Settings  *ir.HTTP1Settings
 	timeout        *ir.Timeout
 	tcpkeepalive   *ir.TCPKeepalive
+	metrics        *ir.Metrics
 }
 
 type EndpointType int
@@ -86,6 +87,13 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	}
 
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
+
+	// set peer endpoint stats
+	if args.metrics != nil && args.metrics.EnablePerEndpointStats {
+		cluster.TrackClusterStats = &clusterv3.TrackClusterStats{
+			PerEndpointStats: args.metrics.EnablePerEndpointStats,
+		}
+	}
 
 	// Set Proxy Protocol
 	if args.proxyProtocol != nil {
@@ -206,6 +214,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	}
 	if healthcheck.HTTP != nil {
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
+			Host: healthcheck.HTTP.Host,
 			Path: healthcheck.HTTP.Path,
 		}
 		if healthcheck.HTTP.Method != nil {

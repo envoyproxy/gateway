@@ -18,7 +18,6 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=ctp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // ClientTrafficPolicy allows the user to configure the behavior of the connection
@@ -93,13 +92,35 @@ type ClientTrafficPolicySpec struct {
 	Connection *Connection `json:"connection,omitempty"`
 }
 
-// HeaderSettings providess configuration options for headers on the listener.
+// HeaderSettings provides configuration options for headers on the listener.
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
+
+	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+	// is encountered. The default action is to reject the request.
+	// +optional
+	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
 }
+
+// WithUnderscoresAction configures the action to take when an HTTP header with underscores
+// is encountered.
+// +kubebuilder:validation:Enum=Allow;RejectRequest;DropHeader
+type WithUnderscoresAction string
+
+const (
+	// WithUnderscoresActionAllow allows headers with underscores to be passed through.
+	WithUnderscoresActionAllow WithUnderscoresAction = "Allow"
+	// WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with
+	// the 400 status. HTTP/2 requests end with the stream reset.
+	WithUnderscoresActionRejectRequest WithUnderscoresAction = "RejectRequest"
+	// WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header
+	// is dropped before the filter chain is invoked and as such filters will not see
+	// dropped headers.
+	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
+)
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
@@ -129,7 +150,7 @@ type XForwardedForSettings struct {
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
 }
 
-// CustomHeader provides configuration for determining the client IP address for a request based on
+// CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
 // a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 // Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 // for more details.

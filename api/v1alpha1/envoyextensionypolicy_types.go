@@ -18,7 +18,6 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=eep
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
@@ -46,22 +45,18 @@ type EnvoyExtensionPolicySpec struct {
 	// TargetRef
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
-	// Priority of the EnvoyExtensionPolicy.
-	// If multiple EnvoyExtensionPolices are applied to the same
-	// TargetRef, extensions will execute in the ascending order of
-	// the priority i.e. int32.min has the highest priority and
-	// int32.max has the lowest priority.
-	// Defaults to 0.
-	//
-	// +optional
-	Priority int32 `json:"priority,omitempty"`
-
-	// WASM is a list of Wasm extensions to be loaded by the Gateway.
+	// Wasm is a list of Wasm extensions to be loaded by the Gateway.
 	// Order matters, as the extensions will be loaded in the order they are
 	// defined in this list.
 	//
 	// +optional
-	WASM []Wasm `json:"wasm,omitempty"`
+	Wasm []Wasm `json:"wasm,omitempty"`
+
+	// ExtProc is an ordered list of external processing filters
+	// that should added to the envoy filter chain
+	//
+	// +optional
+	ExtProc []ExtProc `json:"extProc,omitempty"`
 }
 
 //+kubebuilder:object:root=true
