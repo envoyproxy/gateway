@@ -126,6 +126,9 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
+		{
+			name: "http2",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
