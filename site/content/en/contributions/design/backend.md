@@ -107,10 +107,13 @@ spec:
 ```
 
 ## Design Decisions
-* All existing and future `BackendObjectReference` in Envoy Gateway MUST support the `Backend` kind. 
+* All instances of `BackendObjectReference` in Envoy Gateway MAY support referencing the `Backend` kind.
+* In some cases, Envoy Gateway may reject references to a `Backend` resource. For example, a backend with a UDS address 
+  will be rejected on xRoute references. 
+* All attributes of the Envoy Gateway extended `BackendRef` resource MUST be implemented for the `Backend` resource.  
 * Gateway-API and Envoy Gateway policies that attach to Services ([BackendTLSPolicy][], [BackendLBPolicy][]) 
   MUST support attachment to the `Backend` resource in Envoy Gateway. Policies may attach to a named 
-  section of the `Backend` resource (the `backendAddress.name` field). 
+  section of the `Backend` resource (the `backendAddress.name` field).
 * The `Backend` API SHOULD support other Gateway-API backend features, such as [Backend Protocol Selection][]. 
   Translation of explicit upstream application protocol setting MUST be consistent with the existing implementation for
   `Service` resources. 
