@@ -29,6 +29,9 @@ This task demonstrates the configuration of OIDC at the HTTPRoute level.
 
 Let's create an HTTPRoute that represents an application protected by OIDC.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -49,6 +52,33 @@ spec:
       port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: myapp
+spec:
+  parentRefs:
+  - name: eg
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp
+    backendRefs:
+    - name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the HTTPRoute status:
 
@@ -93,6 +123,9 @@ by the OAuth2 filter on that HTTPRoute.
 
 Note: please replace the ${CLIENT_ID} in the below yaml snippet with the actual Client ID that you got from the OIDC provider.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -114,6 +147,34 @@ spec:
     logoutPath: "/myapp/logout"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "http://www.example.com:8080/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the SecurityPolicy configuration:
 
