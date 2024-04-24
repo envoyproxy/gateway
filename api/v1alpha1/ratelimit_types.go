@@ -114,6 +114,7 @@ type RateLimitSelectCondition struct {
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
 }
 
+// +kubebuilder:validation:Enum=Exact;Distinct
 type SourceMatchType string
 
 const (
@@ -129,7 +130,6 @@ const (
 type SourceMatch struct {
 	// +optional
 	// +kubebuilder:default=Exact
-	// +kubebuilder:validation:Enum=Exact;Distinct
 	Type *SourceMatchType `json:"type,omitempty"`
 
 	// Value is the IP CIDR that represents the range of Source IP Addresses of the client.
