@@ -84,17 +84,23 @@ func (t *Translator) processBackendTLSPolicy(
 			if len(resources.EnvoyProxy.Spec.BackendTLS.Ciphers) > 0 {
 				tlsBundle.Ciphers = resources.EnvoyProxy.Spec.BackendTLS.Ciphers
 			}
-			if len(resources.EnvoyProxy.Spec.BackendTLS.EcdhCurves) > 0 {
-				tlsBundle.EcdhCurves = resources.EnvoyProxy.Spec.BackendTLS.EcdhCurves
+			if len(resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves) > 0 {
+				tlsBundle.EcdhCurves = resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves
 			}
 			if len(resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms) > 0 {
 				tlsBundle.SignatureAlgorithms = resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms
 			}
-			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != "" {
-				tlsBundle.MinVersion = ptr.To(ir.TLSVersion(resources.EnvoyProxy.Spec.BackendTLS.MinVersion))
+			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != nil {
+				tlsBundle.MinVersion = ptr.To(ir.TLSVersion(*resources.EnvoyProxy.Spec.BackendTLS.MinVersion))
 			}
-			if resources.EnvoyProxy.Spec.BackendTLS.MaxVersion != "" {
-				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(resources.EnvoyProxy.Spec.BackendTLS.MaxVersion))
+			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != nil {
+				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(*resources.EnvoyProxy.Spec.BackendTLS.MaxVersion))
+			}
+			if len(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols) > 0 {
+				tlsBundle.ALPNProtocols = make([]string, len(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols))
+				for i := range resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols {
+					tlsBundle.ALPNProtocols[i] = string(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols[i])
+				}
 			}
 		}
 	}

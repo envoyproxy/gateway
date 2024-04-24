@@ -1888,6 +1888,7 @@ type TLSUpstreamConfig struct {
 	MinVersion          *TLSVersion       `json:"minVersion,omitempty"`
 	MaxVersion          *TLSVersion       `json:"maxVersion,omitempty"`
 	SignatureAlgorithms []string          `json:"signatureAlgorithms,omitempty"`
+	ALPNProtocols       []string          `json:"alpnProtocols,omitempty"`
 }
 
 // Connection settings for downstream connections

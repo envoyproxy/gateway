@@ -24,7 +24,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -780,19 +779,11 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 
 		if tlsConfig.MinVersion != nil {
-			tlsMin, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MinVersion, ""))
-			if err != nil {
-				return nil, err
-			}
-			tlsParams.TlsMinimumProtocolVersion = tlsMin
+			tlsParams.TlsMinimumProtocolVersion = buildTLSVersion(tlsConfig.MinVersion)
 		}
 
 		if tlsConfig.MaxVersion != nil {
-			tlsMax, err := ParseTLSProtocol(ptr.Deref(tlsConfig.MaxVersion, ""))
-			if err != nil {
-				return nil, err
-			}
-			tlsParams.TlsMaximumProtocolVersion = tlsMax
+			tlsParams.TlsMaximumProtocolVersion = buildTLSVersion(tlsConfig.MaxVersion)
 		}
 	}
 
@@ -821,6 +812,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	} else {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
+				AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols),
 				TlsCertificateSdsSecretConfigs: nil,
 				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{

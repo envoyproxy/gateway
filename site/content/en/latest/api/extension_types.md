@@ -218,11 +218,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  | ClientCertificateRef defines the reference to a Kubernetes Secret that contains<br />the client certificate and private key for Envoy to use when connecting to<br />backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc. |
-| `ciphers` | _string array_ |  false  | Ciphers defines only support the specified cipher list when negotiating BackendTLS 1.0-1.2 (this setting has no effect when negotiating BackendTLS 1.3). |
-| `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves. |
-| `minVersion` | _string_ |  false  | MinVersion specifies the minimal tls protocol to allow. |
-| `maxVersion` | _string_ |  false  | MaxVersion specifies the maximal tls protocol version to allow |
-| `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should support. |
+| `TLSSettings` | _[TLSSettings](#tlssettings)_ |  true  |  |
 
 
 #### BackendTrafficPolicy
@@ -379,6 +375,21 @@ _Appears in:_
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
+#### ClientTLSSettings
+
+
+
+
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `TLSSettings` | _[TLSSettings](#tlssettings)_ |  true  |  |
+| `clientValidation` | _[ClientValidationContext](#clientvalidationcontext)_ |  false  | ClientValidation specifies the configuration to validate the client<br />initiating the TLS connection to the Gateway listener. |
+
+
 #### ClientTimeout
 
 
@@ -442,7 +453,7 @@ _Appears in:_
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection.<br />If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.<br />Disabled by default. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the<br />Client Address into the X-Forwarded-For header.<br />Note Proxy Protocol must be present when this field is set, else the connection<br />is closed. |
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
-| `tls` | _[TLSSettings](#tlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
+| `tls` | _[ClientTLSSettings](#clienttlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
@@ -461,7 +472,7 @@ to the Gateway.
 By default, no client specific configuration is validated.
 
 _Appears in:_
-- [TLSSettings](#tlssettings)
+- [ClientTLSSettings](#clienttlssettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -3083,7 +3094,8 @@ _Appears in:_
 
 
 _Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [BackendTLSConfig](#backendtlsconfig)
+- [ClientTLSSettings](#clienttlssettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -3093,7 +3105,6 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
-| `clientValidation` | _[ClientValidationContext](#clientvalidationcontext)_ |  false  | ClientValidation specifies the configuration to validate the client<br />initiating the TLS connection to the Gateway listener. |
 
 
 #### TLSVersion

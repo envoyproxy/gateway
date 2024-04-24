@@ -121,6 +121,9 @@ envoyproxy:
       SignatureAlgorithms:
         - RSA-PSS-RSAE-SHA256
         - ECDSA-SECP256R1-SHA256
+      alpnProtocols:
+        - HTTP/1.1
+        - HTTP/2
 secrets:
   - apiVersion: v1
     kind: Secret

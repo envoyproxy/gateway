@@ -130,21 +130,7 @@ type BackendTLSConfig struct {
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
-	// Ciphers defines only support the specified cipher list when negotiating BackendTLS 1.0-1.2 (this setting has no effect when negotiating BackendTLS 1.3).
-	// +optional
-	Ciphers []string `json:"ciphers,omitempty"`
-	// ECDHCurves specifies the set of supported ECDH curves.
-	// +optional
-	EcdhCurves []string `json:"ecdhCurves,omitempty"`
-	// MinVersion specifies the minimal tls protocol to allow.
-	// +optional
-	MinVersion string `json:"minVersion,omitempty"`
-	// MaxVersion specifies the maximal tls protocol version to allow
-	// +optional
-	MaxVersion string `json:"maxVersion,omitempty"`
-	// SignatureAlgorithms specifies which signature algorithms the listener should support.
-	// +optional
-	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty"`
+	TLSSettings
 }
 
 // FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
