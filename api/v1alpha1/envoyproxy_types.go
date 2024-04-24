@@ -130,7 +130,7 @@ type BackendTLSConfig struct {
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
-	TLSSettings
+	TLSSettings          `json:",inline"`
 }
 
 // FilterPosition defines the position of an Envoy HTTP filter in the filter chain.

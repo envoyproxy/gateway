@@ -812,7 +812,6 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	} else {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
-				AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols),
 				TlsCertificateSdsSecretConfigs: nil,
 				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
@@ -827,6 +826,9 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 
 	if tlsParams != nil {
 		tlsCtx.CommonTlsContext.TlsParams = tlsParams
+	}
+	if len(tlsConfig.ALPNProtocols) > 0 {
+		tlsCtx.CommonTlsContext.AlpnProtocols = buildALPNProtocols(tlsConfig.ALPNProtocols)
 	}
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
