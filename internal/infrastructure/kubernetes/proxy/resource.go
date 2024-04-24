@@ -102,7 +102,8 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
-	shutdownConfig *egv1a1.ShutdownConfig) ([]corev1.Container, error) {
+	shutdownConfig *egv1a1.ShutdownConfig,
+	shutdownManager *egv1a1.ShutdownManager) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
@@ -229,7 +230,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		{
 			Name:                     "shutdown-manager",
-			Image:                    expectedShutdownManagerImage(),
+			Image:                    expectedShutdownManagerImage(shutdownManager),
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
@@ -276,7 +277,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	return containers, nil
 }
 
-func expectedShutdownManagerImage() string {
+func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) string {
+	if shutdownManager != nil && shutdownManager.Image != nil {
+		return *shutdownManager.Image
+	}
 	if v := version.Get().ShutdownManagerVersion; v != "" {
 		return fmt.Sprintf("%s:%s", strings.Split(egv1a1.DefaultShutdownManagerImage, ":")[0], v)
 	}
