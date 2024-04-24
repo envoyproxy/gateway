@@ -386,8 +386,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `TLSSettings` | _[TLSSettings](#tlssettings)_ |  true  |  |
 | `clientValidation` | _[ClientValidationContext](#clientvalidationcontext)_ |  false  | ClientValidation specifies the configuration to validate the client<br />initiating the TLS connection to the Gateway listener. |
+| `TLSSettings` | _[TLSSettings](#tlssettings)_ |  true  |  |
 
 
 #### ClientTimeout
