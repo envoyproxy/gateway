@@ -18,7 +18,6 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=sp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // SecurityPolicy allows the user to configure various security settings for a
@@ -70,17 +69,6 @@ type SecurityPolicySpec struct {
 	//
 	// +optional
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
-}
-
-// SecurityPolicyStatus defines the state of SecurityPolicy
-type SecurityPolicyStatus struct {
-	// Conditions describe the current conditions of the SecurityPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -18,6 +18,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -157,6 +158,42 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 		tSocket:      tSocket,
 		endpointType: endpointType,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
+	}
+	return nil
+}
+
+// addClusterFromURL adds a cluster to the resource version table from the provided URL.
+func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
+	var (
+		uc      *urlCluster
+		ds      *ir.DestinationSetting
+		tSocket *corev3.TransportSocket
+		err     error
+	)
+
+	if uc, err = url2Cluster(url); err != nil {
+		return err
+	}
+
+	ds = &ir.DestinationSetting{
+		Weight:    ptr.To[uint32](1),
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(uc.hostname, uc.port)},
+	}
+
+	clusterArgs := &xdsClusterArgs{
+		name:         uc.name,
+		settings:     []*ir.DestinationSetting{ds},
+		endpointType: uc.endpointType,
+	}
+	if uc.tls {
+		if tSocket, err = buildXdsUpstreamTLSSocket(uc.hostname); err != nil {
+			return err
+		}
+		clusterArgs.tSocket = tSocket
+	}
+
+	if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
 	return nil

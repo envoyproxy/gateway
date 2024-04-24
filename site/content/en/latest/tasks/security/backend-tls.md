@@ -29,7 +29,7 @@ Create a certificate and a private key for `www.example.com`:
 
 ```shell
 openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
-openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
+openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
 ```
 
 Store the cert/key in a Secret:
@@ -49,59 +49,40 @@ kubectl create configmap example-ca --from-file=ca.crt
 Patch the existing quickstart backend to enable TLS. The patch will mount the TLS certificate secret into the backend as volume. 
 
 ```shell
-kubectl patch deployment backend --type=json --patch '[
-  {
-    "op": "add",
-    "path": "/spec/template/spec/containers/0/volumeMounts",
-    "value": [
-      {
-        "name": "secret-volume",
-        "mountPath": "/etc/secret-volume"
-      }
-    ]
-  },
-  {
-    "op": "add",
-    "path": "/spec/template/spec/volumes",
-    "value": [
-      {
-        "name": "secret-volume",
-        "secret": {
-          "secretName": "example-cert",
-          "items": [
-            {
-              "key": "tls.crt",
-              "path": "crt"
-            },
-            {
-              "key": "tls.key",
-              "path": "key"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "op": "add",
-    "path": "/spec/template/spec/containers/0/env/-",
-    "value": {
-      "name": "TLS_SERVER_CERT",
-      "value": "/etc/secret-volume/crt"
-    }
-  },
-  {
-    "op": "add",
-    "path": "/spec/template/spec/containers/0/env/-",
-    "value": {
-      "name": "TLS_SERVER_PRIVKEY",
-      "value": "/etc/secret-volume/key"
-    }
-  }
-]'
+kubectl patch deployment backend --type=json --patch '
+  - op: add
+    path: /spec/template/spec/containers/0/volumeMounts
+    value:
+    - name: secret-volume
+      mountPath: /etc/secret-volume
+  - op: add
+    path: /spec/template/spec/volumes
+    value:
+    - name: secret-volume
+      secret:
+        secretName: example-cert
+        items:
+        - key: tls.crt
+          path: crt
+        - key: tls.key
+          path: key
+  - op: add
+    path: /spec/template/spec/containers/0/env/-
+    value:
+      name: TLS_SERVER_CERT
+      value: /etc/secret-volume/crt
+  - op: add
+    path: /spec/template/spec/containers/0/env/-
+    value:
+      name: TLS_SERVER_PRIVKEY
+      value: /etc/secret-volume/key
+  '
 ```
 
 Create a service that exposes port 443 on the backend service. 
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -124,7 +105,37 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: backend
+    service: backend
+  name: tls-backend
+  namespace: default
+spec:
+  selector:
+    app: backend
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS connection with the backend and validate the backend certificate is issued by a trusted CA and contains an appropriate DNS SAN.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -141,28 +152,52 @@ spec:
     sectionName: "443"
   tls:
     caCertRefs:
-      - name: example-ca
-        group: ''
-        kind: ConfigMap
+    - name: example-ca
+      group: ''
+      kind: ConfigMap
     hostname: www.example.com
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: enable-backend-tls
+  namespace: default
+spec:
+  targetRef:
+    group: ''
+    kind: Service
+    name: tls-backend
+    sectionName: "443"
+  tls:
+    caCertRefs:
+    - name: example-ca
+      group: ''
+      kind: ConfigMap
+    hostname: www.example.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Patch the HTTPRoute's backend reference, so that it refers to the new TLS-enabled service:
 
 ```shell
-kubectl patch HTTPRoute backend --type=json --patch '[
-    {
-        "op": "replace",
-        "path": "/spec/rules/0/backendRefs/0/port",
-        "value": 443
-    },
-    {
-        "op": "replace",
-        "path": "/spec/rules/0/backendRefs/0/name",
-        "value": "tls-backend"
-    }
-]'
+kubectl patch HTTPRoute backend --type=json --patch '
+  - op: replace
+    path: /spec/rules/0/backendRefs/0/port
+    value: 443
+  - op: replace
+    path: /spec/rules/0/backendRefs/0/name
+    value: tls-backend
+  '
 ```
 
 Verify the HTTPRoute status:

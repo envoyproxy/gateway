@@ -19,9 +19,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -961,6 +958,12 @@ spec:
                         type: string
                     type: object
                 type: object
+              useClientProtocol:
+                description: |-
+                  UseClientProtocol configures Envoy to prefer sending requests to backends using
+                  the same HTTP protocol that the incoming request used. Defaults to false, which means
+                  that Envoy will use the protocol indicated by the attached BackendRef.
+                type: boolean
             required:
             - targetRef
             type: object

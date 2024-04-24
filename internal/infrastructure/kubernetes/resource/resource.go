@@ -37,6 +37,9 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 		if service.AllocateLoadBalancerNodePorts != nil {
 			serviceSpec.AllocateLoadBalancerNodePorts = service.AllocateLoadBalancerNodePorts
 		}
+		if service.LoadBalancerSourceRanges != nil && len(service.LoadBalancerSourceRanges) > 0 {
+			serviceSpec.LoadBalancerSourceRanges = service.LoadBalancerSourceRanges
+		}
 		if service.LoadBalancerIP != nil {
 			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP
 		}
@@ -73,8 +76,8 @@ func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev
 	return env
 }
 
-// ExpectedDeploymentVolumes returns expected deployment volumes.
-func ExpectedDeploymentVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
+// ExpectedVolumes returns expected deployment volumes.
+func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
 	amendFunc := func(volume corev1.Volume) {
 		for index, e := range volumes {
 			if e.Name == volume.Name {

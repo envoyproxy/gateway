@@ -262,6 +262,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
+// TODO: implement this method
+func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
+	return nil, nil
+}
+
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	return nil, nil
 }

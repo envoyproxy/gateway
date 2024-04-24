@@ -33,20 +33,17 @@ kubectl wait --timeout=5m deployment/coredns --for=condition=Available
 Update the Gateway from the Quickstart to include a UDP listener that listens on UDP port `5300`:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "coredns",
-      "protocol": "UDP",
-      "port": 5300,
-      "allowedRoutes": {
-         "kinds": [{
-            "kind": "UDPRoute"
-          }]
-      }
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: coredns
+      protocol: UDP
+      port: 5300
+      allowedRoutes:
+        kinds:
+        - kind: UDPRoute
+  '
 ```
 
 Verify the Gateway status:
@@ -58,6 +55,9 @@ kubectl get gateway/eg -o yaml
 ## Configuration
 
 Create a UDPRoute resource to route UDP traffic received on Gateway port 5300 to the CoredDNS backend.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -75,6 +75,29 @@ spec:
           port: 53
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: coredns
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: coredns
+  rules:
+    - backendRefs:
+        - name: coredns
+          port: 53
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the UDPRoute status:
 

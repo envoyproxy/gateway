@@ -87,11 +87,11 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog); err != nil {
+	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog, ir.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP, ir.AccessLog); err != nil {
+	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP, ir.AccessLog, ir.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -99,11 +99,11 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForAccessLog(tCtx, ir.AccessLog); err != nil {
+	if err := processClusterForAccessLog(tCtx, ir.AccessLog, ir.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForTracing(tCtx, ir.Tracing); err != nil {
+	if err := processClusterForTracing(tCtx, ir.Tracing, ir.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -279,7 +279,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// RateLimit filter is handled separately because it relies on the global
 		// rate limit server configuration.
 		// Check if a ratelimit cluster exists, if not, add it, if it's needed.
-		if err = t.createRateLimitServiceCluster(tCtx, httpListener); err != nil {
+		if err = t.createRateLimitServiceCluster(tCtx, httpListener, metrics); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
@@ -370,7 +370,12 @@ func (t *Translator) addRouteToRouteConfig(
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
 		if httpRoute.Destination != nil {
-			if err = processXdsCluster(tCtx, httpRoute, httpListener.HTTP1); err != nil {
+			if err = processXdsCluster(
+				tCtx,
+				httpRoute,
+				httpListener.HTTP1,
+				metrics,
+			); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -382,6 +387,7 @@ func (t *Translator) addRouteToRouteConfig(
 					settings:     mirrorDest.Settings,
 					tSocket:      nil,
 					endpointType: EndpointTypeStatic,
+					metrics:      metrics,
 				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 					errs = errors.Join(errs, err)
 				}
@@ -457,7 +463,7 @@ func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
 	}
 }
 
-func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog) error {
+func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog, metrics *ir.Metrics) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error
@@ -488,6 +494,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			healthCheck:    tcpListener.HealthCheck,
 			timeout:        tcpListener.Timeout,
 			endpointType:   buildEndpointType(tcpListener.Destination.Settings),
+			metrics:        metrics,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -510,7 +517,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 	return errs
 }
 
-func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener, accesslog *ir.AccessLog) error {
+func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener, accesslog *ir.AccessLog, metrics *ir.Metrics) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error
@@ -538,6 +545,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			timeout:      udpListener.Timeout,
 			tSocket:      nil,
 			endpointType: buildEndpointType(udpListener.Destination.Settings),
+			metrics:      metrics,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			errs = errors.Join(errs, err)
 		}
@@ -629,7 +637,7 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes a xds cluster by its endpoint address type.
-func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings) error {
+func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings, metrics *ir.Metrics) error {
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
@@ -642,6 +650,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		http1Settings:  http1Settings,
 		timeout:        httpRoute.Timeout,
 		tcpkeepalive:   httpRoute.TCPKeepalive,
+		metrics:        metrics,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

@@ -28,7 +28,11 @@ import (
 
 const (
 	// Use an invalid string to represent all sections (listeners) within a Gateway
-	AllSections = "/"
+	AllSections                         = "/"
+	MinHTTP2InitialStreamWindowSize     = 65535      // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size
+	MaxHTTP2InitialStreamWindowSize     = 2147483647 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size
+	MinHTTP2InitialConnectionWindowSize = MinHTTP2InitialStreamWindowSize
+	MaxHTTP2InitialConnectionWindowSize = MaxHTTP2InitialStreamWindowSize
 )
 
 func hasSectionName(policy *egv1a1.ClientTrafficPolicy) bool {
@@ -409,6 +413,11 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 			return err
 		}
 
+		// Translate HTTP2 Settings
+		if err := translateHTTP2Settings(policy.Spec.HTTP2, httpIR); err != nil {
+			return err
+		}
+
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil {
 			http3 := &ir.HTTP3Settings{
@@ -576,6 +585,52 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 	return nil
 }
 
+func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTPListener) error {
+	if http2Settings == nil {
+		return nil
+	}
+
+	var (
+		http2 = &ir.HTTP2Settings{}
+		errs  error
+	)
+
+	if http2Settings.InitialStreamWindowSize != nil {
+		initialStreamWindowSize, ok := http2Settings.InitialStreamWindowSize.AsInt64()
+		switch {
+		case !ok:
+			errs = errors.Join(errs, fmt.Errorf("invalid InitialStreamWindowSize value %s", http2Settings.InitialStreamWindowSize.String()))
+		case initialStreamWindowSize < MinHTTP2InitialStreamWindowSize || initialStreamWindowSize > MaxHTTP2InitialStreamWindowSize:
+			errs = errors.Join(errs, fmt.Errorf("InitialStreamWindowSize value %s is out of range, must be between %d and %d",
+				http2Settings.InitialStreamWindowSize.String(),
+				MinHTTP2InitialStreamWindowSize,
+				MaxHTTP2InitialStreamWindowSize))
+		default:
+			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize))
+		}
+	}
+
+	if http2Settings.InitialConnectionWindowSize != nil {
+		initialConnectionWindowSize, ok := http2Settings.InitialConnectionWindowSize.AsInt64()
+		switch {
+		case !ok:
+			errs = errors.Join(errs, fmt.Errorf("invalid InitialConnectionWindowSize value %s", http2Settings.InitialConnectionWindowSize.String()))
+		case initialConnectionWindowSize < MinHTTP2InitialConnectionWindowSize || initialConnectionWindowSize > MaxHTTP2InitialConnectionWindowSize:
+			errs = errors.Join(errs, fmt.Errorf("InitialConnectionWindowSize value %s is out of range, must be between %d and %d",
+				http2Settings.InitialConnectionWindowSize.String(),
+				MinHTTP2InitialConnectionWindowSize,
+				MaxHTTP2InitialConnectionWindowSize))
+		default:
+			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize))
+		}
+	}
+
+	http2.MaxConcurrentStreams = http2Settings.MaxConcurrentStreams
+
+	httpIR.HTTP2 = http2
+	return errs
+}
+
 func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
 	httpIR *ir.HTTPListener, resources *Resources) error {
 	// Return if this listener isn't a TLS listener. There has to be
@@ -674,6 +729,7 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 
 		if len(irCACert.Certificate) > 0 {
 			httpIR.TLS.CACertificate = irCACert
+			httpIR.TLS.RequireClientCertificate = !tlsParams.ClientValidation.Optional
 		}
 	}
 
@@ -710,7 +766,8 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 			return fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
 		}
 		if bufferLimit < 0 || bufferLimit > math.MaxUint32 {
-			return fmt.Errorf("BufferLimit value %s is out of range", connection.BufferLimit.String())
+			return fmt.Errorf("BufferLimit value %s is out of range, must be between 0 and %d",
+				connection.BufferLimit.String(), math.MaxUint32)
 		}
 		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
 	}

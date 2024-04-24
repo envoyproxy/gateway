@@ -18,7 +18,6 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=eep
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
@@ -39,22 +38,23 @@ type EnvoyExtensionPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
 	//
-	// TargetRef is the name of the Gateway resource this policy
+	// TargetRef is the name of the resource this policy
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
-	// for this Policy to have effect and be applied to the Gateway.
-	// TargetRef
+	// for this Policy to have effect and be applied to the Gateway or xRoute.
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
-	// WASM is a list of Wasm extensions to be loaded by the Gateway.
+	// Wasm is a list of Wasm extensions to be loaded by the Gateway.
 	// Order matters, as the extensions will be loaded in the order they are
 	// defined in this list.
 	//
 	// +optional
-	WASM []Wasm `json:"wasm,omitempty"`
+	Wasm []Wasm `json:"wasm,omitempty"`
 
 	// ExtProc is an ordered list of external processing filters
 	// that should added to the envoy filter chain
+	//
+	// +optional
 	ExtProc []ExtProc `json:"extProc,omitempty"`
 }
 
