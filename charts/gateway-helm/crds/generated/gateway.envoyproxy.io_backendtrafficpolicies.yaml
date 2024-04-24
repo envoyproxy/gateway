@@ -571,6 +571,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
@@ -701,6 +704,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
