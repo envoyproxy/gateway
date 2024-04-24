@@ -6,8 +6,10 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
-    connection:
-      bufferLimit: 100G
+    http2:
+      initialConnectionWindowSize: 32Mi
+      initialStreamWindowSize: 64Ki
+      maxConcurrentStreams: 200
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -24,24 +26,28 @@ clientTrafficPolicies:
         sectionName: http-1
       conditions:
       - lastTransitionTime: null
-        message: BufferLimit value 100G is out of range, must be between 0 and 4294967295
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: target-gateway-1
+    name: target-gateway-1-section-http-2
     namespace: envoy-gateway
   spec:
-    connection: {}
+    http2:
+      initialConnectionWindowSize: 1Ti
+      initialStreamWindowSize: 1Ki
+      maxConcurrentStreams: 200
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       namespace: envoy-gateway
+      sectionName: http-2
   status:
     ancestors:
     - ancestorRef:
@@ -49,17 +55,14 @@ clientTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http-2
       conditions:
       - lastTransitionTime: null
-        message: There are existing ClientTrafficPolicies that are overriding these
-          sections [http-1]
-        reason: Overridden
-        status: "True"
-        type: Overridden
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: |-
+          InitialStreamWindowSize value 1Ki is out of range, must be between 65535 and 2147483647
+          InitialConnectionWindowSize value 1Ti is out of range, must be between 65535 and 2147483647
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -81,6 +84,7 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: Same
+      hostname: www.example.com
       name: http-2
       port: 8080
       protocol: HTTP
@@ -164,6 +168,10 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
+      http2:
+        initialConnectionWindowSize: 65536
+        initialStreamWindowSize: 33554432
+        maxConcurrentStreams: 200
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
       path:
@@ -171,9 +179,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
-      connection: {}
       hostnames:
-      - '*'
+      - www.example.com
+      http2:
+        maxConcurrentStreams: 200
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-2
       path:

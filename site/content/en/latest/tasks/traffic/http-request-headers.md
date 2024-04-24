@@ -24,6 +24,9 @@ does not have the header configured by the filter, then that header will be adde
 has the header configured by the filter, then the value of the header in the filter will be appended to the value of the
 header in the request.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -54,6 +57,44 @@ spec:
           value: "foo"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - headers.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: "add-header"
+          value: "foo"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
@@ -107,6 +148,9 @@ will be added, but unlike [adding request headers](#adding-request-headers) whic
 the request already contains it, setting a header will cause the value to be replaced by the value configured in the
 filter.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -137,6 +181,43 @@ spec:
           value: "foo"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - headers.example
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        set:
+        - name: "set-header"
+          value: "foo"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
 example app should indicate that the upstream example app received the header `add-header` with the original value
@@ -178,6 +259,9 @@ will be added, but unlike [adding request headers](#adding-request-headers) whic
 the request already contains it, setting a header will cause the value to be replaced by the value configured in the
 filter.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -206,6 +290,41 @@ spec:
         - "remove-header"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - headers.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      name: backend
+      port: 3000
+      weight: 1
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        remove:
+        - "remove-header"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
 example app should indicate that the upstream example app received the header `add-header`, but the header
@@ -243,6 +362,9 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --head
 
 Headers can be added/set/removed in a single filter on the same HTTPRoute and they will all perform as expected
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -278,6 +400,48 @@ spec:
         - "removed-header"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - headers.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: "add-header-1"
+          value: "foo"
+        set:
+        - name: "set-header-1"
+          value: "bar"
+        remove:
+        - "removed-header"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [HTTPRoute filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter

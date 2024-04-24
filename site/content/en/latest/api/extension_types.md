@@ -260,6 +260,7 @@ _Appears in:_
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds |
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
+| `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 
 
@@ -646,7 +647,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
+| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway or xRoute. |
 | `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
 
@@ -1497,7 +1498,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `initialStreamWindowSize` | _[Quantity](#quantity)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
 | `initialConnectionWindowSize` | _[Quantity](#quantity)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
-| `maxConcurrentStreams` | _integer_ |  true  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
+| `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
 
 
 #### HTTP3Settings
