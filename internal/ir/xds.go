@@ -1883,12 +1883,7 @@ type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
-	Ciphers             []string          `json:"ciphers,omitempty"`
-	EcdhCurves          []string          `json:"ecdhCurves,omitempty"`
-	MinVersion          *TLSVersion       `json:"minVersion,omitempty"`
-	MaxVersion          *TLSVersion       `json:"maxVersion,omitempty"`
-	SignatureAlgorithms []string          `json:"signatureAlgorithms,omitempty"`
-	ALPNProtocols       []string          `json:"alpnProtocols,omitempty"`
+	TLSConfig           `json:",inline"`
 }
 
 // Connection settings for downstream connections

@@ -766,27 +766,7 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 }
 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
-
 	var tlsCtx *tlsv3.UpstreamTlsContext
-	var tlsParams *tlsv3.TlsParameters
-
-	if len(tlsConfig.Ciphers) > 0 || len(tlsConfig.EcdhCurves) > 0 || len(tlsConfig.SignatureAlgorithms) > 0 ||
-		tlsConfig.MinVersion != nil || tlsConfig.MaxVersion != nil {
-		tlsParams = &tlsv3.TlsParameters{
-			CipherSuites:        tlsConfig.Ciphers,
-			EcdhCurves:          tlsConfig.EcdhCurves,
-			SignatureAlgorithms: tlsConfig.SignatureAlgorithms,
-		}
-
-		if tlsConfig.MinVersion != nil {
-			tlsParams.TlsMinimumProtocolVersion = buildTLSVersion(tlsConfig.MinVersion)
-		}
-
-		if tlsConfig.MaxVersion != nil {
-			tlsParams.TlsMaximumProtocolVersion = buildTLSVersion(tlsConfig.MaxVersion)
-		}
-	}
-
 	if tlsConfig.UseSystemTrustStore {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
@@ -824,9 +804,11 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
+	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)
 	if tlsParams != nil {
 		tlsCtx.CommonTlsContext.TlsParams = tlsParams
 	}
+
 	if len(tlsConfig.ALPNProtocols) > 0 {
 		tlsCtx.CommonTlsContext.AlpnProtocols = buildALPNProtocols(tlsConfig.ALPNProtocols)
 	}

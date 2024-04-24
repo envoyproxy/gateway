@@ -85,7 +85,7 @@ func (t *Translator) processBackendTLSPolicy(
 				tlsBundle.Ciphers = resources.EnvoyProxy.Spec.BackendTLS.Ciphers
 			}
 			if len(resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves) > 0 {
-				tlsBundle.EcdhCurves = resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves
+				tlsBundle.ECDHCurves = resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves
 			}
 			if len(resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms) > 0 {
 				tlsBundle.SignatureAlgorithms = resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms
