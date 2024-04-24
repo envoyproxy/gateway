@@ -10,11 +10,11 @@ import (
 )
 
 type ClientTLSSettings struct {
-	TLSSettings
 	// ClientValidation specifies the configuration to validate the client
 	// initiating the TLS connection to the Gateway listener.
 	// +optional
 	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
+	TLSSettings
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
