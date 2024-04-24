@@ -35,6 +35,9 @@ You can configure a collector that supports the OTLP protocol, which includes bu
 Assuming the OpenTelemetry Collector is running in the `observability` namespace, and it has a service named `otel-svc`,
 we only want to sample `50%` of the trace data. We would configure it as follows:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -62,6 +65,40 @@ data:
             url: otel-svc.observability.svc.cluster.local:4318
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: redis-service.default.svc.cluster.local:6379
+      telemetry:
+        tracing:
+          sampleRate: 50
+          provider:
+            url: otel-svc.observability.svc.cluster.local:4318
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 After updating the ConfigMap, you will need to restart the envoy-gateway deployment so the configuration kicks in:
 
