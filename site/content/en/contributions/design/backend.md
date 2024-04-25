@@ -97,7 +97,6 @@ spec:
     group: gateway.envoyproxy.io
     kind: Backend
     name: backend-mixed-ip-uds
-    sectionName: uds-be
   tls:
     caCertRefs:
       - name: backend-tls-checks-certificate
@@ -111,9 +110,15 @@ spec:
 * In some cases, Envoy Gateway may reject references to a `Backend` resource. For example, a backend with a UDS address 
   will be rejected on xRoute references. 
 * All attributes of the Envoy Gateway extended `BackendRef` resource MUST be implemented for the `Backend` resource.  
+* A `Backend` resource referenced by `BackendObjectReference` will be translated to Envoy Gateway's IR DestinationSetting.
+  As such, all `BackendAdresses` are treated as equivalent endpoints with identical weights, TLS settings, etc.  
 * Gateway-API and Envoy Gateway policies that attach to Services ([BackendTLSPolicy][], [BackendLBPolicy][]) 
-  MUST support attachment to the `Backend` resource in Envoy Gateway. Policies may attach to a named 
-  section of the `Backend` resource (the `backendAddress.name` field).
+  MUST support attachment to the `Backend` resource in Envoy Gateway. 
+* Policy attachment to a named section of the `Backend` resource (the `backendAddress.name` field) is not supported at 
+  this time. Currently, `BackendObjectReference` can only select ports, and not generic section names. Hence, a named 
+  section of `Backend` cannot be referenced by routes, and so attachment of policies to named sections will create 
+  translation ambiguity. Users that wish to attach policies to some of the `BackendAddresses` in a `Backend` resource 
+  can use multiple `Backend` resources and pluralized `BackendRefs` instead. 
 * The `Backend` API SHOULD support other Gateway-API backend features, such as [Backend Protocol Selection][]. 
   Translation of explicit upstream application protocol setting MUST be consistent with the existing implementation for
   `Service` resources. 
