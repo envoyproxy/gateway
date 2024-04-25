@@ -66,7 +66,7 @@ type ClientTrafficPolicySpec struct {
 	// TLS settings configure TLS termination settings with the downstream client.
 	//
 	// +optional
-	TLS *TLSSettings `json:"tls,omitempty"`
+	TLS *ClientTLSSettings `json:"tls,omitempty"`
 	// Path enables managing how the incoming path set by clients can be normalized.
 	//
 	// +optional
