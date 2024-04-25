@@ -549,6 +549,8 @@ func TestDeployment(t *testing.T) {
 
 			if tc.shutdownManager != nil {
 				cfg.EnvoyGateway.Provider.Kubernetes.ShutdownManager = tc.shutdownManager
+			} else {
+				cfg.EnvoyGateway.Provider.Kubernetes.ShutdownManager = nil
 			}
 
 			if len(tc.extraArgs) > 0 {
