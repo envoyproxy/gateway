@@ -502,6 +502,8 @@ type HTTPRoute struct {
 
 	// Security holds the features associated with SecurityPolicy
 	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// UseClientProtocol enables using the same protocol upstream that was used downstream
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 }
 
 // SecurityFeatures holds the information associated with the Security Policy.
