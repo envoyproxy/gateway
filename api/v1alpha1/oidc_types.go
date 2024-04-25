@@ -30,6 +30,11 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 
+	// The optional cookie suffix to be added to Bearer and IdToken cookies in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, uses a randomly generated suffix
+	CookieSuffix *string `json:"cookieSuffix,omitempty"`
+
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// The "openid" scope is always added to the list of scopes if not already

@@ -671,6 +671,12 @@ spec:
                     required:
                     - name
                     type: object
+                  cookieSuffix:
+                    description: |-
+                      The optional cookie suffix to be added to Bearer and IdToken cookies in the
+                      [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      If not specified, uses a randomly generated suffix
+                    type: string
                   logoutPath:
                     description: |-
                       The path to log a user out, clearing their credential cookies.
