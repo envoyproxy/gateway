@@ -3,7 +3,7 @@ tcp:
   address: "0.0.0.0"
   port: 10080
   routes:
-  - name: "tcp-route-simple"  
+  - name: "tcp-route-simple"
     destination:
       name: "tcp-route-simple-dest"
       settings:

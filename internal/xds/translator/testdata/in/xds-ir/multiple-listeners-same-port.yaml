@@ -107,7 +107,7 @@ tcp:
   address: "0.0.0.0"
   port: 10080
   routes:
-  - name: "sixth-route"  
+  - name: "sixth-route"
     tls:
       passthrough:
         snis:

@@ -403,7 +403,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 		AccessLog:  buildXdsAccessLog(accesslog, false),
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
-			Cluster: irRoute.Destination.Name,
+			Cluster: clusterName,
 		},
 		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
 	}

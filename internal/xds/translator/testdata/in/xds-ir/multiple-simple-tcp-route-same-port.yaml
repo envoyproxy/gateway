@@ -41,7 +41,7 @@ tcp:
 - name: "tcp-listener-simple-3"
   address: "0.0.0.0"
   port: 10080
-  routes: 
+  routes:
   - name: "tcp-route-simple-3"
     destination:
       name: "tcp-route-simple-3-dest"
@@ -54,7 +54,7 @@ tcp:
 - name: "tcp-listener-simple-4"
   address: "0.0.0.0"
   port: 10080
-  routes:  
+  routes:
   - name: "tcp-route-simple-4"
     destination:
       name: "tcp-route-simple-4-dest"
