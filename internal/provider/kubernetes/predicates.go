@@ -33,13 +33,7 @@ const oidcHMACSecretName = "envoy-oidc-hmac"
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
 // or false otherwise.
-func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
-	gc, ok := obj.(*gwapiv1.GatewayClass)
-	if !ok {
-		r.log.Info("bypassing reconciliation due to unexpected object type", "type", obj)
-		return false
-	}
-
+func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) bool {
 	if gc.Spec.ControllerName == r.classController {
 		r.log.Info("gatewayclass has matching controller name, processing", "name", gc.Name)
 		return true
