@@ -96,7 +96,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 	},
 }
 
-// gets the proxy deployment created for a gateway, assuming merge-gateways is not used
+// getDeploymentForGateway gets the proxy deployment created for a gateway, assuming merge-gateways is not used.
 func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.Deployment, error) {
 	dpLabels := proxy.EnvoyAppLabel()
 	owningLabels := gatewayapi.GatewayOwnerLabels(namespace, name)
@@ -122,8 +122,8 @@ func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.D
 	return &ret, nil
 }
 
-// sets the "gateway.envoyproxy.io/restartedAt" annotation in the EnvoyProxy resource's deployment patch spec
-// leading to EG triggering a rollout restart of the deployment
+// restartProxyAndWaitForRollout sets the "gateway.envoyproxy.io/restartedAt" annotation in the
+// EnvoyProxy resource's deployment patch spec leading to EG triggering a rollout restart of the deployment.
 func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, epNN types.NamespacedName, dp *appsv1.Deployment) error {
 	t.Helper()
 	const egRestartAnnotation = "gateway.envoyproxy.io/restartedAt"

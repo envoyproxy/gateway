@@ -15,16 +15,13 @@ import (
 	"fortio.org/fortio/fhttp"
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
@@ -151,7 +148,7 @@ func AlmostEquals(actual, expect, offset int) bool {
 	return true
 }
 
-// runs a load test with options described in opts
+// runLoadAndWait runs a load test with options described in opts
 // the done channel is used to notify caller of execution result
 // the execution may end due to an external abort or timeout
 func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
@@ -186,8 +183,9 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 
 	if okReq == totalReq && errorReq == 0 && !timedOut {
 		done <- true
+	} else {
+		done <- false
 	}
-	done <- false
 }
 
 func policyAcceptedByAncestor(ancestors []gwv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwv1a2.ParentReference) bool {
