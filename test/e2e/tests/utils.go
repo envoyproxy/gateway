@@ -157,7 +157,7 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 		RunnerOptions: periodic.RunnerOptions{
 			QPS: 5000,
 			// allow some overhead time for setting up workers and tearing down after restart
-			Duration:   timeoutConfig.CreateTimeout + timeoutConfig.CreateTimeout/2,
+			Duration:   timeoutConfig.CreateTimeout * 2,
 			NumThreads: 50,
 			Stop:       aborter,
 			Out:        io.Discard,
