@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestContexts(t *testing.T) {
