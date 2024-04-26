@@ -3,15 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-// This file contains code derived from Contour,
-// https://github.com/projectcontour/contour
-// from the source file
-// https://github.com/projectcontour/contour/blob/main/internal/k8s/status.go
-// and is provided here subject to the following:
-// Copyright Project Contour Authors
-// SPDX-License-Identifier: Apache-2.0
-
-package status
+package kubernetes
 
 import (
 	"context"

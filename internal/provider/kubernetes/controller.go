@@ -46,7 +46,7 @@ import (
 type gatewayAPIReconciler struct {
 	client          client.Client
 	log             logging.Logger
-	statusUpdater   status.Updater
+	statusUpdater   Updater
 	classController gwapiv1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
@@ -58,7 +58,7 @@ type gatewayAPIReconciler struct {
 }
 
 // newGatewayAPIController
-func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater,
+func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources) error {
 	ctx := context.Background()
 
