@@ -13,8 +13,8 @@ import (
 	wasmfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/wasm/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	wasmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/wasm/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -139,7 +139,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 									HttpUpstreamType: &corev3.HttpUri_Cluster{
 										Cluster: uc.name,
 									},
-									Timeout: &duration.Duration{
+									Timeout: &durationpb.Duration{
 										Seconds: defaultExtServiceRequestTimeout,
 									},
 								},

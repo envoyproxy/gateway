@@ -15,8 +15,8 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -122,7 +122,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
 					Cluster: cluster.name,
 				},
-				Timeout: &duration.Duration{
+				Timeout: &durationpb.Duration{
 					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
