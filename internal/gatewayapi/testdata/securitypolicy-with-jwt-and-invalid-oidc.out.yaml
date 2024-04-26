@@ -124,7 +124,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -260,22 +260,23 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        jwt:
-          providers:
-          - audiences:
-            - one.foo.com
-            claimToHeaders:
-            - claim: claim1
-              header: one-route-example-key
-            issuer: https://one.example.com
-            name: example1
-            remoteJWKS:
-              uri: https://one.example.com/jwt/public-key/jwks.json
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
+        security:
+          jwt:
+            providers:
+            - audiences:
+              - one.foo.com
+              claimToHeaders:
+              - claim: claim1
+                header: one-route-example-key
+              issuer: https://one.example.com
+              name: example1
+              remoteJWKS:
+                uri: https://one.example.com/jwt/public-key/jwks.json
       - backendWeights:
           invalid: 0
           valid: 0
@@ -290,19 +291,20 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        jwt:
-          providers:
-          - audiences:
-            - two.foo.com
-            claimToHeaders:
-            - claim: claim2
-              header: one-route-example-key
-            issuer: https://two.example.com
-            name: example2
-            remoteJWKS:
-              uri: https://one.example.com/jwt/public-key/jwks.json
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
+        security:
+          jwt:
+            providers:
+            - audiences:
+              - two.foo.com
+              claimToHeaders:
+              - claim: claim2
+                header: one-route-example-key
+              issuer: https://two.example.com
+              name: example2
+              remoteJWKS:
+                uri: https://one.example.com/jwt/public-key/jwks.json

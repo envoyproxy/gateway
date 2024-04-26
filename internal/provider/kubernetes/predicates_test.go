@@ -515,6 +515,64 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service",
+			configs: []client.Object{
+				&v1alpha1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-proc",
+					},
+					Spec: v1alpha1.EnvoyExtensionPolicySpec{
+						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtProc: []v1alpha1.ExtProc{
+							{
+								BackendRef: v1alpha1.ExtProcBackendRef{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "ext-proc-service",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-proc-service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service unrelated",
+			configs: []client.Object{
+				&v1alpha1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-proc",
+					},
+					Spec: v1alpha1.EnvoyExtensionPolicySpec{
+						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtProc: []v1alpha1.ExtProc{
+							{
+								BackendRef: v1alpha1.ExtProcBackendRef{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "ext-proc-service",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-proc-service-unrelated"}, nil, nil),
+			expect:  false,
+		},
+		{
 			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
 			configs: []client.Object{
 				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
@@ -571,6 +629,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			WithIndex(&v1alpha1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
+			WithIndex(&v1alpha1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)

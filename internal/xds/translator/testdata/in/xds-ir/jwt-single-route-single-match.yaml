@@ -12,14 +12,15 @@ http:
     hostname: "*"
     pathMatch:
       exact: "foo/bar"
-    jwt:
-      providers:
-      - name: example
-        issuer: https://www.example.com
-        audiences:
-        - foo.com
-        remoteJWKS:
-          uri: https://localhost/jwt/public-key/jwks.json
+    security:
+      jwt:
+        providers:
+        - name: example
+          issuer: https://www.example.com
+          audiences:
+          - foo.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
     destination:
       name: "first-route-dest"
       settings:

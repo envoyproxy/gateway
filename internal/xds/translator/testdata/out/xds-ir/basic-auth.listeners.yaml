@@ -15,7 +15,7 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.basic_auth/first-route
+          name: envoy.filters.http.basic_auth
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
             users:
@@ -31,10 +31,10 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: first-listener
+          routeConfigName: default/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
   drainType: MODIFY_ONLY
-  name: first-listener
+  name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

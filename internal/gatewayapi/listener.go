@@ -16,6 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -25,6 +26,8 @@ type ListenersTranslator interface {
 }
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
+	// Infra IR proxy ports must be unique.
+	foundPorts := make(map[string][]*protocolPort)
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
@@ -36,17 +39,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
 	for _, gateway := range gateways {
-		// Infra IR proxy ports must be unique.
-		var foundPorts []*protocolPort
 		irKey := t.getIRKey(gateway.Gateway)
 
 		if resources.EnvoyProxy != nil {
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
 		}
-
-		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Tracing = processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Metrics = processMetrics(infraIR[irKey].Proxy.Config)
+		t.processProxyObservability(gateway.Gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -95,7 +93,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			if !isReady {
 				continue
 			}
-
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
 			containerPort := servicePortToContainerPort(servicePort.port)
@@ -124,42 +121,48 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
 			// (TCP or UDP).
-			if !containsPort(foundPorts, servicePort) {
-				foundPorts = append(foundPorts, servicePort)
-				var proto ir.ProtocolType
-				switch listener.Protocol {
-				case gwapiv1.HTTPProtocolType:
-					proto = ir.HTTPProtocolType
-				case gwapiv1.HTTPSProtocolType:
-					proto = ir.HTTPSProtocolType
-				case gwapiv1.TLSProtocolType:
-					proto = ir.TLSProtocolType
-				case gwapiv1.TCPProtocolType:
-					proto = ir.TCPProtocolType
-				case gwapiv1.UDPProtocolType:
-					proto = ir.UDPProtocolType
-				}
-
-				infraPortName := string(listener.Name)
-				if t.MergeGateways {
-					infraPortName = irHTTPListenerName(listener)
-				}
-				infraPort := ir.ListenerPort{
-					Name:          infraPortName,
-					Protocol:      proto,
-					ServicePort:   servicePort.port,
-					ContainerPort: containerPort,
-				}
-
-				proxyListener := &ir.ProxyListener{
-					Name:  irHTTPListenerName(listener),
-					Ports: []ir.ListenerPort{infraPort},
-				}
-
-				infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
+			if !containsPort(foundPorts[irKey], servicePort) {
+				t.processInfraIRListener(listener, infraIR, irKey, servicePort)
+				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
 		}
 	}
+}
+
+func (t *Translator) processProxyObservability(gw *gwapiv1.Gateway, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
+	xdsIR.AccessLog = processAccessLog(envoyProxy)
+	xdsIR.Tracing = processTracing(gw, envoyProxy, t.MergeGateways)
+	xdsIR.Metrics = processMetrics(envoyProxy)
+}
+
+func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR InfraIRMap, irKey string, servicePort *protocolPort) {
+	var proto ir.ProtocolType
+	switch listener.Protocol {
+	case gwapiv1.HTTPProtocolType:
+		proto = ir.HTTPProtocolType
+	case gwapiv1.HTTPSProtocolType:
+		proto = ir.HTTPSProtocolType
+	case gwapiv1.TLSProtocolType:
+		proto = ir.TLSProtocolType
+	case gwapiv1.TCPProtocolType:
+		proto = ir.TCPProtocolType
+	case gwapiv1.UDPProtocolType:
+		proto = ir.UDPProtocolType
+	}
+
+	infraPort := ir.ListenerPort{
+		Name:          irListenerPortName(proto, servicePort.port),
+		Protocol:      proto,
+		ServicePort:   servicePort.port,
+		ContainerPort: servicePortToContainerPort(servicePort.port),
+	}
+
+	proxyListener := &ir.ProxyListener{
+		Name:  irHTTPListenerName(listener),
+		Ports: []ir.ListenerPort{infraPort},
+	}
+
+	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 }
 
 func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
@@ -215,10 +218,18 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 					continue
 				}
 
+				// TODO: remove support for Host/Port in v1.2
 				al := &ir.OpenTelemetryAccessLog{
 					Port:      uint32(sink.OpenTelemetry.Port),
-					Host:      sink.OpenTelemetry.Host,
 					Resources: sink.OpenTelemetry.Resources,
+				}
+
+				if sink.OpenTelemetry.Host != nil {
+					al.Host = *sink.OpenTelemetry.Host
+				}
+
+				if len(sink.OpenTelemetry.BackendRefs) > 0 {
+					al.Host, al.Port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, envoyproxy.Namespace)
 				}
 
 				switch accessLog.Format.Type {
@@ -236,16 +247,40 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	return irAccessLog
 }
 
-func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
+func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool) *ir.Tracing {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
 		return nil
 	}
+	tracing := envoyproxy.Spec.Telemetry.Tracing
+
+	// TODO: remove support for Host/Port in v1.2
+	var host string
+	var port uint32
+	if tracing.Provider.Host != nil {
+		host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
+	}
+	if len(tracing.Provider.BackendRefs) > 0 {
+		host, port = net.BackendHostAndPort(tracing.Provider.BackendRefs[0].BackendObjectReference, gw.Namespace)
+	}
+
+	samplingRate := 100.0
+	if tracing.SamplingRate != nil {
+		samplingRate = float64(*tracing.SamplingRate)
+	}
+
+	serviceName := naming.ServiceName(utils.NamespacedName(gw))
+	if mergeGateways {
+		serviceName = string(gw.Spec.GatewayClassName)
+	}
 
 	return &ir.Tracing{
-		ServiceName:  naming.ServiceName(utils.NamespacedName(gw)),
-		ProxyTracing: *envoyproxy.Spec.Telemetry.Tracing,
+		ServiceName:  serviceName,
+		Host:         host,
+		Port:         port,
+		SamplingRate: samplingRate,
+		CustomTags:   tracing.CustomTags,
 	}
 }
 
@@ -257,5 +292,6 @@ func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 	}
 	return &ir.Metrics{
 		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
+		EnablePerEndpointStats: envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
 	}
 }

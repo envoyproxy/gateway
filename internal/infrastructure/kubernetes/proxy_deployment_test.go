@@ -106,9 +106,16 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var cli client.Client
 			if tc.current != nil {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.current).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			} else {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			}
 
 			kube := NewInfra(cli, cfg)
@@ -129,7 +136,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 }
 
 func TestDeleteProxyDeployment(t *testing.T) {
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects().
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
 	cfg, err := config.New()
 	require.NoError(t, err)
 

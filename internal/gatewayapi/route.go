@@ -278,12 +278,6 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 
 func setRequestTimeout(irTimeout *ir.Timeout, d metav1.Duration) {
 	switch {
-	case irTimeout == nil:
-		irTimeout = &ir.Timeout{
-			HTTP: &ir.HTTPTimeout{
-				RequestTimeout: ptr.To(d),
-			},
-		}
 	case irTimeout.HTTP == nil:
 		irTimeout.HTTP = &ir.HTTPTimeout{
 			RequestTimeout: ptr.To(d),

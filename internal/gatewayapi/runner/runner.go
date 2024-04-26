@@ -84,6 +84,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					Namespace:               r.Namespace,
+					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -122,37 +123,31 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 				// Update Status
 				for _, gateway := range result.Gateways {
-					gateway := gateway
 					key := utils.NamespacedName(gateway)
 					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
 					delete(statusesToDelete.GatewayStatusKeys, key)
 				}
 				for _, httpRoute := range result.HTTPRoutes {
-					httpRoute := httpRoute
 					key := utils.NamespacedName(httpRoute)
 					r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
 					delete(statusesToDelete.HTTPRouteStatusKeys, key)
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
-					grpcRoute := grpcRoute
 					key := utils.NamespacedName(grpcRoute)
 					r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
 					delete(statusesToDelete.GRPCRouteStatusKeys, key)
 				}
 				for _, tlsRoute := range result.TLSRoutes {
-					tlsRoute := tlsRoute
 					key := utils.NamespacedName(tlsRoute)
 					r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
 					delete(statusesToDelete.TLSRouteStatusKeys, key)
 				}
 				for _, tcpRoute := range result.TCPRoutes {
-					tcpRoute := tcpRoute
 					key := utils.NamespacedName(tcpRoute)
 					r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
 					delete(statusesToDelete.TCPRouteStatusKeys, key)
 				}
 				for _, udpRoute := range result.UDPRoutes {
-					udpRoute := udpRoute
 					key := utils.NamespacedName(udpRoute)
 					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
@@ -172,7 +167,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
-					clientTrafficPolicy := clientTrafficPolicy
 					key := utils.NamespacedName(clientTrafficPolicy)
 					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
 						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
@@ -180,7 +174,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					delete(statusesToDelete.ClientTrafficPolicyStatusKeys, key)
 				}
 				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
-					backendTrafficPolicy := backendTrafficPolicy
 					key := utils.NamespacedName(backendTrafficPolicy)
 					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
 						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
@@ -188,12 +181,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					delete(statusesToDelete.BackendTrafficPolicyStatusKeys, key)
 				}
 				for _, securityPolicy := range result.SecurityPolicies {
-					securityPolicy := securityPolicy
 					key := utils.NamespacedName(securityPolicy)
 					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
 						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
 					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
+				}
+				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
+					envoyExtensionPolicy := envoyExtensionPolicy
+					key := utils.NamespacedName(envoyExtensionPolicy)
+					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
+						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
+					}
+					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
 			}
 
@@ -232,6 +232,7 @@ type StatusesToDelete struct {
 	ClientTrafficPolicyStatusKeys  map[types.NamespacedName]bool
 	BackendTrafficPolicyStatusKeys map[types.NamespacedName]bool
 	SecurityPolicyStatusKeys       map[types.NamespacedName]bool
+	EnvoyExtensionPolicyStatusKeys map[types.NamespacedName]bool
 }
 
 func (r *Runner) getAllStatuses() *StatusesToDelete {
@@ -248,6 +249,7 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 		BackendTrafficPolicyStatusKeys: make(map[types.NamespacedName]bool),
 		SecurityPolicyStatusKeys:       make(map[types.NamespacedName]bool),
 		BackendTLSPolicyStatusKeys:     make(map[types.NamespacedName]bool),
+		EnvoyExtensionPolicyStatusKeys: make(map[types.NamespacedName]bool),
 	}
 
 	// Get current status keys
@@ -282,7 +284,9 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 	for key := range r.ProviderResources.SecurityPolicyStatuses.LoadAll() {
 		ds.SecurityPolicyStatusKeys[key] = true
 	}
-
+	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
+		ds.EnvoyExtensionPolicyStatusKeys[key] = true
+	}
 	return ds
 }
 
@@ -328,6 +332,10 @@ func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
 		r.ProviderResources.BackendTLSPolicyStatuses.Delete(key)
 		delete(ds.BackendTLSPolicyStatusKeys, key)
 	}
+	for key := range ds.EnvoyExtensionPolicyStatusKeys {
+		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
+		delete(ds.EnvoyExtensionPolicyStatusKeys, key)
+	}
 }
 
 // deleteAllStatusKeys deletes all status keys stored by the subscriber.
@@ -364,6 +372,9 @@ func (r *Runner) deleteAllStatusKeys() {
 	}
 	for key := range r.ProviderResources.SecurityPolicyStatuses.LoadAll() {
 		r.ProviderResources.SecurityPolicyStatuses.Delete(key)
+	}
+	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
+		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
 	}
 }
 

@@ -90,6 +90,21 @@ type EnvoyGatewaySpec struct {
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 }
 
+// LeaderElection defines the desired leader election settings.
+type LeaderElection struct {
+	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.
+	// It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
+	LeaseDuration *gwapiv1.Duration `json:"leaseDuration,omitempty"`
+	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership
+	// status before relinquishing its position. The default setting is 10 seconds.
+	RenewDeadline *gwapiv1.Duration `json:"renewDeadline,omitempty"`
+	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.
+	// The default setting is 2 seconds.
+	RetryPeriod *gwapiv1.Duration `json:"retryPeriod,omitempty"`
+	// Disable provides the option to turn off leader election, which is enabled by default.
+	Disable *bool `json:"disable,omitempty"`
+}
+
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.
 // Control plane will focus on metrics observability telemetry and tracing telemetry later.
 type EnvoyGatewayTelemetry struct {
@@ -140,7 +155,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -151,10 +166,6 @@ type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
-
-	// EnableEnvoyExtensionPolicy enables Envoy Gateway to
-	// reconcile and implement the EnvoyExtensionPolicy resources.
-	EnableEnvoyExtensionPolicy bool `json:"enableEnvoyExtensionPolicy"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -198,6 +209,10 @@ type EnvoyGatewayKubernetesProvider struct {
 	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
 	// +optional
 	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
+	// LeaderElection specifies the configuration for leader election.
+	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
+	// +optional
+	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
 }
 
 const (
@@ -339,6 +354,9 @@ type RateLimit struct {
 type RateLimitTelemetry struct {
 	// Metrics defines metrics configuration for RateLimit.
 	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+
+	// Tracing defines traces configuration for RateLimit.
+	Tracing *RateLimitTracing `json:"tracing,omitempty"`
 }
 
 type RateLimitMetrics struct {
@@ -349,6 +367,34 @@ type RateLimitMetrics struct {
 type RateLimitMetricsPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
+}
+
+type RateLimitTracing struct {
+	// SamplingRate controls the rate at which traffic will be
+	// selected for tracing if no prior sampling decision has been made.
+	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+	// +optional
+	SamplingRate *uint32 `json:"samplingRate,omitempty"`
+
+	// Provider defines the rateLimit tracing provider.
+	// Only OpenTelemetry is supported currently.
+	Provider *RateLimitTracingProvider `json:"provider,omitempty"`
+}
+
+type RateLimitTracingProviderType string
+
+const (
+	RateLimitTracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+)
+
+// RateLimitTracingProvider defines the tracing provider configuration of RateLimit
+type RateLimitTracingProvider struct {
+	// Type defines the tracing provider type.
+	// Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported
+	Type *RateLimitTracingProviderType `json:"type,omitempty"`
+
+	// URL is the endpoint of the trace collector that supports the OTLP protocol
+	URL string `json:"url"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

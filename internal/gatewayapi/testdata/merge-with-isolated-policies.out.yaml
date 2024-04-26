@@ -236,14 +236,14 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: default/gateway-1/http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: default/gateway-2/http-2
         ports:
         - containerPort: 8888
-          name: default/gateway-2/http-2
+          name: http-8888
           protocol: HTTP
           servicePort: 8888
       metadata:
@@ -309,21 +309,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -340,6 +325,22 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
         tcpKeepalive:
           idleTime: 1200
           interval: 60
