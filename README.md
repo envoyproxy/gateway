@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/envoyproxy/gateway/branch/main/graph/badge.svg)](https://codecov.io/gh/envoyproxy/gateway)
 [![CodeQL](https://github.com/envoyproxy/gateway/actions/workflows/codeql.yml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/codeql.yml)
 [![OSV-Scanner](https://github.com/envoyproxy/gateway/actions/workflows/osv-scanner.yml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/osv-scanner.yml)
-[![trivy](https://github.com/envoyproxy/gateway/actions/workflows/trivy.yml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/trivy.yml)
+[![Trivy](https://github.com/envoyproxy/gateway/actions/workflows/trivy.yml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/trivy.yml)
 
 Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
 Kubernetes-based application gateway.
