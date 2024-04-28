@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/url"
 	"testing"
-	"time"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 
@@ -49,13 +48,13 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			}
 			ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "connection-limit-ctp", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-			// open some connections
-			for i := 0; i < 10; i++ {
-				conn, err := net.DialTimeout("tcp", gwAddr, 100*time.Millisecond)
-				if err == nil {
-					defer conn.Close()
-				} else {
+			// we make the number of connections equal to the number of connectionLimit connections + 1
+			for i := 0; i < 6; i++ {
+				conn, err := net.Dial("tcp", gwAddr)
+				if err != nil {
 					t.Errorf("failed to open connection: %v", err)
+				} else {
+					defer conn.Close()
 				}
 			}
 
@@ -77,10 +76,10 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			if err != nil {
 				urlError := &url.Error{}
 				if !errors.As(err, &urlError) {
-					t.Errorf("expected net/url error when connection limit is reached")
+					t.Errorf("expected neturl error when connection limit reached, but other error occurred: %v", err)
 				}
 			} else {
-				t.Errorf("expected error when connection limit is reached")
+				t.Errorf("expected error not occurring when connection limit reached")
 			}
 
 		})
