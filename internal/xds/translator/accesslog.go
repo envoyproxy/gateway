@@ -239,21 +239,28 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	for _, otel := range al.OpenTelemetry {
 		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
 
-		ds := &ir.DestinationSetting{
-			Weight:    ptr.To[uint32](1),
-			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
+		var dests []*ir.DestinationSetting
+		if len(otel.Destinations) > 0 {
+			dests = otel.Destinations
+		} else {
+			dests = []*ir.DestinationSetting{
+				{
+					Weight:    ptr.To[uint32](1),
+					Protocol:  ir.GRPC,
+					Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
+				},
+			}
 		}
+
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         clusterName,
-			settings:     []*ir.DestinationSetting{ds},
+			settings:     dests,
 			tSocket:      nil,
 			endpointType: EndpointTypeDNS,
 			metrics:      metrics,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
-
 	}
 
 	return nil

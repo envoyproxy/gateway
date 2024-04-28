@@ -49,7 +49,13 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 	backendRefKind := KindDerefOr(backendRef.Kind, KindService)
 	switch backendRefKind {
 	case KindService:
-		if !t.validateBackendService(backendRef, parentRef, resources, backendNamespace, route, protocol) {
+		if err := validateBackendService(backendRef.BackendObjectReference, resources, backendNamespace, protocol); err != nil {
+			parentRef.SetCondition(route,
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapiv1.RouteReasonBackendNotFound,
+				err.Error(),
+			)
 			return false
 		}
 	case KindServiceImport:
@@ -155,19 +161,12 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, paren
 	return true
 }
 
-func (t *Translator) validateBackendService(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,
-	serviceNamespace string, route RouteContext, protocol v1.Protocol,
-) bool {
+func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resources *Resources,
+	serviceNamespace string, protocol v1.Protocol,
+) error {
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 	if service == nil {
-		parentRef.SetCondition(route,
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonBackendNotFound,
-			fmt.Sprintf("Service %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
-				string(backendRef.Name)),
-		)
-		return false
+		return fmt.Errorf("Service %s/%s not found", serviceNamespace, string(backendRef.Name))
 	}
 	var portFound bool
 	for _, port := range service.Spec.Ports {
@@ -182,16 +181,9 @@ func (t *Translator) validateBackendService(backendRef *gwapiv1a2.BackendRef, pa
 	}
 
 	if !portFound {
-		parentRef.SetCondition(route,
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"PortNotFound",
-			fmt.Sprintf(string(protocol)+" Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace,
-				string(backendRef.Name)),
-		)
-		return false
+		return fmt.Errorf("%s Port %d not found on service %s/%s", string(protocol), *backendRef.Port, serviceNamespace, string(backendRef.Name))
 	}
-	return true
+	return nil
 }
 
 func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,

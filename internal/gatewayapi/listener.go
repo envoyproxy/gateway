@@ -6,8 +6,10 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -15,7 +17,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
-	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -43,7 +44,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		if resources.EnvoyProxy != nil {
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
 		}
-		t.processProxyObservability(gateway.Gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config)
+		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -127,9 +128,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	}
 }
 
-func (t *Translator) processProxyObservability(gw *gwapiv1.Gateway, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
-	xdsIR.AccessLog = processAccessLog(envoyProxy)
-	xdsIR.Tracing = processTracing(gw, envoyProxy, t.MergeGateways)
+func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy, resources *Resources) {
+	xdsIR.AccessLog = t.processAccessLog(envoyProxy, resources)
+	xdsIR.Tracing = t.processTracing(gwCtx.Gateway, envoyProxy, t.MergeGateways, resources)
 	xdsIR.Metrics = processMetrics(envoyProxy)
 }
 
@@ -163,7 +164,7 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 }
 
-func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
+func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *Resources) *ir.AccessLog {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
@@ -227,7 +228,12 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 				}
 
 				if len(sink.OpenTelemetry.BackendRefs) > 0 {
-					al.Host, al.Port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, envoyproxy.Namespace)
+					ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
+					if err != nil {
+						// TODO: update status of EnvoyProxy
+						return nil
+					}
+					al.Destinations = ds
 				}
 
 				switch accessLog.Format.Type {
@@ -245,7 +251,7 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	return irAccessLog
 }
 
-func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool) *ir.Tracing {
+func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool, resources *Resources) *ir.Tracing {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
@@ -259,8 +265,11 @@ func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGat
 	if tracing.Provider.Host != nil {
 		host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 	}
-	if len(tracing.Provider.BackendRefs) > 0 {
-		host, port = net.BackendHostAndPort(tracing.Provider.BackendRefs[0].BackendObjectReference, gw.Namespace)
+
+	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources)
+	if err != nil {
+		// TODO: update status of EnvoyProxy
+		return nil
 	}
 
 	samplingRate := 100.0
@@ -274,11 +283,12 @@ func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGat
 	}
 
 	return &ir.Tracing{
-		ServiceName:  serviceName,
-		Host:         host,
-		Port:         port,
-		SamplingRate: samplingRate,
-		CustomTags:   tracing.CustomTags,
+		ServiceName:         serviceName,
+		Host:                host,
+		Port:                port,
+		SamplingRate:        samplingRate,
+		CustomTags:          tracing.CustomTags,
+		DestinationSettings: ds,
 	}
 }
 
@@ -288,8 +298,30 @@ func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 		envoyproxy.Spec.Telemetry.Metrics == nil {
 		return nil
 	}
+
 	return &ir.Metrics{
 		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
 		EnablePerEndpointStats: envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
 	}
+}
+
+func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespace string, resources *Resources) ([]*ir.DestinationSetting, error) {
+	result := make([]*ir.DestinationSetting, 0, len(backendRefs))
+	for _, ref := range backendRefs {
+		ns := NamespaceDerefOr(ref.Namespace, namespace)
+		kind := KindDerefOr(ref.Kind, KindService)
+		if kind != KindService {
+			return nil, errors.New("only service kind is supported for backendRefs")
+		}
+		if err := validateBackendService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
+			return nil, err
+		}
+
+		ds := t.serviceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources)
+		result = append(result, ds)
+	}
+	if len(result) == 0 {
+		return nil, nil
+	}
+	return result, nil
 }

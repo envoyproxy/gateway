@@ -126,14 +126,22 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 
 	clusterName := buildClusterName("tracing", tracing.Host, tracing.Port)
 
-	ds := &ir.DestinationSetting{
-		Weight:    ptr.To[uint32](1),
-		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Host, tracing.Port)},
+	var dests []*ir.DestinationSetting
+	if len(tracing.DestinationSettings) > 0 {
+		dests = tracing.DestinationSettings
+	} else {
+		dests = []*ir.DestinationSetting{
+			{
+				Weight:    ptr.To[uint32](1),
+				Protocol:  ir.GRPC,
+				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Host, tracing.Port)},
+			},
+		}
 	}
+
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
-		settings:     []*ir.DestinationSetting{ds},
+		settings:     dests,
 		tSocket:      nil,
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
