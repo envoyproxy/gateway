@@ -389,6 +389,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						}
 						r.Timeout = to
 					}
+
+					if policy.Spec.UseClientProtocol != nil {
+						r.UseClientProtocol = policy.Spec.UseClientProtocol
+					}
 				}
 			}
 		}
@@ -558,6 +562,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 
 				if r.Timeout == nil {
 					r.Timeout = ct
+				}
+			}
+
+			if policy.Spec.UseClientProtocol != nil {
+				if r.UseClientProtocol == nil {
+					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
 			}
 		}
