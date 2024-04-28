@@ -45,7 +45,7 @@ var bootstrapTmplStr string
 
 var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
 
-// envoyBootstrap defines the envoy Bootstrap configuration.
+// bootstrapConfig defines the envoy Bootstrap configuration.
 type bootstrapConfig struct {
 	// parameters defines configurable bootstrap configuration parameters.
 	parameters bootstrapParameters
@@ -53,7 +53,7 @@ type bootstrapConfig struct {
 	rendered string
 }
 
-// envoyBootstrap defines the envoy Bootstrap configuration.
+// bootstrapParameters defines the envoy Bootstrap configuration.
 type bootstrapParameters struct {
 	// XdsServer defines the configuration of the XDS server.
 	XdsServer xdsServerParameters
@@ -70,7 +70,7 @@ type bootstrapParameters struct {
 
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
-	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
+	// EnableStatConfig defines whether to customize the Envoy proxy stats.
 	EnableStatConfig bool
 	// StatsMatcher is to control creation of custom Envoy stats with prefix,
 	// suffix, and regex expressions match on the name of the stats.
