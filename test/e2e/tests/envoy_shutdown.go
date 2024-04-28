@@ -73,12 +73,12 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			// will contain indication on success or failure of load test
 			loadSuccess := make(chan bool)
 
+			t.Log("Rolling out proxy deployment")
+			err = restartProxyAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, epNN, dp)
+
 			t.Log("Starting load generation")
 			// Run load async and continue to restart deployment
 			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
-
-			t.Log("Rolling out proxy deployment")
-			err = restartProxyAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, epNN, dp)
 
 			t.Log("Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
