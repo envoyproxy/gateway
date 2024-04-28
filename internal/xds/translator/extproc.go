@@ -27,8 +27,7 @@ func init() {
 	registerHTTPFilter(&extProc{})
 }
 
-type extProc struct {
-}
+type extProc struct{}
 
 var _ httpFilter = &extProc{}
 
@@ -130,7 +129,8 @@ func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 
 // patchResources patches the cluster resources for the external services.
 func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}

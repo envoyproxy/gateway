@@ -7,7 +7,6 @@ package v1alpha1
 
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
-
 	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
 	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
 	Optional *bool `json:"optional,omitempty"`
@@ -91,7 +90,6 @@ type RemoteJWKS struct {
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
 type ClaimToHeader struct {
-
 	// Header defines the name of the HTTP request header that the JWT Claim will be saved into.
 	Header string `json:"header"`
 

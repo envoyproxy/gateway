@@ -30,7 +30,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *Resources,
-	xdsIR XdsIRMap) []*egv1a1.EnvoyExtensionPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.EnvoyExtensionPolicy {
 	var res []*egv1a1.EnvoyExtensionPolicy
 
 	// Sort based on timestamp
@@ -293,7 +294,8 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes m
 }
 
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyExtensionPolicy, route RouteContext,
-	xdsIR XdsIRMap, resources *Resources) error {
+	xdsIR XdsIRMap, resources *Resources,
+) error {
 	var (
 		extProcs  []ir.ExtProc
 		wasms     []ir.Wasm
@@ -343,7 +345,8 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 }
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.EnvoyExtensionPolicy,
-	gateway *GatewayContext, xdsIR XdsIRMap, resources *Resources) error {
+	gateway *GatewayContext, xdsIR XdsIRMap, resources *Resources,
+) error {
 	var (
 		extProcs  []ir.ExtProc
 		wasms     []ir.Wasm
@@ -398,7 +401,8 @@ func (t *Translator) buildExtProc(
 	policyNamespacedName types.NamespacedName,
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
-	resources *Resources) (*ir.ExtProc, error) {
+	resources *Resources,
+) (*ir.ExtProc, error) {
 	var (
 		backendRef *gwapiv1.BackendObjectReference
 		ds         *ir.DestinationSetting
