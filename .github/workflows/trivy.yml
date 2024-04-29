@@ -1,4 +1,4 @@
-name: trivy
+name: Trivy
 
 on:
   push:

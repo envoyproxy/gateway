@@ -82,7 +82,6 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			} else {
 				t.Errorf("expected error when connection limit is reached")
 			}
-
 		})
 	},
 }

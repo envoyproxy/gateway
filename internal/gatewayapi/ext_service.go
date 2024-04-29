@@ -26,7 +26,8 @@ func (t *Translator) processExtServiceDestination(
 	policyNamespacedName types.NamespacedName,
 	policyKind string,
 	protocol ir.AppProtocol,
-	resources *Resources) (*ir.DestinationSetting, error) {
+	resources *Resources,
+) (*ir.DestinationSetting, error) {
 	var (
 		endpoints   []*ir.DestinationEndpoint
 		addrType    *ir.DestinationAddressType

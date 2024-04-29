@@ -82,7 +82,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
-				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
+				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
+			},
+		},
 		OutlierDetection:              &clusterv3.OutlierDetection{},
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
 	}
@@ -191,7 +193,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
-
 	}
 
 	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
@@ -459,13 +460,11 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 
 		if args.timeout != nil && args.timeout.HTTP != nil {
 			if args.timeout.HTTP.ConnectionIdleTimeout != nil {
-				protocolOptions.CommonHttpProtocolOptions.IdleTimeout =
-					durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
+				protocolOptions.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
 			}
 
 			if args.timeout.HTTP.MaxConnectionDuration != nil {
-				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration =
-					durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
+				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
 			}
 		}
 
@@ -626,5 +625,4 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 	}
 
 	return ka
-
 }
