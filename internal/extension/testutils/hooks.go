@@ -103,7 +103,6 @@ func (c *XDSHookClient) PostVirtualHostModifyHook(vh *routeV3.VirtualHost) (*rou
 // A more useful use-case for an extension would be looping through the FilterChains to find the
 // HTTPConnectionManager(s) and inject a custom HTTPFilter, but that for testing purposes we don't need to make a complex change
 func (c *XDSHookClient) PostHTTPListenerModifyHook(l *listenerV3.Listener) (*listenerV3.Listener, error) {
-
 	// Only make the change when the listener's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
 	if l.Name == "extension-post-xdslistener-hook-error" {
@@ -120,7 +119,6 @@ func (c *XDSHookClient) PostHTTPListenerModifyHook(l *listenerV3.Listener) (*lis
 
 // PostTranslateModifyHook inserts and overrides some clusters/secrets
 func (c *XDSHookClient) PostTranslateModifyHook(clusters []*clusterV3.Cluster, secrets []*tlsV3.Secret) ([]*clusterV3.Cluster, []*tlsV3.Secret, error) {
-
 	extensionSvcEndpoint := &endpointV3.LbEndpoint_Endpoint{
 		Endpoint: &endpointV3.Endpoint{
 			Address: &coreV3.Address{

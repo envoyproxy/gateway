@@ -213,7 +213,8 @@ func TestCompareSvc(t *testing.T) {
 					Type: "NodePort",
 				},
 			},
-		}, {
+		},
+		{
 			// Only Spec.Ports[*].Port is different
 			ExpectRet: false,
 			NewSvc: &corev1.Service{
@@ -298,7 +299,8 @@ func TestCompareSvc(t *testing.T) {
 					Type: "ClusterIP",
 				},
 			},
-		}, {
+		},
+		{
 			// Finalizers field differs
 			ExpectRet: true,
 			NewSvc: &corev1.Service{

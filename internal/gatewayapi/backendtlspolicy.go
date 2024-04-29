@@ -21,7 +21,8 @@ func (t *Translator) processBackendTLSPolicy(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1a2.ParentReference,
-	resources *Resources) *ir.TLSUpstreamConfig {
+	resources *Resources,
+) *ir.TLSUpstreamConfig {
 	tlsBundle, err := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, backendRef, backendNamespace)
 	if err == nil && tlsBundle == nil {
 		return nil
@@ -108,7 +109,6 @@ func (t *Translator) processBackendTLSPolicy(
 }
 
 func backendTLSTargetMatched(policy gwapiv1a2.BackendTLSPolicy, target gwapiv1a2.PolicyTargetReferenceWithSectionName) bool {
-
 	policyTarget := policy.Spec.TargetRef
 
 	if target.Group == policyTarget.Group &&
@@ -134,7 +134,6 @@ func getBackendTLSPolicy(policies []*gwapiv1a2.BackendTLSPolicy, backendRef gwap
 }
 
 func getBackendTLSBundle(policies []*gwapiv1a2.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) (*ir.TLSUpstreamConfig, error) {
-
 	backendTLSPolicy := getBackendTLSPolicy(policies, backendRef, backendNamespace)
 
 	if backendTLSPolicy == nil {
