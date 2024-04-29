@@ -166,6 +166,8 @@ func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resourc
 ) error {
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 	if service == nil {
+		// nolint: stylecheck
+		// The error message is used in the status.conditions, so it should be capitalized.
 		return fmt.Errorf("Service %s/%s not found", serviceNamespace, string(backendRef.Name))
 	}
 	var portFound bool
