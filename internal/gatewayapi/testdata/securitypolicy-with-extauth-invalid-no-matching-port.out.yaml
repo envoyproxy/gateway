@@ -126,7 +126,7 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: TCP Port 80 not found on service default/http-backend.
+        message: 'ExtAuth: TCP Port 80 not found on service default/http-backend.'
         reason: Invalid
         status: "False"
         type: Accepted

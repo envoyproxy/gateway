@@ -126,8 +126,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Backend ref to Service envoy-gateway/http-backend not permitted by
-          any ReferenceGrant.
+        message: 'ExtAuth: backend ref to Service envoy-gateway/http-backend not permitted
+          by any ReferenceGrant.'
         reason: Invalid
         status: "False"
         type: Accepted

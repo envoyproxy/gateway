@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -13,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -310,7 +311,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	// Build IR
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
-			return errors.Wrap(err, "RateLimit")
+			return perr.WithMessage(err, "RateLimit")
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
@@ -324,7 +325,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
-			return errors.Wrap(err, "CircuitBreaker")
+			return perr.WithMessage(err, "CircuitBreaker")
 		}
 	}
 
@@ -333,7 +334,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
-			return errors.Wrap(err, "TCPKeepalive")
+			return perr.WithMessage(err, "TCPKeepalive")
 		}
 	}
 	if policy.Spec.Retry != nil {
@@ -344,7 +345,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 	if policy.Spec.Timeout != nil {
 		if to, err = t.buildTimeout(policy, nil); err != nil {
-			return errors.Wrap(err, "Timeout")
+			return perr.WithMessage(err, "Timeout")
 		}
 	}
 
@@ -385,7 +386,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					// some timeout setting originate from the route
 					if policy.Spec.Timeout != nil {
 						if to, err = t.buildTimeout(policy, r); err != nil {
-							return errors.Wrap(err, "Timeout")
+							return perr.WithMessage(err, "Timeout")
 						}
 						r.Timeout = to
 					}
@@ -418,7 +419,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	// Build IR
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
-			return errors.Wrap(err, "RateLimit")
+			return perr.WithMessage(err, "RateLimit")
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
@@ -432,7 +433,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
-			return errors.Wrap(err, "CircuitBreaker")
+			return perr.WithMessage(err, "CircuitBreaker")
 		}
 	}
 	if policy.Spec.FaultInjection != nil {
@@ -440,7 +441,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
-			return errors.Wrap(err, "TCPKeepalive")
+			return perr.WithMessage(err, "TCPKeepalive")
 		}
 	}
 	if policy.Spec.Retry != nil {
@@ -461,7 +462,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 
 	if policy.Spec.Timeout != nil {
 		if ct, err = t.buildTimeout(policy, nil); err != nil {
-			return errors.Wrap(err, "Timeout")
+			return perr.WithMessage(err, "Timeout")
 		}
 	}
 
@@ -557,7 +558,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 
 			if policy.Spec.Timeout != nil {
 				if ct, err = t.buildTimeout(policy, r); err != nil {
-					return errors.Wrap(err, "Timeout")
+					return perr.WithMessage(err, "Timeout")
 				}
 
 				if r.Timeout == nil {
@@ -1014,8 +1015,10 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) (*
 
 func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTTPRoute) (*ir.Timeout, error) {
 	var (
-		tto *ir.TCPTimeout
-		hto *ir.HTTPTimeout
+		tto  *ir.TCPTimeout
+		hto  *ir.HTTPTimeout
+		terr bool
+		errs error
 	)
 
 	pto := policy.Spec.Timeout
@@ -1023,11 +1026,12 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 	if pto.TCP != nil && pto.TCP.ConnectTimeout != nil {
 		d, err := time.ParseDuration(string(*pto.TCP.ConnectTimeout))
 		if err != nil {
-			return nil, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout)
-		}
-
-		tto = &ir.TCPTimeout{
-			ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+			terr = true
+			errs = errors.Join(errs, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
+		} else {
+			tto = &ir.TCPTimeout{
+				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+			}
 		}
 	}
 
@@ -1038,19 +1042,21 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
 			if err != nil {
-				return nil, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout)
+				terr = true
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
+			} else {
+				cit = ptr.To(metav1.Duration{Duration: d})
 			}
-
-			cit = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		if pto.HTTP.MaxConnectionDuration != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.MaxConnectionDuration))
 			if err != nil {
-				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration)
+				terr = true
+				errs = errors.Join(errs, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
+			} else {
+				mcd = ptr.To(metav1.Duration{Duration: d})
 			}
-
-			mcd = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		hto = &ir.HTTPTimeout{
@@ -1061,24 +1067,32 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 
 	// http request timeout is translated during the gateway-api route resource translation
 	// merge route timeout setting with backendtrafficpolicy timeout settings
-	if r != nil && r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
-		if hto == nil {
-			hto = &ir.HTTPTimeout{
-				RequestTimeout: r.Timeout.HTTP.RequestTimeout,
+	if terr {
+		if r != nil && r.Timeout != nil {
+			return r.Timeout.DeepCopy(), errs
+		}
+	} else {
+		// http request timeout is translated during the gateway-api route resource translation
+		// merge route timeout setting with backendtrafficpolicy timeout settings
+		if r != nil && r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
+			if hto == nil {
+				hto = &ir.HTTPTimeout{
+					RequestTimeout: r.Timeout.HTTP.RequestTimeout,
+				}
+			} else {
+				hto.RequestTimeout = r.Timeout.HTTP.RequestTimeout
 			}
-		} else {
-			hto.RequestTimeout = r.Timeout.HTTP.RequestTimeout
+		}
+
+		if hto != nil || tto != nil {
+			return &ir.Timeout{
+				TCP:  tto,
+				HTTP: hto,
+			}, nil
 		}
 	}
 
-	if hto != nil || tto != nil {
-		return &ir.Timeout{
-			TCP:  tto,
-			HTTP: hto,
-		}, nil
-	}
-
-	return nil, nil
+	return nil, errs
 }
 
 func int64ToUint32(in int64) (uint32, bool) {
