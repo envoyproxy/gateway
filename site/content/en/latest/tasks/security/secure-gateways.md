@@ -11,7 +11,7 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 ## Installation
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
@@ -312,7 +312,7 @@ This section gives a walkthrough to generate RSA and ECDSA derived certificates 
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
