@@ -51,7 +51,7 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: 'RateLimit: local rateLimit can not have more than one rule without
-          clientSelectors'
+          clientSelectors.'
         reason: Invalid
         status: "False"
         type: Accepted

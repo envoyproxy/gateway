@@ -24,7 +24,7 @@ envoyExtensionPolicies:
       conditions:
       - lastTransitionTime: null
         message: A valid port number corresponding to a port on the Service must be
-          specified
+          specified.
         reason: Invalid
         status: "False"
         type: Accepted

@@ -27,7 +27,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Target ref to Service backends/http-backend not permitted by any
-          ReferenceGrant
+          ReferenceGrant.
         reason: Invalid
         status: "False"
         type: Accepted

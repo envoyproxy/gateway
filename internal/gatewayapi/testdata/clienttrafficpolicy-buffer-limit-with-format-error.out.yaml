@@ -24,7 +24,7 @@ clientTrafficPolicies:
         sectionName: http-1
       conditions:
       - lastTransitionTime: null
-        message: Invalid BufferLimit value 500m
+        message: Invalid BufferLimit value 500m.
         reason: Invalid
         status: "False"
         type: Accepted

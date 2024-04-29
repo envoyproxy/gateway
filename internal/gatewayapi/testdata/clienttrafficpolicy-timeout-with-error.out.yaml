@@ -23,7 +23,7 @@ clientTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Time: unknown unit "sec" in duration "5sec"'
+        message: 'Time: unknown unit "sec" in duration "5sec".'
         reason: Invalid
         status: "False"
         type: Accepted

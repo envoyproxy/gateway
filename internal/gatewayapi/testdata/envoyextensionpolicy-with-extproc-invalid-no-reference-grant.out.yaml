@@ -26,7 +26,7 @@ envoyExtensionPolicies:
       conditions:
       - lastTransitionTime: null
         message: Backend ref to Service envoy-gateway/grpc-backend not permitted by
-          any ReferenceGrant
+          any ReferenceGrant.
         reason: Invalid
         status: "False"
         type: Accepted

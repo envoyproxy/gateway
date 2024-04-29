@@ -44,7 +44,7 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'RateLimit: local rateLimit does not support distinct HeaderMatch'
+        message: 'RateLimit: local rateLimit does not support distinct HeaderMatch.'
         reason: Invalid
         status: "False"
         type: Accepted

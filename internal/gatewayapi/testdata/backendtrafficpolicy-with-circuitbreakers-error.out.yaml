@@ -23,7 +23,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'CircuitBreaker: invalid MaxRequestsPerConnection value -1'
+        message: 'CircuitBreaker: invalid MaxRequestsPerConnection value -1.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -52,7 +52,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'CircuitBreaker: invalid MaxParallelRetries value -1'
+        message: 'CircuitBreaker: invalid MaxParallelRetries value -1.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -80,7 +80,7 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'CircuitBreaker: invalid MaxConnections value -1'
+        message: 'CircuitBreaker: invalid MaxConnections value -1.'
         reason: Invalid
         status: "False"
         type: Accepted
