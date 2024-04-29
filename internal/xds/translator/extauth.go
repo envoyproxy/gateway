@@ -29,8 +29,7 @@ func init() {
 	registerHTTPFilter(&extAuth{})
 }
 
-type extAuth struct {
-}
+type extAuth struct{}
 
 var _ httpFilter = &extAuth{}
 
@@ -212,7 +211,8 @@ func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
 
 // patchResources patches the cluster resources for the external auth services.
 func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}

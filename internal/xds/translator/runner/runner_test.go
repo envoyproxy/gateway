@@ -98,7 +98,6 @@ func TestRunner(t *testing.T) {
 		// Ensure that xds has no key, value pairs
 		return len(out) == 0
 	}, time.Second*5, time.Millisecond*50)
-
 }
 
 func TestRunner_withExtensionManager(t *testing.T) {

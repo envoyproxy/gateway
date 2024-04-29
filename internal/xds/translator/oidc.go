@@ -31,8 +31,7 @@ func init() {
 	registerHTTPFilter(&oidc{})
 }
 
-type oidc struct {
-}
+type oidc struct{}
 
 var _ httpFilter = &oidc{}
 
@@ -187,7 +186,8 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if err := createOAuth2TokenEndpointClusters(tCtx, routes); err != nil {
 		return err
 	}
@@ -200,7 +200,8 @@ func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
 // createOAuth2TokenEndpointClusters creates token endpoint clusters from the
 // provided routes, if needed.
 func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -236,9 +237,10 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 
 		ds = &ir.DestinationSetting{
 			Weight: ptr.To[uint32](1),
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(
-				cluster.hostname,
-				cluster.port),
+			Endpoints: []*ir.DestinationEndpoint{
+				ir.NewDestEndpoint(
+					cluster.hostname,
+					cluster.port),
 			},
 		}
 

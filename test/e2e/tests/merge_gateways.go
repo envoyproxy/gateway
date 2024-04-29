@@ -146,6 +146,5 @@ var MergeGatewaysTest = suite.ConformanceTest{
 				Namespace: ns,
 			})
 		})
-
 	},
 }
