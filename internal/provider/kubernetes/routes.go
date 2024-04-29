@@ -23,7 +23,8 @@ import (
 // processTLSRoutes finds TLSRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TLSRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayTLSRouteIndex, gatewayNamespaceName),
@@ -93,7 +94,8 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 // processGRPCRoutes finds GRPCRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the GRPCRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
 
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
@@ -203,7 +205,8 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 // processHTTPRoutes finds HTTPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the HTTPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
@@ -376,7 +379,8 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 // processTCPRoutes finds TCPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TCPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayTCPRouteIndex, gatewayNamespaceName),
@@ -446,7 +450,8 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 // processUDPRoutes finds UDPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the UDPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayUDPRouteIndex, gatewayNamespaceName),

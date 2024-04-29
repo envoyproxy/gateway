@@ -284,7 +284,6 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, noTokenReq, noTokenResp); err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
-
 		})
 	},
 }
