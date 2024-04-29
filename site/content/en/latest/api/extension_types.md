@@ -103,6 +103,22 @@ _Appears in:_
 | `responseTrailers` | _string array_ |  false  | ResponseTrailers defines response trailers to include in log entries sent to the access log service. |
 
 
+#### AccessLogFormatterType
+
+_Underlying type:_ _string_
+
+AccessLogFormatterType specifies the type of accesslog formatter.
+
+_Appears in:_
+- [ProxyAccessLogFormat](#proxyaccesslogformat)
+
+| Value | Description |
+| ----- | ----------- |
+| `Cel` | AccessLogFormatterTypeCel defines the Cel formatter.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto<br /> | 
+| `Metadata` | AccessLogFormatterTypeMetadata defines the Metadata formatter.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto<br /> | 
+| `ReqWithoutQuery` | AccessLogFormatterTypeReqWithoutQuery defines the ReqWithoutQuery formatter.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/req_without_query/v3/req_without_query.proto<br /> | 
+
+
 #### ActiveHealthCheck
 
 
@@ -2315,6 +2331,7 @@ _Appears in:_
 | `type` | _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ |  true  | Type defines the type of accesslog format. |
 | `text` | _string_ |  false  | Text defines the text accesslog format, following Envoy accesslog formatting,<br />It's required when the format type is "Text".<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 | `json` | _object (keys:string, values:string)_ |  false  | JSON is additional attributes that describe the specific event occurrence.<br />Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />can be used as values for fields within the Struct.<br />It's required when the format type is "JSON". |
+| `formatters` | _[AccessLogFormatterType](#accesslogformattertype) array_ |  false  | Formatters defines a collection of [accesslog formatter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/substitution_format_string.proto#envoy-v3-api-field-config-core-v3-substitutionformatstring-formatters)<br />that enable additional [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />that can be used in the accesslog format when accesslog sinks only contain "File".<br />Valid AccessLogFormatterType values are<br />"Cel"<br />"Metadata"<br />"ReqWithoutQuery" |
 
 
 #### ProxyAccessLogFormatType

@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -224,6 +225,32 @@ func TestProcessMetrics(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			got := processMetrics(c.proxy)
 			assert.Equal(t, c.expected, got)
+		})
+	}
+}
+
+func Test_makeAccessLogFormatters(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []egcfgv1a1.AccessLogFormatterType
+		want []ir.AccessLogFormatterType
+	}{
+		{
+			name: "no duplicates",
+			in:   []egcfgv1a1.AccessLogFormatterType{egcfgv1a1.AccessLogFormatterTypeCel, egcfgv1a1.AccessLogFormatterTypeMetadata},
+			want: []ir.AccessLogFormatterType{ir.AccessLogFormatterTypeCel, ir.AccessLogFormatterTypeMetadata},
+		},
+		{
+			name: "with duplicates",
+			in:   []egcfgv1a1.AccessLogFormatterType{egcfgv1a1.AccessLogFormatterTypeReqWithoutQuery, egcfgv1a1.AccessLogFormatterTypeMetadata, egcfgv1a1.AccessLogFormatterTypeReqWithoutQuery},
+			want: []ir.AccessLogFormatterType{ir.AccessLogFormatterTypeMetadata, ir.AccessLogFormatterTypeReqWithoutQuery},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := makeAccessLogFormatters(tt.in); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("makeAccessLogFormatters() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

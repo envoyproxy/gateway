@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -198,6 +199,11 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 						Format: accessLog.Format.Text,
 						Path:   sink.File.Path,
 					}
+
+					if accessLog.Format.Formatters != nil {
+						al.Formatters = makeAccessLogFormatters(accessLog.Format.Formatters)
+					}
+
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
 					if len(accessLog.Format.JSON) == 0 {
@@ -209,6 +215,11 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 						JSON: accessLog.Format.JSON,
 						Path: sink.File.Path,
 					}
+
+					if accessLog.Format.Formatters != nil {
+						al.Formatters = makeAccessLogFormatters(accessLog.Format.Formatters)
+					}
+
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
 			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
@@ -292,4 +303,20 @@ func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
 		EnablePerEndpointStats: envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
 	}
+}
+
+func makeAccessLogFormatters(in []egv1a1.AccessLogFormatterType) []ir.AccessLogFormatterType {
+	formatterSet := sets.NewString()
+
+	for _, formatter := range in {
+		formatterSet.Insert(string(formatter))
+	}
+
+	irFormatters := make([]ir.AccessLogFormatterType, 0, formatterSet.Len())
+
+	for _, formatter := range formatterSet.List() {
+		irFormatters = append(irFormatters, ir.AccessLogFormatterType(formatter))
+	}
+
+	return irFormatters
 }

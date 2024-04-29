@@ -14,6 +14,9 @@ import (
 	fileaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	grpcaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/grpc/v3"
 	otelaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/open_telemetry/v3"
+	celformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/cel/v3"
+	metadataformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/metadata/v3"
+	reqwithoutqueryformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/req_without_query/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	"golang.org/x/exp/maps"
@@ -74,16 +77,23 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			format = *text.Format
 		}
 
-		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
-			LogFormat: &cfgcore.SubstitutionFormatString{
-				Format: &cfgcore.SubstitutionFormatString_TextFormatSource{
-					TextFormatSource: &cfgcore.DataSource{
-						Specifier: &cfgcore.DataSource_InlineString{
-							InlineString: format,
-						},
+		logFormat := &cfgcore.SubstitutionFormatString{
+			Format: &cfgcore.SubstitutionFormatString_TextFormatSource{
+				TextFormatSource: &cfgcore.DataSource{
+					Specifier: &cfgcore.DataSource_InlineString{
+						InlineString: format,
 					},
 				},
 			},
+		}
+
+		formatters := convertToFormatterList(text.Formatters)
+		if len(formatters) > 0 {
+			logFormat.Formatters = formatters
+		}
+
+		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
+			LogFormat: logFormat,
 		}
 
 		// TODO: find a better way to handle this
@@ -113,14 +123,21 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			}
 		}
 
+		logFormat := &cfgcore.SubstitutionFormatString{
+			Format: &cfgcore.SubstitutionFormatString_JsonFormat{
+				JsonFormat: jsonFormat,
+			},
+		}
+
+		formatters := convertToFormatterList(json.Formatters)
+		if len(formatters) > 0 {
+			logFormat.Formatters = formatters
+		}
+
 		filelog := &fileaccesslog.FileAccessLog{
 			Path: json.Path,
 			AccessLogFormat: &fileaccesslog.FileAccessLog_LogFormat{
-				LogFormat: &cfgcore.SubstitutionFormatString{
-					Format: &cfgcore.SubstitutionFormatString_JsonFormat{
-						JsonFormat: jsonFormat,
-					},
-				},
+				LogFormat: logFormat,
 			},
 		}
 
@@ -182,6 +199,57 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 	}
 
 	return accessLogs
+}
+
+const (
+	celAccessLogFormatter             = "envoy.formatter.cel"
+	metadataAccessLogFormatter        = "envoy.formatter.metadata"
+	reqWithoutQueryAccessLogFormatter = "envoy.formatter.req_without_query"
+)
+
+// convertToFormatterList converts a list of ir access log formatter to xds access log formatters.
+func convertToFormatterList(irFormatters []ir.AccessLogFormatterType) []*cfgcore.TypedExtensionConfig {
+	formatters := make([]*cfgcore.TypedExtensionConfig, 0, len(irFormatters))
+
+	for _, formatter := range irFormatters {
+		switch formatter {
+		case ir.AccessLogFormatterTypeCel:
+			cel := &celformatter.Cel{}
+			celAny, err := anypb.New(cel)
+			if err != nil {
+				continue
+			}
+
+			formatters = append(formatters, &cfgcore.TypedExtensionConfig{
+				Name:        celAccessLogFormatter,
+				TypedConfig: celAny,
+			})
+		case ir.AccessLogFormatterTypeMetadata:
+			metadata := &metadataformatter.Metadata{}
+			metadataAny, err := anypb.New(metadata)
+			if err != nil {
+				continue
+			}
+
+			formatters = append(formatters, &cfgcore.TypedExtensionConfig{
+				Name:        metadataAccessLogFormatter,
+				TypedConfig: metadataAny,
+			})
+		case ir.AccessLogFormatterTypeReqWithoutQuery:
+			reqWithoutQuery := &reqwithoutqueryformatter.ReqWithoutQuery{}
+			reqWithoutQueryAny, err := anypb.New(reqWithoutQuery)
+			if err != nil {
+				continue
+			}
+
+			formatters = append(formatters, &cfgcore.TypedExtensionConfig{
+				Name:        reqWithoutQueryAccessLogFormatter,
+				TypedConfig: reqWithoutQueryAny,
+			})
+		}
+	}
+
+	return formatters
 }
 
 // read more here: https://opentelemetry.io/docs/specs/otel/resource/semantic_conventions/k8s/
