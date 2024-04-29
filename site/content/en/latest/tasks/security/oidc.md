@@ -4,7 +4,7 @@ title: "OIDC Authentication"
 
 This task provides instructions for configuring [OpenID Connect (OIDC)][oidc] authentication.
 OpenID Connect (OIDC) is an authentication standard built on top of OAuth 2.0.
-It enables client applications to rely on authentication that is performed by an OpenID Connect Provider (OP)
+It enables EG to rely on authentication that is performed by an OpenID Connect Provider (OP)
 to verify the identity of a user.
 
 Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure OIDC
@@ -13,10 +13,10 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-EG OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../security/secure-gateways) guide
+EG OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../secure-gateways) guide
 to generate the TLS certificates and update the Gateway configuration to add an HTTPS listener.
 
 Verify the Gateway status:
@@ -112,13 +112,12 @@ and the Client Secret must be stored in the key "client-secret".
 Note: please replace the ${CLIENT_SECRET} with the actual Client Secret that you got from the previous step.
 
 ```shell
-$ kubectl create secret generic my-app-client-secret --from-literal=client-secret=${CLIENT_SECRET}
-secret "my-app-client-secret" created
+kubectl create secret generic my-app-client-secret --from-literal=client-secret=${CLIENT_SECRET}
 ```
 
 ### Create a SecurityPolicy
 
-Please notice that the `redirectURL` and `logoutPath` must match the target HTTPRoute. In this example, the target
+**Please notice that the `redirectURL` and `logoutPath` must match the target HTTPRoute.** In this example, the target
 HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed 
 with `https://www.example.com:8443/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication 
 will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed 
@@ -225,8 +224,8 @@ If you haven't created a kubernetes secret, follow the steps in the previous sec
 
 ### Create a SecurityPolicy
 
-Create or update the SecurityPolicy to target the Gateway instead of the HTTPRoute. Please notice that the `redirectURL` 
-and `logoutPath` must match one of the HTTPRoutes associated with the Gateway. In this example, the target Gateway has 
+Create or update the SecurityPolicy to target the Gateway instead of the HTTPRoute. **Please notice that the `redirectURL` 
+and `logoutPath` must match one of the HTTPRoutes associated with the Gateway.** In this example, the target Gateway has 
 two HTTPRoutes associated with it, one with the host `www.example.com` and the path `/myapp`, and the other with the host
 `www.example.com` and the path `/`. Either one of the HTTPRoutes can be used to match the `redirectURL` and `logoutPath`.
 
@@ -314,10 +313,10 @@ kubectl delete httproute/myapp
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](../../../../contributions/develop) to get involved in the project.
 
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
-[SecurityPolicy]: ../../../contributions/design/security-policy
+[SecurityPolicy]: ../../../../contributions/design/security-policy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
