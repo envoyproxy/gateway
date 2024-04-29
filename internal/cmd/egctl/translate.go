@@ -161,12 +161,14 @@ func getValidOutputTypesStr() string {
 }
 
 func validResourceTypes() []envoyConfigType {
-	return []envoyConfigType{BootstrapEnvoyConfigType,
+	return []envoyConfigType{
+		BootstrapEnvoyConfigType,
 		EndpointEnvoyConfigType,
 		ClusterEnvoyConfigType,
 		ListenerEnvoyConfigType,
 		RouteEnvoyConfigType,
-		AllEnvoyConfigType}
+		AllEnvoyConfigType,
+	}
 }
 
 func isValidResourceType(outType envoyConfigType) bool {

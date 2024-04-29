@@ -59,7 +59,8 @@ type gatewayAPIReconciler struct {
 
 // newGatewayAPIController
 func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater,
-	resources *message.ProviderResources) error {
+	resources *message.ProviderResources,
+) error {
 	ctx := context.Background()
 
 	// Gather additional resources to watch from registered extensions
@@ -374,7 +375,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 // - Secrets for OIDC and BasicAuth
 // - BackendRefs for ExAuth
 func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+) {
 	// we don't return errors from this method, because we want to continue reconciling
 	// the rest of the SecurityPolicies despite that one reference is invalid. This
 	// allows Envoy Gateway to continue serving traffic even if some SecurityPolicies
@@ -477,7 +479,6 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 		types.NamespacedName{Namespace: r.namespace, Name: oidcHMACSecretName},
 		&secret,
 	)
-
 	// We don't return an error here, because we want to continue reconciling
 	// despite that the OIDC HMAC secret can't be found.
 	// If the OIDC HMAC Secret is missing, the SecurityPolicy with OIDC will be
@@ -550,7 +551,8 @@ func (r *gatewayAPIReconciler) processSecretRef(
 // processCtpConfigMapRefs adds the referenced ConfigMaps in ClientTrafficPolicies
 // to the resourceTree
 func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+) {
 	for _, policy := range resourceTree.ClientTrafficPolicies {
 		tls := policy.Spec.TLS
 
@@ -734,7 +736,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 							gtw.Namespace,
 							gtw.Name,
 							certRef); err != nil {
-
 							r.log.Error(err,
 								"failed to process TLS SecretRef for gateway",
 								"gateway", gtw, "secretRef", certRef)
@@ -799,7 +800,8 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 
 // processClientTrafficPolicies adds ClientTrafficPolicies to the resourceTree
 func (r *gatewayAPIReconciler) processClientTrafficPolicies(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+) error {
 	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
 	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
 		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
@@ -837,7 +839,8 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 
 // processSecurityPolicies adds SecurityPolicies and their referenced resources to the resourceTree
 func (r *gatewayAPIReconciler) processSecurityPolicies(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+) error {
 	securityPolicies := egv1a1.SecurityPolicyList{}
 	if err := r.client.List(ctx, &securityPolicies); err != nil {
 		return fmt.Errorf("error listing SecurityPolicies: %w", err)
@@ -861,7 +864,8 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 
 // processBackendTLSPolicies adds BackendTLSPolicies and their referenced resources to the resourceTree
 func (r *gatewayAPIReconciler) processBackendTLSPolicies(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+) error {
 	backendTLSPolicies := gwapiv1a2.BackendTLSPolicyList{}
 	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
@@ -1435,7 +1439,8 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyConfigMapRefs(ctx context.
 
 // processEnvoyExtensionPolicies adds EnvoyExtensionPolicies and their referenced resources to the resourceTree
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+) error {
 	envoyExtensionPolicies := egv1a1.EnvoyExtensionPolicyList{}
 	if err := r.client.List(ctx, &envoyExtensionPolicies); err != nil {
 		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
@@ -1459,7 +1464,8 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 // to the resourceTree
 // - BackendRefs for ExtProcs
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+) {
 	// we don't return errors from this method, because we want to continue reconciling
 	// the rest of the EnvoyExtensionPolicies despite that one reference is invalid. This
 	// allows Envoy Gateway to continue serving traffic even if some EnvoyExtensionPolicies

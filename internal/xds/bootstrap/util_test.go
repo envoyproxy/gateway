@@ -18,9 +18,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestApplyBootstrapConfig(t *testing.T) {
 	str, _ := readTestData("enable-prometheus")
@@ -56,7 +54,7 @@ func TestApplyBootstrapConfig(t *testing.T) {
 
 			if *overrideTestData {
 				// nolint:gosec
-				err = os.WriteFile(path.Join("testdata", "merge", fmt.Sprintf("%s.out.yaml", tc.name)), []byte(data), 0644)
+				err = os.WriteFile(path.Join("testdata", "merge", fmt.Sprintf("%s.out.yaml", tc.name)), []byte(data), 0o644)
 				require.NoError(t, err)
 				return
 			}

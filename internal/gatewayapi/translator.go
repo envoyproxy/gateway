@@ -115,7 +115,8 @@ func newTranslateResult(gateways []*GatewayContext,
 	securityPolicies []*egv1a1.SecurityPolicy,
 	backendTLSPolicies []*egv1a2.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
-	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
+	xdsIR XdsIRMap, infraIR InfraIRMap,
+) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
 		InfraIR: infraIR,
@@ -220,7 +221,6 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
 		xdsIR, infraIR)
-
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
