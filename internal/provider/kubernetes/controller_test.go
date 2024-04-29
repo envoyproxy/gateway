@@ -462,7 +462,8 @@ func TestProcessParamsRef(t *testing.T) {
 
 			// Process the test case gatewayclasses.
 			resourceTree := gatewayapi.NewResources()
-			err := r.processParamsRef(context.Background(), tc.gc, resourceTree)
+			resourceMap := newResourceMapping()
+			err := r.processParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
