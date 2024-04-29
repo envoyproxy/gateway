@@ -35,8 +35,7 @@ func init() {
 	registerHTTPFilter(&localRateLimit{})
 }
 
-type localRateLimit struct {
-}
+type localRateLimit struct{}
 
 var _ httpFilter = &localRateLimit{}
 
@@ -106,7 +105,8 @@ func routeContainsLocalRateLimit(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*localRateLimit) patchResources(*types.ResourceVersionTable,
-	[]*ir.HTTPRoute) error {
+	[]*ir.HTTPRoute,
+) error {
 	return nil
 }
 
@@ -188,7 +188,8 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 }
 
 func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
-	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor, error) {
+	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor, error,
+) {
 	var rateLimits []*routev3.RateLimit
 	var descriptors []*rlv3.LocalRateLimitDescriptor
 
