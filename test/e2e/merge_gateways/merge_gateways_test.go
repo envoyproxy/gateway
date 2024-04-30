@@ -53,7 +53,7 @@ func TestMergeGateways(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		RunTest:              *flags.RunTest,
 		SkipTests: []string{
-			tests.MergeGatewaysTest.ShortName, // this test is not stable, disable it for now
+			tests.MergeGatewaysTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3290
 		},
 	})
 

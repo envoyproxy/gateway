@@ -52,7 +52,7 @@ func TestE2E(t *testing.T) {
 		FS:                   &Manifests,
 		RunTest:              *flags.RunTest,
 		SkipTests: []string{
-			tests.ClientTimeoutTest.ShortName, // this test is not stable, disable it for now
+			tests.ClientTimeoutTest.ShortName, // https://github.com/envoyproxy/gateway/issues/2720
 		},
 	})
 
