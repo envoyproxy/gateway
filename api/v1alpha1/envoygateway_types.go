@@ -506,7 +506,6 @@ type ExtensionTLS struct {
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.
 type EnvoyGatewayAdmin struct {
-
 	// Address defines the address of Envoy Gateway Admin Server.
 	//
 	// +optional

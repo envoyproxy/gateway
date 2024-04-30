@@ -32,10 +32,7 @@ var (
 )
 
 func ratelimitConfigCommand() *cobra.Command {
-
-	var (
-		namespace string
-	)
+	var namespace string
 
 	rlConfigCmd := &cobra.Command{
 		Use:     "envoy-ratelimit",
@@ -57,7 +54,6 @@ func ratelimitConfigCommand() *cobra.Command {
 }
 
 func runRateLimitConfig(c *cobra.Command, ns string) error {
-
 	cli, err := getCLIClient()
 	if err != nil {
 		return err
@@ -73,7 +69,6 @@ func runRateLimitConfig(c *cobra.Command, ns string) error {
 }
 
 func retrieveRateLimitConfig(cli kubernetes.CLIClient, ns string) ([]byte, error) {
-
 	// Before retrieving the rate limit configuration
 	// we make sure that the global rate limit feature is enabled
 	if enable, err := checkEnableGlobalRateLimit(cli); !enable {
@@ -103,7 +98,6 @@ func retrieveRateLimitConfig(cli kubernetes.CLIClient, ns string) ([]byte, error
 // fetchRunningRateLimitPods gets the rate limit Pods, based on the labelSelectors.
 // It further filters out only those rate limit Pods that are in "Running" state.
 func fetchRunningRateLimitPods(cli kubernetes.CLIClient, namespace string, labelSelector []string) ([]types.NamespacedName, error) {
-
 	// Since multiple replicas of the rate limit are configured to be equal,
 	// we do not need to use the pod name to obtain the specified pod.
 	rlPods, err := cli.PodsForSelector(namespace, labelSelector...)
@@ -134,7 +128,6 @@ func fetchRunningRateLimitPods(cli kubernetes.CLIClient, namespace string, label
 
 // checkRateLimitPodStatusReady Check that the rate limit pod is ready
 func checkRateLimitPodStatusReady(status corev1.PodStatus) bool {
-
 	if status.Phase != corev1.PodRunning {
 		return false
 	}
@@ -152,7 +145,6 @@ func checkRateLimitPodStatusReady(status corev1.PodStatus) bool {
 // extractRateLimitConfig After turning on port forwarding through PortForwarder,
 // construct a request and send it to the rate limit Pod to obtain relevant configuration information.
 func extractRateLimitConfig(fw kubernetes.PortForwarder, rlPod types.NamespacedName) ([]byte, error) {
-
 	if err := fw.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start port forwarding for pod %s/%s: %w", rlPod.Namespace, rlPod.Name, err)
 	}
@@ -168,7 +160,6 @@ func extractRateLimitConfig(fw kubernetes.PortForwarder, rlPod types.NamespacedN
 
 // checkEnableGlobalRateLimit Check whether the Global Rate Limit function is enabled
 func checkEnableGlobalRateLimit(cli kubernetes.CLIClient) (bool, error) {
-
 	kubeCli := cli.Kube()
 	cm, err := kubeCli.CoreV1().
 		ConfigMaps(defaultRateLimitNamespace).

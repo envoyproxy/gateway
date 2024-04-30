@@ -17,9 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
-var (
-	adminLogger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("admin")
-)
+var adminLogger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("admin")
 
 func Init(cfg *config.Server) error {
 	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
