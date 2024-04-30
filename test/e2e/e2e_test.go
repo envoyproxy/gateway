@@ -51,6 +51,9 @@ func TestE2E(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &Manifests,
 		RunTest:              *flags.RunTest,
+		SkipTests: []string{
+			tests.ClientTimeoutTest.ShortName, // https://github.com/envoyproxy/gateway/issues/2720
+		},
 	})
 
 	cSuite.Setup(t)

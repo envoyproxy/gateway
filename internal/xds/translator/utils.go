@@ -13,16 +13,14 @@ import (
 	"strconv"
 	"strings"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-
-	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -144,13 +142,6 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 		endpointType = EndpointTypeDNS
 	} else {
 		endpointType = EndpointTypeStatic
-	}
-
-	if rd.Settings[0].TLS != nil {
-		tSocket, err = processTLSSocket(rd.Settings[0].TLS, tCtx)
-		if err != nil {
-			return err
-		}
 	}
 
 	if err = addXdsCluster(tCtx, &xdsClusterArgs{
