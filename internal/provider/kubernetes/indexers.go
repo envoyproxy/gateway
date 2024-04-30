@@ -38,7 +38,7 @@ const (
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
 	configMapBtlsIndex               = "configMapBtlsIndex"
-	backendEnvoyExtensionPolicyIndex = "backendSecurityPolicyIndex"
+	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -535,12 +535,16 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 	var ret []string
 
 	for _, ep := range envoyExtensionPolicy.Spec.ExtProc {
-		backendRef := ep.BackendRef.BackendObjectReference
-		ret = append(ret,
-			types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
-				Name:      string(backendRef.Name),
-			}.String())
+
+		for _, br := range ep.BackendRefs {
+			backendRef := br.BackendObjectReference
+			ret = append(ret,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(backendRef.Name),
+				}.String())
+		}
+
 	}
 
 	return ret

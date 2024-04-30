@@ -23,9 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
-var (
-	logger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("shutdown-manager")
-)
+var logger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("shutdown-manager")
 
 const (
 	// ShutdownManagerPort is the port Envoy shutdown manager will listen on.
@@ -88,7 +86,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 // container to block until ready to terminate. After the graceful drain process
 // has completed a file will be written to indicate shutdown readiness.
 func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, readyFile string) {
-	var startTime = time.Now()
+	startTime := time.Now()
 
 	logger.Info("received shutdown ready request")
 
@@ -119,8 +117,8 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 // it will initiate a graceful drain sequence on the Envoy proxy and block until
 // connections are drained or a timeout is exceeded.
 func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAtConnections int) error {
-	var startTime = time.Now()
-	var allowedToExit = false
+	startTime := time.Now()
+	allowedToExit := false
 
 	// Reconfigure logger to write to stdout of main process if running in Kubernetes
 	if _, k8s := os.LookupEnv("KUBERNETES_SERVICE_HOST"); k8s && os.Getpid() != 1 {

@@ -810,7 +810,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "valid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-
 				rules := make([]egv1a1.RateLimitRule, 64)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{
@@ -843,7 +842,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "invalid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-
 				rules := make([]egv1a1.RateLimitRule, 65)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{

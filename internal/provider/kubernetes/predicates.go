@@ -63,7 +63,6 @@ type NamespaceGetter interface {
 
 // checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
 func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
-
 	var nsString string
 	// TODO: it requires extra condition validate cluster resources or resources without namespace?
 	if nsString = obj.GetNamespace(); len(nsString) == 0 {

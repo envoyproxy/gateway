@@ -176,8 +176,7 @@ type CustomHeaderExtensionSettings struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct {
-}
+type HTTP3Settings struct{}
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {
