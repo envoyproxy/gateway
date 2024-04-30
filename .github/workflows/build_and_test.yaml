@@ -20,7 +20,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
     # Generate the install manifests first so it can checked
     # for errors while running `make -k lint`
@@ -31,21 +31,21 @@ jobs:
   gen-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
   coverage-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     # test
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, gen-check, license-check, coverage-test]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
@@ -82,7 +82,7 @@ jobs:
       matrix:
         version: [ v1.26.14, v1.27.11, v1.28.7, v1.29.2 ]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -110,7 +110,7 @@ jobs:
       matrix:
         version: [ v1.26.14, v1.27.11, v1.28.7, v1.29.2 ]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
