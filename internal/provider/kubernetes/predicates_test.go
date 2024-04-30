@@ -530,9 +530,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtProc: []v1alpha1.ExtProc{
 							{
-								BackendRef: v1alpha1.ExtProcBackendRef{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "ext-proc-service",
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-proc-service",
+										},
 									},
 								},
 							},
@@ -559,9 +561,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtProc: []v1alpha1.ExtProc{
 							{
-								BackendRef: v1alpha1.ExtProcBackendRef{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "ext-proc-service",
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-proc-service",
+										},
 									},
 								},
 							},

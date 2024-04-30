@@ -52,6 +52,9 @@ func TestEGUpgrade(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &e2e.Manifests,
 		RunTest:              *flags.RunTest,
+		SkipTests: []string{
+			tests.EnvoyShutdownTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3262
+		},
 	})
 
 	cSuite.Setup(t)
