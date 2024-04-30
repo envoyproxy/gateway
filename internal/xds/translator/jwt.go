@@ -34,8 +34,7 @@ func init() {
 	registerHTTPFilter(&jwt{})
 }
 
-type jwt struct {
-}
+type jwt struct{}
 
 var _ httpFilter = &jwt{}
 
@@ -134,7 +133,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 			for _, claimToHeader := range irProvider.ClaimToHeaders {
 				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
 					HeaderName: claimToHeader.Header,
-					ClaimName:  claimToHeader.Claim}
+					ClaimName:  claimToHeader.Claim,
+				}
 				claimToHeaders = append(claimToHeaders, claimToHeader)
 			}
 			jwtProvider := &jwtauthnv3.JwtProvider{
@@ -242,7 +242,8 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 
 		routeCfgProto := &jwtauthnv3.PerRouteConfig{
-			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name}}
+			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
+		}
 
 		routeCfgAny, err := anypb.New(routeCfgProto)
 		if err != nil {

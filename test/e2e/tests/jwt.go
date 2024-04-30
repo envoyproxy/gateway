@@ -170,6 +170,5 @@ var OptionalJWTTest = suite.ConformanceTest{
 				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 			})
 		}
-
 	},
 }
