@@ -34,7 +34,8 @@ const (
 // computeGatewayClassAcceptedCondition computes the GatewayClass Accepted status condition.
 func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 	accepted bool,
-	reason, msg string) metav1.Condition {
+	reason, msg string,
+) metav1.Condition {
 	switch accepted {
 	case true:
 		return metav1.Condition{

@@ -132,7 +132,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			continue
 		}
 
-		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(httpRoute,
 				gwapiv1.RouteConditionAccepted,
@@ -391,7 +391,6 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if len(httpFiltersContext.ExtensionRefs) > 0 {
 		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
 	}
-
 }
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
@@ -424,7 +423,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
-		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection := t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(grpcRoute,
 				gwapiv1.RouteConditionAccepted,
@@ -801,7 +800,8 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 }
 
 func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *Resources,
-	xdsIR XdsIRMap) []*UDPRouteContext {
+	xdsIR XdsIRMap,
+) []*UDPRouteContext {
 	var relevantUDPRoutes []*UDPRouteContext
 
 	for _, u := range udpRoutes {
@@ -932,7 +932,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 }
 
 func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *Resources,
-	xdsIR XdsIRMap) []*TCPRouteContext {
+	xdsIR XdsIRMap,
+) []*TCPRouteContext {
 	var relevantTCPRoutes []*TCPRouteContext
 
 	for _, tcp := range tcpRoutes {
@@ -1068,7 +1069,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	parentRef *RouteParentContext,
 	route RouteContext,
-	resources *Resources) (ds *ir.DestinationSetting, backendWeight uint32) {
+	resources *Resources,
+) (ds *ir.DestinationSetting, backendWeight uint32) {
 	routeType := GetRouteType(route)
 	weight := uint32(1)
 	backendRef := GetBackendRef(backendRefContext)

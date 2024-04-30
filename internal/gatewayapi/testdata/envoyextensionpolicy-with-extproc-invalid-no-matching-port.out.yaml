@@ -7,8 +7,8 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend
+    - backendRefs:
+      - name: grpc-backend
         port: 4000
     targetRef:
       group: gateway.networking.k8s.io

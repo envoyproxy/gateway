@@ -48,14 +48,12 @@ const (
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
 )
 
-var (
-	// for the case when a route does not exist to upstream, hcm logs will not be present
-	listenerAccessLogFilter = &accesslog.AccessLogFilter{
-		FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
-			ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
-		},
-	}
-)
+// for the case when a route does not exist to upstream, hcm logs will not be present
+var listenerAccessLogFilter = &accesslog.AccessLogFilter{
+	FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
+		ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
+	},
+}
 
 func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLog {
 	if al == nil {

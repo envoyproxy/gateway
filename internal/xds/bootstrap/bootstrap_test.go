@@ -145,7 +145,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 
 			if *overrideTestData {
 				// nolint:gosec
-				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0644)
+				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0o644)
 				require.NoError(t, err)
 				return
 			}

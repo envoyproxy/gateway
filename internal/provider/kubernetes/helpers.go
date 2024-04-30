@@ -36,8 +36,8 @@ type ObjectKindNamespacedName struct {
 // is a Gateway.
 func validateParentRefs(ctx context.Context, client client.Client, namespace string,
 	gatewayClassController gwapiv1.GatewayController,
-	routeParentReferences []gwapiv1.ParentReference) ([]gwapiv1.Gateway, error) {
-
+	routeParentReferences []gwapiv1.ParentReference,
+) ([]gwapiv1.Gateway, error) {
 	var gateways []gwapiv1.Gateway
 	for i := range routeParentReferences {
 		ref := routeParentReferences[i]
