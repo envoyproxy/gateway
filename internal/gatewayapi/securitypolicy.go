@@ -735,9 +735,10 @@ func (t *Translator) buildBasicAuth(
 	resources *Resources,
 ) (*ir.BasicAuth, error) {
 	var (
-		basicAuth   = policy.Spec.BasicAuth
-		usersSecret *v1.Secret
-		err         error
+		basicAuth             = policy.Spec.BasicAuth
+		usersSecret           *v1.Secret
+		forwardUsernameHeader *string
+		err                   error
 	)
 
 	from := crossNamespaceFrom{
@@ -757,9 +758,14 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
+	if basicAuth.ForwardUsernameHeader != nil {
+		forwardUsernameHeader = (*string)(ptr.To(*basicAuth.ForwardUsernameHeader))
+	}
+
 	return &ir.BasicAuth{
-		Name:  irConfigName(policy),
-		Users: usersSecretBytes,
+		Name:                  irConfigName(policy),
+		Users:                 usersSecretBytes,
+		ForwardUsernameHeader: forwardUsernameHeader,
 	}, nil
 }
 

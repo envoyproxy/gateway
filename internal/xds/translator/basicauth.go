@@ -84,6 +84,11 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 			},
 		},
 	}
+
+	if basicAuth.ForwardUsernameHeader != nil {
+		basicAuthProto.ForwardUsernameHeader = *basicAuth.ForwardUsernameHeader
+	}
+
 	if err = basicAuthProto.ValidateAll(); err != nil {
 		return nil, err
 	}

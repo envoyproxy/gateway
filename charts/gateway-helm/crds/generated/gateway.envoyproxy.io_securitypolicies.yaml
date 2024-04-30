@@ -53,6 +53,13 @@ spec:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.
                 properties:
+                  forwardUsernameHeader:
+                    description: The name of the HTTP header that will be used to
+                      forward the username to the upstream server.
+                    maxLength: 256
+                    minLength: 1
+                    pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                    type: string
                   users:
                     description: |-
                       The Kubernetes secret which contains the username-password pairs in

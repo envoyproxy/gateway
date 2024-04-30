@@ -18,6 +18,7 @@
           name: envoy.filters.http.basic_auth
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
+            forwardUsernameHeader: x-basic-auth-user
             users:
               inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
         - name: envoy.filters.http.router

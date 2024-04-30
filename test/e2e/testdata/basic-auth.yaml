@@ -63,6 +63,7 @@ spec:
   basicAuth:
     users:
       name: "basic-auth-users-secret-1"
+    forwardUsernameHeader: x-basic-auth-user
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
