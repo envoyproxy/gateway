@@ -35,7 +35,7 @@ The Helm chart for Envoy Gateway
 | createNamespace | bool | `false` |  |
 | deployment.envoyGateway.image.repository | string | `"${ImageRepository}"` |  |
 | deployment.envoyGateway.image.tag | string | `"${ImageTag}"` |  |
-| deployment.envoyGateway.imagePullPolicy | string | `"Always"` |  |
+| deployment.envoyGateway.imagePullPolicy | string | `"IfNotPresent"` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |

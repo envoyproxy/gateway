@@ -174,4 +174,4 @@ jobs:
     - name: Build and Push EG Latest Helm Chart
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
-      run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+      run: IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
