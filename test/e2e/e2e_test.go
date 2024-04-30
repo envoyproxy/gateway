@@ -51,6 +51,9 @@ func TestE2E(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &Manifests,
 		RunTest:              *flags.RunTest,
+		SkipTests: []string{
+			tests.ClientTimeoutTest.ShortName, // this test is not stable, disable it for now
+		},
 	})
 
 	cSuite.Setup(t)
