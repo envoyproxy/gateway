@@ -11,7 +11,7 @@ spec:
     namespace: gateway-conformance-infra
   connection:
     connectionLimit:
-      value: 5
+      value: 3
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
