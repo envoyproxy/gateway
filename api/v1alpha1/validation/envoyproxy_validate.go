@@ -253,8 +253,6 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 			}
 		}
 
-		hasAccessLogFormatters := len(setting.Format.Formatters) > 0
-
 		for _, sink := range setting.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
@@ -265,11 +263,6 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
 				if sink.OpenTelemetry == nil {
 					err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
-					errs = append(errs, err)
-				}
-
-				if hasAccessLogFormatters {
-					err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type with formatters")
 					errs = append(errs, err)
 				}
 			}

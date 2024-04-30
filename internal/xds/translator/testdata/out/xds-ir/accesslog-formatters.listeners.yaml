@@ -33,7 +33,7 @@
           protocol: '%PROTOCOL%'
           response_code: '%RESPONSE_CODE%'
           start_time: '%START_TIME%'
-          test_key: METADATA(DYNAMIC:com.test.my_filter:test_key)
+          test_key: '%METADATA(DYNAMIC:com.test.my_filter:test_key)%'
       path: /dev/stdout
   - filter:
       responseFlagFilter:
@@ -123,7 +123,7 @@
                 protocol: '%PROTOCOL%'
                 response_code: '%RESPONSE_CODE%'
                 start_time: '%START_TIME%'
-                test_key: METADATA(DYNAMIC:com.test.my_filter:test_key)
+                test_key: '%METADATA(DYNAMIC:com.test.my_filter:test_key)%'
             path: /dev/stdout
         - name: envoy.access_loggers.file
           typedConfig:

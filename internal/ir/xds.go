@@ -1375,8 +1375,6 @@ type AccessLog struct {
 type TextAccessLog struct {
 	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 	Path   string  `json:"path" yaml:"path"`
-
-	Formatters []AccessLogFormatterType `json:"formatters,omitempty" yaml:"formatters,omitempty"`
 }
 
 // JSONAccessLog holds the configuration for JSON access logging.
@@ -1384,19 +1382,7 @@ type TextAccessLog struct {
 type JSONAccessLog struct {
 	JSON map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
 	Path string            `json:"path" yaml:"path"`
-
-	Formatters []AccessLogFormatterType `json:"formatters,omitempty" yaml:"formatters,omitempty"`
 }
-
-// AccessLogFormatterType defines the type of access log formatter.
-// +k8s:deepcopy-gen=true
-type AccessLogFormatterType egv1a1.AccessLogFormatterType
-
-const (
-	AccessLogFormatterTypeCel             = AccessLogFormatterType(egv1a1.AccessLogFormatterTypeCel)
-	AccessLogFormatterTypeMetadata        = AccessLogFormatterType(egv1a1.AccessLogFormatterTypeMetadata)
-	AccessLogFormatterTypeReqWithoutQuery = AccessLogFormatterType(egv1a1.AccessLogFormatterTypeReqWithoutQuery)
-)
 
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true

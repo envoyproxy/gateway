@@ -4,8 +4,6 @@ accesslog:
   - path: "/dev/stdout"
     format: |
       [%START_TIME%] "%CEL(request.method)% %CEL(request.path)% %CEL(request.protocol)%" %CEL(response.code)% %CEL(response.flags)% %CEL(request.total_size)% %CEL(response.total_size)% %CEL(request.duration)% %CEL(response.headers['X-ENVOY-UPSTREAM-SERVICE-TIME'])% "%CEL(request.headers['X-FORWARDED-FOR'])%" "%CEL(request.useragent)%" "%CEL(request.id)%" "%CEL(request.host)%" "%CEL(upstream.address)%"
-    formatters:
-    - "Cel"
   json:
   - path: "/dev/stdout"
     json:
@@ -14,9 +12,7 @@ accesslog:
       path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
       protocol: "%PROTOCOL%"
       response_code: "%RESPONSE_CODE%"
-      test_key: "METADATA(DYNAMIC:com.test.my_filter:test_key)"
-    formatters:
-    - "Metadata"
+      test_key: "%METADATA(DYNAMIC:com.test.my_filter:test_key)%"
   - path: "/dev/stdout"
     json:
       start_time: "%START_TIME%"
@@ -24,8 +20,6 @@ accesslog:
       path_without_query: "%REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)%"
       protocol: "%PROTOCOL%"
       response_code: "%RESPONSE_CODE%"
-    formatters:
-    - "ReqWithoutQuery"
   openTelemetry:
   - text: |
       [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"

@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"sort"
+	"strings"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	cfgcore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -20,6 +21,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	"golang.org/x/exp/maps"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"k8s.io/utils/ptr"
@@ -49,6 +51,10 @@ const (
 
 	otelLogName   = "otel_envoy_accesslog"
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
+
+	reqWithoutQueryCommandOperator = "%REQ_WITHOUT_QUERY"
+	metadataCommandOperator        = "%METADATA"
+	celCommandOperator             = "%CEL"
 )
 
 var (
@@ -57,6 +63,28 @@ var (
 		FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
 			ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
 		},
+	}
+)
+
+var (
+	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
+	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.req_without_query",
+		TypedConfig: MessageToAny(&reqwithoutqueryformatter.ReqWithoutQuery{}),
+	}
+
+	// metadataFormatter configures additional formatters needed for some of the format strings like "METADATA"
+	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
+	metadataFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.metadata",
+		TypedConfig: MessageToAny(&metadataformatter.Metadata{}),
+	}
+
+	// celFormatter configures additional formatters needed for some of the format strings like "CEL"
+	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
+	celFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.cel",
+		TypedConfig: MessageToAny(&celformatter.Cel{}),
 	}
 )
 
@@ -77,23 +105,21 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			format = *text.Format
 		}
 
-		logFormat := &cfgcore.SubstitutionFormatString{
-			Format: &cfgcore.SubstitutionFormatString_TextFormatSource{
-				TextFormatSource: &cfgcore.DataSource{
-					Specifier: &cfgcore.DataSource_InlineString{
-						InlineString: format,
+		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
+			LogFormat: &cfgcore.SubstitutionFormatString{
+				Format: &cfgcore.SubstitutionFormatString_TextFormatSource{
+					TextFormatSource: &cfgcore.DataSource{
+						Specifier: &cfgcore.DataSource_InlineString{
+							InlineString: format,
+						},
 					},
 				},
 			},
 		}
 
-		formatters := convertToFormatterList(text.Formatters)
-		if len(formatters) > 0 {
-			logFormat.Formatters = formatters
-		}
-
-		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
-			LogFormat: logFormat,
+		formatters := accessLogTextFormatters(format)
+		if len(formatters) != 0 {
+			filelog.GetLogFormat().Formatters = formatters
 		}
 
 		// TODO: find a better way to handle this
@@ -123,22 +149,20 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			}
 		}
 
-		logFormat := &cfgcore.SubstitutionFormatString{
-			Format: &cfgcore.SubstitutionFormatString_JsonFormat{
-				JsonFormat: jsonFormat,
-			},
-		}
-
-		formatters := convertToFormatterList(json.Formatters)
-		if len(formatters) > 0 {
-			logFormat.Formatters = formatters
-		}
-
 		filelog := &fileaccesslog.FileAccessLog{
 			Path: json.Path,
 			AccessLogFormat: &fileaccesslog.FileAccessLog_LogFormat{
-				LogFormat: logFormat,
+				LogFormat: &cfgcore.SubstitutionFormatString{
+					Format: &cfgcore.SubstitutionFormatString_JsonFormat{
+						JsonFormat: jsonFormat,
+					},
+				},
 			},
+		}
+
+		formatters := accessLogJSONFormatters(json.JSON)
+		if len(formatters) != 0 {
+			filelog.GetLogFormat().Formatters = formatters
 		}
 
 		accesslogAny, _ := anypb.New(filelog)
@@ -201,52 +225,57 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 	return accessLogs
 }
 
-const (
-	celAccessLogFormatter             = "envoy.formatter.cel"
-	metadataAccessLogFormatter        = "envoy.formatter.metadata"
-	reqWithoutQueryAccessLogFormatter = "envoy.formatter.req_without_query"
-)
+func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {
+	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
 
-// convertToFormatterList converts a list of ir access log formatter to xds access log formatters.
-func convertToFormatterList(irFormatters []ir.AccessLogFormatterType) []*cfgcore.TypedExtensionConfig {
-	formatters := make([]*cfgcore.TypedExtensionConfig, 0, len(irFormatters))
+	if strings.Contains(text, reqWithoutQueryCommandOperator) {
+		formatters = append(formatters, reqWithoutQueryFormatter)
+	}
 
-	for _, formatter := range irFormatters {
-		switch formatter {
-		case ir.AccessLogFormatterTypeCel:
-			cel := &celformatter.Cel{}
-			celAny, err := anypb.New(cel)
-			if err != nil {
-				continue
-			}
+	if strings.Contains(text, metadataCommandOperator) {
+		formatters = append(formatters, metadataFormatter)
+	}
 
-			formatters = append(formatters, &cfgcore.TypedExtensionConfig{
-				Name:        celAccessLogFormatter,
-				TypedConfig: celAny,
-			})
-		case ir.AccessLogFormatterTypeMetadata:
-			metadata := &metadataformatter.Metadata{}
-			metadataAny, err := anypb.New(metadata)
-			if err != nil {
-				continue
-			}
+	if strings.Contains(text, celCommandOperator) {
+		formatters = append(formatters, celFormatter)
+	}
 
-			formatters = append(formatters, &cfgcore.TypedExtensionConfig{
-				Name:        metadataAccessLogFormatter,
-				TypedConfig: metadataAny,
-			})
-		case ir.AccessLogFormatterTypeReqWithoutQuery:
-			reqWithoutQuery := &reqwithoutqueryformatter.ReqWithoutQuery{}
-			reqWithoutQueryAny, err := anypb.New(reqWithoutQuery)
-			if err != nil {
-				continue
-			}
+	return formatters
+}
 
-			formatters = append(formatters, &cfgcore.TypedExtensionConfig{
-				Name:        reqWithoutQueryAccessLogFormatter,
-				TypedConfig: reqWithoutQueryAny,
-			})
+func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionConfig {
+	reqWithoutQuery, metadata, cel := false, false, false
+
+	for _, value := range json {
+		if reqWithoutQuery && metadata && cel {
+			break
 		}
+
+		if strings.Contains(value, reqWithoutQueryCommandOperator) {
+			reqWithoutQuery = true
+		}
+
+		if strings.Contains(value, metadataCommandOperator) {
+			metadata = true
+		}
+
+		if strings.Contains(value, celCommandOperator) {
+			cel = true
+		}
+	}
+
+	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
+
+	if reqWithoutQuery {
+		formatters = append(formatters, reqWithoutQueryFormatter)
+	}
+
+	if metadata {
+		formatters = append(formatters, metadataFormatter)
+	}
+
+	if cel {
+		formatters = append(formatters, celFormatter)
 	}
 
 	return formatters
@@ -327,4 +356,12 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	}
 
 	return nil
+}
+
+// MessageToAny converts from proto message to proto Any
+// TODO: find a better way to handle error when translating access logs
+func MessageToAny(src proto.Message) *anypb.Any {
+	any, _ := anypb.New(src)
+
+	return any
 }

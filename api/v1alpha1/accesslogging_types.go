@@ -55,32 +55,7 @@ type ProxyAccessLogFormat struct {
 	// It's required when the format type is "JSON".
 	// +optional
 	JSON map[string]string `json:"json,omitempty"`
-	// Formatters defines a collection of [accesslog formatter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/substitution_format_string.proto#envoy-v3-api-field-config-core-v3-substitutionformatstring-formatters)
-	// that enable additional [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
-	// that can be used in the accesslog format when accesslog sinks only contain "File".
-	// Valid AccessLogFormatterType values are
-	// "Cel"
-	// "Metadata"
-	// "ReqWithoutQuery"
-	// +optional
-	Formatters []AccessLogFormatterType `json:"formatters,omitempty"`
 }
-
-// AccessLogFormatterType specifies the type of accesslog formatter.
-// +kubebuilder:validation:Enum=CEL;Metadata;ReqWithoutQuery
-type AccessLogFormatterType string
-
-const (
-	// AccessLogFormatterTypeCel defines the Cel formatter.
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
-	AccessLogFormatterTypeCel AccessLogFormatterType = "Cel"
-	// AccessLogFormatterTypeMetadata defines the Metadata formatter.
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
-	AccessLogFormatterTypeMetadata AccessLogFormatterType = "Metadata"
-	// AccessLogFormatterTypeReqWithoutQuery defines the ReqWithoutQuery formatter.
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/req_without_query/v3/req_without_query.proto
-	AccessLogFormatterTypeReqWithoutQuery AccessLogFormatterType = "ReqWithoutQuery"
-)
 
 type ProxyAccessLogSinkType string
 
