@@ -44,7 +44,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return err
 	}
 
-	var initInfra = func() {
+	initInfra := func() {
 		go r.subscribeToProxyInfraIR(ctx)
 
 		// Enable global ratelimit if it has been configured.

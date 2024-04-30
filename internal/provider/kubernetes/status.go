@@ -447,7 +447,8 @@ func (r *gatewayAPIReconciler) updateStatusForGatewayClass(
 	gc *gwapiv1.GatewayClass,
 	accepted bool,
 	reason,
-	msg string) error {
+	msg string,
+) error {
 	if r.statusUpdater != nil {
 		r.statusUpdater.Send(status.Update{
 			NamespacedName: types.NamespacedName{Name: gc.Name},

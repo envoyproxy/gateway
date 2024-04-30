@@ -57,14 +57,12 @@ const (
 	celCommandOperator             = "%CEL"
 )
 
-var (
-	// for the case when a route does not exist to upstream, hcm logs will not be present
-	listenerAccessLogFilter = &accesslog.AccessLogFilter{
-		FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
-			ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
-		},
-	}
-)
+// for the case when a route does not exist to upstream, hcm logs will not be present
+var listenerAccessLogFilter = &accesslog.AccessLogFilter{
+	FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
+		ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
+	},
+}
 
 var (
 	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
