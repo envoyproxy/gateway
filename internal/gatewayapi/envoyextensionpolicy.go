@@ -424,7 +424,6 @@ func (t *Translator) buildExtProc(
 			egv1a1.KindEnvoyExtensionPolicy,
 			ir.GRPC,
 			resources)
-
 		if err != nil {
 			return nil, err
 		}
