@@ -9,20 +9,21 @@
 package tests
 
 import (
-	"errors"
+	"fmt"
 	"net"
-	"net/url"
 	"testing"
+	"time"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/test/e2e/utils/prometheus"
 )
 
 func init() {
@@ -48,7 +49,13 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			}
 			ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "connection-limit-ctp", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-			// we make the number of connections equal to the number of connectionLimit connections + 1
+			promAddr, err := prometheus.Address(suite.Client,
+				types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
+			)
+			require.NoError(t, err)
+
+			// we make the number of connections equal to the number of connectionLimit connections + 3
+			// avoid partial connection errors or interruptions
 			for i := 0; i < 6; i++ {
 				conn, err := net.Dial("tcp", gwAddr)
 				if err != nil {
@@ -58,29 +65,34 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				}
 			}
 
-			// make a request, expect a failure
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
+			prefix := "http"
+			gtwName := "connection-limit-gateway"
+			promQL := fmt.Sprintf(`envoy_connection_limit_limited_connections{envoy_connection_limit_prefix="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, prefix, gtwName)
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			_, _, err := suite.RoundTripper.CaptureRoundTrip(req)
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					// check connection_limit stats from Prometheus
+					v, err := prometheus.QuerySum(promAddr, promQL)
+					if err != nil {
+						// wait until Prometheus sync stats
+						return false
+					}
+					t.Logf("connection_limit stats query count: %v", v)
 
-			// expect error
-			if err != nil {
-				urlError := &url.Error{}
-				if !errors.As(err, &urlError) {
-					t.Errorf("expected neturl error when connection limit reached, but other error occurred: %v", err)
-				}
-			} else {
-				t.Errorf("expected error not occurring when connection limit reached")
-			}
+					// connection interruptions or other connection errors may occur
+					// we just need to determine whether there is a connection limit stats
+					if v == 0 {
+						t.Error("connection is not limited as expected")
+					} else {
+						t.Log("connection is limited as expected")
+					}
+
+					return true
+				},
+			)
 
 		})
 	},
