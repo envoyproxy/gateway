@@ -93,7 +93,6 @@ var ConnectionLimitTest = suite.ConformanceTest{
 					return true
 				},
 			)
-
 		})
 	},
 }
