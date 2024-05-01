@@ -156,7 +156,7 @@ func TestHasManagedClass(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		ep       client.Object
+		ep       *egv1a1.EnvoyProxy
 		classes  []*gwapiv1.GatewayClass
 		expected bool
 	}{
