@@ -32,8 +32,11 @@ the file content directly to response, and then close the file. There won’t be
 However, we need to balance the memory usage and the efficiency, which could be addressed in implementation.
 
 **Caching Mechanism:** Cached files will be evicted based on LRU（Last recently used）algorithm. 
-If the image’s tag is latest, then they will be updated perodically. The cache clean and update periods 
+If the image’s tag is latest, then they will be updated periodically. The cache clean and update periods 
 will be configurable.
+
+**Authentication:** To avoid unauthorized access to the Wasm modules downloaded from private OCI registries, 
+the communication between the Envoy and EG will be secured using mutual TLS.
 
 ## Alternative Considered
 
