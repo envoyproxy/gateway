@@ -53,7 +53,7 @@ spec:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.
                 properties:
-                  forwardUsernameHeader:
+                  userNameToHeader:
                     description: The name of the HTTP header that will be used to
                       forward the username to the upstream server.
                     maxLength: 256

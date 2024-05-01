@@ -157,8 +157,8 @@ func (in *BasicAuth) DeepCopyInto(out *BasicAuth) {
 		*out = make([]byte, len(*in))
 		copy(*out, *in)
 	}
-	if in.ForwardUsernameHeader != nil {
-		in, out := &in.ForwardUsernameHeader, &out.ForwardUsernameHeader
+	if in.UserNameToHeader != nil {
+		in, out := &in.UserNameToHeader, &out.UserNameToHeader
 		*out = new(string)
 		**out = **in
 	}

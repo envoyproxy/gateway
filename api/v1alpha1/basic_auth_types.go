@@ -30,5 +30,5 @@ type BasicAuth struct {
 
 	// The name of the HTTP header that will be used to forward the username to the upstream server.
 	// +optional
-	ForwardUsernameHeader *gwapiv1.HeaderName `json:"forwardUsernameHeader,omitempty"`
+	UserNameToHeader *gwapiv1.HeaderName `json:"userNameToHeader,omitempty"`
 }

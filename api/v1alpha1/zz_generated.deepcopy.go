@@ -353,8 +353,8 @@ func (in *BackendTrafficPolicySpec) DeepCopy() *BackendTrafficPolicySpec {
 func (in *BasicAuth) DeepCopyInto(out *BasicAuth) {
 	*out = *in
 	in.Users.DeepCopyInto(&out.Users)
-	if in.ForwardUsernameHeader != nil {
-		in, out := &in.ForwardUsernameHeader, &out.ForwardUsernameHeader
+	if in.UserNameToHeader != nil {
+		in, out := &in.UserNameToHeader, &out.UserNameToHeader
 		*out = new(v1.HeaderName)
 		**out = **in
 	}

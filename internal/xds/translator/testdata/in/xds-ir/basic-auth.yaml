@@ -32,7 +32,7 @@ http:
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1
         users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
-        forwardUsernameHeader: x-basic-auth-user
+        userNameToHeader: x-basic-auth-user
   - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
     backendWeights:
     hostname: www.foo.com
@@ -56,7 +56,7 @@ http:
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1
         users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
-        forwardUsernameHeader: x-basic-auth-user
+        userNameToHeader: x-basic-auth-user
   - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
     hostname: www.bar.com
     isHTTP2: false

@@ -54,9 +54,9 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	for _, route := range irListener.Routes {
 		if route.Security != nil && route.Security.BasicAuth != nil {
 			irBasicAuth = route.Security.BasicAuth
-			// if any route has a ForwardUsernameHeader set, forward it.
-			if irBasicAuth.ForwardUsernameHeader != nil {
-				userNameToHeader = irBasicAuth.ForwardUsernameHeader
+			// if any route has a UserNameToHeader set, forward it.
+			if irBasicAuth.UserNameToHeader != nil {
+				userNameToHeader = irBasicAuth.UserNameToHeader
 			}
 		}
 	}

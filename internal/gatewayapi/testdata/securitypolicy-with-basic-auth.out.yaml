@@ -147,7 +147,7 @@ securityPolicies:
     namespace: default
   spec:
     basicAuth:
-      forwardUsernameHeader: x-basic-auth-user
+      userNameToHeader: x-basic-auth-user
       users:
         group: null
         kind: null
@@ -246,7 +246,7 @@ xdsIR:
           prefix: /foo1
         security:
           basicAuth:
-            forwardUsernameHeader: x-basic-auth-user
+            userNameToHeader: x-basic-auth-user
             name: securitypolicy/default/policy-for-http-route-1
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - backendWeights:
@@ -270,7 +270,7 @@ xdsIR:
           prefix: /foo2
         security:
           basicAuth:
-            forwardUsernameHeader: x-basic-auth-user
+            userNameToHeader: x-basic-auth-user
             name: securitypolicy/default/policy-for-http-route-1
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - backendWeights:
