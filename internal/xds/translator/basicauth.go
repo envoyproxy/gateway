@@ -54,9 +54,10 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	for _, route := range irListener.Routes {
 		if route.Security != nil && route.Security.BasicAuth != nil {
 			irBasicAuth = route.Security.BasicAuth
-			// if any route has a UserNameToHeader set, forward it.
+			// if any route has a UserNameToHeader set, forward the username to the upstream server.
 			if irBasicAuth.UserNameToHeader != nil {
 				userNameToHeader = irBasicAuth.UserNameToHeader
+				break
 			}
 		}
 	}
@@ -64,7 +65,7 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 		return nil
 	}
 
-	// We use the last route that contains the basicAuth config to build the filter.
+	// We use a random route that contains the basicAuth config to build the filter.
 	// The HCM-level filter config doesn't matter since it is overridden at the route level.
 	if filter, err = buildHCMBasicAuthFilter(irBasicAuth, userNameToHeader); err != nil {
 		return err
