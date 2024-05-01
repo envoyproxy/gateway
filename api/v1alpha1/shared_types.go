@@ -10,6 +10,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -90,6 +91,28 @@ type KubernetesDeploymentSpec struct {
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
+}
+
+// KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+type KubernetesDaemonSetSpec struct {
+	// Patch defines how to perform the patch operation to daemonset
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
+
+	// The daemonset strategy to use to replace existing pods with new ones.
+	// +optional
+	Strategy *appv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
+
+	// Pod defines the desired specification of pod.
+	//
+	// +optional
+	Pod *KubernetesPodSpec `json:"pod,omitempty"`
+
+	// Container defines the desired specification of main container.
+	//
+	// +optional
+	Container *KubernetesContainerSpec `json:"container,omitempty"`
 }
 
 // KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
@@ -219,6 +242,7 @@ const (
 
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
@@ -248,6 +272,14 @@ type KubernetesServiceSpec struct {
 	// services with type LoadBalancer and will be cleared if the type is changed to any other type.
 	// +optional
 	AllocateLoadBalancerNodePorts *bool `json:"allocateLoadBalancerNodePorts,omitempty"`
+
+	// LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
+	// firewall rules on the platform providers load balancer. This is not guaranteed to be working as
+	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
+	// This field may only be set for services with type LoadBalancer and will be cleared if the type
+	// is changed to any other type.
+	// +optional
+	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 
 	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
 	// may be ignored if the load balancer provider does not support this feature.
@@ -406,4 +438,11 @@ type KubernetesPatchSpec struct {
 
 	// Object contains the raw configuration for merged object
 	Value apiextensionsv1.JSON `json:"value"`
+}
+
+// BackendRef defines how an ObjectReference that is specific to BackendRef.
+type BackendRef struct {
+	// BackendObjectReference references a Kubernetes object that represents the backend.
+	// Only service Kind is supported for now.
+	gwapiv1.BackendObjectReference `json:",inline"`
 }

@@ -47,6 +47,28 @@ consideration when debugging.
 
 ## Testing the Configuration
 
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
+Envoy service, run:
+
+```shell
+export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+```
+
+In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
+`ip` in the above command with `hostname`.
+
+Curl the example app through Envoy proxy:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
 Get the name of the Envoy service created the by the example Gateway:
 
 ```shell
@@ -65,23 +87,25 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-### External LoadBalancer Support
+{{% /tab %}}
+{{< /tabpane >}}
 
-You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
-Envoy service, run:
+## What to explore next?
 
-```shell
-export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-```
+In this quickstart, you have:
+- Installed Envoy Gateway
+- Deployed a backend service, and a gateway
+- Configured the gateway using Kubernetes Gateway API resources [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) and [HttpRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) to direct incoming requests over HTTP to the backend service.
 
-In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
-`ip` in the above command with `hostname`.
+Here is a suggested list of follow-on tasks to guide you in your exploration of Envoy Gateway:
 
-Curl the example app through Envoy proxy:
+- [HTTP Routing](traffic/http-routing)
+- [Traffic Splitting](traffic/http-traffic-splitting)
+- [Secure Gateways](security/secure-gateways/)
+- [Global Rate Limit](traffic/global-rate-limit/)
+- [gRPC Routing](traffic/grpc-routing/)
 
-```shell
-curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
-```
+Review the [Tasks](./) section for the scenario matching your use case.  The Envoy Gateway tasks are organized by category: traffic management, security, extensibility, observability, and operations.
 
 ## Clean-Up
 
@@ -101,4 +125,4 @@ helm uninstall eg -n envoy-gateway-system
 
 ## Next Steps
 
-Checkout the [Developer Guide](../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](../../contributions/develop) to get involved in the project.

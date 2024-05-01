@@ -77,7 +77,6 @@ var TCPRouteTest = suite.ConformanceTest{
 			// Send a request to an valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 		})
-
 	},
 }
 
@@ -124,7 +123,6 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 	}
 
 	return gwAddr
-
 }
 
 // WaitForGatewayAddress waits until at least one IP Address has been set in the

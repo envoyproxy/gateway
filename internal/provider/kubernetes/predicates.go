@@ -33,13 +33,7 @@ const oidcHMACSecretName = "envoy-oidc-hmac"
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
 // or false otherwise.
-func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
-	gc, ok := obj.(*gwapiv1.GatewayClass)
-	if !ok {
-		r.log.Info("bypassing reconciliation due to unexpected object type", "type", obj)
-		return false
-	}
-
+func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) bool {
 	if gc.Spec.ControllerName == r.classController {
 		r.log.Info("gatewayclass has matching controller name, processing", "name", gc.Name)
 		return true
@@ -69,7 +63,6 @@ type NamespaceGetter interface {
 
 // checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
 func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
-
 	var nsString string
 	// TODO: it requires extra condition validate cluster resources or resources without namespace?
 	if nsString = obj.GetNamespace(); len(nsString) == 0 {

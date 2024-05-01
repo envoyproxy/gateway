@@ -15,6 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -42,10 +43,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		if resources.EnvoyProxy != nil {
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
 		}
-
-		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Tracing = processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config)
-		xdsIR[irKey].Metrics = processMetrics(infraIR[irKey].Proxy.Config)
+		t.processProxyObservability(gateway.Gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -129,6 +127,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	}
 }
 
+func (t *Translator) processProxyObservability(gw *gwapiv1.Gateway, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
+	xdsIR.AccessLog = processAccessLog(envoyProxy)
+	xdsIR.Tracing = processTracing(gw, envoyProxy, t.MergeGateways)
+	xdsIR.Metrics = processMetrics(envoyProxy)
+}
+
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR InfraIRMap, irKey string, servicePort *protocolPort) {
 	var proto ir.ProtocolType
 	switch listener.Protocol {
@@ -144,12 +148,8 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 		proto = ir.UDPProtocolType
 	}
 
-	infraPortName := string(listener.Name)
-	if t.MergeGateways {
-		infraPortName = irHTTPListenerName(listener)
-	}
 	infraPort := ir.ListenerPort{
-		Name:          infraPortName,
+		Name:          irListenerPortName(proto, servicePort.port),
 		Protocol:      proto,
 		ServicePort:   servicePort.port,
 		ContainerPort: servicePortToContainerPort(servicePort.port),
@@ -216,10 +216,18 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 					continue
 				}
 
+				// TODO: remove support for Host/Port in v1.2
 				al := &ir.OpenTelemetryAccessLog{
 					Port:      uint32(sink.OpenTelemetry.Port),
-					Host:      sink.OpenTelemetry.Host,
 					Resources: sink.OpenTelemetry.Resources,
+				}
+
+				if sink.OpenTelemetry.Host != nil {
+					al.Host = *sink.OpenTelemetry.Host
+				}
+
+				if len(sink.OpenTelemetry.BackendRefs) > 0 {
+					al.Host, al.Port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, envoyproxy.Namespace)
 				}
 
 				switch accessLog.Format.Type {
@@ -237,16 +245,40 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	return irAccessLog
 }
 
-func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
+func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool) *ir.Tracing {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
 		return nil
 	}
+	tracing := envoyproxy.Spec.Telemetry.Tracing
+
+	// TODO: remove support for Host/Port in v1.2
+	var host string
+	var port uint32
+	if tracing.Provider.Host != nil {
+		host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
+	}
+	if len(tracing.Provider.BackendRefs) > 0 {
+		host, port = net.BackendHostAndPort(tracing.Provider.BackendRefs[0].BackendObjectReference, gw.Namespace)
+	}
+
+	samplingRate := 100.0
+	if tracing.SamplingRate != nil {
+		samplingRate = float64(*tracing.SamplingRate)
+	}
+
+	serviceName := naming.ServiceName(utils.NamespacedName(gw))
+	if mergeGateways {
+		serviceName = string(gw.Spec.GatewayClassName)
+	}
 
 	return &ir.Tracing{
-		ServiceName:  naming.ServiceName(utils.NamespacedName(gw)),
-		ProxyTracing: *envoyproxy.Spec.Telemetry.Tracing,
+		ServiceName:  serviceName,
+		Host:         host,
+		Port:         port,
+		SamplingRate: samplingRate,
+		CustomTags:   tracing.CustomTags,
 	}
 }
 
@@ -258,5 +290,6 @@ func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 	}
 	return &ir.Metrics{
 		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
+		EnablePerEndpointStats: envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
 	}
 }

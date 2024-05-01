@@ -45,7 +45,8 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *Resources,
-	xdsIR XdsIRMap) []*egv1a1.SecurityPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
 
 	// Sort based on timestamp
@@ -225,7 +226,8 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 func resolveSecurityPolicyGatewayTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
+	gateways map[types.NamespacedName]*policyGatewayTargetContext,
+) (*GatewayContext, *status.PolicyResolveError) {
 	targetNs := policy.Spec.TargetRef.Namespace
 	// If empty, default to namespace of policy
 	if targetNs == nil {
@@ -278,7 +280,8 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 func resolveSecurityPolicyRouteTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
+	routes map[policyTargetRouteKey]*policyRouteTargetContext,
+) (RouteContext, *status.PolicyResolveError) {
 	targetNs := policy.Spec.TargetRef.Namespace
 	// If empty, default to namespace of policy
 	if targetNs == nil {
@@ -333,7 +336,8 @@ func resolveSecurityPolicyRouteTargetRef(
 
 func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
-	resources *Resources, xdsIR XdsIRMap) error {
+	resources *Resources, xdsIR XdsIRMap,
+) error {
 	// Build IR
 	var (
 		cors      *ir.CORS
@@ -380,19 +384,21 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
 	prefix := irRoutePrefix(route)
-	for _, ir := range xdsIR {
-		for _, http := range ir.HTTP {
-			for _, r := range http.Routes {
+	for _, x := range xdsIR {
+		for _, h := range x.HTTP {
+			for _, r := range h.Routes {
 				// Apply if there is a match
-				// TODO zhaohuabing: extract a utils function to check if an HTTP
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
-					// This security policy matches the current route. It should only be accepted if it doesn't match any other route
-					r.CORS = cors
-					r.JWT = jwt
-					r.OIDC = oidc
-					r.BasicAuth = basicAuth
-					r.ExtAuth = extAuth
+					// This security policy matches the current route.
+					// It should only be accepted if it doesn't match any other route
+					r.Security = &ir.SecurityFeatures{
+						CORS:      cors,
+						JWT:       jwt,
+						OIDC:      oidc,
+						BasicAuth: basicAuth,
+						ExtAuth:   extAuth,
+					}
 				}
 			}
 		}
@@ -402,7 +408,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
-	resources *Resources, xdsIR XdsIRMap) error {
+	resources *Resources, xdsIR XdsIRMap,
+) error {
 	// Build IR
 	var (
 		cors      *ir.CORS
@@ -454,44 +461,32 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// are invalid, we still want to apply the valid ones.
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
-	ir := xdsIR[irKey]
+	x := xdsIR[irKey]
 
 	policyTarget := irStringKey(
 		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
 		string(policy.Spec.TargetRef.Name),
 	)
-	for _, http := range ir.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+	for _, h := range x.HTTP {
+		gatewayName := h.Name[0:strings.LastIndex(h.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
 		// targeting a lesser specific scope(Gateway).
-		for _, r := range http.Routes {
+		for _, r := range h.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			// TODO: zhaohuabing group the features into a struct and check if all of them are set
-			if r.CORS != nil ||
-				r.JWT != nil ||
-				r.OIDC != nil ||
-				r.BasicAuth != nil ||
-				r.ExtAuth != nil {
+			if !r.Security.Empty() {
 				continue
 			}
-			if r.CORS == nil {
-				r.CORS = cors
-			}
-			if r.JWT == nil {
-				r.JWT = jwt
-			}
-			if r.OIDC == nil {
-				r.OIDC = oidc
-			}
-			if r.BasicAuth == nil {
-				r.BasicAuth = basicAuth
-			}
-			if r.ExtAuth == nil {
-				r.ExtAuth = extAuth
+
+			r.Security = &ir.SecurityFeatures{
+				CORS:      cors,
+				JWT:       jwt,
+				OIDC:      oidc,
+				BasicAuth: basicAuth,
+				ExtAuth:   extAuth,
 			}
 		}
 	}
@@ -537,13 +532,15 @@ func wildcard2regex(wildcard string) string {
 
 func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 	return &ir.JWT{
-		Providers: jwt.Providers,
+		AllowMissing: ptr.Deref(jwt.Optional, false),
+		Providers:    jwt.Providers,
 	}
 }
 
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.OIDC, error) {
+	resources *Resources,
+) (*ir.OIDC, error) {
 	var (
 		oidc         = policy.Spec.OIDC
 		clientSecret *v1.Secret
@@ -735,7 +732,8 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 
 func (t *Translator) buildBasicAuth(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.BasicAuth, error) {
+	resources *Resources,
+) (*ir.BasicAuth, error) {
 	var (
 		basicAuth   = policy.Spec.BasicAuth
 		usersSecret *v1.Secret
@@ -767,7 +765,8 @@ func (t *Translator) buildBasicAuth(
 
 func (t *Translator) buildExtAuth(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.ExtAuth, error) {
+	resources *Resources,
+) (*ir.ExtAuth, error) {
 	var (
 		http       = policy.Spec.ExtAuth.HTTP
 		grpc       = policy.Spec.ExtAuth.GRPC

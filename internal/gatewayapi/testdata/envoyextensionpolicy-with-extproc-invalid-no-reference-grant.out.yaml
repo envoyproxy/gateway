@@ -7,8 +7,8 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend
+    - backendRefs:
+      - name: grpc-backend
         namespace: envoy-gateway
         port: 9000
     targetRef:
@@ -119,7 +119,7 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

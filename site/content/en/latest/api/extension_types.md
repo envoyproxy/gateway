@@ -36,8 +36,71 @@ _Underlying type:_ _string_
 ALPNProtocol specifies the protocol to be negotiated using ALPN
 
 _Appears in:_
+- [BackendTLSConfig](#backendtlsconfig)
+- [ClientTLSSettings](#clienttlssettings)
 - [TLSSettings](#tlssettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `http/1.0` | HTTPProtocolVersion1_0 specifies that HTTP/1.0 should be negotiable with ALPN<br /> | 
+| `http/1.1` | HTTPProtocolVersion1_1 specifies that HTTP/1.1 should be negotiable with ALPN<br /> | 
+| `h2` | HTTPProtocolVersion2 specifies that HTTP/2 should be negotiable with ALPN<br /> | 
+
+
+#### ALSEnvoyProxyAccessLog
+
+
+
+ALSEnvoyProxyAccessLog defines the gRPC Access Log Service (ALS) sink.
+The service must implement the Envoy gRPC Access Log Service streaming API:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto
+Access log format information is passed in the form of gRPC metadata when the
+stream is established. Specifically, the following metadata is passed:
+
+
+- `x-accesslog-text` - The access log format string when a Text format is used.
+- `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
+
+_Appears in:_
+- [ProxyAccessLogSink](#proxyaccesslogsink)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  true  | BackendRefs references a Kubernetes object that represents the gRPC service to which<br />the access logs will be sent. Currently only Service is supported. |
+| `logName` | _string_ |  false  | LogName defines the friendly name of the access log to be returned in<br />StreamAccessLogsMessage.Identifier. This allows the access log server<br />to differentiate between different access logs coming from the same Envoy. |
+| `type` | _[ALSEnvoyProxyAccessLogType](#alsenvoyproxyaccesslogtype)_ |  true  | Type defines the type of accesslog. Supported types are "HTTP" and "TCP". |
+| `http` | _[ALSEnvoyProxyHTTPAccessLogConfig](#alsenvoyproxyhttpaccesslogconfig)_ |  false  | HTTP defines additional configuration specific to HTTP access logs. |
+
+
+#### ALSEnvoyProxyAccessLogType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
+
+| Value | Description |
+| ----- | ----------- |
+| `HTTP` | ALSEnvoyProxyAccessLogTypeHTTP defines the HTTP access log type and will populate StreamAccessLogsMessage.http_logs.<br /> | 
+| `TCP` | ALSEnvoyProxyAccessLogTypeTCP defines the TCP access log type and will populate StreamAccessLogsMessage.tcp_logs.<br /> | 
+
+
+#### ALSEnvoyProxyHTTPAccessLogConfig
+
+
+
+
+
+_Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `requestHeaders` | _string array_ |  false  | RequestHeaders defines request headers to include in log entries sent to the access log service. |
+| `responseHeaders` | _string array_ |  false  | ResponseHeaders defines response headers to include in log entries sent to the access log service. |
+| `responseTrailers` | _string array_ |  false  | ResponseTrailers defines response trailers to include in log entries sent to the access log service. |
 
 
 #### ActiveHealthCheck
@@ -87,6 +150,10 @@ ActiveHealthCheckPayloadType is the type of the payload.
 _Appears in:_
 - [ActiveHealthCheckPayload](#activehealthcheckpayload)
 
+| Value | Description |
+| ----- | ----------- |
+| `Text` | ActiveHealthCheckPayloadTypeText defines the Text type payload.<br /> | 
+| `Binary` | ActiveHealthCheckPayloadTypeBinary defines the Binary type payload.<br /> | 
 
 
 #### ActiveHealthCheckerType
@@ -98,6 +165,10 @@ ActiveHealthCheckerType is the type of health checker.
 _Appears in:_
 - [ActiveHealthCheck](#activehealthcheck)
 
+| Value | Description |
+| ----- | ----------- |
+| `HTTP` | ActiveHealthCheckerTypeHTTP defines the HTTP type of health checking.<br /> | 
+| `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
 #### BackOffPolicy
@@ -113,6 +184,48 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `baseInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | BaseInterval is the base interval between retries. |
 | `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
+
+
+#### BackendRef
+
+
+
+BackendRef defines how an ObjectReference that is specific to BackendRef.
+
+_Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
+- [ExtProc](#extproc)
+- [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
+- [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [TracingProvider](#tracingprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io".<br />When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example<br />"Service".<br /><br />Defaults to "Service" when not specified.<br /><br />ExternalName services can refer to CNAME DNS records that may live<br />outside of the cluster and as such are difficult to reason about in<br />terms of conformance. They also may not be safe to forward to (see<br />CVE-2021-25740 for more information). Implementations SHOULD NOT<br />support ExternalName Services.<br /><br />Support: Core (Services with a type other than ExternalName)<br /><br />Support: Implementation-specific (Services with type ExternalName) |
+| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
+| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
+| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+
+
+#### BackendTLSConfig
+
+
+
+BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  | ClientCertificateRef defines the reference to a Kubernetes Secret that contains<br />the client certificate and private key for Envoy to use when connecting to<br />backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc. |
+| `minVersion` | _[TLSVersion](#tlsversion)_ |  false  | Min specifies the minimal TLS protocol version to allow.<br />The default is TLS 1.2 if this is not specified. |
+| `maxVersion` | _[TLSVersion](#tlsversion)_ |  false  | Max specifies the maximal TLS protocol version to allow<br />The default is TLS 1.3 if this is not specified. |
+| `ciphers` | _string array_ |  false  | Ciphers specifies the set of cipher suites supported when<br />negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.<br />In non-FIPS Envoy Proxy builds the default cipher list is:<br />- [ECDHE-ECDSA-AES128-GCM-SHA256\|ECDHE-ECDSA-CHACHA20-POLY1305]<br />- [ECDHE-RSA-AES128-GCM-SHA256\|ECDHE-RSA-CHACHA20-POLY1305]<br />- ECDHE-ECDSA-AES256-GCM-SHA384<br />- ECDHE-RSA-AES256-GCM-SHA384<br />In builds using BoringSSL FIPS the default cipher list is:<br />- ECDHE-ECDSA-AES128-GCM-SHA256<br />- ECDHE-RSA-AES128-GCM-SHA256<br />- ECDHE-ECDSA-AES256-GCM-SHA384<br />- ECDHE-RSA-AES256-GCM-SHA384 |
+| `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
+| `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
+| `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 
 
 #### BackendTrafficPolicy
@@ -153,7 +266,7 @@ BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 
 
 
-spec defines the desired state of BackendTrafficPolicy.
+BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 
 _Appears in:_
 - [BackendTrafficPolicy](#backendtrafficpolicy)
@@ -169,8 +282,8 @@ _Appears in:_
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds |
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
+| `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
-| `compression` | _[Compression](#compression) array_ |  false  | The compression config for the http streams. |
 
 
 #### BasicAuth
@@ -196,6 +309,10 @@ BootstrapType defines the types of bootstrap supported by Envoy Gateway.
 _Appears in:_
 - [ProxyBootstrap](#proxybootstrap)
 
+| Value | Description |
+| ----- | ----------- |
+| `Merge` | Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value<br />within a map, or add a new value to a list.<br />Please note that the provided bootstrap can't override a value within a list.<br /> | 
+| `Replace` | Replace replaces the default bootstrap with the provided one.<br /> | 
 
 
 #### CORS
@@ -265,6 +382,26 @@ _Appears in:_
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
+#### ClientTLSSettings
+
+
+
+
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientValidation` | _[ClientValidationContext](#clientvalidationcontext)_ |  false  | ClientValidation specifies the configuration to validate the client<br />initiating the TLS connection to the Gateway listener. |
+| `minVersion` | _[TLSVersion](#tlsversion)_ |  false  | Min specifies the minimal TLS protocol version to allow.<br />The default is TLS 1.2 if this is not specified. |
+| `maxVersion` | _[TLSVersion](#tlsversion)_ |  false  | Max specifies the maximal TLS protocol version to allow<br />The default is TLS 1.3 if this is not specified. |
+| `ciphers` | _string array_ |  false  | Ciphers specifies the set of cipher suites supported when<br />negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.<br />In non-FIPS Envoy Proxy builds the default cipher list is:<br />- [ECDHE-ECDSA-AES128-GCM-SHA256\|ECDHE-ECDSA-CHACHA20-POLY1305]<br />- [ECDHE-RSA-AES128-GCM-SHA256\|ECDHE-RSA-CHACHA20-POLY1305]<br />- ECDHE-ECDSA-AES256-GCM-SHA384<br />- ECDHE-RSA-AES256-GCM-SHA384<br />In builds using BoringSSL FIPS the default cipher list is:<br />- ECDHE-ECDSA-AES128-GCM-SHA256<br />- ECDHE-RSA-AES128-GCM-SHA256<br />- ECDHE-ECDSA-AES256-GCM-SHA384<br />- ECDHE-RSA-AES256-GCM-SHA384 |
+| `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
+| `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
+| `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+
+
 #### ClientTimeout
 
 
@@ -328,13 +465,14 @@ _Appears in:_
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection.<br />If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.<br />Disabled by default. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the<br />Client Address into the X-Forwarded-For header.<br />Note Proxy Protocol must be present when this field is set, else the connection<br />is closed. |
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
-| `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
-| `tls` | _[TLSSettings](#tlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
+| `tls` | _[ClientTLSSettings](#clienttlssettings)_ |  false  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
-| `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
 | `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
+| `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
+| `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration on the listener. |
+| `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
 
 
 #### ClientValidationContext
@@ -346,10 +484,11 @@ to the Gateway.
 By default, no client specific configuration is validated.
 
 _Appears in:_
-- [TLSSettings](#tlssettings)
+- [ClientTLSSettings](#clienttlssettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `optional` | _boolean_ |  false  | Optional set to true accepts connections even when a client doesn't present a certificate.<br />Defaults to false, which rejects connections without a valid client certificate. |
 | `caCertificateRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  false  | CACertificateRefs contains one or more references to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the client.<br /><br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br /><br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the certificate<br />to be attached. |
 
 
@@ -362,6 +501,7 @@ This can help reduce the bandwidth at the expense of higher CPU.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ProxyPrometheusProvider](#proxyprometheusprovider)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -434,13 +574,16 @@ ConsistentHashType defines the type of input to hash on.
 _Appears in:_
 - [ConsistentHash](#consistenthash)
 
+| Value | Description |
+| ----- | ----------- |
+| `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
 
 
 #### CustomHeaderExtensionSettings
 
 
 
-CustomHeader provides configuration for determining the client IP address for a request based on
+CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
 a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
 Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 for more details.
@@ -480,6 +623,11 @@ _Underlying type:_ _string_
 _Appears in:_
 - [CustomTag](#customtag)
 
+| Value | Description |
+| ----- | ----------- |
+| `Literal` | CustomTagTypeLiteral adds hard-coded value to each span.<br /> | 
+| `Environment` | CustomTagTypeEnvironment adds value from environment variable to each span.<br /> | 
+| `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
 
 
 #### EnvironmentCustomTag
@@ -541,9 +689,33 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
-| `wasm` | _[Wasm](#wasm) array_ |  false  | WASM is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
-| `extProc` | _[ExtProc](#extproc) array_ |  true  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
+| `targetRef` | _[PolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway or xRoute. |
+| `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
+| `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
+
+
+#### EnvoyFilter
+
+_Underlying type:_ _string_
+
+EnvoyFilter defines the type of Envoy HTTP filter.
+
+_Appears in:_
+- [FilterPosition](#filterposition)
+
+| Value | Description |
+| ----- | ----------- |
+| `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
+| `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
+| `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 
+| `envoy.filters.http.basic_authn` | EnvoyFilterBasicAuthn defines the Envoy HTTP basic authentication filter.<br /> | 
+| `envoy.filters.http.oauth2` | EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.<br /> | 
+| `envoy.filters.http.jwt_authn` | EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.<br /> | 
+| `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> | 
+| `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> | 
+| `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
+| `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
+| `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
 
 #### EnvoyGateway
@@ -682,6 +854,15 @@ EnvoyGatewayLogComponent defines a component that supports a configured logging 
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 
+| Value | Description |
+| ----- | ----------- |
+| `default` | LogComponentGatewayDefault defines the "default"-wide logging component. When specified,<br />all other logging components are ignored.<br /> | 
+| `provider` | LogComponentProviderRunner defines the "provider" runner component.<br /> | 
+| `gateway-api` | LogComponentGatewayAPIRunner defines the "gateway-api" runner component.<br /> | 
+| `xds-translator` | LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.<br /> | 
+| `xds-server` | LogComponentXdsServerRunner defines the "xds-server" runner component.<br /> | 
+| `infrastructure` | LogComponentInfrastructureRunner defines the "infrastructure" runner component.<br /> | 
+| `global-ratelimit` | LogComponentGlobalRateLimitRunner defines the "global-ratelimit" runner component.<br /> | 
 
 
 #### EnvoyGatewayLogging
@@ -906,6 +1087,9 @@ EnvoyPatchType specifies the types of Envoy patching mechanisms.
 _Appears in:_
 - [EnvoyPatchPolicySpec](#envoypatchpolicyspec)
 
+| Value | Description |
+| ----- | ----------- |
+| `JSONPatch` | JSONPatchEnvoyPatchType allows the user to patch the generated xDS resources using JSONPatch semantics.<br />For more details on the semantics, please refer to https://datatracker.ietf.org/doc/html/rfc6902<br /> | 
 
 
 #### EnvoyProxy
@@ -937,6 +1121,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `envoyDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  | EnvoyDeployment defines the desired state of the Envoy deployment resource.<br />If unspecified, default settings for the managed Envoy deployment resource<br />are applied. |
+| `envoyDaemonSet` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  | EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.<br />Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  | EnvoyService defines the desired state of the Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
 | `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.<br />Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
 
@@ -975,6 +1160,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
+| `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 
 
 
@@ -988,6 +1174,12 @@ EnvoyResourceType specifies the type URL of the Envoy resource.
 _Appears in:_
 - [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
 
+| Value | Description |
+| ----- | ----------- |
+| `type.googleapis.com/envoy.config.listener.v3.Listener` | ListenerEnvoyResourceType defines the Type URL of the Listener resource<br /> | 
+| `type.googleapis.com/envoy.config.route.v3.RouteConfiguration` | RouteConfigurationEnvoyResourceType defines the Type URL of the RouteConfiguration resource<br /> | 
+| `type.googleapis.com/envoy.config.cluster.v3.Cluster` | ClusterEnvoyResourceType defines the Type URL of the Cluster resource<br /> | 
+| `type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment` | ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource<br /> | 
 
 
 #### ExtAuth
@@ -1018,27 +1210,42 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `backendRef` | _[ExtProcBackendRef](#extprocbackendref)_ |  true  | Service defines the configuration of the external processing service |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  true  | BackendRefs defines the configuration of the external processing service |
+| `messageTimeout` | _[Duration](#duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
+| `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
+| `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 
 
-#### ExtProcBackendRef
+#### ExtProcBodyProcessingMode
+
+_Underlying type:_ _string_
 
 
 
-ExtProcService defines the gRPC External Processing service using the envoy grpc client
-The processing request and response messages are defined in
-https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/ext_proc/v3/external_processor.proto
+_Appears in:_
+- [ProcessingModeOptions](#processingmodeoptions)
+
+| Value | Description |
+| ----- | ----------- |
+| `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
+| `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
+| `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcProcessingMode
+
+
+
+ExtProcProcessingMode defines if and how headers and bodies are sent to the service.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-processingmode
 
 _Appears in:_
 - [ExtProc](#extproc)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `group` | _[Group](#group)_ |  false  | Group is the group of the referent. For example, "gateway.networking.k8s.io".<br />When unspecified or empty string, core API group is inferred. |
-| `kind` | _[Kind](#kind)_ |  false  | Kind is the Kubernetes resource kind of the referent. For example<br />"Service".<br /><br />Defaults to "Service" when not specified.<br /><br />ExternalName services can refer to CNAME DNS records that may live<br />outside of the cluster and as such are difficult to reason about in<br />terms of conformance. They also may not be safe to forward to (see<br />CVE-2021-25740 for more information). Implementations SHOULD NOT<br />support ExternalName Services.<br /><br />Support: Core (Services with a type other than ExternalName)<br /><br />Support: Implementation-specific (Services with type ExternalName) |
-| `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
-| `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
-| `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+| `request` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines processing mode for requests. If present, request headers are sent. Request body is processed according<br />to the specified mode. |
+| `response` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  | Defines processing mode for responses. If present, response headers are sent. Response body is processed according<br />to the specified mode. |
 
 
 #### ExtensionAPISettings
@@ -1179,6 +1386,22 @@ _Appears in:_
 | `path` | _string_ |  true  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### FilterPosition
+
+
+
+FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `filter` | _[EnvoyFilter](#envoyfilter)_ |  true  | Name of the filter. |
+| `before` | _[EnvoyFilter](#envoyfilter)_ |  true  | Before defines the filter that should come before the filter.<br />Only one of Before or After must be set. |
+| `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
+
+
 #### GRPCExtAuthService
 
 
@@ -1282,6 +1505,22 @@ _Appears in:_
 | `enableTrailers` | _boolean_ |  false  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
 | `preserveHeaderCase` | _boolean_ |  false  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
+
+
+#### HTTP2Settings
+
+
+
+HTTP2Settings provides HTTP/2 configuration on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `initialStreamWindowSize` | _[Quantity](#quantity)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
+| `initialConnectionWindowSize` | _[Quantity](#quantity)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
+| `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
 
 
 #### HTTP3Settings
@@ -1396,13 +1635,18 @@ Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
 _Appears in:_
 - [HeaderMatch](#headermatch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | HeaderMatchExact matches the exact value of the Value field against the value of<br />the specified HTTP Header.<br /> | 
+| `RegularExpression` | HeaderMatchRegularExpression matches a regular expression against the value of the<br />specified HTTP Header. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+| `Distinct` | HeaderMatchDistinct matches any and all possible unique values encountered in the<br />specified HTTP Header. Note that each unique value will receive its own rate limit<br />bucket.<br />Note: This is only supported for Global Rate Limits.<br /> | 
 
 
 #### HeaderSettings
 
 
 
-HeaderSettings providess configuration options for headers on the listener.
+HeaderSettings provides configuration options for headers on the listener.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
@@ -1453,6 +1697,9 @@ InfrastructureProviderType defines the types of custom infrastructure providers 
 _Appears in:_
 - [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> | 
 
 
 #### JSONPatchOperation
@@ -1495,6 +1742,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `optional` | _boolean_ |  true  | Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.<br />Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented. |
 | `providers` | _[JWTProvider](#jwtprovider) array_ |  true  | Providers defines the JSON Web Token (JWT) authentication provider type.<br />When multiple JWT providers are specified, the JWT is considered valid if<br />any of the providers successfully validate the JWT. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
 
 
@@ -1558,6 +1806,7 @@ _Appears in:_
 KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
@@ -1567,6 +1816,23 @@ _Appears in:_
 | `securityContext` | _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#securitycontext-v1-core)_ |  false  | SecurityContext defines the security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `image` | _string_ |  false  | Image specifies the EnvoyProxy container image to be used, instead of the default image. |
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volumemount-v1-core) array_ |  false  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
+
+
+#### KubernetesDaemonSetSpec
+
+
+
+KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+
+_Appears in:_
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to daemonset |
+| `strategy` | _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#daemonsetupdatestrategy-v1-apps)_ |  false  | The daemonset strategy to use to replace existing pods with new ones. |
+| `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  | Pod defines the desired specification of pod. |
+| `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  | Container defines the desired specification of main container. |
 
 
 #### KubernetesDeployMode
@@ -1628,6 +1894,7 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
@@ -1644,6 +1911,7 @@ _Appears in:_
 KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
 
 _Appears in:_
+- [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 
 | Field | Type | Required | Description |
@@ -1674,6 +1942,7 @@ _Appears in:_
 | `type` | _[ServiceType](#servicetype)_ |  false  | Type determines how the Service is exposed. Defaults to LoadBalancer.<br />Valid options are ClusterIP, LoadBalancer and NodePort.<br />"LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).<br />"ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP.<br />"NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
 | `loadBalancerClass` | _string_ |  false  | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider<br />implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` | _boolean_ |  false  | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for<br />services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster<br />load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a<br />value), those requests will be respected, regardless of this field. This field may only be set for<br />services with type LoadBalancer and will be cleared if the type is changed to any other type. |
+| `loadBalancerSourceRanges` | _string array_ |  false  | LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as<br />firewall rules on the platform providers load balancer. This is not guaranteed to be working as<br />it happens outside of kubernetes and has to be supported and handled by the platform provider.<br />This field may only be set for services with type LoadBalancer and will be cleared if the type<br />is changed to any other type. |
 | `loadBalancerIP` | _string_ |  false  | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field<br />may be ignored if the load balancer provider does not support this feature.<br />This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud<br />providers such as GCP. |
 | `externalTrafficPolicy` | _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ |  false  | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options<br />are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node<br />receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to the service |
@@ -1762,6 +2031,12 @@ LoadBalancerType specifies the types of LoadBalancer.
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
 
+| Value | Description |
+| ----- | ----------- |
+| `ConsistentHash` | ConsistentHashLoadBalancerType load balancer policy.<br /> | 
+| `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> | 
+| `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
+| `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 
 
 #### LocalRateLimit
@@ -1788,6 +2063,12 @@ _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
 
+| Value | Description |
+| ----- | ----------- |
+| `debug` | LogLevelDebug defines the "debug" logging level.<br /> | 
+| `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
+| `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
+| `error` | LogLevelError defines the "Error" logging level.<br /> | 
 
 
 
@@ -1802,6 +2083,9 @@ _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
 - [ProxyMetricSink](#proxymetricsink)
 
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` |  | 
 
 
 #### OIDC
@@ -1851,9 +2135,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the extension service hostname.<br />Deprecated: Use BackendRef instead. |
+| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: Use BackendRef instead. |
 | `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
 | `resources` | _object (keys:string, values:string)_ |  false  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
@@ -1912,6 +2196,12 @@ sequences in the URI path.
 _Appears in:_
 - [PathSettings](#pathsettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `KeepUnchanged` | KeepUnchangedAction keeps escaped slashes as they arrive without changes<br /> | 
+| `RejectRequest` | RejectRequestAction rejects client requests containing escaped slashes<br />with a 400 status. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />The "httpN.downstream_rq_failed_path_normalization" counter is incremented<br />for each rejected request.<br /> | 
+| `UnescapeAndRedirect` | UnescapeAndRedirect unescapes %2F and %5C sequences and redirects to the new path<br />if these sequences were present.<br />Redirect occurs after path normalization and merge slashes transformations if<br />they were configured. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />This option minimizes possibility of path confusion exploits by forcing request<br />with unescaped slashes to traverse all parties: downstream client, intermediate<br />proxies, Envoy and upstream server.<br />The “httpN.downstream_rq_redirected_with_normalized_path” counter is incremented<br />for each redirected request.<br /> | 
+| `UnescapeAndForward` | UnescapeAndForward unescapes %2F and %5C sequences and forwards the request.<br />Note: this option should not be enabled if intermediaries perform path based access<br />control as it may lead to path confusion vulnerabilities.<br /> | 
 
 
 #### PathSettings
@@ -1944,6 +2234,20 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
+#### ProcessingModeOptions
+
+
+
+ProcessingModeOptions defines if headers or body should be processed by the external service
+
+_Appears in:_
+- [ExtProcProcessingMode](#extprocprocessingmode)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
+
+
 #### ProviderType
 
 _Underlying type:_ _string_
@@ -1954,6 +2258,10 @@ _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 - [EnvoyProxyProvider](#envoyproxyprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `Kubernetes` | ProviderTypeKubernetes defines the "Kubernetes" provider.<br /> | 
+| `File` | ProviderTypeFile defines the "File" provider. This type is not implemented<br />until https://github.com/envoyproxy/gateway/issues/1001 is fixed.<br /> | 
 
 
 #### ProxyAccessLog
@@ -1997,6 +2305,10 @@ _Underlying type:_ _string_
 _Appears in:_
 - [ProxyAccessLogFormat](#proxyaccesslogformat)
 
+| Value | Description |
+| ----- | ----------- |
+| `Text` | ProxyAccessLogFormatTypeText defines the text accesslog format.<br /> | 
+| `JSON` | ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.<br /> | 
 
 
 #### ProxyAccessLogSetting
@@ -2026,6 +2338,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[ProxyAccessLogSinkType](#proxyaccesslogsinktype)_ |  true  | Type defines the type of accesslog sink. |
+| `als` | _[ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)_ |  false  | ALS defines the gRPC Access Log Service (ALS) sink. |
 | `file` | _[FileEnvoyProxyAccessLog](#fileenvoyproxyaccesslog)_ |  false  | File defines the file accesslog sink. |
 | `openTelemetry` | _[OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)_ |  false  | OpenTelemetry defines the OpenTelemetry accesslog sink. |
 
@@ -2039,6 +2352,11 @@ _Underlying type:_ _string_
 _Appears in:_
 - [ProxyAccessLogSink](#proxyaccesslogsink)
 
+| Value | Description |
+| ----- | ----------- |
+| `ALS` | ProxyAccessLogSinkTypeALS defines the gRPC Access Log Service (ALS) sink.<br />The service must implement the Envoy gRPC Access Log Service streaming API:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto<br /> | 
+| `File` | ProxyAccessLogSinkTypeFile defines the file accesslog sink.<br /> | 
+| `OpenTelemetry` | ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.<br />When the provider is Kubernetes, EnvoyGateway always sends `k8s.namespace.name`<br />and `k8s.pod.name` as additional attributes.<br /> | 
 
 
 #### ProxyBootstrap
@@ -2065,6 +2383,18 @@ ProxyLogComponent defines a component that supports a configured logging level.
 _Appears in:_
 - [ProxyLogging](#proxylogging)
 
+| Value | Description |
+| ----- | ----------- |
+| `default` | LogComponentDefault defines the default logging component.<br />See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l<br /> | 
+| `upstream` | LogComponentUpstream defines the "upstream" logging component.<br /> | 
+| `http` | LogComponentHTTP defines the "http" logging component.<br /> | 
+| `connection` | LogComponentConnection defines the "connection" logging component.<br /> | 
+| `admin` | LogComponentAdmin defines the "admin" logging component.<br /> | 
+| `client` | LogComponentClient defines the "client" logging component.<br /> | 
+| `filter` | LogComponentFilter defines the "filter" logging component.<br /> | 
+| `main` | LogComponentMain defines the "main" logging component.<br /> | 
+| `router` | LogComponentRouter defines the "router" logging component.<br /> | 
+| `runtime` | LogComponentRuntime defines the "runtime" logging component.<br /> | 
 
 
 #### ProxyLogging
@@ -2112,6 +2442,7 @@ _Appears in:_
 | `sinks` | _[ProxyMetricSink](#proxymetricsink) array_ |  true  | Sinks defines the metric sinks where metrics are sent to. |
 | `matches` | _[StringMatch](#stringmatch) array_ |  true  | Matches defines configuration for selecting specific metrics instead of generating all metrics stats<br />that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats<br />may after critical functionality. Here are the stats that we strongly recommend not disabling:<br />`cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`,<br />`cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856,<br />https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` | _boolean_ |  true  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
+| `enablePerEndpointStats` | _boolean_ |  true  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 
 
 #### ProxyOpenTelemetrySink
@@ -2125,9 +2456,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the service hostname.<br />Deprecated: Use BackendRef instead. |
+| `host` | _string_ |  false  | Host define the service hostname.<br />Deprecated: Use BackendRef instead. |
 | `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
 
 
 #### ProxyPrometheusProvider
@@ -2142,6 +2473,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `disable` | _boolean_ |  true  | Disable the Prometheus endpoint. |
+| `compression` | _[Compression](#compression)_ |  false  | Configure the compression on Prometheus endpoint. Compression is useful in situations when bandwidth is scarce and large payloads can be effectively compressed at the expense of higher CPU load. |
 
 
 #### ProxyProtocol
@@ -2168,6 +2500,10 @@ ProxyProtocolVersion defines the version of the Proxy Protocol to use.
 _Appears in:_
 - [ProxyProtocol](#proxyprotocol)
 
+| Value | Description |
+| ----- | ----------- |
+| `V1` | ProxyProtocolVersionV1 is the PROXY protocol version 1 (human readable format).<br /> | 
+| `V2` | ProxyProtocolVersionV2 is the PROXY protocol version 2 (binary format).<br /> | 
 
 
 #### ProxyTelemetry
@@ -2247,6 +2583,9 @@ to be used by the rate limit service.
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
 
+| Value | Description |
+| ----- | ----------- |
+| `Redis` | RedisBackendType uses a redis database for the rate limit service.<br /> | 
 
 
 #### RateLimitMetrics
@@ -2354,6 +2693,39 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  | Metrics defines metrics configuration for RateLimit. |
+| `tracing` | _[RateLimitTracing](#ratelimittracing)_ |  true  | Tracing defines traces configuration for RateLimit. |
+
+
+#### RateLimitTracing
+
+
+
+
+
+_Appears in:_
+- [RateLimitTelemetry](#ratelimittelemetry)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `provider` | _[RateLimitTracingProvider](#ratelimittracingprovider)_ |  true  | Provider defines the rateLimit tracing provider.<br />Only OpenTelemetry is supported currently. |
+
+
+#### RateLimitTracingProvider
+
+
+
+RateLimitTracingProvider defines the tracing provider configuration of RateLimit
+
+_Appears in:_
+- [RateLimitTracing](#ratelimittracing)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[RateLimitTracingProviderType](#ratelimittracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported |
+| `url` | _string_ |  true  | URL is the endpoint of the trace collector that supports the OTLP protocol |
+
+
 
 
 #### RateLimitType
@@ -2365,6 +2737,10 @@ RateLimitType specifies the types of RateLimiting.
 _Appears in:_
 - [RateLimitSpec](#ratelimitspec)
 
+| Value | Description |
+| ----- | ----------- |
+| `Global` | GlobalRateLimitType allows the rate limits to be applied across all Envoy<br />proxy instances.<br /> | 
+| `Local` | LocalRateLimitType allows the rate limits to be applied on a per Envoy<br />proxy instance basis.<br /> | 
 
 
 #### RateLimitUnit
@@ -2377,6 +2753,12 @@ Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
 _Appears in:_
 - [RateLimitValue](#ratelimitvalue)
 
+| Value | Description |
+| ----- | ----------- |
+| `Second` | RateLimitUnitSecond specifies the rate limit interval to be 1 second.<br /> | 
+| `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> | 
+| `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> | 
+| `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
 
 
 #### RateLimitValue
@@ -2447,6 +2829,9 @@ ResourceProviderType defines the types of custom resource providers supported by
 _Appears in:_
 - [EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
 #### Retry
@@ -2533,8 +2918,6 @@ _Appears in:_
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
 
 
-
-
 #### ServiceExternalTrafficPolicy
 
 _Underlying type:_ _string_
@@ -2546,6 +2929,10 @@ and LoadBalancer IPs.
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
+| Value | Description |
+| ----- | ----------- |
+| `Cluster` | ServiceExternalTrafficPolicyCluster routes traffic to all endpoints.<br /> | 
+| `Local` | ServiceExternalTrafficPolicyLocal preserves the source IP of the traffic by<br />routing only to endpoints on the same node as the traffic was received on<br />(dropping the traffic if there are no local endpoints).<br /> | 
 
 
 #### ServiceType
@@ -2557,6 +2944,11 @@ ServiceType string describes ingress methods for a service
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
+| Value | Description |
+| ----- | ----------- |
+| `ClusterIP` | ServiceTypeClusterIP means a service will only be accessible inside the<br />cluster, via the cluster IP.<br /> | 
+| `LoadBalancer` | ServiceTypeLoadBalancer means a service will be exposed via an<br />external load balancer (if the cloud provider supports it).<br /> | 
+| `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> | 
 
 
 #### ShutdownConfig
@@ -2599,6 +2991,10 @@ _Underlying type:_ _string_
 _Appears in:_
 - [SourceMatch](#sourcematch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
+| `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
 
 
 #### StringMatch
@@ -2628,6 +3024,12 @@ Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 _Appears in:_
 - [StringMatch](#stringmatch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | StringMatchExact :the input string must match exactly the match value.<br /> | 
+| `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> | 
+| `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> | 
+| `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
 
 
 #### TCPActiveHealthChecker
@@ -2683,7 +3085,8 @@ _Appears in:_
 
 
 _Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [BackendTLSConfig](#backendtlsconfig)
+- [ClientTLSSettings](#clienttlssettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -2693,7 +3096,6 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
-| `clientValidation` | _[ClientValidationContext](#clientvalidationcontext)_ |  false  | ClientValidation specifies the configuration to validate the client<br />initiating the TLS connection to the Gateway listener. |
 
 
 #### TLSVersion
@@ -2703,8 +3105,17 @@ _Underlying type:_ _string_
 TLSVersion specifies the TLS version
 
 _Appears in:_
+- [BackendTLSConfig](#backendtlsconfig)
+- [ClientTLSSettings](#clienttlssettings)
 - [TLSSettings](#tlssettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | TLSAuto allows Envoy to choose the optimal TLS Version<br /> | 
+| `1.0` | TLS1.0 specifies TLS version 1.0<br /> | 
+| `1.1` | TLS1.1 specifies TLS version 1.1<br /> | 
+| `1.2` | TLSv1.2 specifies TLS version 1.2<br /> | 
+| `1.3` | TLSv1.3 specifies TLS version 1.3<br /> | 
 
 
 #### Timeout
@@ -2734,9 +3145,9 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />EG currently only supports OpenTelemetry. |
-| `host` | _string_ |  true  | Host define the provider service hostname.<br />Deprecated: Use BackendRef instead. |
+| `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRef instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRef` | _[BackendObjectReference](#backendobjectreference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
 
 
 #### TracingProviderType
@@ -2748,6 +3159,10 @@ _Underlying type:_ _string_
 _Appears in:_
 - [TracingProvider](#tracingprovider)
 
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` |  | 
+| `OpenTelemetry` |  | 
 
 
 #### TriggerEnum
@@ -2759,6 +3174,20 @@ TriggerEnum specifies the conditions that trigger retries.
 _Appears in:_
 - [RetryOn](#retryon)
 
+| Value | Description |
+| ----- | ----------- |
+| `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> | 
+| `gateway-error` | The response is a gateway error (502,503 or 504).<br /> | 
+| `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> | 
+| `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> | 
+| `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> | 
+| `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> | 
+| `retriable-status-codes` | The upstream server responds with any response code matching one defined in the RetriableStatusCodes.<br /> | 
+| `cancelled` | The gRPC status code in the response headers is “cancelled”.<br /> | 
+| `deadline-exceeded` | The gRPC status code in the response headers is “deadline-exceeded”.<br /> | 
+| `internal` | The gRPC status code in the response headers is “internal”.<br /> | 
+| `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> | 
+| `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
 
 
 #### Wasm
@@ -2777,8 +3206,9 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging. |
+| `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />RootID must match the root_id parameter used to register the Context in the Wasm code. |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
-| `config` | _[JSON](#json)_ |  true  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
+| `config` | _[JSON](#json)_ |  false  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. Otherwise, if it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error. |
 
 
@@ -2796,6 +3226,7 @@ _Appears in:_
 | `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code.<br /><br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code.<br /><br />Note that the image must be accessible from the Envoy Gateway. |
+| `sha256` | _string_ |  true  | SHA256 checksum that will be used to verify the wasm code.<br /><br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
 
 
 #### WasmCodeSourceType
@@ -2807,6 +3238,10 @@ WasmCodeSourceType specifies the types of sources for the wasm code.
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
 
+| Value | Description |
+| ----- | ----------- |
+| `HTTP` | HTTPWasmCodeSourceType allows the user to specify the wasm code in an HTTP URL.<br /> | 
+| `Image` | ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.<br /> | 
 
 
 #### WithUnderscoresAction
@@ -2819,6 +3254,11 @@ is encountered.
 _Appears in:_
 - [HeaderSettings](#headersettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `Allow` | WithUnderscoresActionAllow allows headers with underscores to be passed through.<br /> | 
+| `RejectRequest` | WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with<br />the 400 status. HTTP/2 requests end with the stream reset.<br /> | 
+| `DropHeader` | WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header<br />is dropped before the filter chain is invoked and as such filters will not see<br />dropped headers.<br /> | 
 
 
 #### XDSTranslatorHook
@@ -2831,6 +3271,12 @@ for the xds-translator
 _Appears in:_
 - [XDSTranslatorHooks](#xdstranslatorhooks)
 
+| Value | Description |
+| ----- | ----------- |
+| `VirtualHost` |  | 
+| `Route` |  | 
+| `HTTPListener` |  | 
+| `Translation` |  | 
 
 
 #### XDSTranslatorHooks

@@ -3,7 +3,7 @@ title: "UDP Routing"
 ---
 
 The [UDPRoute][] resource allows users to configure UDP routing by matching UDP traffic and forwarding it to Kubernetes
-backends. This guide will use CoreDNS example to walk you through the steps required to configure UDPRoute on Envoy
+backends. This task will use CoreDNS example to walk you through the steps required to configure UDPRoute on Envoy
 Gateway.
 
 __Note:__ UDPRoute allows Envoy Gateway to operate as a non-transparent proxy between a UDP client and server. The lack
@@ -12,7 +12,7 @@ For additional information, refer to Envoy's [UDP proxy documentation][].
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Installation
@@ -33,20 +33,17 @@ kubectl wait --timeout=5m deployment/coredns --for=condition=Available
 Update the Gateway from the Quickstart to include a UDP listener that listens on UDP port `5300`:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "coredns",
-      "protocol": "UDP",
-      "port": 5300,
-      "allowedRoutes": {
-         "kinds": [{
-            "kind": "UDPRoute"
-          }]
-      }
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: coredns
+      protocol: UDP
+      port: 5300
+      allowedRoutes:
+        kinds:
+        - kind: UDPRoute
+  '
 ```
 
 Verify the Gateway status:
@@ -141,7 +138,7 @@ kubectl delete udproute/coredns
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
 [UDPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
 [UDP proxy documentation]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy

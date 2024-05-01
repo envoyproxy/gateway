@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: envoyextensionpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -17,9 +17,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -57,104 +54,148 @@ spec:
                   description: ExtProc defines the configuration for External Processing
                     filter.
                   properties:
-                    backendRef:
-                      description: Service defines the configuration of the external
+                    backendRefs:
+                      description: BackendRefs defines the configuration of the external
                         processing service
-                      properties:
-                        group:
-                          default: ""
-                          description: |-
-                            Group is the group of the referent. For example, "gateway.networking.k8s.io".
-                            When unspecified or empty string, core API group is inferred.
-                          maxLength: 253
-                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                          type: string
-                        kind:
-                          default: Service
-                          description: |-
-                            Kind is the Kubernetes resource kind of the referent. For example
-                            "Service".
+                      items:
+                        description: BackendRef defines how an ObjectReference that
+                          is specific to BackendRef.
+                        properties:
+                          group:
+                            default: ""
+                            description: |-
+                              Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                              When unspecified or empty string, core API group is inferred.
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            default: Service
+                            description: |-
+                              Kind is the Kubernetes resource kind of the referent. For example
+                              "Service".
 
 
-                            Defaults to "Service" when not specified.
+                              Defaults to "Service" when not specified.
 
 
-                            ExternalName services can refer to CNAME DNS records that may live
-                            outside of the cluster and as such are difficult to reason about in
-                            terms of conformance. They also may not be safe to forward to (see
-                            CVE-2021-25740 for more information). Implementations SHOULD NOT
-                            support ExternalName Services.
+                              ExternalName services can refer to CNAME DNS records that may live
+                              outside of the cluster and as such are difficult to reason about in
+                              terms of conformance. They also may not be safe to forward to (see
+                              CVE-2021-25740 for more information). Implementations SHOULD NOT
+                              support ExternalName Services.
 
 
-                            Support: Core (Services with a type other than ExternalName)
+                              Support: Core (Services with a type other than ExternalName)
 
 
-                            Support: Implementation-specific (Services with type ExternalName)
-                          maxLength: 63
-                          minLength: 1
-                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                          type: string
-                        name:
-                          description: Name is the name of the referent.
-                          maxLength: 253
-                          minLength: 1
-                          type: string
-                        namespace:
-                          description: |-
-                            Namespace is the namespace of the backend. When unspecified, the local
-                            namespace is inferred.
+                              Support: Implementation-specific (Services with type ExternalName)
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            description: Name is the name of the referent.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace is the namespace of the backend. When unspecified, the local
+                              namespace is inferred.
 
 
-                            Note that when a namespace different than the local namespace is specified,
-                            a ReferenceGrant object is required in the referent namespace to allow that
-                            namespace's owner to accept the reference. See the ReferenceGrant
-                            documentation for details.
+                              Note that when a namespace different than the local namespace is specified,
+                              a ReferenceGrant object is required in the referent namespace to allow that
+                              namespace's owner to accept the reference. See the ReferenceGrant
+                              documentation for details.
 
 
-                            Support: Core
-                          maxLength: 63
-                          minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                          type: string
-                        port:
-                          description: |-
-                            Port specifies the destination port number to use for this resource.
-                            Port is required when the referent is a Kubernetes Service. In this
-                            case, the port number is the service port number, not the target port.
-                            For other resources, destination port might be derived from the referent
-                            resource or this field.
-                          format: int32
-                          maximum: 65535
-                          minimum: 1
-                          type: integer
-                      required:
-                      - name
-                      type: object
+                              Support: Core
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                          port:
+                            description: |-
+                              Port specifies the destination port number to use for this resource.
+                              Port is required when the referent is a Kubernetes Service. In this
+                              case, the port number is the service port number, not the target port.
+                              For other resources, destination port might be derived from the referent
+                              resource or this field.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        required:
+                        - name
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Must have port for Service reference
+                          rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                            ? has(self.port) : true'
+                      maxItems: 1
+                      minItems: 1
+                      type: array
                       x-kubernetes-validations:
-                      - message: Must have port for Service reference
-                        rule: '(size(self.group) == 0 && self.kind == ''Service'')
-                          ? has(self.port) : true'
+                      - message: BackendRefs only supports Service kind.
+                        rule: self.all(f, f.kind == 'Service')
+                      - message: BackendRefs only supports Core group.
+                        rule: self.all(f, f.group == '')
+                    failOpen:
+                      description: |-
+                        FailOpen defines if requests or responses that cannot be processed due to connectivity to the
+                        external processor are terminated or passed-through.
+                        Default: false
+                      type: boolean
+                    messageTimeout:
+                      description: |-
+                        MessageTimeout is the timeout for a response to be returned from the external processor
+                        Default: 200ms
+                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                      type: string
+                    processingMode:
+                      description: |-
+                        ProcessingMode defines how request and response body is processed
+                        Default: header and body are not sent to the external processor
+                      properties:
+                        request:
+                          description: |-
+                            Defines processing mode for requests. If present, request headers are sent. Request body is processed according
+                            to the specified mode.
+                          properties:
+                            body:
+                              description: Defines body processing mode
+                              enum:
+                              - Streamed
+                              - Buffered
+                              - BufferedPartial
+                              type: string
+                          type: object
+                        response:
+                          description: |-
+                            Defines processing mode for responses. If present, response headers are sent. Response body is processed according
+                            to the specified mode.
+                          properties:
+                            body:
+                              description: Defines body processing mode
+                              enum:
+                              - Streamed
+                              - Buffered
+                              - BufferedPartial
+                              type: string
+                          type: object
+                      type: object
                   required:
-                  - backendRef
+                  - backendRefs
                   type: object
-                  x-kubernetes-validations:
-                  - message: group is invalid, only the core API group (specified
-                      by omitting the group field or setting it to an empty string)
-                      is supported
-                    rule: 'has(self.backendRef) ? (!has(self.backendRef.group) ||
-                      self.backendRef.group == "") : true'
-                  - message: kind is invalid, only Service (specified by omitting
-                      the kind field or setting it to 'Service') is supported
-                    rule: 'has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind
-                      == ''Service'') : true'
                 type: array
               targetRef:
                 description: |-
-                  TargetRef is the name of the Gateway resource this policy
+                  TargetRef is the name of the resource this policy
                   is being attached to.
                   This Policy and the TargetRef MUST be in the same namespace
-                  for this Policy to have effect and be applied to the Gateway.
-                  TargetRef
+                  for this Policy to have effect and be applied to the Gateway or xRoute.
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -215,7 +256,7 @@ spec:
                   rule: '!has(self.sectionName)'
               wasm:
                 description: |-
-                  WASM is a list of Wasm extensions to be loaded by the Gateway.
+                  Wasm is a list of Wasm extensions to be loaded by the Gateway.
                   Order matters, as the extensions will be loaded in the order they are
                   defined in this list.
                 items:
@@ -301,19 +342,28 @@ spec:
                           - pullSecret
                           - url
                           type: object
+                        sha256:
+                          description: |-
+                            SHA256 checksum that will be used to verify the wasm code.
+
+
+                            kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+                          type: string
                         type:
                           allOf:
                           - enum:
-                            - Global
-                            - Local
+                            - HTTP
+                            - Image
                           - enum:
                             - HTTP
                             - Image
+                            - ConfigMap
                           description: |-
                             Type is the type of the source of the wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
                           type: string
                       required:
+                      - sha256
                       - type
                       type: object
                     config:
@@ -337,9 +387,15 @@ spec:
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
                       type: string
+                    rootID:
+                      description: |-
+                        RootID is a unique ID for a set of extensions in a VM which will share a
+                        RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
+                        If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
+                        RootID must match the root_id parameter used to register the Context in the Wasm code.
+                      type: string
                   required:
                   - code
-                  - config
                   - name
                   type: object
                 type: array

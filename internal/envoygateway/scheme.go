@@ -16,15 +16,13 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-var (
-	// scheme contains all the API types necessary for the provider's dynamic
-	// clients to work. Any new non-core types must be added here.
-	//
-	// NOTE: The discovery mechanism used by the client doesn't automatically
-	// refresh, so only add types here that are guaranteed to exist before the
-	// provider starts.
-	scheme = runtime.NewScheme()
-)
+// scheme contains all the API types necessary for the provider's dynamic
+// clients to work. Any new non-core types must be added here.
+//
+// NOTE: The discovery mechanism used by the client doesn't automatically
+// refresh, so only add types here that are guaranteed to exist before the
+// provider starts.
+var scheme = runtime.NewScheme()
 
 func init() {
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {

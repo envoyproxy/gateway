@@ -23,6 +23,9 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Support TCP keepalive for downstream client
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -42,6 +45,32 @@ spec:
     probes: 3
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-tcp-keepalive-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  tcpKeepalive:
+    idleTime: 20m
+    interval: 60s
+    probes: 3
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify that ClientTrafficPolicy is Accepted:
 
@@ -176,6 +205,9 @@ You can see keepalive connection marked by the output in:
 
 This example configures Proxy Protocol for downstream clients.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -192,6 +224,29 @@ spec:
   enableProxyProtocol: true
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-proxy-protocol-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  enableProxyProtocol: true
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify that ClientTrafficPolicy is Accepted:
 
@@ -289,6 +344,9 @@ You should now expect 200 response status and also see that source IP was preser
 
 This example configures the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address and determines whether or not `x-forwarded-proto` headers will be trusted. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for details.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -307,6 +365,31 @@ spec:
       numTrustedHops: 2
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http-client-ip-detection
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 2
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify that ClientTrafficPolicy is Accepted:
 
@@ -415,6 +498,9 @@ Handling connection for 8888
 This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
 This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -431,6 +517,29 @@ spec:
       requestReceivedTimeout: 2s
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  timeout:
+    http:
+      requestReceivedTimeout: 2s
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Curl the example app through Envoy proxy:
 

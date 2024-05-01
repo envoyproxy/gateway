@@ -239,46 +239,46 @@ enable = true
 
 [menu]
   [[menu.main]]
+    name = "Contributions"
+    weight = -98
+    url = "/contributions"
+  [[menu.main]]
     name = "Blog"
     weight = -99
-    pre = "<i class='fas fa-rss pr-2'></i>"
     url = "/blog"
   [[menu.main]]
     name = "About"
     weight = -100
-    pre = "<i class='fa fa-star pr-2'></i>"
     url = "/about"
   [[menu.main]]
     name = "Announcements"
     weight = -101
-    pre = "<i class='fas fa-comments pr-2'></i>"
     url = "/announcements"
   [[menu.main]]
     name = "Documentation"
     weight = -102
-    pre = "<i class='fas fa-book pr-2'></i>"
     url = "/v1.0.1"
 
   # i18n for Chinese
   [[languages.zh.menu.main]]
+    name = "贡献"
+    weight = -98
+    url = "/contributions"
+  [[languages.zh.menu.main]]
     name = "博客"
     weight = -99
-    pre = "<i class='fas fa-rss pr-2'></i>"
     url = "/blog"
   [[languages.zh.menu.main]]
     name = "关于"
     weight = -100
-    pre = "<i class='fa fa-star pr-2'></i>"
     url = "/about"
   [[languages.zh.menu.main]]
     name = "公告"
     weight = -101
-    pre = "<i class='fas fa-comments pr-2'></i>"
     url = "/announcements"
   [[languages.zh.menu.main]]
     name = "文档"
     weight = -102
-    pre = "<i class='fas fa-book pr-2'></i>"
     url = "/latest"
 
 [[params.versions]]

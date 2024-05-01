@@ -79,16 +79,20 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	return r
 }
 
-func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
+func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
+	if opts == nil {
+		opts = &ir.HTTP2Settings{}
+	}
+
 	return &corev3.Http2ProtocolOptions{
 		MaxConcurrentStreams: &wrappers.UInt32Value{
-			Value: http2MaxConcurrentStreamsLimit,
+			Value: ptr.Deref(opts.MaxConcurrentStreams, http2MaxConcurrentStreamsLimit),
 		},
 		InitialStreamWindowSize: &wrappers.UInt32Value{
-			Value: http2InitialStreamWindowSize,
+			Value: ptr.Deref(opts.InitialStreamWindowSize, http2InitialStreamWindowSize),
 		},
 		InitialConnectionWindowSize: &wrappers.UInt32Value{
-			Value: http2InitialConnectionWindowSize,
+			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
 		},
 	}
 }
@@ -194,8 +198,19 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 	return xdsListener
 }
 
-func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection) error {
+// addHCMToXDSListener adds a HCM filter to the listener's filter chain, and adds
+// all the necessary HTTP filters to that HCM.
+//
+//   - If tls is not enabled, a HCM filter is added to the Listener's default TCP filter chain.
+//     All the ir HTTP Listeners on the same address + port combination share the
+//     same HCM + HTTP filters.
+//   - If tls is enabled, a new TCP filter chain is created and added to the listener.
+//     A HCM filter is added to the new TCP filter chain.
+//     The newly created TCP filter chain is configured with a filter chain match to
+//     match the server names(SNI) based on the listener's hostnames.
+func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
+	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection,
+) error {
 	al := buildXdsAccessLog(accesslog, false)
 
 	hcmTracing, err := buildHCMTracing(tracing)
@@ -212,8 +227,8 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	}
 
 	// Client IP detection
-	var useRemoteAddress = true
-	var originalIPDetectionExtensions = originalIPDetectionExtensions(irListener.ClientIPDetection)
+	useRemoteAddress := true
+	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}
@@ -234,7 +249,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
-		Http2ProtocolOptions: http2ProtocolOptions(),
+		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress:              &wrappers.BoolValue{Value: useRemoteAddress},
 		XffNumTrustedHops:             xffNumTrustedHops(irListener.ClientIPDetection),
@@ -533,7 +548,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 	}
 
 	if tlsConfig.CACertificate != nil {
-		tlsCtx.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.RequireClientCertificate = &wrappers.BoolValue{Value: tlsConfig.RequireClientCertificate}
 		tlsCtx.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
 				Name:      tlsConfig.CACertificate.Name,
@@ -706,7 +721,6 @@ func makeConfigSource() *corev3.ConfigSource {
 }
 
 func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction {
-
 	lookup := map[ir.PathEscapedSlashAction]hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction{
 		ir.KeepUnchangedAction: hcmv3.HttpConnectionManager_KEEP_UNCHANGED,
 		ir.RejectRequestAction: hcmv3.HttpConnectionManager_REJECT_REQUEST,

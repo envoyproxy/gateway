@@ -26,7 +26,7 @@ The Helm chart for Envoy Gateway
 |-----|------|---------|-------------|
 | certgen.job.annotations | object | `{}` |  |
 | certgen.job.resources | object | `{}` |  |
-| certgen.job.ttlSecondsAfterFinished | int | `0` |  |
+| certgen.job.ttlSecondsAfterFinished | int | `30` |  |
 | certgen.rbac.annotations | object | `{}` |  |
 | certgen.rbac.labels | object | `{}` |  |
 | config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
@@ -35,7 +35,7 @@ The Helm chart for Envoy Gateway
 | createNamespace | bool | `false` |  |
 | deployment.envoyGateway.image.repository | string | `"${ImageRepository}"` |  |
 | deployment.envoyGateway.image.tag | string | `"${ImageTag}"` |  |
-| deployment.envoyGateway.imagePullPolicy | string | `"Always"` |  |
+| deployment.envoyGateway.imagePullPolicy | string | `"IfNotPresent"` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |

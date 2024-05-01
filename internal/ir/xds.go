@@ -180,12 +180,8 @@ func (x Xds) Printable() *Xds {
 
 		for _, route := range listener.Routes {
 			// Omit field
-			if route.OIDC != nil {
-				route.OIDC.ClientSecret = redacted
-				route.OIDC.HMACSecret = redacted
-			}
-			if route.BasicAuth != nil {
-				route.BasicAuth.Users = redacted
+			if route.Security != nil {
+				route.Security = route.Security.Printable()
 			}
 		}
 	}
@@ -221,14 +217,17 @@ type HTTPListener struct {
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
-	// HTTP3 provides HTTP/3 configuration on the listener.
-	// +optional
-	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
+	// HTTP2 provides HTTP/2 configuration on the listener
+	// +optional
+	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
+	// HTTP3 provides HTTP/3 configuration on the listener.
+	// +optional
+	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
@@ -285,6 +284,8 @@ type TLSConfig struct {
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
 	// CACertificate to verify the client
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+	// RequireClientCertificate to enforce client certificate
+	RequireClientCertificate bool `json:"requireClientCertificate,omitempty" yaml:"requireClientCertificate,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
 	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
 	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
@@ -396,6 +397,17 @@ type HTTP10Settings struct {
 	DefaultHost *string `json:"defaultHost,omitempty" yaml:"defaultHost,omitempty"`
 }
 
+// HTTP2Settings provides HTTP/2 configuration on the listener.
+// +k8s:deepcopy-gen=true
+type HTTP2Settings struct {
+	// InitialStreamWindowSize is the initial window size for a stream.
+	InitialStreamWindowSize *uint32 `json:"initialConnectionWindowSize,omitempty" yaml:"initialConnectionWindowSize,omitempty"`
+	// InitialConnectionWindowSize is the initial window size for a connection.
+	InitialConnectionWindowSize *uint32 `json:"initialStreamWindowSize,omitempty" yaml:"initialStreamWindowSize,omitempty"`
+	// MaxConcurrentStreams is the maximum number of concurrent streams that can be opened on a connection.
+	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
+}
+
 // HeaderSettings provides configuration related to header processing on the listener.
 // +k8s:deepcopy-gen=true
 type HeaderSettings struct {
@@ -467,18 +479,8 @@ type HTTPRoute struct {
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
-	// CORS policy for the route.
-	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
-	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
-	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
-	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
-	// BasicAuth defines the schema for the HTTP Basic Authentication.
-	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
-	// ExtAuth defines the schema for the external authorization.
-	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
@@ -495,6 +497,65 @@ type HTTPRoute struct {
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 	// External Processing extensions
 	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
+	// Wasm extensions
+	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+
+	// Security holds the features associated with SecurityPolicy
+	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// UseClientProtocol enables using the same protocol upstream that was used downstream
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+}
+
+// SecurityFeatures holds the information associated with the Security Policy.
+// +k8s:deepcopy-gen=true
+type SecurityFeatures struct {
+	// CORS policy for the route.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
+	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
+	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// BasicAuth defines the schema for the HTTP Basic Authentication.
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	// ExtAuth defines the schema for the external authorization.
+	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
+}
+
+// Empty returns true if all the features are not set.
+func (s *SecurityFeatures) Empty() bool {
+	if s == nil {
+		return true
+	}
+
+	return s.CORS == nil &&
+		s.JWT == nil &&
+		s.OIDC == nil &&
+		s.BasicAuth == nil &&
+		s.ExtAuth == nil
+}
+
+func (s *SecurityFeatures) Printable() *SecurityFeatures {
+	out := s.DeepCopy()
+	if out.OIDC != nil {
+		out.OIDC.ClientSecret = redacted
+		out.OIDC.HMACSecret = redacted
+	}
+	if out.BasicAuth != nil {
+		out.BasicAuth.Users = redacted
+	}
+	return out
+}
+
+func (s *SecurityFeatures) Validate() error {
+	var errs error
+
+	if s.JWT != nil {
+		if err := s.JWT.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -529,6 +590,10 @@ type CORS struct {
 //
 // +k8s:deepcopy-gen=true
 type JWT struct {
+	// AllowMissing determines whether a missing JWT is acceptable.
+	//
+	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
+
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
@@ -810,8 +875,8 @@ func (h HTTPRoute) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-	if h.JWT != nil {
-		if err := h.JWT.validate(); err != nil {
+	if h.Security != nil {
+		if err := h.Security.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -824,7 +889,7 @@ func (h HTTPRoute) Validate() error {
 	return errs
 }
 
-func (j *JWT) validate() error {
+func (j *JWT) Validate() error {
 	var errs error
 
 	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
@@ -1380,15 +1445,18 @@ type JSONPatchOperation struct {
 // Tracing defines the configuration for tracing a Envoy xDS Resource
 // +k8s:deepcopy-gen=true
 type Tracing struct {
-	ServiceName string `json:"serviceName"`
-
-	egv1a1.ProxyTracing
+	ServiceName  string                      `json:"serviceName"`
+	Host         string                      `json:"host"`
+	Port         uint32                      `json:"port"`
+	SamplingRate float64                     `json:"samplingRate,omitempty"`
+	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
 // +k8s:deepcopy-gen=true
 type Metrics struct {
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats" yaml:"enableVirtualHostStats"`
+	EnablePerEndpointStats bool `json:"enablePerEndpointStats" yaml:"enablePerEndpointStats"`
 }
 
 // TCPKeepalive define the TCP Keepalive configuration.
@@ -1817,12 +1885,12 @@ type TLSUpstreamConfig struct {
 	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+	TLSConfig           `json:",inline"`
 }
 
 // Connection settings for downstream connections
 // +k8s:deepcopy-gen=true
 type Connection struct {
-	//
 	// ConnectionLimit is the limit of number of connections
 	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
@@ -1841,6 +1909,17 @@ type ConnectionLimit struct {
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }
 
+type ExtProcBodyProcessingMode egv1a1.ExtProcBodyProcessingMode
+
+const (
+	// ExtProcBodyStreamed sets the streamed body processing mode
+	ExtProcBodyStreamed = ExtProcBodyProcessingMode(egv1a1.StreamedExtProcBodyProcessingMode)
+	// ExtProcBodyBuffered sets the buffered body processing mode
+	ExtProcBodyBuffered = ExtProcBodyProcessingMode(egv1a1.BufferedExtProcBodyProcessingMode)
+	// ExtProcBodyBufferedPartial sets the partial buffered body processing mode
+	ExtProcBodyBufferedPartial = ExtProcBodyProcessingMode(egv1a1.BufferedPartialExtBodyHeaderProcessingMode)
+)
+
 // ExtProc holds the information associated with the ExtProc extensions.
 // +k8s:deepcopy-gen=true
 type ExtProc struct {
@@ -1849,8 +1928,65 @@ type ExtProc struct {
 	Name string `json:"name" yaml:"name"`
 
 	// Destination defines the destination for the gRPC External Processing service.
-	Destination RouteDestination `json:"destination"`
+	Destination RouteDestination `json:"destination" yaml:"destination"`
 
 	// Authority is the hostname:port of the HTTP External Processing service.
-	Authority string `json:"authority"`
+	Authority string `json:"authority" yaml:"authority"`
+
+	// MessageTimeout is the timeout for a response to be returned from the external processor
+	MessageTimeout *metav1.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
+
+	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
+	// external processor are terminated or passed-through.
+	FailOpen *bool `json:"failOpen,omitempty" yaml:"failOpen,omitempty"`
+
+	// RequestHeaderProcessing Defines if request headers are processed
+	RequestHeaderProcessing bool `json:"requestHeaderProcessing,omitempty" yaml:"requestHeaderProcessing,omitempty"`
+
+	// RequestBodyProcessingMode Defines request body processing
+	RequestBodyProcessingMode *ExtProcBodyProcessingMode `json:"requestBodyProcessingMode,omitempty" yaml:"requestBodyProcessingMode,omitempty"`
+
+	// ResponseHeaderProcessingMode Defines if response headers are processed
+	ResponseHeaderProcessing bool `json:"responseHeaderProcessing,omitempty" yaml:"responseHeaderProcessing,omitempty"`
+
+	// ResponseBodyProcessingMode Defines response body processing
+	ResponseBodyProcessingMode *ExtProcBodyProcessingMode `json:"responseBodyProcessingMode,omitempty" yaml:"responseBodyProcessingMode,omitempty"`
+}
+
+// Wasm holds the information associated with the Wasm extensions.
+// +k8s:deepcopy-gen=true
+type Wasm struct {
+	// Name is a unique name for an Wasm configuration.
+	// The xds translator only generates one ExtProc filter for each unique name.
+	Name string `json:"name"`
+
+	// RootID is a unique ID for a set of extensions in a VM which will share a
+	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
+	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
+	RootID *string `json:"rootID,omitempty"`
+
+	// WasmName is used to identify the Wasm extension if multiple extensions are
+	// handled by the same vm_id and root_id.
+	// It's also used for logging/debugging.
+	WasmName string `json:"wasmName"`
+
+	// Config is the configuration for the Wasm extension.
+	// This configuration will be passed as a JSON string to the Wasm extension.
+	Config *apiextensionsv1.JSON `json:"config"`
+
+	// FailOpen is a switch used to control the behavior when a fatal error occurs
+	// during the initialization or the execution of the Wasm extension.
+	FailOpen bool `json:"failOpen"`
+
+	// HTTPWasmCode is the HTTP Wasm code source.
+	HTTPWasmCode *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+}
+
+// HTTPWasmCode holds the information associated with the HTTP Wasm code source.
+type HTTPWasmCode struct {
+	// URL is the URL of the Wasm code.
+	URL string `json:"url"`
+
+	// SHA256 checksum that will be used to verify the wasm code.
+	SHA256 string `json:"sha256"`
 }

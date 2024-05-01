@@ -35,7 +35,7 @@
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
         - disabled: true
-          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
+          name: envoy.filters.http.basic_auth
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
             users:
@@ -94,7 +94,7 @@
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
         - disabled: true
-          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
+          name: envoy.filters.http.basic_auth
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
             users:
