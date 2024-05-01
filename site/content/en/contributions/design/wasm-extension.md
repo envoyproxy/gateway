@@ -12,7 +12,7 @@ Google Container Registry, and Amazon Elastic Container Registry, to Envoy proxi
 
 ## Architecture
 
-![](./wasm-extension.png)
+![](../wasm-extension.png)
 
 ### Control Plane Wasm File Cache
 
