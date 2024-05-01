@@ -45,24 +45,28 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	}
 
 	var (
-		irBasicAuth *ir.BasicAuth
-		filter      *hcmv3.HttpFilter
-		err         error
+		irBasicAuth      *ir.BasicAuth
+		userNameToHeader *string
+		filter           *hcmv3.HttpFilter
+		err              error
 	)
 
 	for _, route := range irListener.Routes {
 		if route.Security != nil && route.Security.BasicAuth != nil {
 			irBasicAuth = route.Security.BasicAuth
-			break
+			// if any route has a ForwardUsernameHeader set, forward it.
+			if irBasicAuth.ForwardUsernameHeader != nil {
+				userNameToHeader = irBasicAuth.ForwardUsernameHeader
+			}
 		}
 	}
 	if irBasicAuth == nil {
 		return nil
 	}
 
-	// We use the first route that contains the basicAuth config to build the filter.
+	// We use the last route that contains the basicAuth config to build the filter.
 	// The HCM-level filter config doesn't matter since it is overridden at the route level.
-	if filter, err = buildHCMBasicAuthFilter(irBasicAuth); err != nil {
+	if filter, err = buildHCMBasicAuthFilter(irBasicAuth, userNameToHeader); err != nil {
 		return err
 	}
 	mgr.HttpFilters = append(mgr.HttpFilters, filter)
@@ -70,7 +74,7 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 }
 
 // buildHCMBasicAuthFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
-func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error) {
+func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth, userNameToHeader *string) (*hcmv3.HttpFilter, error) {
 	var (
 		basicAuthProto *basicauthv3.BasicAuth
 		basicAuthAny   *anypb.Any
@@ -85,8 +89,8 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 		},
 	}
 
-	if basicAuth.ForwardUsernameHeader != nil {
-		basicAuthProto.ForwardUsernameHeader = *basicAuth.ForwardUsernameHeader
+	if userNameToHeader != nil {
+		basicAuthProto.ForwardUsernameHeader = *userNameToHeader
 	}
 
 	if err = basicAuthProto.ValidateAll(); err != nil {
