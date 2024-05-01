@@ -29,6 +29,8 @@ type BasicAuth struct {
 	Users gwapiv1b1.SecretObjectReference `json:"users"`
 
 	// The name of the HTTP header that will be used to forward the username to the upstream server.
+	// Please note that the header name is a global setting for all the routes in a Gateway.
+	// If multiple routes have different header names, a random one will be chosen.
 	// +optional
 	UserNameToHeader *gwapiv1.HeaderName `json:"userNameToHeader,omitempty"`
 }

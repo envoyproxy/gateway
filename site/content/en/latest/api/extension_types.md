@@ -298,7 +298,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br /><br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:{SHA}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details.<br /><br />Note: The secret must be in the same namespace as the SecurityPolicy. |
-| `userNameToHeader` | _[HeaderName](#headername)_ |  false  | The name of the HTTP header that will be used to forward the username to the upstream server. |
+| `userNameToHeader` | _[HeaderName](#headername)_ |  false  | The name of the HTTP header that will be used to forward the username to the upstream server.<br />Please note that the header name is a global setting for all the routes in a Gateway.<br />If multiple routes have different header names, a random one will be chosen. |
 
 
 #### BootstrapType
@@ -3307,3 +3307,5 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
+
+

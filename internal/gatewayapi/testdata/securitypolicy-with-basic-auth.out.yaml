@@ -246,8 +246,8 @@ xdsIR:
           prefix: /foo1
         security:
           basicAuth:
-            userNameToHeader: x-basic-auth-user
             name: securitypolicy/default/policy-for-http-route-1
+            userNameToHeader: x-basic-auth-user
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - backendWeights:
           invalid: 0
@@ -270,8 +270,8 @@ xdsIR:
           prefix: /foo2
         security:
           basicAuth:
-            userNameToHeader: x-basic-auth-user
             name: securitypolicy/default/policy-for-http-route-1
+            userNameToHeader: x-basic-auth-user
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - backendWeights:
           invalid: 0
