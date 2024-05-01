@@ -20,7 +20,7 @@ Envoy lacks native OCI image support, therefore, EG needs to download Wasm modul
 cache them locally in the file system, and serve them to Envoy over HTTP.
 
 **HTTP Code Source:** For HTTP code source, we have two options: serve Wasm modules directly from their 
-original HTTP URLs, or cache them in EG (as with OIC images). Caching both the HTTP Wasm modules and OCI 
+original HTTP URLs, or cache them in EG (as with OCI images). Caching both the HTTP Wasm modules and OCI 
 images inside EG can make UI consistent, for example, sha256sum can be calculated on the EG side and made 
 optional in the API. EG can also periodically pull Wasm modules and update the local file cache.
 
