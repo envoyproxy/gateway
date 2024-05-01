@@ -38,7 +38,7 @@ will be configurable.
 **Authn & Authz:** 
 * To prevent unauthorized proxies from accessing the Wasm modules, the communication between the Envoy and EG will be 
  secured using mutual TLS.
-* To prevent unauthorized users from accessing the Wasm modules, the user who authroize the EEP must have the appropriate 
+* To prevent unauthorized users from accessing the Wasm modules, the user who authorize the EEP must have the appropriate 
  permissions to access the OCI registry. For example, if users in different namespaces (ns1, ns2) access the same OCI image, 
  each must create a unique secret with registry credentials (secret1 for user1 in ns1, secret2 for user2 in ns2). EG will 
  validate the provided secret against the OCI registry before serving the Wasm module to the target HTTPRoute/Gateway.
