@@ -35,8 +35,15 @@ However, we need to balance the memory usage and the efficiency, which could be 
 If the image’s tag is latest, then they will be updated periodically. The cache clean and update periods 
 will be configurable.
 
-**Authentication:** To avoid unauthorized access to the Wasm modules downloaded from private OCI registries, 
-the communication between the Envoy and EG will be secured using mutual TLS.
+**Authn & Authz:** 
+* To prevent unauthorized proxies from accessing the Wasm modules, the communication between the Envoy and EG will be 
+ secured using mutual TLS.
+* To prevent unauthorized users from accessing the Wasm modules, the user who authroize the EEP must have the appropriate 
+ permissions to access the OCI registry. For example, if users in different namespaces (ns1, ns2) access the same OCI image, 
+ each must create a unique secret with registry credentials (secret1 for user1 in ns1, secret2 for user2 in ns2). EG will 
+ validate the provided secret against the OCI registry before serving the Wasm module to the target HTTPRoute/Gateway.
+* To prevent unauthorized users from accessing the Wasm modules, the download URL will be appended with a generated secret
+  suffix that can be validated by the EG.
 
 ## Alternative Considered
 
