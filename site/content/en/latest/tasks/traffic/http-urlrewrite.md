@@ -15,6 +15,9 @@ Before proceeding, you should be able to query the example backend using HTTP.
 You can configure to rewrite the prefix in the url like below. In this example, any curls to
 `http://${GATEWAY_HOST}/get/xxx` will be rewritten to `http://${GATEWAY_HOST}/replace/xxx`.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -41,6 +44,39 @@ spec:
         port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-url-rewrite
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - path.rewrite.example
+  rules:
+    - matches:
+      - path:
+          value: "/get"
+      filters:
+      - type: URLRewrite
+        urlRewrite:
+          path:
+            type: ReplacePrefixMatch
+            replacePrefixMatch: /replace
+      backendRefs:
+      - name: backend
+        port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
@@ -114,6 +150,9 @@ You can configure to rewrite the fullpath in the url like below. In this example
 `http://${GATEWAY_HOST}/get/origin/path/xxxx` will be rewritten to
 `http://${GATEWAY_HOST}/force/replace/fullpath`.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -141,6 +180,40 @@ spec:
         port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-url-rewrite
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - path.rewrite.example
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/get/origin/path"
+      filters:
+      - type: URLRewrite
+        urlRewrite:
+          path:
+            type: ReplaceFullPath
+            replaceFullPath: /force/replace/fullpath
+      backendRefs:
+      - name: backend
+        port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
@@ -208,6 +281,9 @@ You can see that the `X-Envoy-Original-Path` is `/get/origin/path/extra`, but th
 You can configure to rewrite the hostname like below. In this example, any requests sent to
 `http://${GATEWAY_HOST}/get` with `--header "Host: path.rewrite.example"` will rewrite host into `envoygateway.io`.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -233,6 +309,38 @@ spec:
         port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-url-rewrite
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - path.rewrite.example
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/get"
+      filters:
+      - type: URLRewrite
+        urlRewrite:
+          hostname: "envoygateway.io"
+      backendRefs:
+      - name: backend
+        port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 

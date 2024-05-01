@@ -22,8 +22,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-type XdsIRMap map[string]*ir.Xds
-type InfraIRMap map[string]*ir.Infra
+type (
+	XdsIRMap   map[string]*ir.Xds
+	InfraIRMap map[string]*ir.Infra
+)
 
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.

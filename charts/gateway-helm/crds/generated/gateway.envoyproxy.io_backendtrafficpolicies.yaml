@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -571,6 +571,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
@@ -701,6 +704,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
@@ -958,6 +964,12 @@ spec:
                         type: string
                     type: object
                 type: object
+              useClientProtocol:
+                description: |-
+                  UseClientProtocol configures Envoy to prefer sending requests to backends using
+                  the same HTTP protocol that the incoming request used. Defaults to false, which means
+                  that Envoy will use the protocol indicated by the attached BackendRef.
+                type: boolean
             required:
             - targetRef
             type: object

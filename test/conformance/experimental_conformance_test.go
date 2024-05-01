@@ -129,7 +129,7 @@ func experimentalConformanceReport(logf func(string, ...any), report confv1a1.Co
 	}
 
 	if output != "" {
-		if err = os.WriteFile(output, rawReport, 0600); err != nil {
+		if err = os.WriteFile(output, rawReport, 0o600); err != nil {
 			return err
 		}
 	}

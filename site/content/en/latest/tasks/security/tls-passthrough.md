@@ -68,7 +68,24 @@ kubectl patch gateway eg --type=json --patch '
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+You can also test the same functionality by sending traffic to the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Curl the example app through the Gateway, e.g. Envoy proxy:
+
+```shell
+curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://passthrough.example.com:6443/get
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -89,20 +106,8 @@ curl -v --resolve "passthrough.example.com:6043:127.0.0.1" https://passthrough.e
 --cacert passthrough.example.com.crt
 ```
 
-### Clusters with External LoadBalancer Support
-
-You can also test the same functionality by sending traffic to the External IP of the Gateway:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-Curl the example app through the Gateway, e.g. Envoy proxy:
-
-```shell
-curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:${GATEWAY_HOST}" \
---cacert example.com.crt https://passthrough.example.com:6443/get
-```
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Clean-Up
 

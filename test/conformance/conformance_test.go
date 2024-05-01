@@ -54,5 +54,4 @@ func TestGatewayAPIConformance(t *testing.T) {
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)
-
 }
