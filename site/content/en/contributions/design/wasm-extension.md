@@ -22,7 +22,8 @@ cache them locally in the file system, and serve them to Envoy over HTTP.
 **HTTP Code Source:** For HTTP code source, we have two options: serve Wasm modules directly from their 
 original HTTP URLs, or cache them in EG (as with OCI images). Caching both the HTTP Wasm modules and OCI 
 images inside EG can make UI consistent, for example, sha256sum can be calculated on the EG side and made 
-optional in the API. EG can also periodically pull Wasm modules and update the local file cache.
+optional in the API. This will also make the Envoy proxy side more efficient as it won’t have to download the
+Wasm module from the original URL every time, which can be slow.
 
 **Memory Optimization:** Since we cache Wasm modules in the file system, we can optimize the memory usage 
 of the cache and the HTTP server to avoid introducing too much memory consumption by this feature. 
