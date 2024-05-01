@@ -59,15 +59,16 @@ func setAcceptedForPolicyAncestor(policyStatus *gwv1a2.PolicyStatus, ancestorRef
 }
 
 func SetConditionForPolicyAncestors(policyStatus *gwv1a2.PolicyStatus, ancestorRefs []gwv1a2.ParentReference, controllerName string,
-	conditionType gwv1a2.PolicyConditionType, status metav1.ConditionStatus, reason gwv1a2.PolicyConditionReason, message string, generation int64) {
+	conditionType gwv1a2.PolicyConditionType, status metav1.ConditionStatus, reason gwv1a2.PolicyConditionReason, message string, generation int64,
+) {
 	for _, ancestorRef := range ancestorRefs {
 		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName, conditionType, status, reason, message, generation)
 	}
 }
 
 func SetConditionForPolicyAncestor(policyStatus *gwv1a2.PolicyStatus, ancestorRef gwv1a2.ParentReference, controllerName string,
-	conditionType gwv1a2.PolicyConditionType, status metav1.ConditionStatus, reason gwv1a2.PolicyConditionReason, message string, generation int64) {
-
+	conditionType gwv1a2.PolicyConditionType, status metav1.ConditionStatus, reason gwv1a2.PolicyConditionReason, message string, generation int64,
+) {
 	if policyStatus.Ancestors == nil {
 		policyStatus.Ancestors = []gwv1a2.PolicyAncestorStatus{}
 	}

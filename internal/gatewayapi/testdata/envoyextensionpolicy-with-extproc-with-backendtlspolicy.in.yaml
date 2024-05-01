@@ -201,10 +201,17 @@ envoyExtensionPolicies:
       name: gateway-1
       namespace: default
     extProc:
-    - backendRef:
-        Name: grpc-backend
+    - backendRefs:
+      - Name: grpc-backend
         Namespace: envoy-gateway
         Port: 8000
+      processingMode:
+        request:
+          body: Buffered
+        response:
+          body: Streamed
+      messageTimeout: 5s
+      failOpen: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -217,6 +224,9 @@ envoyExtensionPolicies:
       name: httproute-1
       namespace: default
     extProc:
-    - backendRef:
-        Name: grpc-backend-2
+    - backendRefs:
+      - Name: grpc-backend-2
         Port: 9000
+      processingMode:
+        request: {}
+        response: {}

@@ -34,6 +34,9 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/exa
 
 Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.  
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -56,6 +59,34 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: myapp
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp
+    backendRefs:
+    - name: backend
+      port: 3000   
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Verify the HTTPRoute status:
 
 ```shell
@@ -68,6 +99,9 @@ Create a new SecurityPolicy resource to configure the external authorization. Th
 "myApp" created in the previous step. It calls the HTTP external authorization service "http-ext-auth" on port 9002 for
 authorization. The `headersToBackend` field specifies the headers that will be sent to the backend service if the request
 is successfully authorized.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -88,6 +122,32 @@ spec:
       headersToBackend: ["x-current-user"]
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  extAuth:
+    http:
+      backendRef:
+        name: http-ext-auth
+        port: 9002
+      headersToBackend: ["x-current-user"]
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the SecurityPolicy configuration:
 
@@ -162,6 +222,9 @@ not created the HTTPRoute, you can create it now.
 
 Create a new HTTPRoute resource to route traffic on the path `/myapp` to the backend service.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -184,6 +247,34 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: myapp
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp
+    backendRefs:
+    - name: backend
+      port: 3000   
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Verify the HTTPRoute status:
 
 ```shell
@@ -194,6 +285,9 @@ kubectl get httproute/myapp -o yaml
 
 Update the SecurityPolicy that was created in the previous section to use the gRPC external authorization service.
 It calls the gRPC external authorization service "grpc-ext-auth" on port 9002 for authorization. 
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -214,6 +308,31 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  extAuth:
+    grpc:
+      backendRef:
+        name: grpc-ext-auth
+        port: 9002
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Verify the SecurityPolicy configuration:
 
 ```shell
@@ -222,6 +341,9 @@ kubectl get securitypolicy/ext-auth-example -o yaml
 
 Because the gRPC external authorization service is enabled with TLS, a BackendTLSConfig needs to be created to configure
 the communication between the Envoy proxy and the gRPC auth service.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -243,6 +365,33 @@ spec:
     hostname: grpc-ext-auth
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: grpc-ext-auth-btls
+spec:
+  targetRef:
+    group: ''
+    kind: Service
+    name: grpc-ext-auth
+    sectionName: "9002"
+  tls:
+    caCertRefs:
+    - name: grpc-ext-auth-ca
+      group: ''
+      kind: ConfigMap
+    hostname: grpc-ext-auth
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the BackendTLSPolicy configuration:
 
