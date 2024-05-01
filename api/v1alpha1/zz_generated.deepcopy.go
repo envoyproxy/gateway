@@ -4057,7 +4057,7 @@ func (in *SocketAddress) DeepCopyInto(out *SocketAddress) {
 	*out = *in
 	if in.Protocol != nil {
 		in, out := &in.Protocol, &out.Protocol
-		*out = new(AddressProtocolType)
+		*out = new(ProtocolType)
 		**out = **in
 	}
 }

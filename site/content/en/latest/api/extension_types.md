@@ -172,21 +172,6 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
-#### AddressProtocolType
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [SocketAddress](#socketaddress)
-
-| Value | Description |
-| ----- | ----------- |
-| `TCP` | AddressProtocolTypeTCP defines the TCP address protocol.<br /> | 
-| `UDP` | AddressProtocolTypeUDP defines the UDP address protocol.<br /> | 
-
-
 #### ApplicationProtocolType
 
 _Underlying type:_ _string_
@@ -2330,6 +2315,21 @@ _Appears in:_
 | `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
 
 
+#### ProtocolType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [SocketAddress](#socketaddress)
+
+| Value | Description |
+| ----- | ----------- |
+| `TCP` | ProtocolTypeTCP defines the TCP address protocol.<br /> | 
+| `UDP` | ProtocolTypeUDP defines the UDP address protocol.<br /> | 
+
+
 #### ProviderType
 
 _Underlying type:_ _string_
@@ -3076,7 +3076,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `address` | _string_ |  true  | Address refers to the FQDN or IP address of the backend service. |
 | `port` | _integer_ |  true  | Address refers to the FQDN or IP address of the backend service. |
-| `protocol` | _[AddressProtocolType](#addressprotocoltype)_ |  true  |  |
+| `protocol` | _[ProtocolType](#protocoltype)_ |  true  |  |
 
 
 

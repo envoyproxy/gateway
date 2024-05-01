@@ -14,13 +14,13 @@ const (
 	KindBackend = "Backend"
 )
 
-type AddressProtocolType string
+type ProtocolType string
 
 const (
-	// AddressProtocolTypeTCP defines the TCP address protocol.
-	AddressProtocolTypeTCP AddressProtocolType = "TCP"
-	// AddressProtocolTypeUDP defines the UDP address protocol.
-	AddressProtocolTypeUDP AddressProtocolType = "UDP"
+	// ProtocolTypeTCP defines the TCP address protocol.
+	ProtocolTypeTCP ProtocolType = "TCP"
+	// ProtocolTypeUDP defines the UDP address protocol.
+	ProtocolTypeUDP ProtocolType = "UDP"
 )
 
 type ApplicationProtocolType string
@@ -81,7 +81,7 @@ type SocketAddress struct {
 	Port int32 `json:"port"`
 
 	// +kubebuilder:validation:Enum=TCP;UDP
-	Protocol *AddressProtocolType `json:"protocol,omitempty"`
+	Protocol *ProtocolType `json:"protocol,omitempty"`
 }
 
 // UnixDomainSocketAddress describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
