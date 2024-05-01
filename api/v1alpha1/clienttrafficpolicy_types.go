@@ -66,7 +66,7 @@ type ClientTrafficPolicySpec struct {
 	// TLS settings configure TLS termination settings with the downstream client.
 	//
 	// +optional
-	TLS *TLSSettings `json:"tls,omitempty"`
+	TLS *ClientTLSSettings `json:"tls,omitempty"`
 	// Path enables managing how the incoming path set by clients can be normalized.
 	//
 	// +optional
@@ -176,8 +176,7 @@ type CustomHeaderExtensionSettings struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct {
-}
+type HTTP3Settings struct{}
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {

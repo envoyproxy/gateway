@@ -52,14 +52,16 @@ func TestMergeGateways(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		RunTest:              *flags.RunTest,
+		SkipTests: []string{
+			tests.MergeGatewaysTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3290
+		},
 	})
 
 	// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
 	// since this test suite reuse the base resources of previous test suite.
 	cSuite.Applier.FS = e2e.Manifests
 	cSuite.Applier.GatewayClass = *flags.GatewayClassName
-	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t,
-		cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
+	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
 
 	t.Logf("Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
 	cSuite.Run(t, tests.MergeGatewaysTests)

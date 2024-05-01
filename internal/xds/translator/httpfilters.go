@@ -211,7 +211,8 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterP
 // newOrderedHTTPFilter method.
 func (t *Translator) patchHCMWithFilters(
 	mgr *hcmv3.HttpConnectionManager,
-	irListener *ir.HTTPListener) error {
+	irListener *ir.HTTPListener,
+) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
 	//
@@ -249,8 +250,8 @@ func (t *Translator) patchHCMWithFilters(
 // provided route.
 func patchRouteWithPerRouteConfig(
 	route *routev3.Route,
-	irRoute *ir.HTTPRoute) error {
-
+	irRoute *ir.HTTPRoute,
+) error {
 	for _, filter := range httpFilters {
 		if err := filter.patchRoute(route, irRoute); err != nil {
 			return err
@@ -259,8 +260,7 @@ func patchRouteWithPerRouteConfig(
 
 	// RateLimit filter is handled separately because it relies on the global
 	// rate limit server configuration.
-	if err :=
-		patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
+	if err := patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
 		return nil
 	}
 
