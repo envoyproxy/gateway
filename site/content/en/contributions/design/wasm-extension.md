@@ -1,0 +1,54 @@
+---
+title: "Wasm OCI Image Support"
+---
+
+## Motivation
+Envoy Gateway (EG) should support Wasm OCI image as a remote wasm code source.
+This feature will allow users to deploy Wasm modules from OCI registries, such as Docker Hub, 
+Google Container Registry, and Amazon Elastic Container Registry, to Envoy proxies managed by EG.
+
+## Goals
+* Define the system components needed to support Wasm OCI images as remote Wasm code sources.
+
+## Architecture
+
+![](./wasm-extension.png)
+
+### Control Plane Wasm File Cache
+
+Envoy lacks native OCI image support, therefore, EG needs to download Wasm modules from OIC registries, 
+cache them locally in the file system, and serve them to Envoy over HTTP.
+
+**HTTP Code Source:** For HTTP code source, we have two options: serve Wasm modules directly from their 
+original HTTP URLs, or cache them in EG (as with OIC images). Caching both the HTTP Wasm modules and OCI 
+images inside EG can make UI consistent, for example, sha256sum can be calculated on the EG side and made 
+optional in the API. EG can also periodically pull Wasm modules and update the local file cache.
+
+**Memory Optimization:** Since we cache Wasm modules in the file system, we can optimize the memory usage 
+of the cache and the HTTP server to avoid introducing too much memory consumption by this feature. 
+For example, when receiving a Wasm pulling request form the Envoy, we can open the Wasm file and write 
+the file content directly to response, and then close the file. There won’t be significant caching involved. 
+However, we need to balance the memory usage and the efficiency, which could be addressed in implementation.
+
+**Caching Mechanism:** Cached files will be evicted based on LRU（Last recently used）algorithm. 
+If the image’s tag is latest, then they will be updated perodically. The cache clean and update periods 
+will be configurable.
+
+## Alternative Considered
+
+### Inline Bytes
+
+EG downloads the Wasm modules, caches them in memory, and pushes the Wasm code through xDS as inline bytes. 
+This could inflate the xDS, potentially causing memory issues for EG and Envoy.
+
+### Data Plane Agent
+Mount Wasm modules in the local file system of the Envoy container. We’ll need an agent deployed in the 
+same pod as the Envoy for this. It would be too expensive to implement this as we’ll need to intercept 
+the xDS at the agent.
+
+### Standalone Wasm HTTP Server
+Deploying the Wasm HTTP server as a standalone service. While this has no obvious benefits, it increases 
+operational costs.
+
+### Wait for Envoy OCI image support
+We could wait indefinitely for Envoy to support OCI imag as a remote wasm code source.
