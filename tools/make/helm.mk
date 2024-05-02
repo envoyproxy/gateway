@@ -4,7 +4,7 @@
 
 include tools/make/env.mk
 
-IMAGE_PULL_POLICY ?= Always
+IMAGE_PULL_POLICY ?= IfNotPresent
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
