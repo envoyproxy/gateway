@@ -30,8 +30,7 @@ func init() {
 	registerHTTPFilter(&wasm{})
 }
 
-type wasm struct {
-}
+type wasm struct{}
 
 var _ httpFilter = &wasm{}
 
@@ -172,7 +171,8 @@ func routeContainsWasm(irRoute *ir.HTTPRoute) bool {
 
 // patchResources patches the cluster resources for the http wasm code source.
 func (*wasm) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}

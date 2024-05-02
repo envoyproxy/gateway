@@ -208,7 +208,8 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 //     The newly created TCP filter chain is configured with a filter chain match to
 //     match the server names(SNI) based on the listener's hostnames.
 func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection,
+) error {
 	al := buildXdsAccessLog(accesslog, false)
 
 	hcmTracing, err := buildHCMTracing(tracing)
@@ -225,8 +226,8 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 
 	// Client IP detection
-	var useRemoteAddress = true
-	var originalIPDetectionExtensions = originalIPDetectionExtensions(irListener.ClientIPDetection)
+	useRemoteAddress := true
+	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}
@@ -719,7 +720,6 @@ func makeConfigSource() *corev3.ConfigSource {
 }
 
 func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction {
-
 	lookup := map[ir.PathEscapedSlashAction]hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction{
 		ir.KeepUnchangedAction: hcmv3.HttpConnectionManager_KEEP_UNCHANGED,
 		ir.RejectRequestAction: hcmv3.HttpConnectionManager_REJECT_REQUEST,

@@ -27,8 +27,7 @@ func init() {
 	registerHTTPFilter(&basicAuth{})
 }
 
-type basicAuth struct {
-}
+type basicAuth struct{}
 
 var _ httpFilter = &basicAuth{}
 

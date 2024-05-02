@@ -33,18 +33,18 @@ import (
 func TestGatewayClassHasMatchingController(t *testing.T) {
 	testCases := []struct {
 		name   string
-		obj    client.Object
+		gc     *gwapiv1.GatewayClass
 		client client.Client
 		expect bool
 	}{
 		{
 			name:   "matching controller name",
-			obj:    test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+			gc:     test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 			expect: true,
 		},
 		{
 			name:   "non-matching controller name",
-			obj:    test.GetGatewayClass("test-gc", "not.configured/controller", nil),
+			gc:     test.GetGatewayClass("test-gc", "not.configured/controller", nil),
 			expect: false,
 		},
 	}
@@ -60,7 +60,7 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			res := r.hasMatchingController(tc.obj)
+			res := r.hasMatchingController(tc.gc)
 			require.Equal(t, tc.expect, res)
 		})
 	}
@@ -530,9 +530,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtProc: []v1alpha1.ExtProc{
 							{
-								BackendRef: v1alpha1.ExtProcBackendRef{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "ext-proc-service",
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-proc-service",
+										},
 									},
 								},
 							},
@@ -559,9 +561,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtProc: []v1alpha1.ExtProc{
 							{
-								BackendRef: v1alpha1.ExtProcBackendRef{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "ext-proc-service",
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-proc-service",
+										},
 									},
 								},
 							},

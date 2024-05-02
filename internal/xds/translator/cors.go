@@ -27,8 +27,7 @@ func init() {
 	registerHTTPFilter(&cors{})
 }
 
-type cors struct {
-}
+type cors struct{}
 
 var _ httpFilter = &cors{}
 
@@ -36,7 +35,8 @@ var _ httpFilter = &cors{}
 // applicable.
 func (*cors) patchHCM(
 	mgr *hcmv3.HttpConnectionManager,
-	irListener *ir.HTTPListener) error {
+	irListener *ir.HTTPListener,
+) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
