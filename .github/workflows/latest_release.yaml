@@ -26,7 +26,8 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Generate Release Manifests
-      run: make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
+      # Use `Always` image pull policy for latest version.
+      run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
     - name: Build egctl latest multiarch binaries
       run: |
