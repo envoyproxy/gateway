@@ -71,7 +71,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
 		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights)
+		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination.Settings)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
 		if httpRoute.Mirrors != nil {
@@ -222,7 +222,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights) *routev3.RouteAction {
+func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
 	if backendWeights.Invalid == 0 {
 		return &routev3.RouteAction{
@@ -232,31 +232,59 @@ func buildXdsRouteAction(backendWeights *ir.BackendWeights) *routev3.RouteAction
 		}
 	}
 
-	return buildXdsWeightedRouteAction(backendWeights)
+	return buildXdsWeightedRouteAction(backendWeights, settings)
 }
 
-func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights) *routev3.RouteAction {
-	clusters := []*routev3.WeightedCluster_ClusterWeight{
-		{
+func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
+	weightedClusters := []*routev3.WeightedCluster_ClusterWeight{}
+	if backendWeights.Invalid > 0 {
+		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
 			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
-		},
+		}
+		weightedClusters = append(weightedClusters, invalidCluster)
+		return &routev3.RouteAction{
+			// Intentionally route to a non-existent cluster and return a 500 error when it is not found
+			ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
+			ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
+				WeightedClusters: &routev3.WeightedCluster{
+					Clusters: weightedClusters,
+				},
+			},
+		}
 	}
 
-	if backendWeights.Valid > 0 {
-		validCluster := &routev3.WeightedCluster_ClusterWeight{
-			Name:   backendWeights.Name,
-			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Valid},
-		}
-		clusters = append(clusters, validCluster)
+	validCluster := &routev3.WeightedCluster_ClusterWeight{
+		Name:   backendWeights.Name,
+		Weight: &wrapperspb.UInt32Value{Value: backendWeights.Valid},
 	}
+	for _, destinationSetting := range settings {
+		if destinationSetting.Filters != nil {
+			if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
+				validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+			}
+
+			if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
+				validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
+			}
+
+			if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
+				validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
+			}
+
+			if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
+				validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
+			}
+		}
+	}
+	weightedClusters = append(weightedClusters, validCluster)
 
 	return &routev3.RouteAction{
 		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
 		ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
 		ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
 			WeightedClusters: &routev3.WeightedCluster{
-				Clusters: clusters,
+				Clusters: weightedClusters,
 			},
 		},
 	}

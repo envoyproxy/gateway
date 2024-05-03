@@ -686,13 +686,18 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 					IsHTTP2:               routeRoute.IsHTTP2,
+					BackendWeights:        routeRoute.BackendWeights,
 				}
+<<<<<<< HEAD
 				if routeRoute.Traffic != nil {
 					hostRoute.Traffic = &ir.TrafficFeatures{
 						Timeout: routeRoute.Traffic.Timeout,
 						Retry:   routeRoute.Traffic.Retry,
 					}
 				}
+=======
+
+>>>>>>> ca7809dc (add xds configuration)
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
@@ -1231,7 +1236,6 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	if backendFilters != nil {
 		httpFiltersContext := t.processFilters(backendFilters, parentRef, route, resources)
 		destFilters = assignDestinationFilters(httpFiltersContext)
-
 	}
 
 	ds = &ir.DestinationSetting{

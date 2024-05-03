@@ -293,7 +293,14 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/envoy-gateway/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -314,7 +321,14 @@ xdsIR:
         - distinct: false
           exact: "yes"
           name: debug
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/envoy-gateway/httproute-3/rule/0
           settings:
           - addressType: IP
@@ -331,7 +345,14 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v1/example
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/envoy-gateway/httproute-4/rule/0
           settings:
           - addressType: IP
@@ -352,7 +373,14 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v1/status
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/envoy-gateway/httproute-5/rule/0
           settings:
           - addressType: IP
@@ -369,7 +397,14 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v1/status
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -386,7 +421,14 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -403,7 +445,14 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP

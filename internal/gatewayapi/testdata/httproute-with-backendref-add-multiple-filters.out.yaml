@@ -131,7 +131,7 @@ xdsIR:
       routes:
       - backendWeights:
           invalid: 0
-          valid: 0
+          valid: 6
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:

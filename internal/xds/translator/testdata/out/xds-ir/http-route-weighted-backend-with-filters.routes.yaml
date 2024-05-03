@@ -14,5 +14,15 @@
         - upgradeType: websocket
         weightedClusters:
           clusters:
-          - name: invalid-backend-cluster
-            weight: 1
+          - name: first-route-dest
+            requestHeadersToAdd:
+            - header:
+                key: add-header-1
+                value: some-value
+            - header:
+                key: add-header-2
+                value: some-value
+            - header:
+                key: add-header-3
+                value: some-value
+            weight: 20

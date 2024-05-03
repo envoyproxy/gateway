@@ -471,7 +471,14 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -523,7 +530,14 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+<<<<<<< HEAD
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -540,6 +554,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v2
+<<<<<<< HEAD
         traffic:
           healthCheck:
             active:
@@ -561,6 +576,12 @@ xdsIR:
               maxEjectionPercent: 10
               splitExternalLocalOriginErrors: false
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
@@ -577,6 +598,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v3
+<<<<<<< HEAD
         traffic:
           healthCheck:
             active:
@@ -598,6 +620,12 @@ xdsIR:
               maxEjectionPercent: 11
               splitExternalLocalOriginErrors: false
       - destination:
+=======
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+>>>>>>> ca7809dc (add xds configuration)
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
