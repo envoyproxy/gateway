@@ -161,6 +161,11 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterP
 	for i := 0; i < len(filterOrder); i++ {
 		var currentFilters []*list.Element
 
+		// Find all the filters of the same type.
+		// The filter name in the filterOrder is the filter type. The real filter
+		// name is prefixed with the filter type, for example,
+		// "envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route-1".
+		// And there may be multiple filters of the same type for wasm and ext_proc filters.
 		for element := l.Front(); element != nil; element = element.Next() {
 			if isFilterType(element.Value.(*OrderedHTTPFilter).filter, string(filterOrder[i].Name)) {
 				currentFilters = append(currentFilters, element)
