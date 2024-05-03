@@ -26,7 +26,7 @@ RELEASE_VERSION=$(shell cat VERSION)
 
 # Set Root Directory Path
 ifeq ($(origin ROOT_DIR),undefined)
-ROOT_DIR := $(abspath $(shell  pwd -P))
+ROOT_DIR := $(abspath $(shell pwd -P))
 endif
 
 # Set Output Directory Path
