@@ -21,12 +21,12 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	"golang.org/x/exp/maps"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -68,21 +68,21 @@ var (
 	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
 	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
 		Name:        "envoy.formatter.req_without_query",
-		TypedConfig: MessageToAny(&reqwithoutqueryformatter.ReqWithoutQuery{}),
+		TypedConfig: protocov.ToAny(&reqwithoutqueryformatter.ReqWithoutQuery{}),
 	}
 
 	// metadataFormatter configures additional formatters needed for some of the format strings like "METADATA"
 	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
 	metadataFormatter = &cfgcore.TypedExtensionConfig{
 		Name:        "envoy.formatter.metadata",
-		TypedConfig: MessageToAny(&metadataformatter.Metadata{}),
+		TypedConfig: protocov.ToAny(&metadataformatter.Metadata{}),
 	}
 
 	// celFormatter configures additional formatters needed for some of the format strings like "CEL"
 	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
 	celFormatter = &cfgcore.TypedExtensionConfig{
 		Name:        "envoy.formatter.cel",
-		TypedConfig: MessageToAny(&celformatter.Cel{}),
+		TypedConfig: protocov.ToAny(&celformatter.Cel{}),
 	}
 )
 
@@ -354,12 +354,4 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	}
 
 	return nil
-}
-
-// MessageToAny converts from proto message to proto Any
-// TODO: find a better way to handle error when translating access logs
-func MessageToAny(src proto.Message) *anypb.Any {
-	any, _ := anypb.New(src)
-
-	return any
 }
