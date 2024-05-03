@@ -20,32 +20,32 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
-    # Generate the install manifests first so it can checked
+    # Generate the installation manifests first, so it can check
     # for errors while running `make -k lint`
-    - run: make generate-manifests
+    - run: IMAGE_PULL_POLICY=Always make generate-manifests
     - run: make lint-deps
     - run: make -k lint
 
   gen-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
   coverage-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     # test
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, gen-check, license-check, coverage-test]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
@@ -82,7 +82,7 @@ jobs:
       matrix:
         version: [ v1.26.14, v1.27.11, v1.28.7, v1.29.2 ]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -110,7 +110,7 @@ jobs:
       matrix:
         version: [ v1.26.14, v1.27.11, v1.28.7, v1.29.2 ]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.1.3
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -174,4 +174,5 @@ jobs:
     - name: Build and Push EG Latest Helm Chart
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
-      run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+      # use `Always` image pull policy for latest version.
+      run: IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
