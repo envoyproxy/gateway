@@ -24,7 +24,8 @@ import (
 )
 
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
-	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind) bool {
+	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind,
+) bool {
 	backendRef := GetBackendRef(backendRefContext)
 
 	if !t.validateBackendRefGroup(backendRef, parentRef, route) {
