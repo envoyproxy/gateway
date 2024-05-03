@@ -53,15 +53,15 @@ kind: Backend
 metadata:
   name: backend-mixed-ip-uds
 spec:
+  applicationProtocol: H2C
   addresses:
-    - unixDomainSocketAddress:
+    - type: UDS
+      unixDomainSocketAddress:
         path: /var/run/backend.sock
-      applicationProtocol: HTTP2
-      name: uds-be
-    - socketAddress:
+    - type: IPv4  
+      socketAddress:
         address: 10.244.0.28
         port: 3000
-      name: ip-be
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -114,11 +114,11 @@ spec:
   As such, all `BackendAdresses` are treated as equivalent endpoints with identical weights, TLS settings, etc.  
 * Gateway-API and Envoy Gateway policies that attach to Services ([BackendTLSPolicy][], [BackendLBPolicy][]) 
   MUST support attachment to the `Backend` resource in Envoy Gateway. 
-* Policy attachment to a named section of the `Backend` resource (the `backendAddress.name` field) is not supported at 
-  this time. Currently, `BackendObjectReference` can only select ports, and not generic section names. Hence, a named 
-  section of `Backend` cannot be referenced by routes, and so attachment of policies to named sections will create 
-  translation ambiguity. Users that wish to attach policies to some of the `BackendAddresses` in a `Backend` resource 
-  can use multiple `Backend` resources and pluralized `BackendRefs` instead. 
+* Policy attachment to a named section of the `Backend` resource is not supported at this time. Currently, 
+  `BackendObjectReference` can only select ports, and not generic section names. Hence, a named section of `Backend` 
+  cannot be referenced by routes, and so attachment of policies to named sections will create translation ambiguity. 
+  Users that wish to attach policies to some of the `BackendAddresses` in a `Backend` resource can use multiple `Backend` 
+  resources and pluralized `BackendRefs` instead. 
 * The `Backend` API SHOULD support other Gateway-API backend features, such as [Backend Protocol Selection][]. 
   Translation of explicit upstream application protocol setting MUST be consistent with the existing implementation for
   `Service` resources. 

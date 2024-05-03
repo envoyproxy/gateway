@@ -14,6 +14,21 @@ const (
 	KindBackend = "Backend"
 )
 
+// +kubebuilder:validation:Enum=FQDN;UDS;IPv4;IPv6
+type AddressType string
+
+const (
+	// AddressTypeFQDN defines the RFC-1123 compliant fully qualified domain name address type.
+	AddressTypeFQDN ProtocolType = "FQDN"
+	// AddressTypeUDS defines the unix domain socket address type.
+	AddressTypeUDS ProtocolType = "UDS"
+	// AddressTypeIPv4 defines the IPv4 address type.
+	AddressTypeIPv4 ProtocolType = "IPv4"
+	// AddressTypeIPv6 defines the IPv4 address type.
+	AddressTypeIPv6 ProtocolType = "IPv6"
+)
+
+// +kubebuilder:validation:Enum=TCP;UDP
 type ProtocolType string
 
 const (
@@ -23,11 +38,12 @@ const (
 	ProtocolTypeUDP ProtocolType = "UDP"
 )
 
+// +kubebuilder:validation:Enum=HTTP2;WS
 type ApplicationProtocolType string
 
 const (
-	// ApplicationProtocolTypeH2C defines the HTTP/2 prior knowledge application protocol.
-	ApplicationProtocolTypeH2C ApplicationProtocolType = "H2C"
+	// ApplicationProtocolTypeHTTP2 defines the HTTP/2 application protocol.
+	ApplicationProtocolTypeHTTP2 ApplicationProtocolType = "HTTP2"
 	// ApplicationProtocolTypeWS defines the WebSocket over HTTP protocol.
 	ApplicationProtocolTypeWS ApplicationProtocolType = "WS"
 )
@@ -57,30 +73,26 @@ type Backend struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) || has(self.unixDomainSocketAddress))",message="one of socketAddress or unixDomainSocketAddress must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) && !has(self.unixDomainSocketAddress)) || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))",message="only one of socketAddress or unixDomainSocketAddress can be specified"
 type BackendAddress struct {
-	// Name is the unique name of the backend address
-	Name string `json:"name,omitempty"`
+	// Type is the the type name of the backend address: FQDN, UDS, IPv4, IPv6
+	Type AddressType `json:"type"`
 
-	// SocketAddress is a [FQDN|IP]:[Port] address
+	// SocketAddress defines a FQDN, IPv4 or IPv6 address
 	SocketAddress *SocketAddress `json:"socketAddress,omitempty"`
 
-	// UnixDomainSocketAddress is a unix domain socket path
+	// UnixDomainSocketAddress defines the unix domain socket path
 	UnixDomainSocketAddress *UnixDomainSocketAddress `json:"unixDomainSocketAddress,omitempty"`
-
-	// ApplicationProtocol determines the application protocol to be used, e.g. HTTP2.
-	ApplicationProtocol *ApplicationProtocolType `json:"applicationProtocol,omitempty"`
 }
 
 // SocketAddress describes TCP/UDP socket address, corresponding to Envoy's SocketAddress
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 type SocketAddress struct {
-
-	// Address refers to the FQDN or IP address of the backend service.
+	// Address defines to the FQDN or IP address of the backend service.
 	Address string `json:"address"`
 
-	// Address refers to the FQDN or IP address of the backend service.
+	// Port defines to the port of of the backend service.
 	Port int32 `json:"port"`
 
-	// +kubebuilder:validation:Enum=TCP;UDP
+	// Protocol defines to the the transport protocol to use for communication with the backend.
 	Protocol *ProtocolType `json:"protocol,omitempty"`
 }
 
@@ -92,8 +104,12 @@ type UnixDomainSocketAddress struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 type BackendSpec struct {
-	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=4
 	BackendAddresses []BackendAddress `json:"addresses,omitempty"`
+
+	// ApplicationProtocol defines the application protocol to be used, e.g. HTTP2.
+	ApplicationProtocol *ApplicationProtocolType `json:"applicationProtocol,omitempty"`
 }
 
 // BackendStatus defines the state of Backend

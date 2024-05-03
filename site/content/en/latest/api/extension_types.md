@@ -172,7 +172,7 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
-#### ApplicationProtocolType
+#### AddressType
 
 _Underlying type:_ _string_
 
@@ -181,9 +181,20 @@ _Underlying type:_ _string_
 _Appears in:_
 - [BackendAddress](#backendaddress)
 
+
+
+#### ApplicationProtocolType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
 | Value | Description |
 | ----- | ----------- |
-| `H2C` | ApplicationProtocolTypeH2C defines the HTTP/2 prior knowledge application protocol.<br /> | 
+| `HTTP2` | ApplicationProtocolTypeHTTP2 defines the HTTP/2 application protocol.<br /> | 
 | `WS` | ApplicationProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> | 
 
 
@@ -231,10 +242,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `name` | _string_ |  true  | Name is the unique name of the backend address |
-| `socketAddress` | _[SocketAddress](#socketaddress)_ |  true  | SocketAddress is a [FQDN\|IP]:[Port] address |
-| `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  true  | UnixDomainSocketAddress is a unix domain socket path |
-| `applicationProtocol` | _[ApplicationProtocolType](#applicationprotocoltype)_ |  true  | ApplicationProtocol determines the application protocol to be used, e.g. HTTP2. |
+| `type` | _[AddressType](#addresstype)_ |  true  | Type is the the type name of the backend address: FQDN, UDS, IPv4, IPv6 |
+| `socketAddress` | _[SocketAddress](#socketaddress)_ |  true  | SocketAddress defines a FQDN, IPv4 or IPv6 address |
+| `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  true  | UnixDomainSocketAddress defines the unix domain socket path |
 
 
 #### BackendRef
@@ -271,6 +281,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
+| `applicationProtocol` | _[ApplicationProtocolType](#applicationprotocoltype)_ |  true  | ApplicationProtocol defines the application protocol to be used, e.g. HTTP2. |
 
 
 
@@ -2326,6 +2337,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
+| `FQDN` | AddressTypeFQDN defines the RFC-1123 compliant fully qualified domain name address type.<br /> | 
+| `UDS` | AddressTypeUDS defines the unix domain socket address type.<br /> | 
+| `IPv4` | AddressTypeIPv4 defines the IPv4 address type.<br /> | 
+| `IPv6` | AddressTypeIPv6 defines the IPv4 address type.<br /> | 
 | `TCP` | ProtocolTypeTCP defines the TCP address protocol.<br /> | 
 | `UDP` | ProtocolTypeUDP defines the UDP address protocol.<br /> | 
 
@@ -3074,9 +3089,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Address refers to the FQDN or IP address of the backend service. |
-| `port` | _integer_ |  true  | Address refers to the FQDN or IP address of the backend service. |
-| `protocol` | _[ProtocolType](#protocoltype)_ |  true  |  |
+| `address` | _string_ |  true  | Address defines to the FQDN or IP address of the backend service. |
+| `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
+| `protocol` | _[ProtocolType](#protocoltype)_ |  true  | Protocol defines to the the transport protocol to use for communication with the backend. |
 
 
 

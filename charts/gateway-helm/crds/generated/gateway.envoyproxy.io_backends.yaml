@@ -58,26 +58,21 @@ spec:
                     BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
                     corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
                   properties:
-                    applicationProtocol:
-                      description: ApplicationProtocol determines the application
-                        protocol to be used, e.g. HTTP2.
-                      type: string
-                    name:
-                      description: Name is the unique name of the backend address
-                      type: string
                     socketAddress:
-                      description: SocketAddress is a [FQDN|IP]:[Port] address
+                      description: SocketAddress defines a FQDN, IPv4 or IPv6 address
                       properties:
                         address:
-                          description: Address refers to the FQDN or IP address of
+                          description: Address defines to the FQDN or IP address of
                             the backend service.
                           type: string
                         port:
-                          description: Address refers to the FQDN or IP address of
-                            the backend service.
+                          description: Port defines to the port of of the backend
+                            service.
                           format: int32
                           type: integer
                         protocol:
+                          description: Protocol defines to the the transport protocol
+                            to use for communication with the backend.
                           enum:
                           - TCP
                           - UDP
@@ -86,15 +81,26 @@ spec:
                       - address
                       - port
                       type: object
+                    type:
+                      description: 'Type is the the type name of the backend address:
+                        FQDN, UDS, IPv4, IPv6'
+                      enum:
+                      - FQDN
+                      - UDS
+                      - IPv4
+                      - IPv6
+                      type: string
                     unixDomainSocketAddress:
-                      description: UnixDomainSocketAddress is a unix domain socket
-                        path
+                      description: UnixDomainSocketAddress defines the unix domain
+                        socket path
                       properties:
                         path:
                           type: string
                       required:
                       - path
                       type: object
+                  required:
+                  - type
                   type: object
                   x-kubernetes-validations:
                   - message: one of socketAddress or unixDomainSocketAddress must
@@ -104,8 +110,16 @@ spec:
                       can be specified
                     rule: (has(self.socketAddress) && !has(self.unixDomainSocketAddress))
                       || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))
-                maxItems: 1
+                maxItems: 4
+                minItems: 1
                 type: array
+              applicationProtocol:
+                description: ApplicationProtocol defines the application protocol
+                  to be used, e.g. HTTP2.
+                enum:
+                - HTTP2
+                - WS
+                type: string
             type: object
           status:
             description: status defines the current status of Backend.
