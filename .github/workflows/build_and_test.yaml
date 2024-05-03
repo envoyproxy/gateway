@@ -22,9 +22,9 @@ jobs:
     steps:
     - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
     - uses: ./tools/github-actions/setup-deps
-    # Generate the install manifests first so it can checked
+    # Generate the installation manifests first, so it can check
     # for errors while running `make -k lint`
-    - run: make generate-manifests
+    - run: IMAGE_PULL_POLICY=Always make generate-manifests
     - run: make lint-deps
     - run: make -k lint
 
@@ -174,4 +174,5 @@ jobs:
     - name: Build and Push EG Latest Helm Chart
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
+      # use `Always` image pull policy for latest version.
       run: IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push

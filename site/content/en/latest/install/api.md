@@ -33,8 +33,8 @@ The Helm chart for Envoy Gateway
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
 | createNamespace | bool | `false` |  |
-| deployment.envoyGateway.image.repository | string | `"${ImageRepository}"` |  |
-| deployment.envoyGateway.image.tag | string | `"${ImageTag}"` |  |
+| deployment.envoyGateway.image.repository | string | `"docker.io/envoyproxy/gateway"` |  |
+| deployment.envoyGateway.image.tag | string | `"latest"` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `"IfNotPresent"` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
