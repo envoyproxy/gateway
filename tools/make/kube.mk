@@ -62,8 +62,6 @@ ifndef ignore-not-found
   ignore-not-found = true
 endif
 
-IMAGE_PULL_POLICY ?= Always
-
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
@@ -225,7 +223,7 @@ generate-manifests: helm-generate ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
+	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
