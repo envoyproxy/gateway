@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/probs"
 	"github.com/envoyproxy/gateway/internal/status"
 )
 
@@ -34,9 +35,8 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources, xdsReady probs.HealthProb) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
-
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
 		Logger:                  svr.Logger.Logger,
@@ -90,7 +90,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources); err != nil {
+	if err := newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources, xdsReady); err != nil {
 		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
 	}
 
@@ -99,8 +99,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		return nil, fmt.Errorf("unable to set up health check: %w", err)
 	}
 
-	// Add ready check health probes.
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err = mgr.AddReadyzCheck("readyz", xdsReady.GetHealthCheckerProb()); err != nil {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
