@@ -12,11 +12,12 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_proc/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"github.com/golang/protobuf/ptypes/duration"
-	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
@@ -27,8 +28,7 @@ func init() {
 	registerHTTPFilter(&extProc{})
 }
 
-type extProc struct {
-}
+type extProc struct{}
 
 var _ httpFilter = &extProc{}
 
@@ -103,10 +103,42 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 				EnvoyGrpc: grpcExtProcService(extProc),
 			},
-			Timeout: &duration.Duration{
+			Timeout: &durationpb.Duration{
 				Seconds: defaultExtServiceRequestTimeout,
 			},
 		},
+		ProcessingMode: &extprocv3.ProcessingMode{
+			RequestHeaderMode:   extprocv3.ProcessingMode_SKIP,
+			ResponseHeaderMode:  extprocv3.ProcessingMode_SKIP,
+			RequestBodyMode:     extprocv3.ProcessingMode_NONE,
+			ResponseBodyMode:    extprocv3.ProcessingMode_NONE,
+			RequestTrailerMode:  extprocv3.ProcessingMode_SKIP,
+			ResponseTrailerMode: extprocv3.ProcessingMode_SKIP,
+		},
+	}
+
+	if extProc.FailOpen != nil {
+		config.FailureModeAllow = *extProc.FailOpen
+	}
+
+	if extProc.MessageTimeout != nil {
+		config.MessageTimeout = durationpb.New(extProc.MessageTimeout.Duration)
+	}
+
+	if extProc.RequestBodyProcessingMode != nil {
+		config.ProcessingMode.RequestBodyMode = buildExtProcBodyProcessingMode(extProc.RequestBodyProcessingMode)
+	}
+
+	if extProc.RequestHeaderProcessing {
+		config.ProcessingMode.RequestHeaderMode = extprocv3.ProcessingMode_SEND
+	}
+
+	if extProc.ResponseBodyProcessingMode != nil {
+		config.ProcessingMode.ResponseBodyMode = buildExtProcBodyProcessingMode(extProc.ResponseBodyProcessingMode)
+	}
+
+	if extProc.ResponseHeaderProcessing {
+		config.ProcessingMode.ResponseHeaderMode = extprocv3.ProcessingMode_SEND
 	}
 
 	return config
@@ -130,7 +162,8 @@ func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 
 // patchResources patches the cluster resources for the external services.
 func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -172,4 +205,16 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 	}
 	return nil
+}
+
+func buildExtProcBodyProcessingMode(mode *ir.ExtProcBodyProcessingMode) extprocv3.ProcessingMode_BodySendMode {
+	lookup := map[ir.ExtProcBodyProcessingMode]extprocv3.ProcessingMode_BodySendMode{
+		ir.ExtProcBodyBuffered:        extprocv3.ProcessingMode_BUFFERED,
+		ir.ExtProcBodyBufferedPartial: extprocv3.ProcessingMode_BUFFERED_PARTIAL,
+		ir.ExtProcBodyStreamed:        extprocv3.ProcessingMode_STREAMED,
+	}
+	if r, found := lookup[*mode]; found {
+		return r
+	}
+	return extprocv3.ProcessingMode_NONE
 }

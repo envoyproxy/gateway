@@ -25,7 +25,7 @@ import (
 
 func init() {
 	// nolint
-	//ConformanceTests = append(ConformanceTests, GatewayInfraResourceTest)
+	// ConformanceTests = append(ConformanceTests, GatewayInfraResourceTest)
 }
 
 // nolint

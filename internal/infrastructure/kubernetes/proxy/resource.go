@@ -103,7 +103,8 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig,
-	shutdownManager *egv1a1.ShutdownManager) ([]corev1.Container, error) {
+	shutdownManager *egv1a1.ShutdownManager,
+) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 

@@ -70,7 +70,6 @@ var WeightEqualTest = suite.ConformanceTest{
 				if len(podName) == 0 {
 					// it shouldn't be missing here
 					t.Errorf("failed to get pod header in response: %v", err)
-
 				} else {
 					// all we need is the pod Name prefix
 					podNamePrefix := ExtractPodNamePrefix(podName)
@@ -135,7 +134,6 @@ var WeightBlueGreenTest = suite.ConformanceTest{
 				if len(podName) == 0 {
 					// it shouldn't be missing here
 					t.Errorf("failed to get pod header in response: %v", err)
-
 				} else {
 					// all we need is the pod Name prefix
 					podNamePrefix := ExtractPodNamePrefix(podName)
@@ -200,7 +198,6 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 				if len(podName) == 0 {
 					// it shouldn't be missing here
 					t.Errorf("failed to get pod header in response: %v", err)
-
 				} else {
 					// all we need is the pod Name prefix
 					podNamePrefix := ExtractPodNamePrefix(podName)
@@ -222,7 +219,6 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 
 // ExtractPodNamePrefix Extract the Pod Name prefix
 func ExtractPodNamePrefix(podName string) string {
-
 	pattern := regexp.MustCompile(`infra-backend-(.+?)-`)
 	match := pattern.FindStringSubmatch(podName)
 	if len(match) > 1 {

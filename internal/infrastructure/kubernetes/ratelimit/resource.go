@@ -115,7 +115,6 @@ func GetServiceURL(namespace string, dnsDomain string) string {
 
 // LabelSelector returns the string slice form labels used for all envoy rate limit resources.
 func LabelSelector() []string {
-
 	rlLabelMap := rateLimitLabels()
 	retLabels := make([]string, 0, len(rlLabelMap))
 
@@ -138,7 +137,8 @@ func rateLimitLabels() map[string]string {
 
 // expectedRateLimitContainers returns expected rateLimit containers.
 func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
-	namespace string) []corev1.Container {
+	namespace string,
+) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "grpc",
@@ -289,7 +289,8 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
 func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
-	namespace string) []corev1.EnvVar {
+	namespace string,
+) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  RuntimeRootEnvVar,
@@ -399,7 +400,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 	}
 
 	if enableTracing(rateLimit) {
-		var sampleRate = 1.0
+		sampleRate := 1.0
 		if rateLimit.Telemetry.Tracing.SamplingRate != nil {
 			sampleRate = float64(*rateLimit.Telemetry.Tracing.SamplingRate) / 100.0
 		}

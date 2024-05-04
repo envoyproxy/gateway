@@ -22,9 +22,7 @@ import (
 )
 
 func init() {
-	// This test cause too much flakiness, so we disable it for now.
-	// TODO: find a better way to test client timeout.
-	// ConformanceTests = append(ConformanceTests, ClientTimeoutTest)
+	ConformanceTests = append(ConformanceTests, ClientTimeoutTest)
 }
 
 var largeSizeHeader = func() string {
@@ -35,7 +33,6 @@ var largeSizeHeader = func() string {
 	return b.String()
 }
 
-// nolint
 var ClientTimeoutTest = suite.ConformanceTest{
 	ShortName:   "ClientTimeout",
 	Description: "Test that the ClientTrafficPolicy API implementation supports client timeout",

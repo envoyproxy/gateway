@@ -30,9 +30,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 const (
 	// envoyHTTPPort is the container port number of Envoy's HTTP endpoint.
@@ -574,7 +572,7 @@ func TestDeployment(t *testing.T) {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint: gosec
-				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0644)
+				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0o644)
 				require.NoError(t, err)
 				return
 			}
@@ -995,7 +993,7 @@ func TestDaemonSet(t *testing.T) {
 				deploymentYAML, err := yaml.Marshal(ds)
 				require.NoError(t, err)
 				// nolint: gosec
-				err = os.WriteFile(fmt.Sprintf("testdata/daemonsets/%s.yaml", tc.caseName), deploymentYAML, 0644)
+				err = os.WriteFile(fmt.Sprintf("testdata/daemonsets/%s.yaml", tc.caseName), deploymentYAML, 0o644)
 				require.NoError(t, err)
 				return
 			}
@@ -1159,7 +1157,6 @@ func loadConfigmap(tc string) (*corev1.ConfigMap, error) {
 }
 
 func TestServiceAccount(t *testing.T) {
-
 	cfg, err := config.New()
 	require.NoError(t, err)
 	cases := []struct {
@@ -1285,7 +1282,6 @@ func loadHPA(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
 }
 
 func TestOwningGatewayLabelsAbsent(t *testing.T) {
-
 	cases := []struct {
 		caseName string
 		labels   map[string]string
@@ -1333,5 +1329,4 @@ func TestOwningGatewayLabelsAbsent(t *testing.T) {
 			require.Equal(t, tc.expect, actual)
 		})
 	}
-
 }

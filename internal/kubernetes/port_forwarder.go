@@ -86,7 +86,6 @@ func (f *localForwarder) Start() error {
 
 			readyCh = nil
 		}
-
 	}()
 
 	select {
