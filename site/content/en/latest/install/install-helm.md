@@ -28,7 +28,7 @@ You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gat
 Envoy Gateway is typically deployed to Kubernetes from the command line. If you don't have Kubernetes, you should use `kind` to create one.
 
 {{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](/latest/contributions/develop) to learn more.
+Refer to the [Developer Guide](../../contributions/develop) to learn more.
 {{% /alert %}}
 
 Install the Gateway API CRDs and Envoy Gateway:
@@ -140,5 +140,5 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 | Heath Check  | 0.0.0.0     | 19001   |
 
 {{% alert title="Next Steps" color="warning" %}}
-Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../user).
+Envoy Gateway should now be successfully installed and running.  To experience more abilities of Envoy Gateway, refer to [Tasks](../tasks).
 {{% /alert %}}

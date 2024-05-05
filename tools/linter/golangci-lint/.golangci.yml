@@ -8,10 +8,12 @@ linters:
     - errorlint
     - exportloopref
     - gofmt
+    - gofumpt
     - goimports
     - goheader
     - gocritic
     - gosec
+    - govet
     - misspell
     - revive
     - stylecheck
@@ -57,6 +59,11 @@ linters-settings:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
     local-prefixes: github.com/envoyproxy/gateway/
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+      - fieldalignment
   revive:
     rules:
       # TODO: enable if-return check

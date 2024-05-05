@@ -17,6 +17,7 @@ http:
         unhealthyThreshold: 3
         healthyThreshold: 1
         http:
+          host: "*"
           path: "/healthz"
           expectedResponse:
             text: "ok"
@@ -46,6 +47,7 @@ http:
         unhealthyThreshold: 3
         healthyThreshold: 3
         http:
+          host: "*"
           path: "/healthz"
           expectedResponse:
             binary: "cG9uZw=="

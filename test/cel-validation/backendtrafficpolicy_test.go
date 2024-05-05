@@ -16,9 +16,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
-
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -436,8 +434,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: " valid config: min, max, nil",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				valMax := pointer.Int64(4294967295)
-				valMin := pointer.Int64(0)
+				valMax := ptr.To[int64](4294967295)
+				valMin := ptr.To[int64](0)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
@@ -459,8 +457,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: " invalid config: min and max values",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				valOverMax := pointer.Int64(4294967296)
-				valUnderMin := pointer.Int64(-1)
+				valOverMax := ptr.To[int64](4294967296)
+				valUnderMin := ptr.To[int64](-1)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
@@ -812,7 +810,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "valid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-
 				rules := make([]egv1a1.RateLimitRule, 64)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{
@@ -845,7 +842,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "invalid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-
 				rules := make([]egv1a1.RateLimitRule, 65)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{

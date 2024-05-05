@@ -61,6 +61,11 @@ func TestProvider(t *testing.T) {
 		require.NoError(t, provider.Start(ctx))
 	}()
 
+	testNs := config.DefaultNamespace
+	cli := provider.manager.GetClient()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
+
 	// Stop the kube provider.
 	defer func() {
 		cancel()
@@ -154,15 +159,8 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	// Create the namespace for the test case.
 	// Note: The namespace for the EnvoyProxy must match EG's configured namespace.
 	testNs := config.DefaultNamespace
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
-	require.NoError(t, cli.Create(ctx, ns))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, ns))
-	}()
 
 	epName := "test-envoy-proxy"
 	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: testNs, Name: epName}, false)
@@ -444,7 +442,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 
 	rewriteHostname := gwapiv1.PreciseHostname("rewrite.hostname.local")
 
-	var testCases = []struct {
+	testCases := []struct {
 		name  string
 		route gwapiv1.HTTPRoute
 	}{
@@ -988,7 +986,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	var testCases = []struct {
+	testCases := []struct {
 		name  string
 		route gwapiv1a2.TLSRoute
 	}{
@@ -1151,13 +1149,17 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 				}},
 			},
 			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
-			Rules: []gwapiv1a2.TLSRouteRule{{
-				BackendRefs: []gwapiv1a2.BackendRef{{
-					BackendObjectReference: gwapiv1a2.BackendObjectReference{
-						Name: "test-common-svc",
-						Port: ptr.To(gwapiv1.PortNumber(90)),
-					}},
-				}},
+			Rules: []gwapiv1a2.TLSRouteRule{
+				{
+					BackendRefs: []gwapiv1a2.BackendRef{
+						{
+							BackendObjectReference: gwapiv1a2.BackendObjectReference{
+								Name: "test-common-svc",
+								Port: ptr.To(gwapiv1.PortNumber(90)),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -1260,8 +1262,8 @@ func TestNamespacedProvider(t *testing.T) {
 			Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
 			Namespaces: []string{"ns1", "ns2"},
 		},
+		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
-
 	resources := new(message.ProviderResources)
 	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
@@ -1320,8 +1322,8 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 			Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
 			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
 		},
+		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
-
 	resources := new(message.ProviderResources)
 	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
@@ -1330,12 +1332,16 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		require.NoError(t, provider.Start(ctx))
 	}()
 
+	testNs := config.DefaultNamespace
+	cli := provider.manager.GetClient()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
+
 	defer func() {
 		cancel()
 		require.NoError(t, testEnv.Stop())
 	}()
 
-	cli := provider.manager.GetClient()
 	watchedNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
 		Name:   "watched-ns",
 		Labels: map[string]string{"label-1": "true", "label-2": "true"},
@@ -1583,7 +1589,6 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		}
 		return res != nil && len(res.GRPCRoutes) == 1
 	}, defaultWait, defaultTick)
-
 }
 
 func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*gatewayapi.Resources, bool) {

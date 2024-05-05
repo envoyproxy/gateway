@@ -23,7 +23,8 @@ clientTrafficPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Affects additional listeners: default/gateway-1/http'
+        message: ClientTrafficPolicy is being applied to multiple http (non https)
+          listeners (default/gateway-1/http) on the same port, which is not allowed
         reason: Invalid
         status: "False"
         type: Accepted
@@ -214,14 +215,7 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: default/gateway-1/http
-          protocol: HTTP
-          servicePort: 80
-      - address: null
-        name: default/mfqjpuycbgjrtdww/http
-        ports:
-        - containerPort: 10080
-          name: default/mfqjpuycbgjrtdww/http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -261,9 +255,9 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Affects multiple listeners: default/mfqjpuycbgjrtdww/http, default/gateway-1/http'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
@@ -330,3 +324,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        security:
+          cors:
+            allowCredentials: true
+            allowMethods:
+            - PUT
+            - GET
+            - POST
+            - DELETE
+            - PATCH
+            - OPTIONS
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.foo\.com
+            maxAge: 10m0s

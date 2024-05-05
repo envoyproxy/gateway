@@ -221,14 +221,14 @@ infraIR:
         name: default/tcp-gateway/foo
         ports:
         - containerPort: 8162
-          name: foo
+          name: udp-8162
           protocol: UDP
           servicePort: 8162
       - address: null
         name: default/tcp-gateway/bar
         ports:
         - containerPort: 8089
-          name: bar
+          name: tcp-8089
           protocol: TCP
           servicePort: 8089
       metadata:
@@ -333,6 +333,7 @@ xdsIR:
             expectedStatuses:
             - 200
             - 300
+            host: ""
             method: GET
             path: /healthz
           interval: 3s

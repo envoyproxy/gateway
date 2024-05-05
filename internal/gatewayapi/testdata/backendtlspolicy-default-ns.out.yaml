@@ -118,7 +118,7 @@ infraIR:
         name: envoy-gateway/gateway-btls/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

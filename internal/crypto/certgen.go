@@ -225,7 +225,6 @@ func newCert(request *certificateRequest) ([]byte, []byte, error) {
 		Bytes: newCert,
 	})
 	return newCertPEM, newKeyPEM, nil
-
 }
 
 // newCA generates a new CA, given the CA's CN and an expiry time.

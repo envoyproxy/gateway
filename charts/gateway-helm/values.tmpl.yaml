@@ -3,7 +3,7 @@ deployment:
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
-    imagePullPolicy: Always
+    imagePullPolicy: ${ImagePullPolicy}
     imagePullSecrets: []
     resources:
       limits:
@@ -48,7 +48,7 @@ certgen:
   job:
     annotations: {}
     resources: {}
-    ttlSecondsAfterFinished: 0
+    ttlSecondsAfterFinished: 30
   rbac:
     annotations: {}
     labels: {}

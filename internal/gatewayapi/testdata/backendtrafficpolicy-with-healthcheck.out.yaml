@@ -436,7 +436,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -451,7 +451,7 @@ infraIR:
         name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -496,6 +496,7 @@ xdsIR:
               expectedStatuses:
               - 200
               - 300
+              host: '*'
               method: GET
               path: /healthz
             interval: 3s
@@ -624,6 +625,7 @@ xdsIR:
               expectedStatuses:
               - 200
               - 201
+              host: gateway.envoyproxy.io
               method: GET
               path: /healthz
             interval: 5s

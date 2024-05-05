@@ -161,12 +161,14 @@ func getValidOutputTypesStr() string {
 }
 
 func validResourceTypes() []envoyConfigType {
-	return []envoyConfigType{BootstrapEnvoyConfigType,
+	return []envoyConfigType{
+		BootstrapEnvoyConfigType,
 		EndpointEnvoyConfigType,
 		ClusterEnvoyConfigType,
 		ListenerEnvoyConfigType,
 		RouteEnvoyConfigType,
-		AllEnvoyConfigType}
+		AllEnvoyConfigType,
+	}
 }
 
 func isValidResourceType(outType envoyConfigType) bool {
@@ -276,7 +278,7 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 	}
 
 	t := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -303,7 +305,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -335,7 +337,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -687,6 +689,10 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Namespace: namespace,
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
+			}
+			// fill controller name by default controller name when gatewayclass controller name empty.
+			if gatewayClass.Spec.ControllerName == "" {
+				gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
 			}
 			resources.GatewayClass = gatewayClass
 		case gatewayapi.KindGateway:

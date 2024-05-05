@@ -31,7 +31,8 @@ import (
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
-	xdsIR XdsIRMap) []*egv1a1.BackendTrafficPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.BackendTrafficPolicy {
 	var res []*egv1a1.BackendTrafficPolicy
 
 	// Sort based on timestamp
@@ -375,6 +376,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.LoadBalancer = lb
 					r.ProxyProtocol = pp
 					r.HealthCheck = hc
+					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+					r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 					r.CircuitBreaker = cb
 					r.FaultInjection = fi
 					r.TCPKeepalive = ka
@@ -386,6 +389,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 							return errors.Wrap(err, "Timeout")
 						}
 						r.Timeout = to
+					}
+
+					if policy.Spec.UseClientProtocol != nil {
+						r.UseClientProtocol = policy.Spec.UseClientProtocol
 					}
 				}
 			}
@@ -532,7 +539,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.HealthCheck == nil {
 				r.HealthCheck = hc
+				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+				r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 			}
+
 			if r.CircuitBreaker == nil {
 				r.CircuitBreaker = cb
 			}
@@ -553,6 +563,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 
 				if r.Timeout == nil {
 					r.Timeout = ct
+				}
+			}
+
+			if policy.Spec.UseClientProtocol != nil {
+				if r.UseClientProtocol == nil {
+					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
 			}
 		}
@@ -616,7 +632,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	var err error
 	var irRule *ir.RateLimitRule
-	var irRules = make([]*ir.RateLimitRule, 0)
+	irRules := make([]*ir.RateLimitRule, 0)
 	for _, rule := range local.Rules {
 		// We don't process the rule without clientSelectors here because it's
 		// previously used as the default route-level limit.

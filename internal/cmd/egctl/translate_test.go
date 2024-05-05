@@ -26,9 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
@@ -353,7 +351,6 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 			require.Empty(t, cmp.Diff(want, got, opts))
-
 		})
 	}
 }

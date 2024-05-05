@@ -17,6 +17,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -33,8 +34,7 @@ func init() {
 	registerHTTPFilter(&jwt{})
 }
 
-type jwt struct {
-}
+type jwt struct{}
 
 var _ httpFilter = &jwt{}
 
@@ -106,8 +106,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		}
 
 		var reqs []*jwtauthnv3.JwtRequirement
-		for i := range route.JWT.Providers {
-			irProvider := route.JWT.Providers[i]
+		for i := range route.Security.JWT.Providers {
+			irProvider := route.Security.JWT.Providers[i]
 			// Create the cluster for the remote jwks, if it doesn't exist.
 			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI)
 			if err != nil {
@@ -133,7 +133,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 			for _, claimToHeader := range irProvider.ClaimToHeaders {
 				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
 					HeaderName: claimToHeader.Header,
-					ClaimName:  claimToHeader.Claim}
+					ClaimName:  claimToHeader.Claim,
+				}
 				claimToHeaders = append(claimToHeaders, claimToHeader)
 			}
 			jwtProvider := &jwtauthnv3.JwtProvider{
@@ -163,6 +164,15 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				},
 			})
 		}
+
+		if route.Security.JWT.AllowMissing {
+			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
+					AllowMissing: &emptypb.Empty{},
+				},
+			})
+		}
+
 		if len(reqs) == 1 {
 			reqMap[route.Name] = reqs[0]
 		} else {
@@ -232,7 +242,8 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 
 		routeCfgProto := &jwtauthnv3.PerRouteConfig{
-			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name}}
+			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
+		}
 
 		routeCfgAny, err := anypb.New(routeCfgProto)
 		if err != nil {
@@ -255,47 +266,16 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 		return errors.New("xds resource table is nil")
 	}
 
-	var errs error
+	var err, errs error
 	for _, route := range routes {
 		if !routeContainsJWTAuthn(route) {
 			continue
 		}
 
-		for i := range route.JWT.Providers {
-			var (
-				jwks    *urlCluster
-				ds      *ir.DestinationSetting
-				tSocket *corev3.TransportSocket
-				err     error
-			)
+		for i := range route.Security.JWT.Providers {
+			provider := route.Security.JWT.Providers[i]
 
-			provider := route.JWT.Providers[i]
-			jwks, err = url2Cluster(provider.RemoteJWKS.URI)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-
-			ds = &ir.DestinationSetting{
-				Weight:    ptr.To[uint32](1),
-				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
-			}
-
-			clusterArgs := &xdsClusterArgs{
-				name:         jwks.name,
-				settings:     []*ir.DestinationSetting{ds},
-				endpointType: jwks.endpointType,
-			}
-			if jwks.tls {
-				tSocket, err = buildXdsUpstreamTLSSocket(jwks.hostname)
-				if err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-				clusterArgs.tSocket = tSocket
-			}
-
-			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -323,17 +303,13 @@ func listenerContainsJWTAuthn(irListener *ir.HTTPListener) bool {
 // routeContainsJWTAuthn returns true if JWT authentication exists for the
 // provided route.
 func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
 	if irRoute != nil &&
-		irRoute.JWT != nil &&
-		irRoute.JWT.Providers != nil &&
-		len(irRoute.JWT.Providers) > 0 {
+		irRoute.Security != nil &&
+		irRoute.Security.JWT != nil &&
+		irRoute.Security.JWT.Providers != nil &&
+		len(irRoute.Security.JWT.Providers) > 0 {
 		return true
 	}
-
 	return false
 }
 
