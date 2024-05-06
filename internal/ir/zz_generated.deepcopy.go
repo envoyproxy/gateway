@@ -964,7 +964,6 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			}
 		}
 	}
-
 	if in.AddRequestHeaders != nil {
 		in, out := &in.AddRequestHeaders, &out.AddRequestHeaders
 		*out = make([]AddHeader, len(*in))
