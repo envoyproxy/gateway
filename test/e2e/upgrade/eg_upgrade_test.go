@@ -54,6 +54,7 @@ func TestEGUpgrade(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		SkipTests: []string{
 			tests.EnvoyShutdownTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3262
+			tests.EGUpgradeTest.ShortName,     // https://github.com/envoyproxy/gateway/issues/3311
 		},
 	})
 

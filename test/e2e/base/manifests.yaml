@@ -94,7 +94,12 @@ spec:
   ports:
   - protocol: TCP
     port: 8080
+    name: http11
     targetPort: 3000
+  - protocol: TCP
+    port: 8081
+    name: http2
+    targetPort: 3001
 ---
 apiVersion: apps/v1
 kind: Deployment

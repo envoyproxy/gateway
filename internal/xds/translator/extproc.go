@@ -16,7 +16,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
@@ -104,7 +103,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 				EnvoyGrpc: grpcExtProcService(extProc),
 			},
-			Timeout: &duration.Duration{
+			Timeout: &durationpb.Duration{
 				Seconds: defaultExtServiceRequestTimeout,
 			},
 		},

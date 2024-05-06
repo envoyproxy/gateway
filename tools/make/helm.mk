@@ -4,6 +4,7 @@
 
 include tools/make/env.mk
 
+IMAGE_PULL_POLICY ?= IfNotPresent
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
@@ -25,8 +26,9 @@ helm-install: helm-generate ## Install envoy gateway helm chart from OCI registr
 	@$(LOG_TARGET)
 	helm install eg ${OCI_REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n envoy-gateway-system --create-namespace
 
+.PHONY: helm-generate
 helm-generate:
-	ImageRepository=${IMAGE} ImageTag=${TAG} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
+	ImageRepository=${IMAGE} ImageTag=${TAG} ImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
 	helm lint charts/gateway-helm
 
 helm-template: ## Template envoy gateway helm chart.
