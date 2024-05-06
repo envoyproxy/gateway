@@ -61,6 +61,7 @@ To uninstall the chart:
 |----------------------------------------------------| ------ |---------------------------------------------------| ----------- |
 | config.envoyGateway.gateway.controllerName         | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |             |
 | config.envoyGateway.provider.type                  | string | `"Kubernetes"`                                    |             |
+| provider.kubernetes.shutdownManager.image          | string | `"envoyproxy/gateway-dev:latest"`                 |             |
 | deployment.envoyGateway.image.repository           | string | `"docker.io/envoyproxy/gateway-dev"`              |             |
 | deployment.envoyGateway.image.tag                  | string | `"latest"`                                        |             |
 | deployment.envoyGateway.imagePullPolicy            | string | `"Always"`                                        |             |
