@@ -38,8 +38,8 @@ func Get() Info {
 var (
 	envoyGatewayVersion    string
 	gatewayAPIVersion      string
-	envoyProxyVersion      = strings.Split(*v1alpha1.DefaultKubernetesContainerImage(v1alpha1.DefaultEnvoyProxyImage), ":")[1]
-	shutdownManagerVersion string
+	envoyProxyVersion      = strings.Split(v1alpha1.DefaultEnvoyProxyImage, ":")[1]
+	shutdownManagerVersion = strings.Split(v1alpha1.DefaultShutdownManagerImage, ":")[1]
 	gitCommitID            string
 )
 
