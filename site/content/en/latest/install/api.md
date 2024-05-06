@@ -1,4 +1,7 @@
-# gateway-helm
++++
+title = "gateway-helm"
++++
+
 
 ![Version: v0.0.0-latest](https://img.shields.io/badge/Version-v0.0.0--latest-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
 
@@ -54,4 +57,3 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
-
