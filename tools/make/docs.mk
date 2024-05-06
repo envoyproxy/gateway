@@ -28,7 +28,7 @@ docs.clean:
 	rm -rf $(DOCS_OUTPUT_DIR)
 	rm -rf site/node_modules
 	rm -rf site/resources
-	rm -f site/package-lock.json
+	rm -f site/package-lock.jsonq
 	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api

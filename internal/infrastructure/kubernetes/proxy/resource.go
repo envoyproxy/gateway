@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -15,7 +14,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
-	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -281,9 +279,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) string {
 	if shutdownManager != nil && shutdownManager.Image != nil {
 		return *shutdownManager.Image
-	}
-	if v := version.Get().ShutdownManagerVersion; v != "" {
-		return fmt.Sprintf("%s:%s", strings.Split(egv1a1.DefaultShutdownManagerImage, ":")[0], v)
 	}
 	return egv1a1.DefaultShutdownManagerImage
 }

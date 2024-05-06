@@ -38,7 +38,7 @@ config:
       type: Kubernetes
       kubernetes:
         shutdownManager:
-          image: "envoyproxy/gateway-dev:latest"
+          image: ${ImageRepository}:${ImageTag}
     logging:
       level:
         default: info

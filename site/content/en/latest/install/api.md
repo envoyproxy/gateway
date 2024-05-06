@@ -1,7 +1,4 @@
-+++
-title = "gateway-helm"
-+++
-
+# gateway-helm
 
 ![Version: v0.0.0-latest](https://img.shields.io/badge/Version-v0.0.0--latest-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
 
@@ -31,6 +28,7 @@ The Helm chart for Envoy Gateway
 | certgen.rbac.labels | object | `{}` |  |
 | config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
+| config.envoyGateway.provider.kubernetes.shutdownManager.image | string | `"docker.io/envoyproxy/gateway:latest"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
 | createNamespace | bool | `false` |  |
 | deployment.envoyGateway.image.repository | string | `"docker.io/envoyproxy/gateway"` |  |
