@@ -190,7 +190,7 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			shutdownManager: &egv1a1.ShutdownManager{
-				Image: ptr.To("privatereop/envoyproxy/gateway-dev:v1.2.3"),
+				Image: ptr.To("privaterepo/envoyproxy/gateway-dev:v1.2.3"),
 			},
 		},
 		{
