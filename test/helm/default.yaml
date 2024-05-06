@@ -36,7 +36,7 @@ data:
     provider:
       kubernetes:
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:d43069ce
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
