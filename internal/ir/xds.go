@@ -377,6 +377,7 @@ type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
+	Name    string `json:"name" yaml:"name"`
 	Valid   uint32 `json:"valid" yaml:"valid"`
 	Invalid uint32 `json:"invalid" yaml:"invalid"`
 }
@@ -454,8 +455,6 @@ type HTTPRoute struct {
 	HeaderMatches []*StringMatch `json:"headerMatches,omitempty" yaml:"headerMatches,omitempty"`
 	// QueryParamMatches define the match conditions on the query parameters.
 	QueryParamMatches []*StringMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
-	// DestinationWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
-	BackendWeights BackendWeights `json:"backendWeights" yaml:"backendWeights"`
 	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
 	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.
@@ -910,7 +909,7 @@ type RouteDestination struct {
 }
 
 // Validate the fields within the RouteDestination structure
-func (r RouteDestination) Validate() error {
+func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
@@ -924,14 +923,33 @@ func (r RouteDestination) Validate() error {
 	return errs
 }
 
+func (r *RouteDestination) ToWeightedBackend() *BackendWeights {
+	w := &BackendWeights{
+		Name: r.Name,
+	}
+
+	for _, s := range r.Settings {
+		if s.Weight == nil {
+			continue
+		}
+
+		if len(s.Endpoints) > 0 {
+			w.Valid += *s.Weight
+		} else {
+			w.Invalid += *s.Weight
+		}
+	}
+
+	return w
+}
+
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
 	// Weight associated with this destination.
-	// Note: Weight is not used in TCP/UDP route.
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
+	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
@@ -940,7 +958,7 @@ type DestinationSetting struct {
 }
 
 // Validate the fields within the RouteDestination structure
-func (d DestinationSetting) Validate() error {
+func (d *DestinationSetting) Validate() error {
 	var errs error
 	for _, ep := range d.Endpoints {
 		if err := ep.Validate(); err != nil {

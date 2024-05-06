@@ -167,9 +167,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("invalid-backend"),
 		},
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-		},
 	}
 	weightedInvalidBackendsHTTPRoute = HTTPRoute{
 		Name:     "weighted-invalid-backends",
@@ -178,10 +175,6 @@ var (
 			Exact: ptr.To("invalid-backends"),
 		},
 		Destination: &happyRouteDestination,
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-			Valid:   1,
-		},
 	}
 
 	redirectHTTPRoute = HTTPRoute{

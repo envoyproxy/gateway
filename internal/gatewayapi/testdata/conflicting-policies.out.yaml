@@ -276,10 +276,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/bdkzlmibsivuiqav/rule/0
           settings:
           - addressType: IP
@@ -305,10 +302,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/mfqjpuycbgjrtdww/rule/0
           settings:
           - addressType: IP

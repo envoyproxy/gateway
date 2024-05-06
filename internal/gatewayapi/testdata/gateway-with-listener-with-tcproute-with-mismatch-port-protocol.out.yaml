@@ -90,3 +90,12 @@ xdsIR:
     accessLog:
       text:
       - path: /dev/stdout
+    tcp:
+    - address: 0.0.0.0
+      destination:
+        name: tcproute/default/tcproute-1/rule/-1
+        settings:
+        - weight: 1
+      name: envoy-gateway/gateway-1/tcp/tcproute-1
+      port: 10162
+      tls: {}

@@ -246,10 +246,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -277,10 +274,7 @@ xdsIR:
               name: example1
               remoteJWKS:
                 uri: https://one.example.com/jwt/public-key/jwks.json
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

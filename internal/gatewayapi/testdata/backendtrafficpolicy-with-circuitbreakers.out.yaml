@@ -265,10 +265,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        circuitBreaker:
+      - circuitBreaker:
           maxConnections: 2048
           maxParallelRequests: 4294967295
           maxParallelRetries: 1024
@@ -301,10 +298,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        circuitBreaker:
+      - circuitBreaker:
           maxConnections: 42
           maxParallelRequests: 42
           maxParallelRetries: 24

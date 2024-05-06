@@ -16,6 +16,5 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
-    backendWeights:
-      invalid: 1
-      valid: 1
+        weight: 1
+      - weight: 1
