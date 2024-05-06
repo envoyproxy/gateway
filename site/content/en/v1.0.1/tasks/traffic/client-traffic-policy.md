@@ -465,8 +465,9 @@ request timeout
 ```
 
 ### Configure Client HTTP Idle Timeout
+
 The idle timeout is defined as the period in which there are no active requests. When the idle timeout is reached the connection will be closed.
-For more details see [here](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-idle-timeout:~:text=...%7D%0A%7D-,idle_timeout,-(Duration)%20The)
+For more details see [here](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-idle-timeout:~:text=...%7D%0A%7D-,idle_timeout,-(Duration)%20The).
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
