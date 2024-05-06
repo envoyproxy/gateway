@@ -52,9 +52,6 @@ func TestMergeGateways(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		RunTest:              *flags.RunTest,
-		SkipTests: []string{
-			tests.MergeGatewaysTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3290
-		},
 	})
 
 	// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
