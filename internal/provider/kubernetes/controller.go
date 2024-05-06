@@ -825,7 +825,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxyObjectRefs(resourceTree *gateway
 					backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 				}
 			}
-
 		}
 
 		// Collect BackendRefs for tracing provider

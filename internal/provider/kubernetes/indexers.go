@@ -88,7 +88,6 @@ func backendEnvoyProxyIndexFunc(rawObj client.Object) []string {
 					backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 				}
 			}
-
 		}
 
 		// Collect BackendRefs for tracing provider

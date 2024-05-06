@@ -150,8 +150,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 		if len(otel.Destination.Settings) > 0 &&
 			otel.Destination.Settings[0].AddressType != nil &&
 			*otel.Destination.Settings[0].AddressType == ir.FQDN {
-			al.CommonConfig.GrpcService.TargetSpecifier.(*cfgcore.GrpcService_EnvoyGrpc_).EnvoyGrpc.Authority =
-				otel.Destination.Settings[0].Endpoints[0].Host
+			al.CommonConfig.GrpcService.TargetSpecifier.(*cfgcore.GrpcService_EnvoyGrpc_).EnvoyGrpc.Authority = otel.Destination.Settings[0].Endpoints[0].Host
 		}
 
 		format := EnvoyTextLogFormat

@@ -43,8 +43,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	if len(tracing.Destination.Settings) > 0 &&
 		tracing.Destination.Settings[0].AddressType != nil &&
 		*tracing.Destination.Settings[0].AddressType == ir.FQDN {
-		oc.GrpcService.TargetSpecifier.(*corev3.GrpcService_EnvoyGrpc_).EnvoyGrpc.Authority =
-			tracing.Destination.Settings[0].Endpoints[0].Host
+		oc.GrpcService.TargetSpecifier.(*corev3.GrpcService_EnvoyGrpc_).EnvoyGrpc.Authority = tracing.Destination.Settings[0].Endpoints[0].Host
 	}
 
 	ocAny, err := protocov.ToAnyWithError(oc)
