@@ -161,9 +161,12 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterP
 	// Sort the filters in the custom order.
 	for i := 0; i < len(filterOrder); i++ {
 		var (
-			// The filter name in the filterOrder is the name of the filter type.
+			// The filter name in the filterOrder is the filter type.
 			// For example, "envoy.filters.http.oauth2".
 			filterType = string(filterOrder[i].Name)
+			// currentFilters holds all the filters of the specified filter type
+			// in the custom FilterOrder that we are currently processing.
+			//
 			// We need an array to store the filters because there may be multiple
 			// filters of the same filter type for a specific HTTPRoute.
 			// For example, there may be multiple wasm filters or extProc filters, for
@@ -171,10 +174,10 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterP
 			currentFilters []*list.Element
 		)
 
-		// Find all the filters for a filter type in the custom FilterOrder.
+		// Find all the filters for the current filter type in the custom FilterOrder.
 		//
-		// The real filter name is prefixed with the filter type, for example,
-		// "envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route-1".
+		// The real filter name is a generated name prefixed with the filter type,
+		// for example,"envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route-1".
 		for element := l.Front(); element != nil; element = element.Next() {
 			if isFilterType(element.Value.(*hcmv3.HttpFilter), filterType) {
 				currentFilters = append(currentFilters, element)
