@@ -108,9 +108,9 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, jwtAuthn):
 		order = 6
 	case isFilterType(filter, extProcFilter):
-		order = 7 + mustFilterIndex(filter.Name)
+		order = 7 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, wasmFilter):
-		order = 100 + mustFilterIndex(filter.Name)
+		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, localRateLimitFilter):
 		order = 201
 	case isFilterType(filter, wellknown.HTTPRateLimit):
@@ -152,44 +152,58 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterP
 	}
 	sort.Sort(orderedFilters)
 
+	// Use a linked list to sort the filters in the custom order.
 	l := list.New()
 	for i := 0; i < len(orderedFilters); i++ {
-		l.PushBack(orderedFilters[i])
+		l.PushBack(orderedFilters[i].filter)
 	}
 
 	// Sort the filters in the custom order.
 	for i := 0; i < len(filterOrder); i++ {
-		var currentFilters []*list.Element
+		var (
+			// The filter name in the filterOrder is the name of the filter type.
+			// For example, "envoy.filters.http.oauth2".
+			filterType = string(filterOrder[i].Name)
+			// We need an array to store the filters because there may be multiple
+			// filters of the same filter type for a specific HTTPRoute.
+			// For example, there may be multiple wasm filters or extProc filters, for
+			// different custom extensions.
+			currentFilters []*list.Element
+		)
 
-		// Find all the filters of the same type.
-		// The filter name in the filterOrder is the filter type. The real filter
-		// name is prefixed with the filter type, for example,
+		// Find all the filters for a filter type in the custom FilterOrder.
+		//
+		// The real filter name is prefixed with the filter type, for example,
 		// "envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route-1".
-		// And there may be multiple filters of the same type for wasm and ext_proc filters.
 		for element := l.Front(); element != nil; element = element.Next() {
-			if isFilterType(element.Value.(*OrderedHTTPFilter).filter, string(filterOrder[i].Name)) {
+			if isFilterType(element.Value.(*hcmv3.HttpFilter), filterType) {
 				currentFilters = append(currentFilters, element)
 			}
 		}
 
+		// Skip if there are no filters found for the filter type in a custom order.
 		if len(currentFilters) == 0 {
 			continue
 		}
 
 		switch {
+		// Move all the current filters before the first filter of the filter type
+		// specified in the `FilterOrder.Before` field.
 		case filterOrder[i].Before != nil:
 			for element := l.Front(); element != nil; element = element.Next() {
-				if isFilterType(element.Value.(*OrderedHTTPFilter).filter, string(*filterOrder[i].Before)) {
+				if isFilterType(element.Value.(*hcmv3.HttpFilter), string(*filterOrder[i].Before)) {
 					for _, filter := range currentFilters {
 						l.MoveBefore(filter, element)
 					}
 					break
 				}
 			}
+		// Move all the current filters after the last filter of the filter type
+		// specified in the `FilterOrder.After` field.
 		case filterOrder[i].After != nil:
 			var afterFilter *list.Element
 			for element := l.Front(); element != nil; element = element.Next() {
-				if isFilterType(element.Value.(*OrderedHTTPFilter).filter, string(*filterOrder[i].After)) {
+				if isFilterType(element.Value.(*hcmv3.HttpFilter), string(*filterOrder[i].After)) {
 					afterFilter = element
 				}
 			}
@@ -201,9 +215,10 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterP
 		}
 	}
 
+	// Collect the sorted filters.
 	i := 0
 	for element := l.Front(); element != nil; element = element.Next() {
-		filters[i] = element.Value.(*OrderedHTTPFilter).filter
+		filters[i] = element.Value.(*hcmv3.HttpFilter)
 		i++
 	}
 
@@ -280,8 +295,8 @@ func isFilterType(filter *hcmv3.HttpFilter, filterType string) bool {
 	return strings.HasPrefix(filter.Name, filterType)
 }
 
-// mustFilterIndex returns the index of the filter in its filter type.
-func mustFilterIndex(filterName string) int {
+// mustGetFilterIndex returns the index of the filter in its filter type.
+func mustGetFilterIndex(filterName string) int {
 	a := strings.Split(filterName, "/")
 	index, err := strconv.Atoi(a[len(a)-1])
 	if err != nil {
