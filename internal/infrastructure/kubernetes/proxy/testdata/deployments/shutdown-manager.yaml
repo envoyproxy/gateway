@@ -249,7 +249,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: privaterepo/envoyproxy/gateway-dev:v1.2.3
+        image: privatereop/envoyproxy/gateway-dev:v1.2.3
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
