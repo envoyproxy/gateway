@@ -78,6 +78,19 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancerWithLoadBalancerSourceRanges",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+			}},
+			want: corev1.ServiceSpec{
+				Type:                     corev1.ServiceTypeLoadBalancer,
+				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+				SessionAffinity:          corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy:    corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
 			name: "LoadBalancerWithLoadBalancerIP",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -200,7 +213,8 @@ func TestCompareSvc(t *testing.T) {
 					Type: "NodePort",
 				},
 			},
-		}, {
+		},
+		{
 			// Only Spec.Ports[*].Port is different
 			ExpectRet: false,
 			NewSvc: &corev1.Service{
@@ -285,7 +299,8 @@ func TestCompareSvc(t *testing.T) {
 					Type: "ClusterIP",
 				},
 			},
-		}, {
+		},
+		{
 			// Finalizers field differs
 			ExpectRet: true,
 			NewSvc: &corev1.Service{
@@ -474,7 +489,7 @@ func TestExpectedDeploymentVolumes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, ExpectedDeploymentVolumes(tt.args.pod, tt.args.volumes), "ExpectedDeploymentVolumes(%v, %v)", tt.args.pod, tt.args.volumes)
+			assert.Equalf(t, tt.want, ExpectedVolumes(tt.args.pod, tt.args.volumes), "ExpectedVolumes(%v, %v)", tt.args.pod, tt.args.volumes)
 		})
 	}
 }

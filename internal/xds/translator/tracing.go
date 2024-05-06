@@ -40,7 +40,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	}
 
 	// TODO: remove support for Host/Port in v1.2
-	if tracing.Destination.Settings[0].AddressType != nil &&
+	if len(tracing.Destination.Settings) > 0 &&
+		tracing.Destination.Settings[0].AddressType != nil &&
 		*tracing.Destination.Settings[0].AddressType == ir.FQDN {
 		oc.GrpcService.TargetSpecifier.(*corev3.GrpcService_EnvoyGrpc_).EnvoyGrpc.Authority =
 			tracing.Destination.Settings[0].Endpoints[0].Host
@@ -124,7 +125,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	}, nil
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing) error {
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
 	if tracing == nil {
 		return nil
 	}
@@ -132,7 +133,8 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	endpointType := EndpointTypeStatic
 
 	// TODO: remove support for Host/Port in v1.2
-	if tracing.Destination.Settings[0].AddressType != nil &&
+	if len(tracing.Destination.Settings) > 0 &&
+		tracing.Destination.Settings[0].AddressType != nil &&
 		*tracing.Destination.Settings[0].AddressType == ir.FQDN {
 		endpointType = EndpointTypeDNS
 	}
@@ -142,6 +144,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		settings:     tracing.Destination.Settings,
 		tSocket:      nil,
 		endpointType: endpointType,
+		metrics:      metrics,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

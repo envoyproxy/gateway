@@ -47,14 +47,12 @@ const (
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
 )
 
-var (
-	// for the case when a route does not exist to upstream, hcm logs will not be present
-	listenerAccessLogFilter = &accesslog.AccessLogFilter{
-		FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
-			ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
-		},
-	}
-)
+// for the case when a route does not exist to upstream, hcm logs will not be present
+var listenerAccessLogFilter = &accesslog.AccessLogFilter{
+	FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
+		ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
+	},
+}
 
 func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLog {
 	if al == nil {
@@ -149,7 +147,8 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 		}
 
 		// TODO: remove support for Host/Port in v1.2
-		if otel.Destination.Settings[0].AddressType != nil &&
+		if len(otel.Destination.Settings) > 0 &&
+			otel.Destination.Settings[0].AddressType != nil &&
 			*otel.Destination.Settings[0].AddressType == ir.FQDN {
 			al.CommonConfig.GrpcService.TargetSpecifier.(*cfgcore.GrpcService_EnvoyGrpc_).EnvoyGrpc.Authority =
 				otel.Destination.Settings[0].Endpoints[0].Host
@@ -238,7 +237,7 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	return keyValueList
 }
 
-func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog) error {
+func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog, metrics *ir.Metrics) error {
 	if al == nil {
 		return nil
 	}
@@ -248,7 +247,8 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 		endpointType := EndpointTypeStatic
 
 		// TODO: remove support for Host/Port in v1.2
-		if otel.Destination.Settings[0].AddressType != nil &&
+		if len(otel.Destination.Settings) > 0 &&
+			otel.Destination.Settings[0].AddressType != nil &&
 			*otel.Destination.Settings[0].AddressType == ir.FQDN {
 			endpointType = EndpointTypeDNS
 		}
@@ -258,6 +258,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			settings:     otel.Destination.Settings,
 			tSocket:      nil,
 			endpointType: endpointType,
+			metrics:      metrics,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}

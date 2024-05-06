@@ -22,6 +22,9 @@ backend has the ability to delay responses; we use it as the backend to control 
 ### request timeout
 We configure the backend to delay responses by 3 seconds, then we set the request timeout to 4 seconds. Envoy Gateway will successfully respond to the request.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -51,6 +54,41 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  hostnames:
+  - timeout.example.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+    timeouts:
+      request: "4s"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ```shell
 curl --header "Host: timeout.example.com" http://${GATEWAY_HOST}/?delay=3s  -I
 ```
@@ -64,6 +102,9 @@ content-length: 480
 ```
 
 Then we set the request timeout to 2 seconds. In this case, Envoy Gateway will respond with a timeout.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -93,6 +134,41 @@ spec:
       request: "2s"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  hostnames:
+  - timeout.example.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+    timeouts:
+      request: "2s"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ```shell
 curl --header "Host: timeout.example.com" http://${GATEWAY_HOST}/?delay=3s  -v

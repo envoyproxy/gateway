@@ -162,10 +162,12 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-proc-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 						},
@@ -187,11 +189,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Group: ptr.To(gwapiv1.Group("unsupported")),
-									Name:  "grpc-proc-service",
-									Port:  ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Group: ptr.To(gwapiv1.Group("unsupported")),
+										Name:  "grpc-proc-service",
+										Port:  ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 						},
@@ -205,7 +209,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"},
+			wantErrors: []string{" spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Core group."},
 		},
 		{
 			desc: "ExtProc with invalid BackendRef Kind",
@@ -213,11 +217,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Kind: ptr.To(gwapiv1.Kind("unsupported")),
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Kind: ptr.To(gwapiv1.Kind("unsupported")),
+										Name: "grpc-proc-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 						},
@@ -231,7 +237,45 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"},
+			wantErrors: []string{"spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Service kind."},
+		},
+		{
+			desc: "ExtProc with invalid fields",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-proc-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("not-a-body-mode")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("not-a-body-mode")),
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0].processingMode.response.body: Unsupported value: \"not-a-body-mode\": supported values: \"Streamed\", \"Buffered\", \"BufferedPartial\"",
+				"spec.extProc[0].processingMode.request.body: Unsupported value: \"not-a-body-mode\": supported values: \"Streamed\", \"Buffered\", \"BufferedPartial\"",
+			},
 		},
 	}
 

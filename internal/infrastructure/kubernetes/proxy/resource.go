@@ -101,8 +101,9 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
-	deploymentConfig *egv1a1.KubernetesDeploymentSpec,
-	shutdownConfig *egv1a1.ShutdownConfig) ([]corev1.Container, error) {
+	containerSpec *egv1a1.KubernetesContainerSpec,
+	shutdownConfig *egv1a1.ShutdownConfig,
+) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
@@ -119,8 +120,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				// hashed container port name including up to the 6 characters of the port name and the maximum of 15 characters.
-				Name:          utils.GetHashedName(p.Name, 6),
+				Name:          p.Name,
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}
@@ -144,7 +144,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
-	maxHeapSizeBytes := caclulateMaxHeapSizeBytes(deploymentConfig.Container.Resources)
+	maxHeapSizeBytes := caclulateMaxHeapSizeBytes(containerSpec.Resources)
 
 	// Get the default Bootstrap
 	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootsrapConfigOptions{
@@ -194,15 +194,15 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	containers := []corev1.Container{
 		{
 			Name:                     envoyContainerName,
-			Image:                    *deploymentConfig.Container.Image,
+			Image:                    *containerSpec.Image,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(deploymentConfig.Container),
-			Resources:                *deploymentConfig.Container.Resources,
-			SecurityContext:          deploymentConfig.Container.SecurityContext,
+			Env:                      expectedContainerEnv(containerSpec),
+			Resources:                *containerSpec.Resources,
+			SecurityContext:          containerSpec.SecurityContext,
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig.Container),
+			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			ReadinessProbe: &corev1.Probe{
@@ -327,8 +327,8 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 
-// expectedDeploymentVolumes returns expected proxy deployment volumes.
-func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
+// expectedVolumes returns expected proxy deployment volumes.
+func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "certs",
@@ -363,7 +363,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDep
 		},
 	}
 
-	return resource.ExpectedDeploymentVolumes(deploymentSpec.Pod, volumes)
+	return resource.ExpectedVolumes(pod, volumes)
 }
 
 // expectedContainerEnv returns expected proxy container envs.

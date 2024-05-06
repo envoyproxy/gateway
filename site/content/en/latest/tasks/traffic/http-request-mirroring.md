@@ -16,8 +16,11 @@ Before proceeding, you should be able to query the example backend using HTTP.
 Next, create a new `Deployment` and `Service` to mirror requests to. The following example will use
 a second instance of the application deployed in the quickstart.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f -
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -74,11 +77,76 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend-2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-2
+  labels:
+    app: backend-2
+    service: backend-2
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: backend-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-2
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: backend-2
+        version: v1
+    spec:
+      serviceAccountName: backend-2
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: backend-2
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 Then create an `HTTPRoute` that uses a `HTTPRequestMirrorFilter` to send requests to the original
 service from the quickstart, and mirror request to the service that was just deployed.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -107,6 +175,43 @@ spec:
       port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-mirror
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - backends.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: RequestMirror
+      requestMirror:
+        backendRef:
+          kind: Service
+          name: backend-2
+          port: 3000
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
@@ -142,6 +247,7 @@ $ curl -v --header "Host: backends.example" "http://${GATEWAY_HOST}/get"
 < server: envoy
 <
 ...
+
  "namespace": "default",
  "ingress": "",
  "service": "",
@@ -163,6 +269,9 @@ Echoing back request made to /get to client (10.42.0.10:45096)
 ## Multiple BackendRefs
 
 When an `HTTPRoute` has multiple `backendRefs` and an `HTTPRequestMirrorFilter`, traffic splitting will still behave the same as it normally would for the main `backendRefs` while the `backendRef` of the `HTTPRequestMirrorFilter` will continue receiving mirrored copies of the incoming requests.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -199,9 +308,53 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-mirror
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - backends.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: RequestMirror
+      requestMirror:
+        backendRef:
+          kind: Service
+          name: backend-2
+          port: 3000
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+    - group: ""
+      kind: Service
+      name: backend-3
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ## Multiple HTTPRequestMirrorFilters
 
 Multiple `HTTPRequestMirrorFilters` are not supported on the same `HTTPRoute` `rule`. When attempting to do so, the admission webhook will reject the configuration.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -239,6 +392,49 @@ spec:
       port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-mirror
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - backends.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: RequestMirror
+      requestMirror:
+        backendRef:
+          kind: Service
+          name: backend-2
+          port: 3000
+    - type: RequestMirror
+      requestMirror:
+        backendRef:
+          kind: Service
+          name: backend-3
+          port: 3000
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ```console
 Error from server: error when creating "STDIN": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.rules[0].filters: Invalid value: "RequestMirror": cannot be used multiple times in the same rule

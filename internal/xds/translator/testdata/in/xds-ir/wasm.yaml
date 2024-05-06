@@ -1,0 +1,84 @@
+http:
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  isHTTP2: false
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - backendWeights:
+      invalid: 0
+      valid: 0
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    wasm:
+    - config:
+        parameter1:
+          key1: value1
+        parameter2:
+          key2:
+            key3: value3
+      failOpen: true
+      httpWasmCode:
+        sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+        url: https://www.test.com/wasm-filter-3.wasm
+      name: envoyextensionpolicy/default/policy-for-http-route/0
+      wasmName: wasm-filter-3
+  - backendWeights:
+      invalid: 0
+      valid: 0
+    destination:
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /bar
+    wasm:
+    - config:
+        parameter1:
+          key1: value1
+          key2: value2
+        parameter2: value3
+      failOpen: false
+      httpWasmCode:
+        sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+        url: https://www.example.com/wasm-filter-1.wasm
+      name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
+      wasmName: wasm-filter-1
+      rootID: my-root-id
+    - config:
+        parameter1: value1
+        parameter2: value2
+      failOpen: false
+      httpWasmCode:
+        sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+        url: https://www.example.com/wasm-filter-2.wasm
+      name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
+      wasmName: wasm-filter-2

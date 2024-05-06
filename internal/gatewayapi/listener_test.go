@@ -62,6 +62,35 @@ func TestProcessTracing(t *testing.T) {
 					Name:      "fake-gw",
 					Namespace: "fake-ns",
 				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "fake-gateway-class",
+				},
+			},
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Tracing: &egcfgv1a1.ProxyTracing{},
+					},
+				},
+			},
+			translator: Translator{
+				MergeGateways: true,
+			},
+			expected: &ir.Tracing{
+				ServiceName:  "fake-gateway-class",
+				SamplingRate: 100.0,
+				Destination: ir.RouteDestination{
+					Name:     "tracing/fake-ns/fake-gw",
+					Settings: []*ir.DestinationSetting{},
+				},
+			},
+		},
+		{
+			gw: gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-gw",
+					Namespace: "fake-ns",
+				},
 			},
 			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -237,6 +266,21 @@ func TestProcessMetrics(t *testing.T) {
 			},
 			expected: &ir.Metrics{
 				EnableVirtualHostStats: true,
+			},
+		},
+		{
+			name: "peer endpoint stats enabled",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Metrics: &egcfgv1a1.ProxyMetrics{
+							EnablePerEndpointStats: true,
+						},
+					},
+				},
+			},
+			expected: &ir.Metrics{
+				EnablePerEndpointStats: true,
 			},
 		},
 	}

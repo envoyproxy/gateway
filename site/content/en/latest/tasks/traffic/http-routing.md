@@ -131,6 +131,9 @@ For this feature to work please make sure
 * you have a fallback route rule defined, the backend for this route rule can be invalid.
 * The SecurityPolicy is applied to both the fallback route as well as the route with the claim header matches, to avoid spoofing.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -195,6 +198,76 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: jwt-claim-routing
+  jwt:
+    providers:
+      - name: example
+        recomputeRoute: true
+        claimToHeaders:
+          - claim: sub
+            header: x-sub
+          - claim: admin
+            header: x-admin
+          - claim: name
+            header: x-name
+        remoteJWKS:
+          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: jwt-claim-routing
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - kind: Service
+          name: foo-svc
+          port: 8080
+          weight: 1
+      matches:
+        - headers:
+            - name: x-name
+              value: John Doe
+    - backendRefs:
+        - kind: Service
+          name: bar-svc
+          port: 8080
+          weight: 1
+      matches:
+        - headers:
+            - name: x-name
+              value: Tom
+    # catch all
+    - backendRefs:
+        - kind: Service
+          name: infra-backend-invalid
+          port: 8080
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Get the JWT used for testing request authentication:
 
 ```shell
@@ -204,7 +277,7 @@ TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/
 Test routing to the `foo-svc` backend by specifying a JWT Token with a claim `name: John Doe`.
 
 ```shell
-curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
+curl -sS -H "Host: foo.example.com" -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/login" | jq .pod
 "foo-backend-6df8cc6b9f-fmwcg"
 ```
 
@@ -217,7 +290,7 @@ TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/
 Test HTTP routing to the `bar-svc` backend by specifying a JWT Token with a claim `name: Tom`.
 
 ```shell
-curl -sS -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
+curl -sS -H "Host: bar.example.com" -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
 "bar-backend-6688b8944c-s8htr"
 ```
 

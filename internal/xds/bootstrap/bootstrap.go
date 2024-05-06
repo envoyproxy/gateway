@@ -63,6 +63,11 @@ type bootstrapParameters struct {
 	ReadyServer readyServerParameters
 	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
 	EnablePrometheus bool
+	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
+	EnablePrometheusCompression bool
+	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
+	PrometheusCompressionLibrary string
+
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
 	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
@@ -136,9 +141,11 @@ func (b *bootstrapConfig) render() error {
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
 func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, error) {
 	var (
-		enablePrometheus = true
-		metricSinks      []metricSink
-		StatsMatcher     StatsMatcherParameters
+		enablePrometheus             = true
+		enablePrometheusCompression  = false
+		PrometheusCompressionLibrary = "gzip"
+		metricSinks                  []metricSink
+		StatsMatcher                 StatsMatcherParameters
 	)
 
 	// TODO (davidalger) push these through XDS?
@@ -147,6 +154,11 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 
 		if proxyMetrics.Prometheus != nil {
 			enablePrometheus = !proxyMetrics.Prometheus.Disable
+
+			if proxyMetrics.Prometheus.Compression != nil {
+				enablePrometheusCompression = true
+				PrometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+			}
 		}
 
 		addresses := sets.NewString()
@@ -217,8 +229,10 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
-			EnablePrometheus: enablePrometheus,
-			OtelMetricSinks:  metricSinks,
+			EnablePrometheus:             enablePrometheus,
+			EnablePrometheusCompression:  enablePrometheusCompression,
+			PrometheusCompressionLibrary: PrometheusCompressionLibrary,
+			OtelMetricSinks:              metricSinks,
 		},
 	}
 	if opts != nil && opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {

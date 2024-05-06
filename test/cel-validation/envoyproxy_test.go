@@ -121,6 +121,56 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allocateLoadBalancerNodePorts can only be set for LoadBalancer type"},
 		},
 		{
+			desc: "loadBalancerSourceRanges-pass-case1",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerSourceRanges-pass-case2",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerSourceRanges-fail",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     ptr.To(egv1a1.ServiceTypeClusterIP),
+								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerSourceRanges can only be set for LoadBalancer type"},
+		},
+		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -1219,6 +1269,128 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 		},
+		{
+			desc: "ProxyFilterOrder-with-before-and-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterRateLimit,
+							Before: ptr.To(egv1a1.EnvoyFilterCORS),
+							After:  ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of before or after can be specified"},
+		},
+		{
+			desc: "ProxyFilterOrder-without-before-or-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name: egv1a1.EnvoyFilterRateLimit,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"one of before or after must be specified"},
+		},
+		{
+			desc: "ProxyFilterOrder-with-before",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterRateLimit,
+							Before: ptr.To(egv1a1.EnvoyFilterCORS),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyFilterOrder-with-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:  egv1a1.EnvoyFilterRateLimit,
+							After: ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "EnvoyDeployment-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{},
+							EnvoyDaemonSet:  &egv1a1.KubernetesDaemonSetSpec{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of envoyDeployment or envoyDaemonSet can be specified"},
+		},
+		{
+			desc: "EnvoyHpa-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](10),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"cannot use envoyHpa if envoyDaemonSet is used"},
+		},
+		{
+			desc: "EnvoyDeployment-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{},
+							EnvoyDaemonSet:  &egv1a1.KubernetesDaemonSetSpec{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of envoyDeployment or envoyDaemonSet can be specified"},
+		},
+		{
+			desc: "EnvoyHpa-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](10),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"cannot use envoyHpa if envoyDaemonSet is used"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -1237,7 +1409,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			}
 
 			if (len(tc.wantErrors) != 0) != (err != nil) {
-				t.Fatalf("Unexpected response while creating EnvoyProxy; got err=\n%v\n;want error=%v", err, tc.wantErrors != nil)
+				t.Fatalf("Unexpected response while creating EnvoyProxy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
 			}
 
 			var missingErrorStrings []string

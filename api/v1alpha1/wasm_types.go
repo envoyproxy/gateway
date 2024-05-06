@@ -31,14 +31,16 @@ type Wasm struct {
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
 	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
-	// RootID *string `json:"rootID,omitempty"`
+	// RootID must match the root_id parameter used to register the Context in the Wasm code.
+	RootID *string `json:"rootID,omitempty"`
 
 	// Code is the wasm code for the extension.
 	Code WasmCodeSource `json:"code"`
 
 	// Config is the configuration for the Wasm extension.
 	// This configuration will be passed as a JSON string to the Wasm extension.
-	Config *apiextensionsv1.JSON `json:"config"`
+	// +optional
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// FailOpen is a switch used to control the behavior when a fatal error occurs
 	// during the initialization or the execution of the Wasm extension.
@@ -61,7 +63,7 @@ type WasmCodeSource struct {
 	// Type is the type of the source of the wasm code.
 	// Valid WasmCodeSourceType values are "HTTP" or "Image".
 	//
-	// +kubebuilder:validation:Enum=HTTP;Image
+	// +kubebuilder:validation:Enum=HTTP;Image;ConfigMap
 	// +unionDiscriminator
 	Type WasmCodeSourceType `json:"type"`
 
@@ -78,8 +80,9 @@ type WasmCodeSource struct {
 	Image *ImageWasmCodeSource `json:"image,omitempty"`
 
 	// SHA256 checksum that will be used to verify the wasm code.
-	// +optional
-	// SHA256 *string `json:"sha256,omitempty"`
+	//
+	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	SHA256 string `json:"sha256"`
 }
 
 // WasmCodeSourceType specifies the types of sources for the wasm code.

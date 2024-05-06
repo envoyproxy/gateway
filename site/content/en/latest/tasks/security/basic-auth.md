@@ -49,23 +49,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+  '
 ```
 
 ### Create a .htpasswd file
@@ -103,6 +100,9 @@ kubectl create secret generic basic-auth --from-file=.htpasswd
 The below example defines a SecurityPolicy that authenticates requests against the user list in the kubernetes
 secret generated in the previous step.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -119,6 +119,29 @@ spec:
       name: "basic-auth"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: basic-auth-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  basicAuth:
+    users:
+      name: "basic-auth"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the SecurityPolicy configuration:
 
