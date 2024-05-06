@@ -35,7 +35,7 @@ Envoy Gateway 社区的一个明确的目标是完全包容性。
 ## 提交一个 PR {#submitting-a-pr}
 
 * Fork 该仓库。
-* 修改
+* 修改。
 * 对每次提交都进行 DCO 签署。这可以通过 `git commit -s` 来完成。
 * 提交您的 PR。
 * 将为您自动运行测试。
