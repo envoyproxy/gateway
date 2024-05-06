@@ -1048,7 +1048,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
 func (t *Translator) processDestination(backendRefContext BackendRefContext,
-	parentRef *RouteParentContext, route RouteContext, resources *Resources) (ds *ir.DestinationSetting) {
+	parentRef *RouteParentContext, route RouteContext, resources *Resources,
+) (ds *ir.DestinationSetting) {
 	routeType := GetRouteType(route)
 	weight := uint32(1)
 	backendRef := GetBackendRef(backendRefContext)
