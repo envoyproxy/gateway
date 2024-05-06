@@ -616,5 +616,8 @@ spec:
     bufferLimit: 1024
 ```
 
+{{% /tab %}}
+{{< /tabpane >}}
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
