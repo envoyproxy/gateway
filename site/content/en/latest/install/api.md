@@ -57,3 +57,4 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+
