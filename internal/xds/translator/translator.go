@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -300,7 +301,8 @@ func (t *Translator) addRouteToRouteConfig(
 	xdsRouteCfg *routev3.RouteConfiguration,
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
-	http3Enabled bool) error {
+	http3Enabled bool,
+) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
 		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
@@ -553,7 +555,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 // findXdsListenerByHostPort finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
 func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32,
-	protocol corev3.SocketAddress_Protocol) *listenerv3.Listener {
+	protocol corev3.SocketAddress_Protocol,
+) *listenerv3.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
@@ -637,46 +640,24 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 // processXdsCluster processes a xds cluster by its endpoint address type.
 func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings, metrics *ir.Metrics) error {
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
-		name:           httpRoute.Destination.Name,
-		settings:       httpRoute.Destination.Settings,
-		tSocket:        nil,
-		endpointType:   buildEndpointType(httpRoute.Destination.Settings),
-		loadBalancer:   httpRoute.LoadBalancer,
-		proxyProtocol:  httpRoute.ProxyProtocol,
-		circuitBreaker: httpRoute.CircuitBreaker,
-		healthCheck:    httpRoute.HealthCheck,
-		http1Settings:  http1Settings,
-		timeout:        httpRoute.Timeout,
-		tcpkeepalive:   httpRoute.TCPKeepalive,
-		metrics:        metrics,
+		name:              httpRoute.Destination.Name,
+		settings:          httpRoute.Destination.Settings,
+		tSocket:           nil,
+		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
+		loadBalancer:      httpRoute.LoadBalancer,
+		proxyProtocol:     httpRoute.ProxyProtocol,
+		circuitBreaker:    httpRoute.CircuitBreaker,
+		healthCheck:       httpRoute.HealthCheck,
+		http1Settings:     http1Settings,
+		timeout:           httpRoute.Timeout,
+		tcpkeepalive:      httpRoute.TCPKeepalive,
+		metrics:           metrics,
+		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
 
 	return nil
-}
-
-// processTLSSocket generates a xDS TransportSocket for a given TLS config.
-// It also adds the necessary secrets to the resource version table.
-func processTLSSocket(tlsConfig *ir.TLSUpstreamConfig, tCtx *types.ResourceVersionTable) (*corev3.TransportSocket, error) {
-	if tlsConfig == nil {
-		return nil, nil
-	}
-	// Create a secret for the CA certificate only if it's not using the system trust store
-	if !tlsConfig.UseSystemTrustStore {
-		CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
-		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
-			return nil, err
-		}
-	}
-
-	// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
-	// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
-	tlsSocket, err := buildXdsUpstreamTLSSocketWthCert(tlsConfig)
-	if err != nil {
-		return nil, err
-	}
-	return tlsSocket, nil
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -765,12 +746,11 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 }
 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
-
 	var tlsCtx *tlsv3.UpstreamTlsContext
-
 	if tlsConfig.UseSystemTrustStore {
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
+				TlsCertificates: nil,
 				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 					ValidationContext: &tlsv3.CertificateValidationContext{
 						TrustedCa: &corev3.DataSource{
@@ -804,6 +784,14 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
+	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)
+	if tlsParams != nil {
+		tlsCtx.CommonTlsContext.TlsParams = tlsParams
+	}
+
+	if len(tlsConfig.ALPNProtocols) > 0 {
+		tlsCtx.CommonTlsContext.AlpnProtocols = buildALPNProtocols(tlsConfig.ALPNProtocols)
+	}
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
 		return nil, err

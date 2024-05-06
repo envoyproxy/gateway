@@ -31,7 +31,8 @@ import (
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
-	xdsIR XdsIRMap) []*egv1a1.BackendTrafficPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.BackendTrafficPolicy {
 	var res []*egv1a1.BackendTrafficPolicy
 
 	// Sort based on timestamp
@@ -391,6 +392,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						}
 						r.Timeout = to
 					}
+
+					if policy.Spec.UseClientProtocol != nil {
+						r.UseClientProtocol = policy.Spec.UseClientProtocol
+					}
 				}
 			}
 		}
@@ -564,6 +569,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 					r.Timeout = ct
 				}
 			}
+
+			if policy.Spec.UseClientProtocol != nil {
+				if r.UseClientProtocol == nil {
+					r.UseClientProtocol = policy.Spec.UseClientProtocol
+				}
+			}
 		}
 	}
 
@@ -625,7 +636,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	var err error
 	var irRule *ir.RateLimitRule
-	var irRules = make([]*ir.RateLimitRule, 0)
+	irRules := make([]*ir.RateLimitRule, 0)
 	for _, rule := range local.Rules {
 		// We don't process the rule without clientSelectors here because it's
 		// previously used as the default route-level limit.

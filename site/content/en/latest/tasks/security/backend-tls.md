@@ -208,7 +208,37 @@ kubectl get HTTPRoute backend -o yaml
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through the Gateway:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:80:${GATEWAY_HOST}" \
+http://www.example.com:80/get
+```
+
+Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
+
+```shell
+< HTTP/1.1 200 OK
+[...]
+ "tls": {
+  "version": "TLSv1.2",
+  "serverName": "www.example.com",
+  "negotiatedProtocol": "http/1.1",
+  "cipherSuite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+ }
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -242,32 +272,7 @@ Inspect the output and see that the response contains the details of the TLS han
  }
 ```
 
-### Clusters with External LoadBalancer Support
-
-Get the External IP of the Gateway:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-Query the example app through the Gateway:
-
-```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:80:${GATEWAY_HOST}" \
-http://www.example.com:80/get
-```
-
-Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
-
-```shell
-< HTTP/1.1 200 OK
-[...]
- "tls": {
-  "version": "TLSv1.2",
-  "serverName": "www.example.com",
-  "negotiatedProtocol": "http/1.1",
-  "cipherSuite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
- }
-```
+{{% /tab %}}
+{{< /tabpane >}}
 
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/

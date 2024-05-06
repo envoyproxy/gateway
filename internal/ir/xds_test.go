@@ -35,11 +35,11 @@ var (
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
-
 				Name:              "happy",
 				ServerCertificate: []byte{1, 2, 3},
 				PrivateKey:        []byte{1, 2, 3},
-			}}},
+			}},
+		},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	redactedHappyHTTPSListener = HTTPListener{
@@ -49,11 +49,11 @@ var (
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
-
 				Name:              "happy",
 				ServerCertificate: []byte{1, 2, 3},
 				PrivateKey:        redacted,
-			}}},
+			}},
+		},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidAddrHTTPListener = HTTPListener{
@@ -62,13 +62,6 @@ var (
 		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
-	}
-	invalidRouteMatchHTTPListener = HTTPListener{
-		Name:      "invalid-route-match",
-		Address:   "0.0.0.0",
-		Port:      80,
-		Hostnames: []string{"example.com"},
-		Routes:    []*HTTPRoute{&emptyMatchHTTPRoute},
 	}
 	invalidBackendHTTPListener = HTTPListener{
 		Name:      "invalid-backend-match",
@@ -86,34 +79,44 @@ var (
 	}
 
 	// TCPListener
-	happyTCPListener = TCPListener{
+	happyTCPListenerTLSPassthrough = TCPListener{
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
-	happyTCPListenerWithRoute = TCPListener{
+
+	happyTCPListenerTLSTerminate = TCPListener{
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
-		Routes:  []*TCPRoute{&happyTCPRoute},
+		Routes:  []*TCPRoute{&happyTCPRouteTLSTermination},
 	}
-	invalidNameTCPListener = TCPListener{
+
+	emptySNITCPListenerTLSPassthrough = TCPListener{
+		Name:    "empty-sni",
 		Address: "0.0.0.0",
 		Port:    80,
-		Routes:  []*TCPRoute{&happyTCPRoute},
+		Routes:  []*TCPRoute{&emptySNITCPRoute},
 	}
-	invalidAddrTCPListener = TCPListener{
+	invalidNameTCPListenerTLSPassthrough = TCPListener{
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
+	}
+	invalidAddrTCPListenerTLSPassthrough = TCPListener{
 		Name:    "invalid-addr",
 		Address: "1.0.0",
 		Port:    80,
-		Routes:  []*TCPRoute{&happyTCPRoute},
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
+	}
+	invalidSNITCPListenerTLSPassthrough = TCPListener{
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&invalidSNITCPRoute},
 	}
 
 	// TCPRoute
-	happyTCPRoute = TCPRoute{
-		Name:        "happy",
-		Destination: &happyRouteDestination,
-	}
 	happyTCPRouteTLSPassthrough = TCPRoute{
 		Name:        "happy-tls-passthrough",
 		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
@@ -128,11 +131,13 @@ var (
 		}}}},
 		Destination: &happyRouteDestination,
 	}
-	invalidNameTCPRoute = TCPRoute{
+	emptySNITCPRoute = TCPRoute{
+		Name:        "empty-sni",
 		Destination: &happyRouteDestination,
 	}
+
 	invalidSNITCPRoute = TCPRoute{
-		Name:        "invalid-sni-route",
+		Name:        "invalid-sni",
 		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
 		Destination: &happyRouteDestination,
 	}
@@ -169,11 +174,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("example"),
 		},
-		Destination: &happyRouteDestination,
-	}
-	emptyMatchHTTPRoute = HTTPRoute{
-		Name:        "empty-match",
-		Hostname:    "*",
 		Destination: &happyRouteDestination,
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
@@ -516,31 +516,21 @@ func TestValidateXds(t *testing.T) {
 		{
 			name: "happy tls passthrough",
 			input: Xds{
-				TCP: []*TCPListener{{
-					Name:    "happy-tls-passthrough",
-					Address: "0.0.0.0",
-					Port:    80,
-					Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
-				}},
+				TCP: []*TCPListener{&happyTCPListenerTLSPassthrough},
 			},
 			want: nil,
 		},
 		{
 			name: "happy tls terminate",
 			input: Xds{
-				TCP: []*TCPListener{{
-					Name:    "happy-tls-terminate",
-					Address: "0.0.0.0",
-					Port:    80,
-					Routes:  []*TCPRoute{&happyTCPRouteTLSTermination},
-				}},
+				TCP: []*TCPListener{&happyTCPListenerTLSTerminate},
 			},
 			want: nil,
 		},
 		{
 			name: "invalid listener",
 			input: Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener, &invalidRouteMatchHTTPListener},
+				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener},
 			},
 			want: []error{ErrListenerAddressInvalid},
 		},
@@ -632,24 +622,34 @@ func TestValidateTCPListener(t *testing.T) {
 		want  []error
 	}{
 		{
-			name:  "happy",
-			input: happyTCPListener,
+			name:  "tls passthrough happy",
+			input: happyTCPListenerTLSPassthrough,
 			want:  nil,
 		},
 		{
-			name:  "happy with route",
-			input: happyTCPListenerWithRoute,
+			name:  "tls terminate happy",
+			input: happyTCPListenerTLSTerminate,
 			want:  nil,
 		},
 		{
-			name:  "invalid name",
-			input: invalidNameTCPListener,
+			name:  "tcp empty SNIs",
+			input: emptySNITCPListenerTLSPassthrough,
+			want:  nil,
+		},
+		{
+			name:  "tls passthrough invalid name",
+			input: invalidNameTCPListenerTLSPassthrough,
 			want:  []error{ErrListenerNameEmpty},
 		},
 		{
-			name:  "invalid addr",
-			input: invalidAddrTCPListener,
+			name:  "tls passthrough invalid addr",
+			input: invalidAddrTCPListenerTLSPassthrough,
 			want:  []error{ErrListenerAddressInvalid},
+		},
+		{
+			name:  "tls passthrough empty SNIs",
+			input: invalidSNITCPListenerTLSPassthrough,
+			want:  []error{ErrTCPRouteSNIsEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -679,7 +679,8 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 				Certificates: []TLSCertificate{{
 					ServerCertificate: []byte("server-cert"),
 					PrivateKey:        []byte("priv-key"),
-				}}},
+				}},
+			},
 			want: nil,
 		},
 		{
@@ -687,7 +688,8 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			input: TLSConfig{
 				Certificates: []TLSCertificate{{
 					PrivateKey: []byte("priv-key"),
-				}}},
+				}},
+			},
 			want: ErrTLSServerCertEmpty,
 		},
 		{
@@ -695,7 +697,8 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			input: TLSConfig{
 				Certificates: []TLSCertificate{{
 					ServerCertificate: []byte("server-cert"),
-				}}},
+				}},
+			},
 			want: ErrTLSPrivateKey,
 		},
 	}
@@ -986,11 +989,6 @@ func TestValidateTCPRoute(t *testing.T) {
 		want  []error
 	}{
 		{
-			name:  "happy",
-			input: happyTCPRoute,
-			want:  nil,
-		},
-		{
 			name:  "tls passthrough happy",
 			input: happyTCPRouteTLSPassthrough,
 			want:  nil,
@@ -1001,9 +999,9 @@ func TestValidateTCPRoute(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name:  "invalid name",
-			input: invalidNameTCPRoute,
-			want:  []error{ErrRouteNameEmpty},
+			name:  "empty sni",
+			input: emptySNITCPRoute,
+			want:  nil,
 		},
 		{
 			name:  "invalid sni",
@@ -1321,231 +1319,244 @@ func TestValidateHealthCheck(t *testing.T) {
 	}{
 		{
 			name: "invalid timeout",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Duration(0)},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To[uint32](3),
-				HealthyThreshold:   ptr.To[uint32](3),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					ExpectedStatuses: []HTTPStatus{200, 400},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Duration(0)},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHealthCheckTimeoutInvalid,
 		},
 		{
 			name: "invalid interval",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Duration(0)},
-				UnhealthyThreshold: ptr.To[uint32](3),
-				HealthyThreshold:   ptr.To[uint32](3),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodGet),
-					ExpectedStatuses: []HTTPStatus{200, 400},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Duration(0)},
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHealthCheckIntervalInvalid,
 		},
 		{
 			name: "invalid unhealthy threshold",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To[uint32](0),
-				HealthyThreshold:   ptr.To[uint32](3),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodPatch),
-					ExpectedStatuses: []HTTPStatus{200, 400},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To[uint32](0),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodPatch),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHealthCheckUnhealthyThresholdInvalid,
 		},
 		{
 			name: "invalid healthy threshold",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To[uint32](3),
-				HealthyThreshold:   ptr.To[uint32](0),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodPost),
-					ExpectedStatuses: []HTTPStatus{200, 400},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](0),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodPost),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
 		{
 			name: "http-health-check: invalid host",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To[uint32](3),
-				HealthyThreshold:   ptr.To[uint32](3),
-				HTTP: &HTTPHealthChecker{
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodPut),
-					ExpectedStatuses: []HTTPStatus{200, 400},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodPut),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHCHTTPHostInvalid,
 		},
 		{
 			name: "http-health-check: invalid path",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To[uint32](3),
-				HealthyThreshold:   ptr.To[uint32](3),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "",
-					Method:           ptr.To(http.MethodPut),
-					ExpectedStatuses: []HTTPStatus{200, 400},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "",
+						Method:           ptr.To(http.MethodPut),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHCHTTPPathInvalid,
 		},
 		{
 			name: "http-health-check: invalid method",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To(uint32(3)),
-				HealthyThreshold:   ptr.To(uint32(3)),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodConnect),
-					ExpectedStatuses: []HTTPStatus{200, 400},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodConnect),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHCHTTPMethodInvalid,
 		},
 		{
 			name: "http-health-check: invalid expected-statuses",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To(uint32(3)),
-				HealthyThreshold:   ptr.To(uint32(3)),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodDelete),
-					ExpectedStatuses: []HTTPStatus{},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodDelete),
+						ExpectedStatuses: []HTTPStatus{},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHCHTTPExpectedStatusesInvalid,
 		},
 		{
 			name: "http-health-check: invalid range",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To(uint32(3)),
-				HealthyThreshold:   ptr.To(uint32(3)),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodHead),
-					ExpectedStatuses: []HTTPStatus{100, 600},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodHead),
+						ExpectedStatuses: []HTTPStatus{100, 600},
+					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHTTPStatusInvalid,
 		},
 		{
 			name: "http-health-check: invalid expected-responses",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To(uint32(3)),
-				HealthyThreshold:   ptr.To(uint32(3)),
-				HTTP: &HTTPHealthChecker{
-					Host:             "*",
-					Path:             "/healthz",
-					Method:           ptr.To(http.MethodOptions),
-					ExpectedStatuses: []HTTPStatus{200, 300},
-					ExpectedResponse: &HealthCheckPayload{
-						Text:   ptr.To("foo"),
-						Binary: []byte{'f', 'o', 'o'},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodOptions),
+						ExpectedStatuses: []HTTPStatus{200, 300},
+						ExpectedResponse: &HealthCheckPayload{
+							Text:   ptr.To("foo"),
+							Binary: []byte{'f', 'o', 'o'},
+						},
 					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
 			name: "tcp-health-check: invalid send payload",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To(uint32(3)),
-				HealthyThreshold:   ptr.To(uint32(3)),
-				TCP: &TCPHealthChecker{
-					Send: &HealthCheckPayload{
-						Text:   ptr.To("foo"),
-						Binary: []byte{'f', 'o', 'o'},
-					},
-					Receive: &HealthCheckPayload{
-						Text: ptr.To("foo"),
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					TCP: &TCPHealthChecker{
+						Send: &HealthCheckPayload{
+							Text:   ptr.To("foo"),
+							Binary: []byte{'f', 'o', 'o'},
+						},
+						Receive: &HealthCheckPayload{
+							Text: ptr.To("foo"),
+						},
 					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
 			name: "tcp-health-check: invalid receive payload",
-			input: HealthCheck{&ActiveHealthCheck{
-				Timeout:            &metav1.Duration{Duration: time.Second},
-				Interval:           &metav1.Duration{Duration: time.Second},
-				UnhealthyThreshold: ptr.To(uint32(3)),
-				HealthyThreshold:   ptr.To(uint32(3)),
-				TCP: &TCPHealthChecker{
-					Send: &HealthCheckPayload{
-						Text: ptr.To("foo"),
-					},
-					Receive: &HealthCheckPayload{
-						Text:   ptr.To("foo"),
-						Binary: []byte{'f', 'o', 'o'},
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					TCP: &TCPHealthChecker{
+						Send: &HealthCheckPayload{
+							Text: ptr.To("foo"),
+						},
+						Receive: &HealthCheckPayload{
+							Text:   ptr.To("foo"),
+							Binary: []byte{'f', 'o', 'o'},
+						},
 					},
 				},
-			},
 				&OutlierDetection{},
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
 			name: "OutlierDetection invalid interval",
-			input: HealthCheck{&ActiveHealthCheck{},
+			input: HealthCheck{
+				&ActiveHealthCheck{},
 				&OutlierDetection{
 					Interval:         &metav1.Duration{Duration: time.Duration(0)},
 					BaseEjectionTime: &metav1.Duration{Duration: time.Second},
@@ -1555,7 +1566,8 @@ func TestValidateHealthCheck(t *testing.T) {
 		},
 		{
 			name: "OutlierDetection invalid BaseEjectionTime",
-			input: HealthCheck{&ActiveHealthCheck{},
+			input: HealthCheck{
+				&ActiveHealthCheck{},
 				&OutlierDetection{
 					Interval:         &metav1.Duration{Duration: time.Second},
 					BaseEjectionTime: &metav1.Duration{Duration: time.Duration(0)},
