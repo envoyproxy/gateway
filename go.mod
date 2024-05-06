@@ -6,9 +6,9 @@ require (
 	fortio.org/fortio v1.63.7
 	fortio.org/log v1.12.2
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
+	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.12.1-0.20240410145647-bdba4bba15fc
+	github.com/envoyproxy/go-control-plane v0.12.1-0.20240425230418-212e93054f1a
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/fatih/color v1.16.0
@@ -37,7 +37,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.2.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
-	golang.org/x/sys v0.19.0
+	golang.org/x/sys v0.20.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -56,6 +56,7 @@ require (
 )
 
 require (
+	cel.dev/expr v0.15.0 // indirect
 	fortio.org/dflag v1.7.1 // indirect
 	fortio.org/sets v1.0.4 // indirect
 	fortio.org/struct2env v0.4.0 // indirect
