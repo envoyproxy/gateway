@@ -725,7 +725,7 @@ func (t *Translator) processRequestMirrorFilter(
 		return
 	}
 
-	ds, _ := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
 	newMirror := &ir.RouteDestination{
 		Name:     fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
