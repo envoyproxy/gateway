@@ -141,7 +141,7 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 		resourcesList = &httproute
 
 	case "grpcroute":
-		grpcroute := gwv1a2.GRPCRouteList{}
+		grpcroute := gwv1.GRPCRouteList{}
 		if err := cli.List(ctx, &grpcroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
