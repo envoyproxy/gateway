@@ -843,6 +843,7 @@ _Appears in:_
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
+| `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  | ShutdownManager defines the configuration for the shutdown manager. |
 
 
 #### EnvoyGatewayLogComponent
@@ -2964,6 +2965,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `drainTimeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 600 seconds. |
 | `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 5 seconds. |
+
+
+#### ShutdownManager
+
+
+
+ShutdownManager defines the configuration for the shutdown manager.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `image` | _string_ |  true  | Image specifies the ShutdownManager container image to be used, instead of the default image. |
 
 
 #### SlowStart
