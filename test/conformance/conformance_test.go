@@ -24,6 +24,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 	opts := conformance.DefaultOptions(t)
 	opts.SkipTests = []string{
 		tests.GatewayStaticAddresses.ShortName,
+		tests.GatewayHTTPListenerIsolation.ShortName, // https://github.com/kubernetes-sigs/gateway-api/issues/3049
 	}
 	opts.SupportedFeatures = features.AllFeatures
 	opts.ExemptFeatures = features.MeshCoreFeatures
