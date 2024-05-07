@@ -16,14 +16,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1alpha3"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
+
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
 func TestGatewayAPIConformance(t *testing.T) {
@@ -32,16 +30,11 @@ func TestGatewayAPIConformance(t *testing.T) {
 	clientCfg, err := config.GetConfig()
 	require.NoError(t, err)
 
-	c, err := client.New(clientCfg, client.Options{})
+	c, err := client.New(clientCfg, client.Options{Scheme: envoygateway.GetScheme()})
 	require.NoError(t, err)
 
 	cs, err := kubernetes.NewForConfig(clientCfg)
 	require.NoError(t, err)
-
-	require.NoError(t, v1alpha3.AddToScheme(c.Scheme()))
-	require.NoError(t, v1alpha2.AddToScheme(c.Scheme()))
-	require.NoError(t, v1beta1.AddToScheme(c.Scheme()))
-	require.NoError(t, v1.AddToScheme(c.Scheme()))
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,

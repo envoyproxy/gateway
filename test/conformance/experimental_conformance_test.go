@@ -18,16 +18,14 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1alpha3"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 	"sigs.k8s.io/yaml"
+
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
 var (
@@ -44,7 +42,7 @@ func TestExperimentalConformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error loading Kubernetes config: %v", err)
 	}
-	mgrClient, err = client.New(cfg, client.Options{})
+	mgrClient, err = client.New(cfg, client.Options{Scheme: envoygateway.GetScheme()})
 	if err != nil {
 		t.Fatalf("Error initializing Kubernetes client: %v", err)
 	}
@@ -52,11 +50,6 @@ func TestExperimentalConformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error initializing Kubernetes REST client: %v", err)
 	}
-
-	require.NoError(t, v1alpha3.AddToScheme(mgrClient.Scheme()))
-	require.NoError(t, v1alpha2.AddToScheme(mgrClient.Scheme()))
-	require.NoError(t, v1beta1.AddToScheme(mgrClient.Scheme()))
-	require.NoError(t, v1.AddToScheme(mgrClient.Scheme()))
 
 	// experimental conformance flags
 	conformanceProfiles = sets.New(
