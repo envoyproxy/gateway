@@ -49,12 +49,13 @@ func TestEGUpgrade(t *testing.T) {
 	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-		Client:               c,
-		GatewayClassName:     *flags.GatewayClassName,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		ManifestFS:           []fs.FS{e2e.Manifests},
-		RunTest:              *flags.RunTest,
+		Client:                     c,
+		GatewayClassName:           *flags.GatewayClassName,
+		Debug:                      *flags.ShowDebug,
+		CleanupBaseResources:       *flags.CleanupBaseResources,
+		ManifestFS:                 []fs.FS{e2e.Manifests},
+		RunTest:                    *flags.RunTest,
+		EnableAllSupportedFeatures: true,
 		SkipTests: []string{
 			tests.EnvoyShutdownTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3262
 			tests.EGUpgradeTest.ShortName,     // https://github.com/envoyproxy/gateway/issues/3311

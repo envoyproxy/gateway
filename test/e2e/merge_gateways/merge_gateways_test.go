@@ -50,12 +50,13 @@ func TestMergeGateways(t *testing.T) {
 	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-		Client:               c,
-		GatewayClassName:     *flags.GatewayClassName,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		RunTest:              *flags.RunTest,
-		SkipTests:            []string{},
+		Client:                     c,
+		GatewayClassName:           *flags.GatewayClassName,
+		Debug:                      *flags.ShowDebug,
+		CleanupBaseResources:       *flags.CleanupBaseResources,
+		RunTest:                    *flags.RunTest,
+		EnableAllSupportedFeatures: true,
+		SkipTests:                  []string{},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

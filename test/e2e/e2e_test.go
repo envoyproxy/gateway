@@ -48,12 +48,13 @@ func TestE2E(t *testing.T) {
 	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-		Client:               c,
-		GatewayClassName:     *flags.GatewayClassName,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		ManifestFS:           []fs.FS{Manifests},
-		RunTest:              *flags.RunTest,
+		Client:                     c,
+		GatewayClassName:           *flags.GatewayClassName,
+		Debug:                      *flags.ShowDebug,
+		CleanupBaseResources:       *flags.CleanupBaseResources,
+		ManifestFS:                 []fs.FS{Manifests},
+		RunTest:                    *flags.RunTest,
+		EnableAllSupportedFeatures: true,
 		SkipTests: []string{
 			tests.ClientTimeoutTest.ShortName,        // https://github.com/envoyproxy/gateway/issues/2720
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
