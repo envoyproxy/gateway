@@ -1031,8 +1031,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
 						Settings: destSettings,
 					},
-					TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
 				}
+
+				if irListener.TLS != nil {
+					irRoute.TLS = &ir.TLS{Terminate: irListener.TLS}
+				}
+
 				irListener.Routes = append(irListener.Routes, irRoute)
 
 			}

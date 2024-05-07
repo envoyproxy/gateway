@@ -320,14 +320,19 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 
 func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, attachedToGateway bool) error {
 	// Find Listener IR
-	// TODO: Support TLSRoute and TCPRoute once
-	// https://github.com/envoyproxy/gateway/issues/1635 is completed
-
 	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range xds.HTTP {
 		if http.Name == irListenerName {
 			httpIR = http
+			break
+		}
+	}
+
+	var tcpIR *ir.TCPListener
+	for _, tcp := range xds.TCP {
+		if tcp.Name == irListenerName {
+			tcpIR = tcp
 			break
 		}
 	}
@@ -359,6 +364,12 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 			}
 		}
 	}
+	if tcpIR != nil {
+		// No port overlap exists in TCP listeners, TLS listeners have their own filter chains.
+		// Just return.
+		return nil
+	}
+
 	return nil
 }
 
@@ -371,10 +382,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	gwXdsIR := xdsIR[irKey]
 
 	// Find Listener IR
-	// TODO: Support TLSRoute and TCPRoute once
-	// https://github.com/envoyproxy/gateway/issues/1635 is completed
-
 	irListenerName := irListenerName(l)
+
 	var httpIR *ir.HTTPListener
 	for _, http := range gwXdsIR.HTTP {
 		if http.Name == irListenerName {
@@ -383,19 +392,41 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		}
 	}
 
+	var tcpIR *ir.TCPListener
+	for _, tcp := range gwXdsIR.TCP {
+		if tcp.Name == irListenerName {
+			tcpIR = tcp
+			break
+		}
+	}
+
+	// HTTP and TCP listeners can both be configured by common fields below.
+	var (
+		keepalive           *ir.TCPKeepalive
+		connection          *ir.Connection
+		enableProxyProtocol bool
+		tlsConfig           *ir.TLSConfig
+		err                 error
+	)
+
+	// Build common IR shared by HTTP and TCP listeners, return early if some field is invalid.
+	// Translate TCPKeepalive
+	keepalive, err = buildKeepAlive(policy.Spec.TCPKeepalive)
+	if err != nil {
+		return err
+	}
+
+	// Translate Connection
+	connection, err = buildConnection(policy.Spec.Connection)
+	if err != nil {
+		return err
+	}
+
+	// Translate Proxy Protocol
+	enableProxyProtocol = buildProxyProtocol(policy.Spec.EnableProxyProtocol)
+
 	// IR must exist since we're past validation
 	if httpIR != nil {
-		// Translate TCPKeepalive
-		translateListenerTCPKeepalive(policy.Spec.TCPKeepalive, httpIR)
-
-		// Translate Connection
-		if err := translateListenerConnection(policy.Spec.Connection, httpIR); err != nil {
-			return err
-		}
-
-		// Translate Proxy Protocol
-		translateListenerProxyProtocol(policy.Spec.EnableProxyProtocol, httpIR)
-
 		// Translate Client IP Detection
 		translateClientIPDetection(policy.Spec.ClientIPDetection, httpIR)
 
@@ -439,17 +470,37 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		}
 
 		// Translate TLS parameters
-		if err := t.translateListenerTLSParameters(policy, httpIR, resources); err != nil {
+		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
+		if err != nil {
 			return err
 		}
+
+		httpIR.TCPKeepalive = keepalive
+		httpIR.Connection = connection
+		httpIR.EnableProxyProtocol = enableProxyProtocol
+		httpIR.TLS = tlsConfig
 	}
+
+	if tcpIR != nil {
+		// Translate TLS parameters
+		tlsConfig, err = t.buildListenerTLSParameters(policy, tcpIR.TLS, resources)
+		if err != nil {
+			return err
+		}
+
+		tcpIR.TCPKeepalive = keepalive
+		tcpIR.Connection = connection
+		tcpIR.EnableProxyProtocol = enableProxyProtocol
+		tcpIR.TLS = tlsConfig
+	}
+
 	return nil
 }
 
-func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir.HTTPListener) {
+func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error) {
 	// Return early if not set
 	if tcpKeepAlive == nil {
-		return
+		return nil, nil
 	}
 
 	irTCPKeepalive := &ir.TCPKeepalive{}
@@ -461,7 +512,7 @@ func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir
 	if tcpKeepAlive.IdleTime != nil {
 		d, err := time.ParseDuration(string(*tcpKeepAlive.IdleTime))
 		if err != nil {
-			return
+			return nil, fmt.Errorf("invalid IdleTime value %s", *tcpKeepAlive.IdleTime)
 		}
 		irTCPKeepalive.IdleTime = ptr.To(uint32(d.Seconds()))
 	}
@@ -469,12 +520,12 @@ func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir
 	if tcpKeepAlive.Interval != nil {
 		d, err := time.ParseDuration(string(*tcpKeepAlive.Interval))
 		if err != nil {
-			return
+			return nil, fmt.Errorf("invalid Interval value %s", *tcpKeepAlive.Interval)
 		}
 		irTCPKeepalive.Interval = ptr.To(uint32(d.Seconds()))
 	}
 
-	httpIR.TCPKeepalive = irTCPKeepalive
+	return irTCPKeepalive, nil
 }
 
 func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPListener) {
@@ -525,15 +576,12 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 	return nil
 }
 
-func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {
-	// Return early if not set
-	if enableProxyProtocol == nil {
-		return
+func buildProxyProtocol(enableProxyProtocol *bool) bool {
+	if enableProxyProtocol != nil && *enableProxyProtocol {
+		return true
 	}
 
-	if *enableProxyProtocol {
-		httpIR.EnableProxyProtocol = true
-	}
+	return false
 }
 
 func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {
@@ -633,49 +681,49 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 	return errs
 }
 
-func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
-	httpIR *ir.HTTPListener, resources *Resources,
-) error {
+func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
+	irTLSConfig *ir.TLSConfig, resources *Resources,
+) (*ir.TLSConfig, error) {
 	// Return if this listener isn't a TLS listener. There has to be
-	// at least one certificate defined, which would cause httpIR to
+	// at least one certificate defined, which would cause httpIR/tcpIR to
 	// have a TLS structure.
-	if httpIR.TLS == nil {
-		return nil
+	if irTLSConfig == nil {
+		return nil, nil
 	}
 
 	tlsParams := policy.Spec.TLS
 
 	// Make sure that the negotiated TLS protocol version is as expected if TLS is used,
 	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
-	httpIR.TLS.MinVersion = ptr.To(ir.TLSv12)
-	httpIR.TLS.MaxVersion = ptr.To(ir.TLSv13)
-
-	if tlsParams != nil && len(tlsParams.ALPNProtocols) > 0 {
-		httpIR.TLS.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
-		for i := range tlsParams.ALPNProtocols {
-			httpIR.TLS.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
-		}
-	}
+	irTLSConfig.MinVersion = ptr.To(ir.TLSv12)
+	irTLSConfig.MaxVersion = ptr.To(ir.TLSv13)
 
 	// Return early if not set
 	if tlsParams == nil {
-		return nil
+		return irTLSConfig, nil
+	}
+
+	if len(tlsParams.ALPNProtocols) > 0 {
+		irTLSConfig.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
+		for i := range tlsParams.ALPNProtocols {
+			irTLSConfig.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
+		}
 	}
 
 	if tlsParams.MinVersion != nil {
-		httpIR.TLS.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
+		irTLSConfig.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
 	}
 	if tlsParams.MaxVersion != nil {
-		httpIR.TLS.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
+		irTLSConfig.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
 	}
 	if len(tlsParams.Ciphers) > 0 {
-		httpIR.TLS.Ciphers = tlsParams.Ciphers
+		irTLSConfig.Ciphers = tlsParams.Ciphers
 	}
 	if len(tlsParams.ECDHCurves) > 0 {
-		httpIR.TLS.ECDHCurves = tlsParams.ECDHCurves
+		irTLSConfig.ECDHCurves = tlsParams.ECDHCurves
 	}
 	if len(tlsParams.SignatureAlgorithms) > 0 {
-		httpIR.TLS.SignatureAlgorithms = tlsParams.SignatureAlgorithms
+		irTLSConfig.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
 
 	if tlsParams.ClientValidation != nil {
@@ -693,17 +741,18 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 			if caCertRef.Kind == nil || string(*caCertRef.Kind) == KindSecret { // nolint
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
 				if err != nil {
-					return err
+					return irTLSConfig, err
 				}
 
 				secretBytes, ok := secret.Data[caCertKey]
 				if !ok || len(secretBytes) == 0 {
-					return fmt.Errorf(
+					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in secret %s", caCertRef.Name)
 				}
 
 				if err := validateCertificate(secretBytes); err != nil {
-					return fmt.Errorf("invalid certificate in secret %s: %w", caCertRef.Name, err)
+					return irTLSConfig, fmt.Errorf(
+						"invalid certificate in secret %s: %w", caCertRef.Name, err)
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
@@ -711,38 +760,39 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 			} else if string(*caCertRef.Kind) == KindConfigMap {
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
-					return err
+					return irTLSConfig, err
 				}
 
 				configMapBytes, ok := configMap.Data[caCertKey]
 				if !ok || len(configMapBytes) == 0 {
-					return fmt.Errorf(
+					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in configMap %s", caCertRef.Name)
 				}
 
 				if err := validateCertificate([]byte(configMapBytes)); err != nil {
-					return fmt.Errorf("invalid certificate in configmap %s: %w", caCertRef.Name, err)
+					return irTLSConfig, fmt.Errorf(
+						"invalid certificate in configmap %s: %w", caCertRef.Name, err)
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)
 			} else {
-				return fmt.Errorf("unsupported caCertificateRef kind:%s", string(*caCertRef.Kind))
+				return irTLSConfig, fmt.Errorf(
+					"unsupported caCertificateRef kind:%s", string(*caCertRef.Kind))
 			}
 		}
 
 		if len(irCACert.Certificate) > 0 {
-			httpIR.TLS.CACertificate = irCACert
-			httpIR.TLS.RequireClientCertificate = !tlsParams.ClientValidation.Optional
+			irTLSConfig.CACertificate = irCACert
+			irTLSConfig.RequireClientCertificate = !tlsParams.ClientValidation.Optional
 		}
 	}
 
-	return nil
+	return irTLSConfig, nil
 }
 
-func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPListener) error {
-	// Return early if not set
+func buildConnection(connection *egv1a1.Connection) (*ir.Connection, error) {
 	if connection == nil {
-		return nil
+		return nil, nil
 	}
 
 	irConnection := &ir.Connection{}
@@ -755,7 +805,7 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 		if connection.ConnectionLimit.CloseDelay != nil {
 			d, err := time.ParseDuration(string(*connection.ConnectionLimit.CloseDelay))
 			if err != nil {
-				return fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
+				return nil, fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
 			}
 			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
 		}
@@ -766,16 +816,14 @@ func translateListenerConnection(connection *egv1a1.Connection, httpIR *ir.HTTPL
 	if connection.BufferLimit != nil {
 		bufferLimit, ok := connection.BufferLimit.AsInt64()
 		if !ok {
-			return fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
+			return nil, fmt.Errorf("invalid BufferLimit value %s", connection.BufferLimit.String())
 		}
 		if bufferLimit < 0 || bufferLimit > math.MaxUint32 {
-			return fmt.Errorf("BufferLimit value %s is out of range, must be between 0 and %d",
+			return nil, fmt.Errorf("BufferLimit value %s is out of range, must be between 0 and %d",
 				connection.BufferLimit.String(), math.MaxUint32)
 		}
 		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
 	}
 
-	httpIR.Connection = irConnection
-
-	return nil
+	return irConnection, nil
 }
