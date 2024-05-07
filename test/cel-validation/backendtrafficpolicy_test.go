@@ -175,6 +175,53 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "consistentHash header field not nil when consistentHashType is header",
+			mutate: func(btp: *egv1a1.BackendTrafficPolicySpec{
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					LoadBalancer: &egv1a1.LoadBalancer{
+						Type: egv1a1.ConsistentHashLoadBalancerType,
+						ConsistentHash: &egv1a1.ConsistentHash{
+							Type: "Header",
+							Header: &egv1a1.Header{
+								HeaderName: "name",
+							}
+						},
+					},
+				},
+			}),
+			wantErrors: []string{},
+		},
+		{
+			desc: "consistentHash header field nil when consistentHashType is header",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					LoadBalancer: &egv1a1.LoadBalancer{
+						Type: egv1a1.ConsistentHashLoadBalancerType,
+						ConsistentHash: &egv1a1.ConsistentHash{
+							Type: "Header",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value: \"object\": If consistent hash type is eader, the header field must be set",
+			},
+		},
+		{
 			desc: "consistentHash field nil when type is consistentHash",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
