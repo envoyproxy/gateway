@@ -41,7 +41,8 @@ func hasSectionName(policy *egv1a1.ClientTrafficPolicy) bool {
 
 func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap) []*egv1a1.ClientTrafficPolicy {
+	xdsIR XdsIRMap, infraIR InfraIRMap,
+) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
 	clientTrafficPolicies := resources.ClientTrafficPolicies
@@ -322,7 +323,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
 
-	irListenerName := irHTTPListenerName(l)
+	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range xds.HTTP {
 		if http.Name == irListenerName {
@@ -362,7 +363,8 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 }
 
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) error {
+	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources,
+) error {
 	// Find IR
 	irKey := t.getIRKey(l.gateway)
 	// It must exist since we've already finished processing the gateways
@@ -372,7 +374,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
 
-	irListenerName := irHTTPListenerName(l)
+	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range gwXdsIR.HTTP {
 		if http.Name == irListenerName {
@@ -632,7 +634,8 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 }
 
 func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
-	httpIR *ir.HTTPListener, resources *Resources) error {
+	httpIR *ir.HTTPListener, resources *Resources,
+) error {
 	// Return if this listener isn't a TLS listener. There has to be
 	// at least one certificate defined, which would cause httpIR to
 	// have a TLS structure.

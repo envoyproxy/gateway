@@ -547,6 +547,10 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/tcp
+      port: 10053
   envoy-gateway/gateway-3:
     accessLog:
       text:

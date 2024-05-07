@@ -65,7 +65,24 @@ kubectl get gateway/eg -o yaml
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through the Gateway:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -86,20 +103,9 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get
 ```
 
-### Clusters with External LoadBalancer Support
+{{% /tab %}}
+{{< /tabpane >}}
 
-Get the External IP of the Gateway:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-Query the example app through the Gateway:
-
-```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
---cacert example.com.crt https://www.example.com/get
-```
 
 ## Multiple HTTPS Listeners
 
@@ -297,7 +303,7 @@ Lastly, test connectivity using the above [Testing section](#testing).
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secrets:
 
@@ -423,7 +429,7 @@ This sections gives a walkthrough to generate multiple certificates correspondin
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
@@ -467,7 +473,14 @@ kubectl patch httproute backend --type=json --patch '
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Refer to the steps mentioned earlier under [Testing in clusters with External LoadBalancer Support](#testing)
+
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -497,9 +510,8 @@ curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
 
 Since the multiple certificates are configured on the same Gateway listener, Envoy was able to provide the client with appropriate certificate based on the SNI in the client request.
 
-### Clusters with External LoadBalancer Support
-
-Refer to the steps mentioned earlier under [Testing in clusters with External LoadBalancer Support](#clusters-with-external-loadbalancer-support)
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Next Steps
 

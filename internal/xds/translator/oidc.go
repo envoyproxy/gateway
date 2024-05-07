@@ -15,8 +15,8 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -31,8 +31,7 @@ func init() {
 	registerHTTPFilter(&oidc{})
 }
 
-type oidc struct {
-}
+type oidc struct{}
 
 var _ httpFilter = &oidc{}
 
@@ -122,7 +121,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
 					Cluster: cluster.name,
 				},
-				Timeout: &duration.Duration{
+				Timeout: &durationpb.Duration{
 					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
@@ -187,7 +186,8 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if err := createOAuth2TokenEndpointClusters(tCtx, routes); err != nil {
 		return err
 	}
@@ -200,7 +200,8 @@ func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
 // createOAuth2TokenEndpointClusters creates token endpoint clusters from the
 // provided routes, if needed.
 func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -236,9 +237,10 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 
 		ds = &ir.DestinationSetting{
 			Weight: ptr.To[uint32](1),
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(
-				cluster.hostname,
-				cluster.port),
+			Endpoints: []*ir.DestinationEndpoint{
+				ir.NewDestEndpoint(
+					cluster.hostname,
+					cluster.port),
 			},
 		}
 

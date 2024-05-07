@@ -7,8 +7,8 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend-2
+    - backendRefs:
+      - name: grpc-backend-2
         port: 8000
     targetRef:
       group: gateway.networking.k8s.io
@@ -38,8 +38,8 @@ envoyExtensionPolicies:
     namespace: envoy-gateway
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend
+    - backendRefs:
+      - name: grpc-backend
         port: 9000
     targetRef:
       group: gateway.networking.k8s.io
@@ -231,7 +231,7 @@ xdsIR:
         extProc:
         - authority: grpc-backend-2.default:8000
           destination:
-            name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
+            name: envoyextensionpolicy/default/policy-for-route-1/0
             settings:
             - protocol: GRPC
               weight: 1
@@ -258,7 +258,7 @@ xdsIR:
         extProc:
         - authority: grpc-backend.envoy-gateway:9000
           destination:
-            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0
             settings:
             - protocol: GRPC
               weight: 1

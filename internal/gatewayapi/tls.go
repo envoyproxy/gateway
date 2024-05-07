@@ -57,7 +57,6 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
 		if matchedFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
 			return fmt.Errorf("%s/%s public key algorithm must be unique, matched certificate FQDN %s has a conflicting algorithm [%s]",
 				secret.Namespace, secret.Name, matchedFQDN, publicKeyAlgorithm)
-
 		}
 		pkaSecretSet[pkaSecretKey] = matchedFQDN
 

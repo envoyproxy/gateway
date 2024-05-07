@@ -24,9 +24,7 @@ const (
 	prometheusOutput = "prom"
 )
 
-var (
-	statsType, outputFormat string
-)
+var statsType, outputFormat string
 
 func newEnvoyStatsCmd() *cobra.Command {
 	var podName, podNamespace string

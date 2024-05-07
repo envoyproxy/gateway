@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -150,9 +149,11 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
-					TLS: &egv1a1.TLSSettings{
-						MinVersion: ptr.To(egv1a1.TLSv12),
-						MaxVersion: ptr.To(egv1a1.TLSv11),
+					TLS: &egv1a1.ClientTLSSettings{
+						TLSSettings: egv1a1.TLSSettings{
+							MinVersion: ptr.To(egv1a1.TLSv12),
+							MaxVersion: ptr.To(egv1a1.TLSv11),
+						},
 					},
 				}
 			},
@@ -171,8 +172,10 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
-					TLS: &egv1a1.TLSSettings{
-						MaxVersion: ptr.To(egv1a1.TLSv11),
+					TLS: &egv1a1.ClientTLSSettings{
+						TLSSettings: egv1a1.TLSSettings{
+							MaxVersion: ptr.To(egv1a1.TLSv11),
+						},
 					},
 				}
 			},
@@ -217,8 +220,10 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HTTP3: &egv1a1.HTTP3Settings{},
-					TLS: &egv1a1.TLSSettings{
-						Ciphers: []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]"},
+					TLS: &egv1a1.ClientTLSSettings{
+						TLSSettings: egv1a1.TLSSettings{
+							Ciphers: []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]"},
+						},
 					},
 				}
 			},
@@ -235,9 +240,11 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
-					TLS: &egv1a1.TLSSettings{
-						MinVersion: ptr.To(egv1a1.TLSv13),
-						Ciphers:    []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]"},
+					TLS: &egv1a1.ClientTLSSettings{
+						TLSSettings: egv1a1.TLSSettings{
+							MinVersion: ptr.To(egv1a1.TLSv13),
+							Ciphers:    []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]"},
+						},
 					},
 				}
 			},

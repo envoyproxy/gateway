@@ -34,9 +34,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
@@ -444,7 +442,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 func overrideOutputConfig(t *testing.T, data string, filepath string) {
 	t.Helper()
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
 	require.NoError(t, err)
 	defer file.Close()
 	write := bufio.NewWriter(file)

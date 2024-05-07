@@ -132,7 +132,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			continue
 		}
 
-		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(httpRoute,
 				gwapiv1.RouteConditionAccepted,
@@ -391,7 +391,6 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if len(httpFiltersContext.ExtensionRefs) > 0 {
 		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
 	}
-
 }
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
@@ -424,7 +423,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
-		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection := t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(grpcRoute,
 				gwapiv1.RouteConditionAccepted,
@@ -667,7 +666,8 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			}
 		}
 		irKey := t.getIRKey(listener.gateway)
-		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
+		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+
 		if irListener != nil {
 			if GetRouteType(route) == KindGRPCRoute {
 				irListener.IsHTTP2 = true
@@ -758,24 +758,22 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			irKey := t.getIRKey(listener.gateway)
 
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the TCP Listener while parsing the TLSRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.TCPListener{
-				Name:    irTLSListenerName(listener, tlsRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
-					SNIs: hosts,
-				}},
-				Destination: &ir.RouteDestination{
-					Name:     irRouteDestinationName(tlsRoute, -1 /*rule index*/),
-					Settings: destSettings,
-				},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
+			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.TCPRoute{
+					Name: irTCPRouteName(tlsRoute),
+					TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
+						SNIs: hosts,
+					}},
+					Destination: &ir.RouteDestination{
+						Name:     irRouteDestinationName(tlsRoute, -1 /*rule index*/),
+						Settings: destSettings,
+					},
+				}
+				irListener.Routes = append(irListener.Routes, irRoute)
 
+			}
 		}
 
 		if !hasHostnameIntersection {
@@ -801,7 +799,8 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 }
 
 func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *Resources,
-	xdsIR XdsIRMap) []*UDPRouteContext {
+	xdsIR XdsIRMap,
+) []*UDPRouteContext {
 	var relevantUDPRoutes []*UDPRouteContext
 
 	for _, u := range udpRoutes {
@@ -932,7 +931,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 }
 
 func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *Resources,
-	xdsIR XdsIRMap) []*TCPRouteContext {
+	xdsIR XdsIRMap,
+) []*TCPRouteContext {
 	var relevantTCPRoutes []*TCPRouteContext
 
 	for _, tcp := range tcpRoutes {
@@ -1022,21 +1022,20 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			accepted = true
 			irKey := t.getIRKey(listener.gateway)
 
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the TCP Listener while parsing the TCPRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.TCPListener{
-				Name:    irTCPListenerName(listener, tcpRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				Destination: &ir.RouteDestination{
-					Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
-					Settings: destSettings,
-				},
-				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
+			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.TCPRoute{
+					Name: irTCPRouteName(tcpRoute),
+					Destination: &ir.RouteDestination{
+						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
+						Settings: destSettings,
+					},
+					TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
+				}
+				irListener.Routes = append(irListener.Routes, irRoute)
+
+			}
 
 		}
 
@@ -1068,7 +1067,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	parentRef *RouteParentContext,
 	route RouteContext,
-	resources *Resources) (ds *ir.DestinationSetting, backendWeight uint32) {
+	resources *Resources,
+) (ds *ir.DestinationSetting, backendWeight uint32) {
 	routeType := GetRouteType(route)
 	weight := uint32(1)
 	backendRef := GetBackendRef(backendRefContext)
