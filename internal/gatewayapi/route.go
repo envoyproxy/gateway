@@ -39,7 +39,7 @@ var (
 
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
-	ProcessGRPCRoutes(grpcRoutes []*gwapiv1a2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
+	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
 	ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
 	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
 	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
@@ -73,7 +73,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 	return relevantHTTPRoutes
 }
 
-func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1a2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext {
+func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext {
 	var relevantGRPCRoutes []*GRPCRouteContext
 
 	for _, g := range grpcRoutes {
@@ -505,7 +505,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	return routeRoutes, nil
 }
 
-func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1a2.GRPCRouteRule) ([]*ir.HTTPRoute, error) {
+func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every gRPC request.
@@ -545,10 +545,10 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 
 		if match.Method != nil {
 			// GRPC's path is in the form of "/<service>/<method>"
-			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, gwapiv1a2.GRPCMethodMatchExact) {
-			case gwapiv1a2.GRPCMethodMatchExact:
+			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, gwapiv1.GRPCMethodMatchExact) {
+			case gwapiv1.GRPCMethodMatchExact:
 				t.processGRPCRouteMethodExact(match.Method, irRoute)
-			case gwapiv1a2.GRPCMethodMatchRegularExpression:
+			case gwapiv1.GRPCMethodMatchRegularExpression:
 				if match.Method.Service != nil {
 					if err := regex.Validate(*match.Method.Service); err != nil {
 						return nil, err
@@ -569,7 +569,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	return ruleRoutes, nil
 }
 
-func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1a2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
+func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
@@ -588,7 +588,7 @@ func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1a2.GRPCMethodMat
 	}
 }
 
-func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1a2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
+func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
@@ -666,7 +666,8 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			}
 		}
 		irKey := t.getIRKey(listener.gateway)
-		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
+		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+
 		if irListener != nil {
 			if GetRouteType(route) == KindGRPCRoute {
 				irListener.IsHTTP2 = true
@@ -757,24 +758,22 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			irKey := t.getIRKey(listener.gateway)
 
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the TCP Listener while parsing the TLSRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.TCPListener{
-				Name:    irTLSListenerName(listener, tlsRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
-					SNIs: hosts,
-				}},
-				Destination: &ir.RouteDestination{
-					Name:     irRouteDestinationName(tlsRoute, -1 /*rule index*/),
-					Settings: destSettings,
-				},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
+			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.TCPRoute{
+					Name: irTCPRouteName(tlsRoute),
+					TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
+						SNIs: hosts,
+					}},
+					Destination: &ir.RouteDestination{
+						Name:     irRouteDestinationName(tlsRoute, -1 /*rule index*/),
+						Settings: destSettings,
+					},
+				}
+				irListener.Routes = append(irListener.Routes, irRoute)
 
+			}
 		}
 
 		if !hasHostnameIntersection {
@@ -1023,21 +1022,20 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			accepted = true
 			irKey := t.getIRKey(listener.gateway)
 
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the TCP Listener while parsing the TCPRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.TCPListener{
-				Name:    irTCPListenerName(listener, tcpRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				Destination: &ir.RouteDestination{
-					Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
-					Settings: destSettings,
-				},
-				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
+			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.TCPRoute{
+					Name: irTCPRouteName(tcpRoute),
+					Destination: &ir.RouteDestination{
+						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
+						Settings: destSettings,
+					},
+					TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
+				}
+				irListener.Routes = append(irListener.Routes, irRoute)
+
+			}
 
 		}
 
@@ -1344,9 +1342,9 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	return endpoints
 }
 
-func GetTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, namespace string) gwapiv1a2.PolicyTargetReferenceWithSectionName {
-	ref := gwapiv1a2.PolicyTargetReferenceWithSectionName{
-		PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+func GetTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, namespace string) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+	ref := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 			Group: func() gwapiv1a2.Group {
 				if backendRef.Group == nil {
 					return ""
@@ -1359,8 +1357,7 @@ func GetTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, name
 				}
 				return *backendRef.Kind
 			}(),
-			Name:      backendRef.Name,
-			Namespace: NamespacePtr(NamespaceDerefOr(backendRef.Namespace, namespace)),
+			Name: backendRef.Name,
 		},
 		SectionName: func() *gwapiv1.SectionName {
 			if backendRef.Port != nil {

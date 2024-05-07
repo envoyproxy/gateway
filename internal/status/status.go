@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -210,8 +211,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a2.GRPCRoute:
-		if b, ok := objB.(*gwapiv1a2.GRPCRoute); ok {
+	case *gwapiv1.GRPCRoute:
+		if b, ok := objB.(*gwapiv1.GRPCRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -240,8 +241,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case gwapiv1a2.BackendTLSPolicy:
-		if b, ok := objB.(*gwapiv1a2.BackendTLSPolicy); ok {
+	case gwapiv1a3.BackendTLSPolicy:
+		if b, ok := objB.(*gwapiv1a3.BackendTLSPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}

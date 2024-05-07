@@ -159,14 +159,13 @@ backendTLSPolicies:
     name: policy-btls-grpc
     namespace: default
   spec:
-    targetRef:
-      group: ''
+    targetRefs:
+    - group: ''
       kind: Service
       name: grpc-backend
-      namespace: envoy-gateway
       sectionName: "8000"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - name: ca-cmap
         group: ''
         kind: ConfigMap
@@ -177,13 +176,13 @@ backendTLSPolicies:
     name: policy-btls-grpc-2
     namespace: default
   spec:
-    targetRef:
-      group: ''
+    targetRefs:
+    - group: ''
       kind: Service
       name: grpc-backend-2
       sectionName: "9000"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - name: ca-cmap
         group: ''
         kind: ConfigMap
@@ -199,7 +198,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
     extProc:
     - backendRefs:
       - Name: grpc-backend
@@ -222,7 +220,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     extProc:
     - backendRefs:
       - Name: grpc-backend-2

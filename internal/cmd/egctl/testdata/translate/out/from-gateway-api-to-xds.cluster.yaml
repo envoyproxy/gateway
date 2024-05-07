@@ -58,9 +58,9 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: tlsroute/default/backend/rule/-1
+          serviceName: tcproute/default/backend/rule/-1
         lbPolicy: LEAST_REQUEST
-        name: tlsroute/default/backend/rule/-1
+        name: tcproute/default/backend/rule/-1
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
@@ -77,9 +77,9 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: tcproute/default/backend/rule/-1
+          serviceName: tlsroute/default/backend/rule/-1
         lbPolicy: LEAST_REQUEST
-        name: tcproute/default/backend/rule/-1
+        name: tlsroute/default/backend/rule/-1
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
