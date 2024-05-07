@@ -60,12 +60,14 @@ httpRoutes:
       matches:
       - path:
           value: /foo1
+      sessionPersistence: null
     - backendRefs:
       - name: service-2
         port: 8080
       matches:
       - path:
           value: /foo2
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -104,6 +106,7 @@ httpRoutes:
       matches:
       - path:
           value: /bar
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -159,7 +162,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -197,7 +199,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:

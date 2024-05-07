@@ -60,6 +60,7 @@ httpRoutes:
       - path:
           type: Exact
           value: /exact
+      sessionPersistence: null
   status:
     parents:
     - conditions:

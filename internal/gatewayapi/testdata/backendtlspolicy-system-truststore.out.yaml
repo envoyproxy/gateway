@@ -6,14 +6,14 @@ backendTLSPolicies:
     name: policy-btls
     namespace: default
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: http-backend
       sectionName: "8080"
-    tls:
+    validation:
       hostname: example.com
-      wellKnownCACerts: System
+      wellKnownCACertificates: System
   status:
     ancestors:
     - ancestorRef:
@@ -89,6 +89,7 @@ httpRoutes:
       - path:
           type: Exact
           value: /exact
+      sessionPersistence: null
   status:
     parents:
     - conditions:

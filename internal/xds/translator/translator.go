@@ -26,6 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -48,6 +49,9 @@ type Translator struct {
 	// ExtensionManager holds the config for interacting with extensions when generating xDS
 	// resources. Only required during xds translation.
 	ExtensionManager *extensionTypes.Manager
+
+	// FilterOrder holds the custom order of the HTTP filters
+	FilterOrder []v1alpha1.FilterPosition
 }
 
 type GlobalRateLimitSettings struct {

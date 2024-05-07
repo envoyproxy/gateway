@@ -62,6 +62,7 @@ grpcRoutes:
       - method:
           method: FooBar[0-9]+
           type: RegularExpression
+      sessionPersistence: null
   status:
     parents:
     - conditions:

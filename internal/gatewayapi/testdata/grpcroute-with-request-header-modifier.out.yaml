@@ -61,6 +61,7 @@ grpcRoutes:
           - name: my-header
             value: foo
         type: RequestHeaderModifier
+      sessionPersistence: null
   status:
     parents:
     - conditions:

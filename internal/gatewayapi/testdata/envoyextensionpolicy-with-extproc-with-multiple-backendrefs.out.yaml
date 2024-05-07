@@ -6,14 +6,13 @@ backendTLSPolicies:
     name: policy-btls-grpc
     namespace: default
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: grpc-backend
-      namespace: envoy-gateway
       sectionName: "8000"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - group: ""
         kind: ConfigMap
         name: ca-cmap
@@ -51,7 +50,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -129,6 +127,7 @@ httpRoutes:
       matches:
       - path:
           value: /foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -167,6 +166,7 @@ httpRoutes:
       matches:
       - path:
           value: /bar
+      sessionPersistence: null
   status:
     parents:
     - conditions:

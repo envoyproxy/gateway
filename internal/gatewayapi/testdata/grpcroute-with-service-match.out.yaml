@@ -62,6 +62,7 @@ grpcRoutes:
       - method:
           service: com.[A-Z]+
           type: RegularExpression
+      sessionPersistence: null
   status:
     parents:
     - conditions:

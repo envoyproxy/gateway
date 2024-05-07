@@ -62,6 +62,7 @@ httpRoutes:
           value: Val-2
         path:
           value: /pathprefix
+      sessionPersistence: null
   status:
     parents:
     - conditions:

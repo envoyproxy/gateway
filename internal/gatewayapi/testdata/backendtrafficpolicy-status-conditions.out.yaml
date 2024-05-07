@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -36,7 +35,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -63,7 +61,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -89,7 +86,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
-      namespace: envoy-gateway
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -103,22 +99,8 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: not-same-namespace-httproute
-      namespace: another-namespace
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: not-same-namespace-gateway
-        namespace: another-namespace
-      conditions:
-      - lastTransitionTime: null
-        message: Namespace:envoy-gateway TargetRef.Namespace:another-namespace, BackendTrafficPolicy
-          can only target a resource in the same namespace.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -130,7 +112,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -162,7 +143,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -189,7 +169,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-      namespace: envoy-gateway
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -203,22 +182,8 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: not-same-namespace-gateway
-      namespace: another-namespace
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: not-same-namespace-gateway
-        namespace: another-namespace
-      conditions:
-      - lastTransitionTime: null
-        message: Namespace:envoy-gateway TargetRef.Namespace:another-namespace, BackendTrafficPolicy
-          can only target a resource in the same namespace.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -411,6 +376,7 @@ grpcRoutes:
         - name: magic
           type: Exact
           value: foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -446,6 +412,7 @@ httpRoutes:
       matches:
       - path:
           value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -480,6 +447,7 @@ httpRoutes:
       matches:
       - path:
           value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:

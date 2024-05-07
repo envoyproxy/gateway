@@ -9,7 +9,6 @@ clientTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway
-        namespace: envoy-gateway
       timeout:
         http:
           requestReceivedTimeout: "10sec"
