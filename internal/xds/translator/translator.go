@@ -301,7 +301,8 @@ func (t *Translator) addRouteToRouteConfig(
 	xdsRouteCfg *routev3.RouteConfiguration,
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
-	http3Enabled bool) error {
+	http3Enabled bool,
+) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
 		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
@@ -479,38 +480,37 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog, tcpListener.Connection); err != nil {
-			errs = errors.Join(errs, err)
-		}
-
-		// 1:1 between IR TCPListener and xDS Cluster
-		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:           tcpListener.Destination.Name,
-			settings:       tcpListener.Destination.Settings,
-			loadBalancer:   tcpListener.LoadBalancer,
-			proxyProtocol:  tcpListener.ProxyProtocol,
-			circuitBreaker: tcpListener.CircuitBreaker,
-			tcpkeepalive:   tcpListener.TCPKeepalive,
-			healthCheck:    tcpListener.HealthCheck,
-			timeout:        tcpListener.Timeout,
-			endpointType:   buildEndpointType(tcpListener.Destination.Settings),
-			metrics:        metrics,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			errs = errors.Join(errs, err)
-		}
-
-		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
-			for _, s := range tcpListener.TLS.Terminate.Certificates {
-				secret := buildXdsTLSCertSecret(s)
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					errs = errors.Join(errs, err)
+		for _, route := range tcpListener.Routes {
+			if err := addXdsCluster(tCtx, &xdsClusterArgs{
+				name:           route.Destination.Name,
+				settings:       route.Destination.Settings,
+				loadBalancer:   route.LoadBalancer,
+				proxyProtocol:  route.ProxyProtocol,
+				circuitBreaker: route.CircuitBreaker,
+				tcpkeepalive:   route.TCPKeepalive,
+				healthCheck:    route.HealthCheck,
+				timeout:        route.Timeout,
+				endpointType:   buildEndpointType(route.Destination.Settings),
+				metrics:        metrics,
+			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+				errs = errors.Join(errs, err)
+			}
+			if route.TLS != nil && route.TLS.Terminate != nil {
+				for _, s := range route.TLS.Terminate.Certificates {
+					secret := buildXdsTLSCertSecret(s)
+					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+				if route.TLS.Terminate.CACertificate != nil {
+					caSecret := buildXdsTLSCaCertSecret(route.TLS.Terminate.CACertificate)
+					if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
-			if tcpListener.TLS.Terminate.CACertificate != nil {
-				caSecret := buildXdsTLSCaCertSecret(tcpListener.TLS.Terminate.CACertificate)
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
-					errs = errors.Join(errs, err)
-				}
+			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Connection); err != nil {
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
@@ -555,7 +555,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 // findXdsListenerByHostPort finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
 func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32,
-	protocol corev3.SocketAddress_Protocol) *listenerv3.Listener {
+	protocol corev3.SocketAddress_Protocol,
+) *listenerv3.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
@@ -657,29 +658,6 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 	}
 
 	return nil
-}
-
-// processTLSSocket generates a xDS TransportSocket for a given TLS config.
-// It also adds the necessary secrets to the resource version table.
-func processTLSSocket(tlsConfig *ir.TLSUpstreamConfig, tCtx *types.ResourceVersionTable) (*corev3.TransportSocket, error) {
-	if tlsConfig == nil {
-		return nil, nil
-	}
-	// Create a secret for the CA certificate only if it's not using the system trust store
-	if !tlsConfig.UseSystemTrustStore {
-		CaSecret := buildXdsUpstreamTLSCASecret(tlsConfig)
-		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
-			return nil, err
-		}
-	}
-
-	// for upstreamTLS , a fixed sni can be used. use auto_sni otherwise
-	// https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/sni#faq-how-to-setup-sni:~:text=For%20clusters%2C%20a,for%20trust%20anchor.
-	tlsSocket, err := buildXdsUpstreamTLSSocketWthCert(tlsConfig)
-	if err != nil {
-		return nil, err
-	}
-	return tlsSocket, nil
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.

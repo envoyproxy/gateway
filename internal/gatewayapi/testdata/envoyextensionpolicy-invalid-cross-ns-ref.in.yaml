@@ -26,6 +26,6 @@ envoyExtensionPolicies:
       name: gateway-1
       namespace: envoy-gateway
     extProc:
-    - backendRef:
-        name: grpc-backend-4
+    - backendRefs:
+      - name: grpc-backend-4
         port: 4000

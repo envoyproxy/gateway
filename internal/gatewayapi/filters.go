@@ -65,7 +65,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
-	resources *Resources) *HTTPFiltersContext {
+	resources *Resources,
+) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
@@ -108,7 +109,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []v1alpha2.GRPCRouteFilter,
-	resources *Resources) *HTTPFiltersContext {
+	resources *Resources,
+) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
@@ -145,7 +147,8 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 
 func (t *Translator) processURLRewriteFilter(
 	rewrite *gwapiv1.HTTPURLRewriteFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	if filterContext.URLRewrite != nil {
 		routeStatus := GetRouteStatus(filterContext.Route)
 		status.SetRouteStatusCondition(routeStatus,
@@ -268,7 +271,8 @@ func (t *Translator) processURLRewriteFilter(
 
 func (t *Translator) processRedirectFilter(
 	redirect *gwapiv1.HTTPRequestRedirectFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Can't have two redirects for the same route
 	if filterContext.RedirectResponse != nil {
 		routeStatus := GetRouteStatus(filterContext.Route)
@@ -384,7 +388,8 @@ func (t *Translator) processRedirectFilter(
 
 func (t *Translator) processRequestHeaderModifierFilter(
 	headerModifier *gwapiv1.HTTPHeaderFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
@@ -555,7 +560,8 @@ func (t *Translator) processRequestHeaderModifierFilter(
 
 func (t *Translator) processResponseHeaderModifierFilter(
 	headerModifier *gwapiv1.HTTPHeaderFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
@@ -766,8 +772,8 @@ func (t *Translator) processRequestMirrorFilter(
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
-	resources *Resources) {
-
+	resources *Resources,
+) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
 		return

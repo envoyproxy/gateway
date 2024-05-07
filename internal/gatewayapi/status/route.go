@@ -13,7 +13,8 @@ import (
 )
 
 func SetRouteStatusCondition(route *gwapiv1.RouteStatus, routeParentStatusIdx int, routeGeneration int64,
-	conditionType gwapiv1.RouteConditionType, status metav1.ConditionStatus, reason gwapiv1.RouteConditionReason, message string) {
+	conditionType gwapiv1.RouteConditionType, status metav1.ConditionStatus, reason gwapiv1.RouteConditionReason, message string,
+) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
 		Status:             status,
