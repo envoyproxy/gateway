@@ -217,6 +217,15 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
+	// Set custom filter order if EnvoyProxy is set
+	// The custom filter order will be applied when generating the HTTP filter chain.
+	if resources.EnvoyProxy != nil {
+		for _, gateway := range gateways {
+			irKey := t.getIRKey(gateway.Gateway)
+			xdsIR[irKey].FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
+		}
+	}
+
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,

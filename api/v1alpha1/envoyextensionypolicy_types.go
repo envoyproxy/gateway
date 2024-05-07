@@ -48,12 +48,14 @@ type EnvoyExtensionPolicySpec struct {
 	// Order matters, as the extensions will be loaded in the order they are
 	// defined in this list.
 	//
+	// +kubebuilder:validation:MaxItems=16
 	// +optional
 	Wasm []Wasm `json:"wasm,omitempty"`
 
 	// ExtProc is an ordered list of external processing filters
 	// that should added to the envoy filter chain
 	//
+	// +kubebuilder:validation:MaxItems=16
 	// +optional
 	ExtProc []ExtProc `json:"extProc,omitempty"`
 }

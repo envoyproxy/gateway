@@ -189,6 +189,7 @@ spec:
                   required:
                   - backendRefs
                   type: object
+                maxItems: 16
                 type: array
               targetRef:
                 description: |-
@@ -398,6 +399,7 @@ spec:
                   - code
                   - name
                   type: object
+                maxItems: 16
                 type: array
             required:
             - targetRef
