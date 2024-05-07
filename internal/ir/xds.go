@@ -30,10 +30,10 @@ var (
 	ErrListenerAddressInvalid                  = errors.New("field Address must be a valid IP address")
 	ErrListenerPortInvalid                     = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty              = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPListenerSNIsEmpty                    = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTCPRouteSNIsEmpty                       = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSServerCertEmpty                      = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                           = errors.New("field PrivateKey must be specified")
-	ErrHTTPRouteNameEmpty                      = errors.New("field Name must be specified")
+	ErrRouteNameEmpty                          = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                  = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
@@ -776,7 +776,7 @@ type FaultInjectionAbort struct {
 func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = errors.Join(errs, ErrHTTPRouteNameEmpty)
+		errs = errors.Join(errs, ErrRouteNameEmpty)
 	}
 	if h.Hostname == "" {
 		errs = errors.Join(errs, ErrHTTPRouteHostnameEmpty)
@@ -1195,14 +1195,25 @@ type TCPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
-	// TLS holds information for configuring TLS on a listener
-	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
-	// Destinations associated with TCP traffic to the service.
-	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// Routes associated with TCP traffic to the listener.
+	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
+}
+
+// TCPRoute holds the route information associated with the TCP Route
+// +k8s:deepcopy-gen=true
+type TCPRoute struct {
+	// Name of the TCPRoute.
+	Name string `json:"name" yaml:"name"`
+	// TLS holds information for configuring TLS on a listener
+	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
+	// Destinations associated with TCP traffic to the service.
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
+	// TCPKeepalive settings associated with the upstream client connection.
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Request and connection timeout settings
@@ -1226,34 +1237,61 @@ type TLS struct {
 }
 
 // Validate the fields within the TCPListener structure
-func (h TCPListener) Validate() error {
+func (t TCPListener) Validate() error {
 	var errs error
-	if h.Name == "" {
+	if t.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
 	}
-	if _, err := netip.ParseAddr(h.Address); err != nil {
+	if _, err := netip.ParseAddr(t.Address); err != nil {
 		errs = errors.Join(errs, ErrListenerAddressInvalid)
 	}
-	if h.Port == 0 {
+	if t.Port == 0 {
 		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
-	if h.TLS != nil && h.TLS.Passthrough != nil {
-		if err := h.TLS.Passthrough.Validate(); err != nil {
+	for _, route := range t.Routes {
+		if err := route.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
+func (t TCPRoute) Validate() error {
+	var errs error
+	if t.Name == "" {
+		errs = errors.Join(errs, ErrRouteNameEmpty)
+	}
+
+	if t.TLS != nil && t.TLS.Passthrough != nil {
+		if err := t.TLS.Passthrough.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
-	if h.TLS != nil && h.TLS.Terminate != nil {
-		if err := h.TLS.Terminate.Validate(); err != nil {
+	if t.TLS != nil && t.TLS.Terminate != nil {
+		if err := t.TLS.Terminate.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
-	if h.Destination != nil {
-		if err := h.Destination.Validate(); err != nil {
+	if t.Destination != nil {
+		if err := t.Destination.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
+
+	if t.LoadBalancer != nil {
+		if err := t.LoadBalancer.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if t.HealthCheck != nil {
+		if err := t.HealthCheck.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
 	return errs
 }
 
@@ -1271,7 +1309,7 @@ type TLSInspectorConfig struct {
 func (t TLSInspectorConfig) Validate() error {
 	var errs error
 	if len(t.SNIs) == 0 {
-		errs = errors.Join(errs, ErrTCPListenerSNIsEmpty)
+		errs = errors.Join(errs, ErrTCPRouteSNIsEmpty)
 	}
 	return errs
 }

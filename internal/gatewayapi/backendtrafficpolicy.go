@@ -351,13 +351,15 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 	for _, ir := range xdsIR {
 		for _, tcp := range ir.TCP {
-			if strings.HasPrefix(tcp.Destination.Name, prefix) {
-				tcp.LoadBalancer = lb
-				tcp.ProxyProtocol = pp
-				tcp.HealthCheck = hc
-				tcp.CircuitBreaker = cb
-				tcp.TCPKeepalive = ka
-				tcp.Timeout = to
+			for _, r := range tcp.Routes {
+				if strings.HasPrefix(r.Destination.Name, prefix) {
+					r.LoadBalancer = lb
+					r.ProxyProtocol = pp
+					r.HealthCheck = hc
+					r.CircuitBreaker = cb
+					r.TCPKeepalive = ka
+					r.Timeout = to
+				}
 			}
 		}
 
@@ -472,21 +474,23 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			continue
 		}
 
-		// policy(targeting xRoute) has already set it, so we skip it.
-		if tcp.LoadBalancer != nil || tcp.ProxyProtocol != nil ||
-			tcp.HealthCheck != nil || tcp.CircuitBreaker != nil ||
-			tcp.TCPKeepalive != nil || tcp.Timeout != nil {
-			continue
-		}
+		for _, r := range tcp.Routes {
+			// policy(targeting xRoute) has already set it, so we skip it.
+			if r.LoadBalancer != nil || r.ProxyProtocol != nil ||
+				r.HealthCheck != nil || r.CircuitBreaker != nil ||
+				r.TCPKeepalive != nil || r.Timeout != nil {
+				continue
+			}
 
-		tcp.LoadBalancer = lb
-		tcp.ProxyProtocol = pp
-		tcp.HealthCheck = hc
-		tcp.CircuitBreaker = cb
-		tcp.TCPKeepalive = ka
+			r.LoadBalancer = lb
+			r.ProxyProtocol = pp
+			r.HealthCheck = hc
+			r.CircuitBreaker = cb
+			r.TCPKeepalive = ka
 
-		if tcp.Timeout == nil {
-			tcp.Timeout = ct
+			if r.Timeout == nil {
+				r.Timeout = ct
+			}
 		}
 	}
 

@@ -92,10 +92,12 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      destination:
-        name: tcproute/default/tcproute-1/rule/-1
-        settings:
-        - weight: 1
-      name: envoy-gateway/gateway-1/tcp/tcproute-1
+      name: envoy-gateway/gateway-1/tcp
       port: 10162
-      tls: {}
+      routes:
+      - destination:
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - weight: 1
+        name: tcproute/default/tcproute-1
+        tls: {}
