@@ -53,17 +53,32 @@ const (
 
 // ConsistentHash defines the configuration related to the consistent hash
 // load balancer policy
+// +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must to be set."
 type ConsistentHash struct {
-	Type ConsistentHashType `json:"type"`
+	Type   ConsistentHashType `json:"type"`
+	Header Header             `json:"header,omitempty"`
+}
+
+// Header defines the header hashing configuration for consistent hash based
+// load balancing.
+type Header struct {
+	HeaderName string `json:"header_name"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
+//
+// It accepts the following values:
+//
+// * `SourceIP` to hash the downstream IP address
+// * `Header` to has a request header
 // +kubebuilder:validation:Enum=SourceIP
 type ConsistentHashType string
 
 const (
 	// SourceIPConsistentHashType hashes based on the source IP address.
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
+	// HeaderConsistentHashType hashes based on a request header.
+	HeaderConsistentHashType ConsistentHashType = "Header"
 )
 
 // SlowStart defines the configuration related to the slow start load balancer policy.
