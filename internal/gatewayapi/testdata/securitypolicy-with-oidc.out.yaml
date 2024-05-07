@@ -60,6 +60,7 @@ httpRoutes:
       matches:
       - path:
           value: /foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -98,6 +99,7 @@ httpRoutes:
       matches:
       - path:
           value: /bar
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -163,7 +165,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -201,7 +202,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:

@@ -111,7 +111,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     healthCheck:
       active:
         timeout: "500ms"
@@ -146,7 +145,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     healthCheck:
       active:
         timeout: "1s"
@@ -181,7 +179,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
     healthCheck:
       active:
         timeout: "1s"
@@ -214,7 +211,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
-      namespace: default
     healthCheck:
       active:
         timeout: 1s

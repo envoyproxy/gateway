@@ -362,6 +362,9 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
 		}
+		if resources.EnvoyProxy != nil {
+			xTranslator.FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
+		}
 		xRes, err := xTranslator.Translate(val)
 		if err != nil {
 			return nil, fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
@@ -553,7 +556,7 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 				refs = append(refs, httpBakcendRef.BackendRef)
 			}
 		}
-	case *gwapiv1a2.GRPCRoute:
+	case *gwapiv1.GRPCRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			for _, gRPCBakcendRef := range rule.BackendRefs {
@@ -759,7 +762,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
 		case gatewayapi.KindGRPCRoute:
 			typedSpec := spec.Interface()
-			grpcRoute := &gwapiv1a2.GRPCRoute{
+			grpcRoute := &gwapiv1.GRPCRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindGRPCRoute,
 				},
@@ -767,7 +770,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a2.GRPCRouteSpec),
+				Spec: typedSpec.(gwapiv1.GRPCRouteSpec),
 			}
 			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case gatewayapi.KindNamespace:

@@ -9,7 +9,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -20,7 +19,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -31,7 +29,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -42,7 +39,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: not-same-namespace-gateway
-      namespace: another-namespace
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -53,7 +49,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -64,7 +59,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -75,7 +69,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -86,7 +79,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -97,7 +89,6 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: not-same-namespace-httproute
-      namespace: another-namespace
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute

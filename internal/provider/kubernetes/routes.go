@@ -96,7 +96,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
 ) error {
-	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
+	grpcRouteList := &gwapiv1.GRPCRouteList{}
 
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
@@ -169,7 +169,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 					r.log.Error(err, "bypassing filter rule", "index", i)
 					continue
 				}
-				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
+				if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the GRPCRoute
 					// Check if it's a Kind managed by an extension and add to resourceTree
 					key := types.NamespacedName{
@@ -195,7 +195,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		resourceMap.allAssociatedNamespaces[grpcRoute.Namespace] = struct{}{}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		grpcRoute.Status = gwapiv1a2.GRPCRouteStatus{}
+		grpcRoute.Status = gwapiv1.GRPCRouteStatus{}
 		resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, &grpcRoute)
 	}
 
