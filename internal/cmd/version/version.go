@@ -18,26 +18,29 @@ import (
 )
 
 type Info struct {
-	EnvoyGatewayVersion string `json:"envoyGatewayVersion"`
-	GatewayAPIVersion   string `json:"gatewayAPIVersion"`
-	EnvoyProxyVersion   string `json:"envoyProxyVersion"`
-	GitCommitID         string `json:"gitCommitID"`
+	EnvoyGatewayVersion    string `json:"envoyGatewayVersion"`
+	GatewayAPIVersion      string `json:"gatewayAPIVersion"`
+	EnvoyProxyVersion      string `json:"envoyProxyVersion"`
+	ShutdownManagerVersion string `json:"shutdownManagerVersion"`
+	GitCommitID            string `json:"gitCommitID"`
 }
 
 func Get() Info {
 	return Info{
-		EnvoyGatewayVersion: envoyGatewayVersion,
-		GatewayAPIVersion:   gatewayAPIVersion,
-		EnvoyProxyVersion:   envoyProxyVersion,
-		GitCommitID:         gitCommitID,
+		EnvoyGatewayVersion:    envoyGatewayVersion,
+		GatewayAPIVersion:      gatewayAPIVersion,
+		EnvoyProxyVersion:      envoyProxyVersion,
+		ShutdownManagerVersion: shutdownManagerVersion,
+		GitCommitID:            gitCommitID,
 	}
 }
 
 var (
-	envoyGatewayVersion string
-	gatewayAPIVersion   string
-	envoyProxyVersion   = strings.Split(*v1alpha1.DefaultKubernetesContainerImage(v1alpha1.DefaultEnvoyProxyImage), ":")[1]
-	gitCommitID         string
+	envoyGatewayVersion    string
+	gatewayAPIVersion      string
+	envoyProxyVersion      = strings.Split(*v1alpha1.DefaultKubernetesContainerImage(v1alpha1.DefaultEnvoyProxyImage), ":")[1]
+	shutdownManagerVersion string
+	gitCommitID            string
 )
 
 func init() {
@@ -67,6 +70,7 @@ func Print(w io.Writer, format string) error {
 		_, _ = fmt.Fprintf(w, "ENVOY_GATEWAY_VERSION: %s\n", v.EnvoyGatewayVersion)
 		_, _ = fmt.Fprintf(w, "ENVOY_PROXY_VERSION: %s\n", v.EnvoyProxyVersion)
 		_, _ = fmt.Fprintf(w, "GATEWAYAPI_VERSION: %s\n", v.GatewayAPIVersion)
+		_, _ = fmt.Fprintf(w, "SHUTDOWN_MANAGER_VERSION: %s\n", v.ShutdownManagerVersion)
 		_, _ = fmt.Fprintf(w, "GIT_COMMIT_ID: %s\n", v.GitCommitID)
 	}
 

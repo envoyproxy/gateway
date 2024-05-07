@@ -7,6 +7,9 @@ package v1alpha1
 
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
+	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
+	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+	Optional *bool `json:"optional,omitempty"`
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
 	// When multiple JWT providers are specified, the JWT is considered valid if
@@ -19,6 +22,7 @@ type JWT struct {
 }
 
 // JWTProvider defines how a JSON Web Token (JWT) can be verified.
+// +kubebuilder:validation:XValidation:rule="(has(self.recomputeRoute) && self.recomputeRoute) ? size(self.claimToHeaders) > 0 : true", message="claimToHeaders must be specified if recomputeRoute is enabled"
 type JWTProvider struct {
 	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
 	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
@@ -52,7 +56,16 @@ type JWTProvider struct {
 	// For examples, following config:
 	// The claim must be of type; string, int, double, bool. Array type claims are not supported
 	//
+	// +optional
 	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers generated from the claim are used for
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
+	//
+	// +optional
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
 	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
 	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
@@ -77,7 +90,6 @@ type RemoteJWKS struct {
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
 type ClaimToHeader struct {
-
 	// Header defines the name of the HTTP request header that the JWT Claim will be saved into.
 	Header string `json:"header"`
 

@@ -9,6 +9,8 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
@@ -38,6 +40,14 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	}
 	if e.Provider == nil {
 		e.Provider = DefaultEnvoyGatewayProvider()
+	}
+	if e.Provider.Kubernetes == nil {
+		e.Provider.Kubernetes = &EnvoyGatewayKubernetesProvider{
+			LeaderElection: DefaultLeaderElection(),
+		}
+	}
+	if e.Provider.Kubernetes.LeaderElection == nil {
+		e.Provider.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
@@ -85,6 +95,16 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
 }
 
+// DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
+func DefaultLeaderElection() *LeaderElection {
+	return &LeaderElection{
+		RenewDeadline: ptr.To(gwapiv1.Duration("10s")),
+		RetryPeriod:   ptr.To(gwapiv1.Duration("2s")),
+		LeaseDuration: ptr.To(gwapiv1.Duration("15s")),
+		Disable:       ptr.To(false),
+	}
+}
+
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
@@ -104,11 +124,11 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 // GetEnvoyGatewayTelemetry returns the EnvoyGatewayTelemetry of EnvoyGateway or a default EnvoyGatewayTelemetry if unspecified.
 func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	if e.Telemetry != nil {
-		if e.Telemetry.Metrics.Prometheus == nil {
-			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
-		}
 		if e.Telemetry.Metrics == nil {
 			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
+		}
+		if e.Telemetry.Metrics.Prometheus == nil {
+			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
 		}
 		return e.Telemetry
 	}
@@ -148,6 +168,9 @@ func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
 func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return &EnvoyGatewayProvider{
 		Type: ProviderTypeKubernetes,
+		Kubernetes: &EnvoyGatewayKubernetesProvider{
+			LeaderElection: DefaultLeaderElection(),
+		},
 	}
 }
 
@@ -195,7 +218,14 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 
 	if r.Kubernetes == nil {
 		r.Kubernetes = DefaultEnvoyGatewayKubeProvider()
+		if r.Kubernetes.LeaderElection == nil {
+			r.Kubernetes.LeaderElection = DefaultLeaderElection()
+		}
 		return r.Kubernetes
+	}
+
+	if r.Kubernetes.LeaderElection == nil {
+		r.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {

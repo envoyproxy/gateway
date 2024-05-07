@@ -6,22 +6,28 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
+
+	jsonpatch "github.com/evanphx/json-patch"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/utils/ptr"
 )
-
-// DefaultKubernetesDeploymentReplicas returns the default replica settings.
-func DefaultKubernetesDeploymentReplicas() *int32 {
-	repl := int32(DefaultDeploymentReplicas)
-	return &repl
-}
 
 // DefaultKubernetesDeploymentStrategy returns the default deployment strategy settings.
 func DefaultKubernetesDeploymentStrategy() *appv1.DeploymentStrategy {
 	return &appv1.DeploymentStrategy{
 		Type: appv1.RollingUpdateDeploymentStrategyType,
+	}
+}
+
+// DefaultKubernetesDaemonSetStrategy returns the default daemonset strategy settings.
+func DefaultKubernetesDaemonSetStrategy() *appv1.DaemonSetUpdateStrategy {
+	return &appv1.DaemonSetUpdateStrategy{
+		Type: appv1.RollingUpdateDaemonSetStrategyType,
 	}
 }
 
@@ -33,8 +39,16 @@ func DefaultKubernetesContainerImage(image string) *string {
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
 func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
-		Replicas:  DefaultKubernetesDeploymentReplicas(),
 		Strategy:  DefaultKubernetesDeploymentStrategy(),
+		Pod:       DefaultKubernetesPod(),
+		Container: DefaultKubernetesContainer(image),
+	}
+}
+
+// DefaultKubernetesDaemonSet returns a new DefaultKubernetesDaemonSet with default settings.
+func DefaultKubernetesDaemonSet(image string) *KubernetesDaemonSetSpec {
+	return &KubernetesDaemonSetSpec{
+		Strategy:  DefaultKubernetesDaemonSetStrategy(),
 		Pod:       DefaultKubernetesPod(),
 		Container: DefaultKubernetesContainer(image),
 	}
@@ -91,10 +105,6 @@ func GetKubernetesServiceExternalTrafficPolicy(serviceExternalTrafficPolicy Serv
 
 // defaultKubernetesDeploymentSpec fill a default KubernetesDeploymentSpec if unspecified.
 func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(image string) {
-	if deployment.Replicas == nil {
-		deployment.Replicas = DefaultKubernetesDeploymentReplicas()
-	}
-
 	if deployment.Strategy == nil {
 		deployment.Strategy = DefaultKubernetesDeploymentStrategy()
 	}
@@ -116,8 +126,140 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 	}
 }
 
+// defaultKubernetesDaemonSetSpec fill a default KubernetesDaemonSetSpec if unspecified.
+func (daemonset *KubernetesDaemonSetSpec) defaultKubernetesDaemonSetSpec(image string) {
+	if daemonset.Strategy == nil {
+		daemonset.Strategy = DefaultKubernetesDaemonSetStrategy()
+	}
+
+	if daemonset.Pod == nil {
+		daemonset.Pod = DefaultKubernetesPod()
+	}
+
+	if daemonset.Container == nil {
+		daemonset.Container = DefaultKubernetesContainer(image)
+	}
+
+	if daemonset.Container.Resources == nil {
+		daemonset.Container.Resources = DefaultResourceRequirements()
+	}
+
+	if daemonset.Container.Image == nil {
+		daemonset.Container.Image = DefaultKubernetesContainerImage(image)
+	}
+}
+
+// setDefault fill a default HorizontalPodAutoscalerSpec if unspecified
 func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 	if len(hpa.Metrics) == 0 {
 		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()
 	}
+}
+
+// ApplyMergePatch applies a merge patch to a deployment based on the merge type
+func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deployment) (*appv1.Deployment, error) {
+	if deployment.Patch == nil {
+		return old, nil
+	}
+
+	var patchedJSON []byte
+	var err error
+
+	// Serialize the current deployment to JSON
+	originalJSON, err := json.Marshal(old)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling original deployment: %w", err)
+	}
+
+	switch {
+	case deployment.Patch.Type == nil || *deployment.Patch.Type == StrategicMerge:
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Patch.Value.Raw, appv1.Deployment{})
+	case *deployment.Patch.Type == JSONMerge:
+		patchedJSON, err = jsonpatch.MergePatch(originalJSON, deployment.Patch.Value.Raw)
+	default:
+		return nil, fmt.Errorf("unsupported merge type: %s", *deployment.Patch.Type)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error applying merge patch: %w", err)
+	}
+
+	// Deserialize the patched JSON into a new deployment object
+	var patchedDeployment appv1.Deployment
+	if err := json.Unmarshal(patchedJSON, &patchedDeployment); err != nil {
+		return nil, fmt.Errorf("error unmarshaling patched deployment: %w", err)
+	}
+
+	return &patchedDeployment, nil
+}
+
+// ApplyMergePatch applies a merge patch to a daemonset based on the merge type
+func (daemonset *KubernetesDaemonSetSpec) ApplyMergePatch(old *appv1.DaemonSet) (*appv1.DaemonSet, error) {
+	if daemonset.Patch == nil {
+		return old, nil
+	}
+
+	var patchedJSON []byte
+	var err error
+
+	// Serialize the current daemonset to JSON
+	originalJSON, err := json.Marshal(old)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling original daemonset: %w", err)
+	}
+
+	switch {
+	case daemonset.Patch.Type == nil || *daemonset.Patch.Type == StrategicMerge:
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, daemonset.Patch.Value.Raw, appv1.DaemonSet{})
+	case *daemonset.Patch.Type == JSONMerge:
+		patchedJSON, err = jsonpatch.MergePatch(originalJSON, daemonset.Patch.Value.Raw)
+	default:
+		return nil, fmt.Errorf("unsupported merge type: %s", *daemonset.Patch.Type)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error applying merge patch: %w", err)
+	}
+
+	// Deserialize the patched JSON into a new daemonset object
+	var patchedDaemonSet appv1.DaemonSet
+	if err := json.Unmarshal(patchedJSON, &patchedDaemonSet); err != nil {
+		return nil, fmt.Errorf("error unmarshaling patched daemonset: %w", err)
+	}
+
+	return &patchedDaemonSet, nil
+}
+
+// ApplyMergePatch applies a merge patch to a service based on the merge type
+func (service *KubernetesServiceSpec) ApplyMergePatch(old *corev1.Service) (*corev1.Service, error) {
+	if service.Patch == nil {
+		return old, nil
+	}
+
+	var patchedJSON []byte
+	var err error
+
+	// Serialize the current deployment to JSON
+	originalJSON, err := json.Marshal(old)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling original deployment: %w", err)
+	}
+
+	switch {
+	case service.Patch.Type == nil || *service.Patch.Type == StrategicMerge:
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, service.Patch.Value.Raw, corev1.Service{})
+	case *service.Patch.Type == JSONMerge:
+		patchedJSON, err = jsonpatch.MergePatch(originalJSON, service.Patch.Value.Raw)
+	default:
+		return nil, fmt.Errorf("unsupported merge type: %s", *service.Patch.Type)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error applying merge patch: %w", err)
+	}
+
+	// Deserialize the patched JSON into a new service object
+	var patchedService corev1.Service
+	if err := json.Unmarshal(patchedJSON, &patchedService); err != nil {
+		return nil, fmt.Errorf("error unmarshaling patched service: %w", err)
+	}
+
+	return &patchedService, nil
 }

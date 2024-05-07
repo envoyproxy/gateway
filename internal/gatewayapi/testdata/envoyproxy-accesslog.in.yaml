@@ -35,7 +35,7 @@ envoyproxy:
               value: env_a_value
             - name: env_b
               value: env_b_name
-            image: "envoyproxy/envoy-dev:latest"
+            image: "envoyproxy/envoy:distroless-dev"
             resources:
               requests:
                 cpu: 100m

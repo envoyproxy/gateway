@@ -15,9 +15,9 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -34,8 +34,7 @@ func init() {
 	registerHTTPFilter(&jwt{})
 }
 
-type jwt struct {
-}
+type jwt struct{}
 
 var _ httpFilter = &jwt{}
 
@@ -107,10 +106,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		}
 
 		var reqs []*jwtauthnv3.JwtRequirement
-		for i := range route.JWT.Providers {
-			irProvider := route.JWT.Providers[i]
+		for i := range route.Security.JWT.Providers {
+			irProvider := route.Security.JWT.Providers[i]
 			// Create the cluster for the remote jwks, if it doesn't exist.
-			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI, false)
+			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI)
 			if err != nil {
 				return nil, err
 			}
@@ -122,7 +121,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
 							Cluster: jwksCluster.name,
 						},
-						Timeout: &durationpb.Duration{Seconds: 5},
+						Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
 					},
 					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
@@ -134,7 +133,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 			for _, claimToHeader := range irProvider.ClaimToHeaders {
 				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
 					HeaderName: claimToHeader.Header,
-					ClaimName:  claimToHeader.Claim}
+					ClaimName:  claimToHeader.Claim,
+				}
 				claimToHeaders = append(claimToHeaders, claimToHeader)
 			}
 			jwtProvider := &jwtauthnv3.JwtProvider{
@@ -144,6 +144,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				PayloadInMetadata:   irProvider.Issuer,
 				ClaimToHeaders:      claimToHeaders,
 				Forward:             true,
+			}
+
+			if irProvider.RecomputeRoute != nil {
+				jwtProvider.ClearRouteCache = *irProvider.RecomputeRoute
 			}
 
 			if irProvider.ExtractFrom != nil {
@@ -160,6 +164,15 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				},
 			})
 		}
+
+		if route.Security.JWT.AllowMissing {
+			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
+					AllowMissing: &emptypb.Empty{},
+				},
+			})
+		}
+
 		if len(reqs) == 1 {
 			reqMap[route.Name] = reqs[0]
 		} else {
@@ -182,8 +195,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
 // as the CA to authenticate server certificates.
-func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
+// TODO huabing: add support for custom CA and client certificate.
+func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 	tlsCtxProto := &tlsv3.UpstreamTlsContext{
+		Sni: sni,
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
@@ -227,7 +242,8 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 
 		routeCfgProto := &jwtauthnv3.PerRouteConfig{
-			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name}}
+			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
+		}
 
 		routeCfgAny, err := anypb.New(routeCfgProto)
 		if err != nil {
@@ -250,48 +266,17 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 		return errors.New("xds resource table is nil")
 	}
 
-	var errs error
+	var err, errs error
 	for _, route := range routes {
 		if !routeContainsJWTAuthn(route) {
 			continue
 		}
 
-		for i := range route.JWT.Providers {
-			var (
-				jwks    *urlCluster
-				ds      *ir.DestinationSetting
-				tSocket *corev3.TransportSocket
-				err     error
-			)
+		for i := range route.Security.JWT.Providers {
+			provider := route.Security.JWT.Providers[i]
 
-			provider := route.JWT.Providers[i]
-			jwks, err = url2Cluster(provider.RemoteJWKS.URI, false)
-			if err != nil {
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			ds = &ir.DestinationSetting{
-				Weight:    ptr.To[uint32](1),
-				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
-			}
-
-			clusterArgs := &xdsClusterArgs{
-				name:         jwks.name,
-				settings:     []*ir.DestinationSetting{ds},
-				endpointType: jwks.endpointType,
-			}
-			if jwks.tls {
-				tSocket, err = buildXdsUpstreamTLSSocket()
-				if err != nil {
-					errs = multierror.Append(errs, err)
-					continue
-				}
-				clusterArgs.tSocket = tSocket
-			}
-
-			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-				errs = multierror.Append(errs, err)
+			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx); err != nil {
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
@@ -318,22 +303,14 @@ func listenerContainsJWTAuthn(irListener *ir.HTTPListener) bool {
 // routeContainsJWTAuthn returns true if JWT authentication exists for the
 // provided route.
 func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
 	if irRoute != nil &&
-		irRoute.JWT != nil &&
-		irRoute.JWT.Providers != nil &&
-		len(irRoute.JWT.Providers) > 0 {
+		irRoute.Security != nil &&
+		irRoute.Security.JWT != nil &&
+		irRoute.Security.JWT.Providers != nil &&
+		len(irRoute.Security.JWT.Providers) > 0 {
 		return true
 	}
-
 	return false
-}
-
-func (*jwt) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
-	return nil
 }
 
 // buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct

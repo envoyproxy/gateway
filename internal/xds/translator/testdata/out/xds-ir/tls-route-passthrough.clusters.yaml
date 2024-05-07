@@ -1,4 +1,7 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -6,9 +9,36 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tls-passthrough-dest
+    serviceName: tls-passthrough-foo-dest
   lbPolicy: LEAST_REQUEST
-  name: tls-passthrough-dest
+  name: tls-passthrough-foo-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: tls-passthrough-bar-dest
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: bar
+              portValue: 50000
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: tls-passthrough-bar-dest/backend/0
+  name: tls-passthrough-bar-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS

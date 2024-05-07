@@ -124,7 +124,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -165,12 +165,20 @@ securityPolicies:
       name: httproute-2
       namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Secret default/client2-secret does not exist
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Secret default/client2-secret does not exist
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -203,12 +211,25 @@ securityPolicies:
       name: gateway-1
       namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Secret envoy-gateway/client1-secret does not exist
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Secret envoy-gateway/client1-secret does not exist
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [default/httproute-2]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -238,22 +259,24 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
-        jwt:
-          providers:
-          - audiences:
-            - one.foo.com
-            claimToHeaders:
-            - claim: claim1
-              header: one-route-example-key
-            issuer: https://one.example.com
-            name: example1
-            remoteJWKS:
-              uri: https://one.example.com/jwt/public-key/jwks.json
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
+        security:
+          jwt:
+            providers:
+            - audiences:
+              - one.foo.com
+              claimToHeaders:
+              - claim: claim1
+                header: one-route-example-key
+              issuer: https://one.example.com
+              name: example1
+              remoteJWKS:
+                uri: https://one.example.com/jwt/public-key/jwks.json
       - backendWeights:
           invalid: 0
           valid: 0
@@ -267,19 +290,21 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
-        jwt:
-          providers:
-          - audiences:
-            - two.foo.com
-            claimToHeaders:
-            - claim: claim2
-              header: one-route-example-key
-            issuer: https://two.example.com
-            name: example2
-            remoteJWKS:
-              uri: https://one.example.com/jwt/public-key/jwks.json
+        isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
+        security:
+          jwt:
+            providers:
+            - audiences:
+              - two.foo.com
+              claimToHeaders:
+              - claim: claim2
+                header: one-route-example-key
+              issuer: https://two.example.com
+              name: example2
+              remoteJWKS:
+                uri: https://one.example.com/jwt/public-key/jwks.json

@@ -293,56 +293,56 @@ infraIR:
         name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10081
-          name: http-1
+          name: http-81
           protocol: HTTP
           servicePort: 81
       - address: null
         name: envoy-gateway/gateway-1/http-2
         ports:
         - containerPort: 10082
-          name: http-2
+          name: http-82
           protocol: HTTP
           servicePort: 82
       - address: null
         name: envoy-gateway/gateway-1/http-3
         ports:
         - containerPort: 10083
-          name: http-3
+          name: http-83
           protocol: HTTP
           servicePort: 83
       - address: null
         name: envoy-gateway/gateway-1/http-4
         ports:
         - containerPort: 10084
-          name: http-4
+          name: http-84
           protocol: HTTP
           servicePort: 84
       - address: null
         name: envoy-gateway/gateway-1/http-5
         ports:
         - containerPort: 10085
-          name: http-5
+          name: http-85
           protocol: HTTP
           servicePort: 85
       - address: null
         name: envoy-gateway/gateway-1/http-6
         ports:
         - containerPort: 10086
-          name: http-6
+          name: http-86
           protocol: HTTP
           servicePort: 86
       - address: null
         name: envoy-gateway/gateway-1/http-7
         ports:
         - containerPort: 10087
-          name: http-7
+          name: http-87
           protocol: HTTP
           servicePort: 87
       - address: null
         name: envoy-gateway/gateway-1/http-8
         ports:
         - containerPort: 10088
-          name: http-8
+          name: http-88
           protocol: HTTP
           servicePort: 88
       metadata:
@@ -379,6 +379,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
           distinct: false
@@ -407,6 +408,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:
           distinct: false
@@ -435,6 +437,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo1.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo1_com
         pathMatch:
           distinct: false
@@ -463,6 +466,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar1.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar1_com
         pathMatch:
           distinct: false
@@ -491,6 +495,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo2.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo2_com
         pathMatch:
           distinct: false
@@ -519,6 +524,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar2.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar2_com
         pathMatch:
           distinct: false
@@ -547,6 +553,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: foo3.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/foo3_com
         pathMatch:
           distinct: false
@@ -575,6 +582,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: bar3.com
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/bar3_com
         pathMatch:
           distinct: false

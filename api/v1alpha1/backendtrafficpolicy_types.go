@@ -16,11 +16,10 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=btp
+// +kubebuilder:resource:categories=envoy-gateway,shortName=btp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-//
+
 // BackendTrafficPolicy allows the user to configure the behavior of the connection
 // between the Envoy Proxy listener and the backend service.
 type BackendTrafficPolicy struct {
@@ -31,10 +30,10 @@ type BackendTrafficPolicy struct {
 	Spec BackendTrafficPolicySpec `json:"spec"`
 
 	// status defines the current status of BackendTrafficPolicy.
-	Status BackendTrafficPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// spec defines the desired state of BackendTrafficPolicy.
+// BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
@@ -82,24 +81,32 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
 
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
+
+	// UseClientProtocol configures Envoy to prefer sending requests to backends using
+	// the same HTTP protocol that the incoming request used. Defaults to false, which means
+	// that Envoy will use the protocol indicated by the attached BackendRef.
+	//
+	// +optional
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
+
 	// Timeout settings for the backend connections.
 	//
 	// +optional
 	Timeout *Timeout `json:"timeout,omitempty"`
-}
 
-// BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
-type BackendTrafficPolicyStatus struct {
-	// Conditions describe the current conditions of the BackendTrafficPolicy.
+	// The compression config for the http streams.
 	//
 	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// +notImplementedHide
+	Compression []*Compression `json:"compression,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`

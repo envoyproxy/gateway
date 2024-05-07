@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/exp/slices"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -26,6 +27,11 @@ const (
 type Infra struct {
 	// Proxy defines managed proxy infrastructure.
 	Proxy *ProxyInfra `json:"proxy" yaml:"proxy"`
+}
+
+func (i Infra) YAMLString() string {
+	y, _ := yaml.Marshal(&i)
+	return string(y)
 }
 
 // ProxyInfra defines managed proxy infrastructure.
@@ -71,6 +77,7 @@ type ProxyListener struct {
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
 type HTTP3Settings struct {
+	QUICPort int32 `json:"quicPort" yaml:"quicPort"`
 }
 
 // ListenerPort defines a network port of a listener.

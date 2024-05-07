@@ -10,6 +10,8 @@
       name: first-route
       route:
         cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.cors:
           '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
@@ -21,4 +23,5 @@
               regex: '*.example.com'
           - exact: foo.bar.com
           exposeHeaders: x-header-3, x-header-4
+          forwardNotMatchingPreflights: false
           maxAge: "1000"

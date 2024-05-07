@@ -72,14 +72,14 @@ infraIR:
         name: envoy-gateway/gateway-1/udp1
         ports:
         - containerPort: 10162
-          name: udp1
+          name: udp-162
           protocol: UDP
           servicePort: 162
       - address: null
         name: envoy-gateway/gateway-1/udp2
         ports:
         - containerPort: 10163
-          name: udp2
+          name: udp-163
           protocol: UDP
           servicePort: 163
       metadata:

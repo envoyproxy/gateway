@@ -1,0 +1,54 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 8081
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 8081
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 2
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 8082
+  hostnames:
+  - "*"
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "2.2.2.2"
+          port: 8082
+  clientIPDetection:
+    customHeader:
+      name: "x-my-custom-header"
+      failClosed: false
+- name: "third-listener"
+  address: "0.0.0.0"
+  port: 8083
+  hostnames:
+  - "*"
+  routes:
+  - name: "third-route"
+    hostname: "*"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "3.3.3.3"
+          port: 8083
+  clientIPDetection:
+    customHeader:
+      name: "x-my-custom-header"
+      failClosed: true

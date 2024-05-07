@@ -1,5 +1,7 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION ?= 1.27.1
+ENVTEST_K8S_VERSION ?= 1.28.0
+# Need run cel validation across multiple versions of k8s
+ENVTEST_K8S_VERSIONS ?= 1.27.1 1.28.0 1.29.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
@@ -11,6 +13,9 @@ WAIT_TIMEOUT ?= 15m
 FLUENT_BIT_CHART_VERSION ?= 0.30.4
 OTEL_COLLECTOR_CHART_VERSION ?= 0.73.1
 TEMPO_CHART_VERSION ?= 1.3.1
+E2E_RUN_TEST ?=
+E2E_RUN_EG_UPGRADE_TESTS ?= false
+E2E_CLEANUP ?= true
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
@@ -29,6 +34,7 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
+
 	@$(LOG_TARGET)
 	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 .PHONY: generate-gwapi-manifests
@@ -55,8 +61,6 @@ kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider 
 ifndef ignore-not-found
   ignore-not-found = true
 endif
-
-IMAGE_PULL_POLICY ?= Always
 
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
@@ -109,23 +113,45 @@ install-ratelimit:
 	kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=envoy-ratelimit" "envoy-gateway-system"
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
-run-e2e: prepare-e2e
+run-e2e: install-e2e-telemetry
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
-	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
+ifeq ($(E2E_RUN_TEST),)
+	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+else
+ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
+	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false \
+		--run-test $(E2E_RUN_TEST)
+	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
+else
+	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
+endif
+endif
 
-.PHONY: prepare-e2e
-prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector
+.PHONY: install-e2e-telemetry
+install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
 	@$(LOG_TARGET)
 	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
 	kubectl rollout status statefulset loki -n monitoring --timeout 5m
 	kubectl rollout status statefulset tempo -n monitoring --timeout 5m
 	kubectl rollout status deployment otel-collector -n monitoring --timeout 5m
+	kubectl rollout status deployment prometheus -n monitoring --timeout 5m
+
+.PHONY: uninstall-e2e-telemetry
+uninstall-e2e-telemetry:
+	@$(LOG_TARGET)
+	kubectl delete -f examples/loki/loki.yaml -n monitoring --ignore-not-found
+	helm delete $(shell helm list -n monitoring -q) -n monitoring
 
 .PHONY: prepare-helm-repo
 prepare-helm-repo:
@@ -133,6 +159,7 @@ prepare-helm-repo:
 	helm repo add fluent https://fluent.github.io/helm-charts
 	helm repo add grafana https://grafana.github.io/helm-charts
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 	helm repo update
 
 .PHONY: install-fluent-bit
@@ -149,6 +176,11 @@ install-loki:
 install-tempo:
 	@$(LOG_TARGET)
 	helm upgrade --install tempo grafana/tempo -f examples/tempo/helm-values.yaml -n monitoring --create-namespace --version $(TEMPO_CHART_VERSION)
+
+.PHONY: install-prometheus
+install-prometheus:
+	@$(LOG_TARGET)
+	helm upgrade --install prometheus prometheus-community/prometheus -f examples/prometheus/helm-values.yaml -n monitoring --create-namespace
 
 .PHONY: install-otel-collector
 install-otel-collector:
@@ -191,7 +223,7 @@ generate-manifests: helm-generate ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
+	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")

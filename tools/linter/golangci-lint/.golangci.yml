@@ -8,10 +8,12 @@ linters:
     - errorlint
     - exportloopref
     - gofmt
+    - gofumpt
     - goimports
     - goheader
     - gocritic
     - gosec
+    - govet
     - misspell
     - revive
     - stylecheck
@@ -32,6 +34,8 @@ linters-settings:
             desc: "use sigs.k8s.io/yaml instead"
           - pkg: k8s.io/utils/pointer
             desc: "use k8s.io/utils/ptr instead"
+          - pkg: github.com/tetratelabs/multierror
+            desc: "use errors instead"
   gci:
     sections:
       # Captures all standard packages if they do not match another section.
@@ -55,6 +59,11 @@ linters-settings:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
     local-prefixes: github.com/envoyproxy/gateway/
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+      - fieldalignment
   revive:
     rules:
       # TODO: enable if-return check
@@ -62,17 +71,17 @@ linters-settings:
         disabled: true
   testifylint:
     disable:
-      - bool-compare
-      - compares
       - float-compare
       - go-require
-      - require-error
     enable:
+      - bool-compare
+      - compares
       - empty
       - error-is-as
       - error-nil
       - expected-actual
       - len
+      - require-error
       - suite-dont-use-pkg
       - suite-extra-assert-call
   unparam:

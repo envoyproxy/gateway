@@ -15,9 +15,8 @@ import (
 	localrlv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -35,8 +34,7 @@ func init() {
 	registerHTTPFilter(&localRateLimit{})
 }
 
-type localRateLimit struct {
-}
+type localRateLimit struct{}
 
 var _ httpFilter = &localRateLimit{}
 
@@ -106,11 +104,8 @@ func routeContainsLocalRateLimit(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*localRateLimit) patchResources(*types.ResourceVersionTable,
-	[]*ir.HTTPRoute) error {
-	return nil
-}
-
-func (*localRateLimit) patchRouteConfig(*routev3.RouteConfiguration, *ir.HTTPListener) error {
+	[]*ir.HTTPRoute,
+) error {
 	return nil
 }
 
@@ -173,7 +168,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 		// won't consume the default token bucket. This means that a request only
 		// counts towards the default token bucket if it does not match any of the
 		// descriptors.
-		AlwaysConsumeDefaultTokenBucket: &wrappers.BoolValue{
+		AlwaysConsumeDefaultTokenBucket: &wrapperspb.BoolValue{
 			Value: false,
 		},
 	}
@@ -192,7 +187,8 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 }
 
 func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
-	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor, error) {
+	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor, error,
+) {
 	var rateLimits []*routev3.RateLimit
 	var descriptors []*rlv3.LocalRateLimitDescriptor
 
@@ -288,7 +284,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 	return rateLimits, descriptors, nil
 }
 
-func ratelimitUnitToDuration(unit ir.RateLimitUnit) *duration.Duration {
+func ratelimitUnitToDuration(unit ir.RateLimitUnit) *durationpb.Duration {
 	var seconds int64
 
 	switch egv1a1.RateLimitUnit(unit) {
@@ -301,7 +297,7 @@ func ratelimitUnitToDuration(unit ir.RateLimitUnit) *duration.Duration {
 	case egv1a1.RateLimitUnitDay:
 		seconds = 60 * 60 * 24
 	}
-	return &duration.Duration{
+	return &durationpb.Duration{
 		Seconds: seconds,
 	}
 }

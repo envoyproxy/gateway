@@ -46,7 +46,7 @@ func (r *ResourceRender) Name() string {
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
+	if OwningGatewayLabelsAbsent(labels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -76,7 +76,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			}
 
 			p := corev1.ServicePort{
-				Name:       ExpectedResourceHashedName(port.Name),
+				Name:       port.Name,
 				Protocol:   protocol,
 				Port:       port.ServicePort,
 				TargetPort: target,
@@ -86,7 +86,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			if port.Protocol == ir.HTTPSProtocolType {
 				if listener.HTTP3 != nil {
 					p := corev1.ServicePort{
-						Name:       ExpectedResourceHashedName(port.Name + "-h3"),
+						Name:       port.Name + "-h3",
 						Protocol:   corev1.ProtocolUDP,
 						Port:       port.ServicePort,
 						TargetPort: target,
@@ -99,7 +99,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
+	if OwningGatewayLabelsAbsent(labels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -120,7 +120,18 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
-	serviceSpec.ExternalIPs = r.infra.Addresses
+
+	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
+		if len(r.infra.Addresses) > 0 {
+			// Since K8s Service requires specify no more than one IP for each IP family
+			// So we only use the first address
+			// if address is not set, the automatically assigned clusterIP is used
+			serviceSpec.ClusterIP = r.infra.Addresses[0]
+			serviceSpec.ClusterIPs = r.infra.Addresses[0:1]
+		}
+	} else {
+		serviceSpec.ExternalIPs = r.infra.Addresses
+	}
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -136,6 +147,12 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		Spec: serviceSpec,
 	}
 
+	// apply merge patch to service
+	var err error
+	if svc, err = envoyServiceConfig.ApplyMergePatch(svc); err != nil {
+		return nil, err
+	}
+
 	return svc, nil
 }
 
@@ -143,7 +160,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
+	if OwningGatewayLabelsAbsent(labels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -167,43 +184,36 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 
 // Deployment returns the expected Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
+	proxyConfig := r.infra.GetProxyConfig()
+
 	// Get the EnvoyProxy config to configure the deployment.
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	provider := proxyConfig.GetEnvoyProxyProvider()
 	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
+	// If deployment config is nil, it's not Deployment installation.
+	if deploymentConfig == nil {
+		return nil, nil
+	}
+
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set the labels based on the owning gateway name.
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations
-	labels := r.infra.GetProxyMetadata().Labels
-	dpLabels := envoyLabels(labels)
-	if (len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(dpLabels[gatewayapi.OwningGatewayClassLabel]) == 0 {
-		return nil, fmt.Errorf("missing owning gateway labels")
-	}
+	podAnnotations := r.getPodAnnotations(dpAnnotations, deploymentConfig.Pod)
 
-	maps.Copy(labels, deploymentConfig.Pod.Labels)
-	podLabels := envoyLabels(labels)
+	// Set the labels based on the owning gateway name.
+	dpLabels, err := r.getLabels()
+	if err != nil {
+		return nil, err
+	}
+	podLabels := r.getPodLabels(deploymentConfig.Pod)
 	selector := resource.GetSelector(podLabels)
-
-	// Get annotations
-	podAnnotations := map[string]string{}
-	maps.Copy(podAnnotations, dpAnnotations)
-	maps.Copy(podAnnotations, deploymentConfig.Pod.Annotations)
-	if enablePrometheus(r.infra) {
-		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
-		podAnnotations["prometheus.io/scrape"] = "true"
-		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
-	}
-	if len(podAnnotations) == 0 {
-		podAnnotations = nil
-	}
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -230,15 +240,14 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
 					AutomountServiceAccountToken:  ptr.To(false),
-					TerminationGracePeriodSeconds: ptr.To[int64](300),
+					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
-					HostNetwork:                   deploymentConfig.Pod.HostNetwork,
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedDeploymentVolumes(r.infra.Name, deploymentConfig),
+					Volumes:                       expectedVolumes(r.infra.Name, deploymentConfig.Pod),
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
@@ -254,7 +263,77 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		deployment.Spec.Replicas = nil
 	}
 
+	// apply merge patch to deployment
+	if deployment, err = deploymentConfig.ApplyMergePatch(deployment); err != nil {
+		return nil, err
+	}
+
 	return deployment, nil
+}
+
+func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
+	proxyConfig := r.infra.GetProxyConfig()
+
+	// Get the EnvoyProxy config to configure the daemonset.
+	provider := proxyConfig.GetEnvoyProxyProvider()
+	if provider.Type != egv1a1.ProviderTypeKubernetes {
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	}
+
+	daemonSetConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDaemonSet
+
+	// If daemonset config is nil, it's not DaemonSet installation.
+	if daemonSetConfig == nil {
+		return nil, nil
+	}
+
+	// Get expected bootstrap configurations rendered ProxyContainers
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown)
+	if err != nil {
+		return nil, err
+	}
+
+	dsAnnotations := r.infra.GetProxyMetadata().Annotations
+	podAnnotations := r.getPodAnnotations(dsAnnotations, daemonSetConfig.Pod)
+
+	// Set the labels based on the owning gateway name.
+	dsLabels, err := r.getLabels()
+	if err != nil {
+		return nil, err
+	}
+	podLabels := r.getPodLabels(daemonSetConfig.Pod)
+	selector := resource.GetSelector(podLabels)
+
+	daemonSet := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   r.Namespace,
+			Name:        r.Name(),
+			Labels:      dsLabels,
+			Annotations: dsAnnotations,
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector:       selector,
+			UpdateStrategy: *daemonSetConfig.Strategy,
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      selector.MatchLabels,
+					Annotations: podAnnotations,
+				},
+				Spec: r.getPodSpec(containers, nil, daemonSetConfig.Pod, proxyConfig),
+			},
+		},
+	}
+
+	// apply merge patch to daemonset
+	if daemonSet, err = daemonSetConfig.ApplyMergePatch(daemonSet); err != nil {
+		return nil, err
+	}
+
+	return daemonSet, nil
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
@@ -293,4 +372,78 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	return hpa, nil
+}
+
+func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
+	s := 900 // default
+	if cfg != nil && cfg.DrainTimeout != nil {
+		s = int(cfg.DrainTimeout.Seconds() + 300) // 5 minutes longer than drain timeout
+	}
+	return ptr.To(int64(s))
+}
+
+func (r *ResourceRender) getPodSpec(
+	containers, initContainers []corev1.Container,
+	pod *egv1a1.KubernetesPodSpec,
+	proxyConfig *egv1a1.EnvoyProxy,
+) corev1.PodSpec {
+	return corev1.PodSpec{
+		Containers:                    containers,
+		InitContainers:                initContainers,
+		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
+		AutomountServiceAccountToken:  ptr.To(false),
+		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
+		DNSPolicy:                     corev1.DNSClusterFirst,
+		RestartPolicy:                 corev1.RestartPolicyAlways,
+		SchedulerName:                 "default-scheduler",
+		SecurityContext:               pod.SecurityContext,
+		Affinity:                      pod.Affinity,
+		Tolerations:                   pod.Tolerations,
+		Volumes:                       expectedVolumes(r.infra.Name, pod),
+		ImagePullSecrets:              pod.ImagePullSecrets,
+		NodeSelector:                  pod.NodeSelector,
+		TopologySpreadConstraints:     pod.TopologySpreadConstraints,
+	}
+}
+
+func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string, pod *egv1a1.KubernetesPodSpec) map[string]string {
+	podAnnotations := map[string]string{}
+	maps.Copy(podAnnotations, resourceAnnotation)
+	maps.Copy(podAnnotations, pod.Annotations)
+
+	if enablePrometheus(r.infra) {
+		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
+		podAnnotations["prometheus.io/scrape"] = "true"
+		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
+	}
+
+	if len(podAnnotations) == 0 {
+		podAnnotations = nil
+	}
+
+	return podAnnotations
+}
+
+func (r *ResourceRender) getLabels() (map[string]string, error) {
+	// Set the labels based on the owning gateway name.
+	resourceLabels := envoyLabels(r.infra.GetProxyMetadata().Labels)
+	if OwningGatewayLabelsAbsent(resourceLabels) {
+		return nil, fmt.Errorf("missing owning gateway labels")
+	}
+
+	return resourceLabels, nil
+}
+
+func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]string {
+	labels := r.infra.GetProxyMetadata().Labels
+	maps.Copy(labels, pod.Labels)
+
+	return envoyLabels(labels)
+}
+
+// OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels
+func OwningGatewayLabelsAbsent(labels map[string]string) bool {
+	return (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 ||
+		len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) &&
+		len(labels[gatewayapi.OwningGatewayClassLabel]) == 0
 }

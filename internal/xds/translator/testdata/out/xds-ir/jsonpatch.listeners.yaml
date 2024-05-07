@@ -2,8 +2,9 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10080
-  defaultFilterChain:
-    filters:
+  drainType: MODIFY_ONLY
+  filterChains:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -28,17 +29,35 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        preserveExternalRequestId: true
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
-        statPrefix: http
-        upgradeConfigs:
-        - upgradeType: websocket
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https
         useRemoteAddress: true
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
   name: first-listener
   perConnectionBufferLimitBytes: 32768

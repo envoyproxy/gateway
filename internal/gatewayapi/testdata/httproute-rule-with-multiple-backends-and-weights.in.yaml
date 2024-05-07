@@ -37,3 +37,6 @@ httpRoutes:
             - name: service-3
               port: 8080
               weight: 3
+            - name: service-4
+              port: 8080
+              weight: 0

@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -24,10 +25,10 @@ const (
 	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
-	// envoyAdminAddress is the listening address of the envoy admin interface.
-	envoyAdminAddress = "127.0.0.1"
-	// envoyAdminPort is the port used to expose admin interface.
-	envoyAdminPort = 19000
+	// EnvoyAdminAddress is the listening address of the envoy admin interface.
+	EnvoyAdminAddress = "127.0.0.1"
+	// EnvoyAdminPort is the port used to expose admin interface.
+	EnvoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
 	envoyAdminAccessLogPath = "/dev/null"
 
@@ -62,6 +63,11 @@ type bootstrapParameters struct {
 	ReadyServer readyServerParameters
 	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
 	EnablePrometheus bool
+	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
+	EnablePrometheusCompression bool
+	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
+	PrometheusCompressionLibrary string
+
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
 	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
@@ -69,6 +75,8 @@ type bootstrapParameters struct {
 	// StatsMatcher is to control creation of custom Envoy stats with prefix,
 	// suffix, and regex expressions match on the name of the stats.
 	StatsMatcher *StatsMatcherParameters
+	// OverloadManager defines the configuration of the Envoy overload manager.
+	OverloadManager overloadManagerParameters
 }
 
 type xdsServerParameters struct {
@@ -82,7 +90,7 @@ type metricSink struct {
 	// Address is the address of the XDS Server that Envoy is managed by.
 	Address string
 	// Port is the port of the XDS Server that Envoy is managed by.
-	Port int32
+	Port uint32
 }
 
 type adminServerParameters struct {
@@ -110,6 +118,15 @@ type StatsMatcherParameters struct {
 	RegularExpressions []string
 }
 
+type overloadManagerParameters struct {
+	MaxHeapSizeBytes uint64
+}
+
+type RenderBootsrapConfigOptions struct {
+	ProxyMetrics     *egv1a1.ProxyMetrics
+	MaxHeapSizeBytes uint64
+}
+
 // render the stringified bootstrap config in yaml format.
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
@@ -122,16 +139,25 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, error) {
+func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, error) {
 	var (
-		enablePrometheus = true
-		metricSinks      []metricSink
-		StatsMatcher     StatsMatcherParameters
+		enablePrometheus             = true
+		enablePrometheusCompression  = false
+		PrometheusCompressionLibrary = "gzip"
+		metricSinks                  []metricSink
+		StatsMatcher                 StatsMatcherParameters
 	)
 
-	if proxyMetrics != nil {
+	if opts != nil && opts.ProxyMetrics != nil {
+		proxyMetrics := opts.ProxyMetrics
+
 		if proxyMetrics.Prometheus != nil {
 			enablePrometheus = !proxyMetrics.Prometheus.Disable
+
+			if proxyMetrics.Prometheus.Compression != nil {
+				enablePrometheusCompression = true
+				PrometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+			}
 		}
 
 		addresses := sets.NewString()
@@ -141,15 +167,23 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 			}
 
 			// skip duplicate sinks
-			addr := fmt.Sprintf("%s:%d", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
+			var host string
+			var port uint32
+			if sink.OpenTelemetry.Host != nil {
+				host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
+			}
+			if len(sink.OpenTelemetry.BackendRefs) > 0 {
+				host, port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, "")
+			}
+			addr := fmt.Sprintf("%s:%d", host, port)
 			if addresses.Has(addr) {
 				continue
 			}
 			addresses.Insert(addr)
 
 			metricSinks = append(metricSinks, metricSink{
-				Address: sink.OpenTelemetry.Host,
-				Port:    sink.OpenTelemetry.Port,
+				Address: host,
+				Port:    port,
 			})
 		}
 
@@ -185,8 +219,8 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 				Port:    DefaultXdsServerPort,
 			},
 			AdminServer: adminServerParameters{
-				Address:       envoyAdminAddress,
-				Port:          envoyAdminPort,
+				Address:       EnvoyAdminAddress,
+				Port:          EnvoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
 			ReadyServer: readyServerParameters{
@@ -194,12 +228,18 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
-			EnablePrometheus: enablePrometheus,
-			OtelMetricSinks:  metricSinks,
+			EnablePrometheus:             enablePrometheus,
+			EnablePrometheusCompression:  enablePrometheusCompression,
+			PrometheusCompressionLibrary: PrometheusCompressionLibrary,
+			OtelMetricSinks:              metricSinks,
 		},
 	}
-	if proxyMetrics != nil && proxyMetrics.Matches != nil {
+	if opts != nil && opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {
 		cfg.parameters.StatsMatcher = &StatsMatcher
+	}
+
+	if opts != nil {
+		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
 	}
 
 	if err := cfg.render(); err != nil {

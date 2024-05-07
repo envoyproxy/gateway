@@ -12,7 +12,7 @@
     "_build": "npm run _hugo-dev",
     "_check:links": "echo IMPLEMENTATION PENDING for check-links; echo",
     "_hugo": "hugo --cleanDestinationDir",
-    "_hugo-dev": "npm run _hugo -- -e dev -DFE",
+    "_hugo-dev": "npm run _hugo -- -e dev -DFE --baseURL http://localhost --bind 0.0.0.0",
     "_serve": "npm run _hugo-dev -- --minify serve",
     "build:preview": "npm run _hugo-dev -- --minify --baseURL \"${DEPLOY_PRIME_URL:-/}\"",
     "build:production": "npm run _hugo -- --minify",
@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
-    "hugo-extended": "0.117.0",
+    "hugo-extended": "0.123.8",
     "postcss-cli": "^10.1.0"
   }
 }

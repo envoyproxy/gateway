@@ -60,7 +60,7 @@ infraIR:
                     value: env_a_value
                   - name: env_b
                     value: env_b_name
-                  image: envoyproxy/envoy-dev:latest
+                  image: envoyproxy/envoy:distroless-dev
                   resources:
                     requests:
                       cpu: 100m
@@ -108,7 +108,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

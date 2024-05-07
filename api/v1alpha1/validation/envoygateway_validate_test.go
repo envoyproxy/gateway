@@ -503,8 +503,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							Watch: &v1alpha1.KubernetesWatchMode{
-								Type:               v1alpha1.KubernetesWatchModeTypeNamespaces,
-								NamespaceSelectors: []string{"foo"},
+								Type:              v1alpha1.KubernetesWatchModeTypeNamespaces,
+								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
 							},
 						},
 					},
@@ -513,7 +513,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "happy namespaceSelectors must be set when watch mode is NamespaceSelectors",
+			name: "happy namespaceSelector must be set when watch mode is NamespaceSelector",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 					Gateway: v1alpha1.DefaultGateway(),
@@ -521,8 +521,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							Watch: &v1alpha1.KubernetesWatchMode{
-								Type:               v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
-								NamespaceSelectors: []string{"foo"},
+								Type:              v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
+								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
 							},
 						},
 					},
@@ -531,7 +531,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
-			name: "fail namespaceSelectors is not be set when watch mode is NamespaceSelectors",
+			name: "fail namespaceSelector is not be set when watch mode is NamespaceSelector",
 			eg: &v1alpha1.EnvoyGateway{
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 					Gateway: v1alpha1.DefaultGateway(),
@@ -539,7 +539,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							Watch: &v1alpha1.KubernetesWatchMode{
-								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelectors,
+								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
 							},
 						},
 					},
@@ -646,7 +646,7 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.NotNil(t, envoyGateway.Provider)
 
 	envoyGatewayProvider := envoyGateway.GetEnvoyGatewayProvider()
-	assert.Nil(t, envoyGatewayProvider.Kubernetes)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes)
 	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
 
 	envoyGatewayProvider.Kubernetes = v1alpha1.DefaultEnvoyGatewayKubeProvider()
@@ -660,7 +660,8 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 			Replicas:  nil,
 			Pod:       nil,
 			Container: nil,
-		}}
+		},
+	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod)
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container)
@@ -668,14 +669,14 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 
 	envoyGatewayProvider.Kubernetes = &v1alpha1.EnvoyGatewayKubernetesProvider{
 		RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
-			Replicas: nil,
-			Pod:      nil,
+			Pod: nil,
 			Container: &v1alpha1.KubernetesContainerSpec{
 				Resources:       nil,
 				SecurityContext: nil,
 				Image:           nil,
 			},
-		}}
+		},
+	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources)
 	envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
@@ -684,8 +685,6 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, v1alpha1.DefaultKubernetesDeployment(v1alpha1.DefaultRateLimitImage))
-	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, v1alpha1.DefaultKubernetesDeploymentReplicas())
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, v1alpha1.DefaultKubernetesPod())
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container)
