@@ -34,15 +34,23 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
 func TestTranslate(t *testing.T) {
+	testCasesConfig := []struct {
+		name                    string
+		EnvoyPatchPolicyEnabled bool
+	}{
+		{
+			name:                    "envoypatchpolicy-invalid-feature-disabled",
+			EnvoyPatchPolicyEnabled: false,
+		},
+	}
+
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
 
@@ -54,15 +62,25 @@ func TestTranslate(t *testing.T) {
 
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
+			envoyPatchPolicyEnabled := true
+
+			for _, config := range testCasesConfig {
+				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
+					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+				}
+			}
 
 			translator := &Translator{
-				GatewayControllerName:  egv1a1.GatewayControllerName,
-				GatewayClassName:       "envoy-gateway-class",
-				GlobalRateLimitEnabled: true,
+				GatewayControllerName:   egv1a1.GatewayControllerName,
+				GatewayClassName:        "envoy-gateway-class",
+				GlobalRateLimitEnabled:  true,
+				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
+				Namespace:               "envoy-gateway-system",
+				MergeGateways:           IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures
-			for i := 1; i <= 3; i++ {
+			for i := 1; i <= 4; i++ {
 				svcName := "service-" + strconv.Itoa(i)
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
@@ -223,8 +241,12 @@ func TestTranslate(t *testing.T) {
 			want := &TranslateResult{}
 			mustUnmarshal(t, output, want)
 
-			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-			require.Empty(t, cmp.Diff(want, got, opts))
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.EquateEmpty(),
+			}
+
+			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
 }
@@ -247,6 +269,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
 				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
+				MergeGateways:          IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures
@@ -419,7 +442,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 func overrideOutputConfig(t *testing.T, data string, filepath string) {
 	t.Helper()
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
 	require.NoError(t, err)
 	defer file.Close()
 	write := bufio.NewWriter(file)
@@ -526,7 +549,7 @@ func TestIsValidHostname(t *testing.T) {
 			if tc.err == "" {
 				require.NoError(t, err)
 			} else {
-				assert.EqualError(t, err, tc.err)
+				require.EqualError(t, err, tc.err)
 			}
 		})
 	}

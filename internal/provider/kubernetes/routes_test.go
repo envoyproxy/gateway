@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,10 +27,15 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 func TestProcessHTTPRoutes(t *testing.T) {
+	const (
+		defaultWait = time.Second * 10
+		defaultTick = time.Millisecond * 20
+	)
+
 	// The gatewayclass configured for the reconciler and referenced by test cases.
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 	gc := &gwapiv1.GatewayClass{
@@ -62,6 +68,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 
 	invalidDuration := gwapiv1.Duration("invalid duration")
 
+	httpRouteNS := "test"
+
 	testCases := []struct {
 		name               string
 		routes             []*gwapiv1.HTTPRoute
@@ -74,7 +82,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			routes: []*gwapiv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
+						Namespace: httpRouteNS,
 						Name:      "test",
 					},
 					Spec: gwapiv1.HTTPRouteSpec{
@@ -118,7 +126,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			routes: []*gwapiv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
+						Namespace: httpRouteNS,
 						Name:      "test",
 					},
 					Spec: gwapiv1.HTTPRouteSpec{
@@ -172,7 +180,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 						"kind":       "Foo",
 						"metadata": map[string]interface{}{
 							"name":      "test",
-							"namespace": "test",
+							"namespace": httpRouteNS,
 						},
 					},
 				},
@@ -191,7 +199,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			routes: []*gwapiv1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
+						Namespace: httpRouteNS,
 						Name:      "test",
 					},
 					Spec: gwapiv1.HTTPRouteSpec{
@@ -268,6 +276,15 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
 				Build()
+
+			// Wait until all the httproutes have been initialized.
+			require.Eventually(t, func() bool {
+				httpRoutes := gwapiv1.HTTPRouteList{}
+				if err := r.client.List(ctx, &httpRoutes, client.InNamespace(httpRouteNS)); err != nil {
+					return false
+				}
+				return len(httpRoutes.Items) > 0
+			}, defaultWait, defaultTick)
 
 			// Process the test case httproutes.
 			resourceTree := gatewayapi.NewResources()
@@ -471,10 +488,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
@@ -606,10 +619,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",
@@ -620,10 +629,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test2",
@@ -700,10 +705,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: gwapiv1.GroupVersion.String(),
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "test",

@@ -1,0 +1,68 @@
+envoyPatchPolicies:
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "foobar"
+  name: "first-policy"
+  namespace: "default"
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+    name: "first-listener"
+    operation:
+      op: "add"
+      path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
+      value:
+        name: "envoy.filters.http.ratelimit"
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
+          domain: "eg-ratelimit"
+          failure_mode_deny: true
+          timeout: 1s
+          rate_limit_service:
+            grpc_service:
+              envoy_grpc:
+                cluster_name: rate-limit-cluster
+            transport_api_version: V3
+  - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
+    name: "first-listener"
+    operation:
+      op: "add"
+      path: "/virtual_hosts/0/rate_limits"
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: secret-1
+      # byte slice representation of "key-data"
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    - name: secret-2
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    headerMatches:
+    - name: user
+      stringMatch:
+      exact: "jason"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

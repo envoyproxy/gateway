@@ -126,7 +126,7 @@ func TestTLSConfig(t *testing.T) {
 
 	go func() {
 		err := g.Serve(l)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}()
 	defer g.GracefulStop()
 

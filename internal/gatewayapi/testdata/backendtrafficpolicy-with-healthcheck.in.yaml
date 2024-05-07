@@ -113,20 +113,29 @@ backendTrafficPolicies:
       name: gateway-1
       namespace: envoy-gateway
     healthCheck:
-      timeout: "500ms"
-      interval: "3s"
-      unhealthyThreshold: 3
-      healthyThreshold: 1
-      type: HTTP
-      http:
-        path: "/healthz"
-        method: "GET"
-        expectedStatuses:
-        - 200
-        - 300
-        expectedResponse:
-          type: Binary
-          binary: RXZlcnl0aGluZyBPSw==
+      active:
+        timeout: "500ms"
+        interval: "3s"
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        type: HTTP
+        http:
+          path: "/healthz"
+          method: "GET"
+          expectedStatuses:
+          - 200
+          - 300
+          expectedResponse:
+            type: Binary
+            binary: RXZlcnl0aGluZyBPSw==
+      passive:
+        baseEjectionTime: 160s
+        interval: 2s
+        maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -139,20 +148,29 @@ backendTrafficPolicies:
       name: httproute-1
       namespace: default
     healthCheck:
-      timeout: "1s"
-      interval: "5s"
-      unhealthyThreshold: 3
-      healthyThreshold: 3
-      type: HTTP
-      http:
-        path: "/healthz"
-        method: "GET"
-        expectedStatuses:
-        - 200
-        - 201
-        expectedResponse:
-          type: Text
-          text: pong
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        type: HTTP
+        http:
+          path: "/healthz"
+          method: "GET"
+          expectedStatuses:
+          - 200
+          - 201
+          expectedResponse:
+            type: Text
+            text: pong
+      passive:
+        baseEjectionTime: 150s
+        interval: 1s
+        maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -165,18 +183,27 @@ backendTrafficPolicies:
       name: httproute-2
       namespace: default
     healthCheck:
-      timeout: "1s"
-      interval: "5s"
-      unhealthyThreshold: 3
-      healthyThreshold: 3
-      type: TCP
-      tcp:
-        send:
-          type: Text
-          text: ping
-        receive:
-          type: Text
-          text: pong
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        type: TCP
+        tcp:
+          send:
+            type: Text
+            text: ping
+          receive:
+            type: Text
+            text: pong
+      passive:
+        baseEjectionTime: 10s
+        interval: 10s
+        maxEjectionPercent: 10
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -189,15 +216,24 @@ backendTrafficPolicies:
       name: httproute-3
       namespace: default
     healthCheck:
-      timeout: 1s
-      interval: 3s
-      unhealthyThreshold: 3
-      healthyThreshold: 1
-      type: TCP
-      tcp:
-        send:
-          type: Binary
-          binary: cGluZw==
-        receive:
-          type: Binary
-          binary: RXZlcnl0aGluZyBPSw==
+      active:
+        timeout: 1s
+        interval: 3s
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        type: TCP
+        tcp:
+          send:
+            type: Binary
+            binary: cGluZw==
+          receive:
+            type: Binary
+            binary: RXZlcnl0aGluZyBPSw==
+      passive:
+        baseEjectionTime: 160s
+        interval: 8ms
+        maxEjectionPercent: 11
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false

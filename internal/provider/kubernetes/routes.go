@@ -8,7 +8,6 @@ package kubernetes
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,13 +17,14 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // processTLSRoutes finds TLSRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TLSRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayTLSRouteIndex, gatewayNamespaceName),
@@ -33,26 +33,16 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	tlsRoutes := tlsRouteList.Items
-	if len(r.namespaceLabels) != 0 {
-		var rts []gwapiv1a2.TLSRoute
-		for _, rt := range tlsRoutes {
-			ns := rt.GetNamespace()
-			ok, err := r.checkObjectNamespaceLabels(ns)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for TLSRoute %s in namespace %s: %w", rt.GetName(), ns, err)
-			}
-
-			if ok {
-				rts = append(rts, rt)
+	for _, tlsRoute := range tlsRouteList.Items {
+		tlsRoute := tlsRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&tlsRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-		tlsRoutes = rts
-	}
-
-	for _, tlsRoute := range tlsRoutes {
-		tlsRoute := tlsRoute
 		r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 
 		for _, rule := range tlsRoute.Spec.Rules {
@@ -83,7 +73,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -104,7 +94,8 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 // processGRPCRoutes finds GRPCRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the GRPCRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
 
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
@@ -114,26 +105,16 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		return err
 	}
 
-	grpcRoutes := grpcRouteList.Items
-	if len(r.namespaceLabels) != 0 {
-		var grs []gwapiv1a2.GRPCRoute
-		for _, gr := range grpcRoutes {
-			ns := gr.GetNamespace()
-			ok, err := r.checkObjectNamespaceLabels(ns)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for GRPCRoute %s in namespace %s: %w", gr.GetName(), ns, err)
-			}
-			if ok {
-				grs = append(grs, gr)
+	for _, grpcRoute := range grpcRouteList.Items {
+		grpcRoute := grpcRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&grpcRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for GRPCRoute %s in namespace %s: %w", grpcRoute.GetName(), grpcRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-
-		grpcRoutes = grs
-	}
-
-	for _, grpcRoute := range grpcRoutes {
-		grpcRoute := grpcRoute
 		r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
 
 		for _, rule := range grpcRoute.Spec.Rules {
@@ -171,7 +152,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -224,7 +205,8 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 // processHTTPRoutes finds HTTPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the HTTPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
@@ -243,26 +225,16 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		return err
 	}
 
-	httpRoutes := httpRouteList.Items
-	if len(r.namespaceLabels) != 0 {
-		var hrs []gwapiv1.HTTPRoute
-		for _, hr := range httpRoutes {
-			ns := hr.GetNamespace()
-			ok, err := r.checkObjectNamespaceLabels(ns)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for HTTPRoute %s in namespace %s: %w", hr.GetName(), ns, err)
-			}
-
-			if ok {
-				hrs = append(hrs, hr)
+	for _, httpRoute := range httpRouteList.Items {
+		httpRoute := httpRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&httpRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for HTTPRoute %s in namespace %s: %w", httpRoute.GetName(), httpRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-		httpRoutes = hrs
-	}
-
-	for _, httpRoute := range httpRoutes {
-		httpRoute := httpRoute
 		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
 		for _, rule := range httpRoute.Spec.Rules {
@@ -300,7 +272,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -367,7 +339,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 								"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 						default:
-							resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 								"name", refGrant.Name)
 						}
@@ -407,7 +379,8 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 // processTCPRoutes finds TCPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TCPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayTCPRouteIndex, gatewayNamespaceName),
@@ -416,27 +389,16 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	tcpRoutes := tcpRouteList.Items
-	if len(r.namespaceLabels) != 0 {
-		var trs []gwapiv1a2.TCPRoute
-		for _, tr := range tcpRoutes {
-			ns := tr.GetNamespace()
-			ok, err := r.checkObjectNamespaceLabels(ns)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for TCPRoute %s in namespace %s: %w", tr.GetName(), ns, err)
-			}
-
-			if ok {
-				trs = append(trs, tr)
+	for _, tcpRoute := range tcpRouteList.Items {
+		tcpRoute := tcpRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&tcpRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for TCPRoute %s in namespace %s: %w", tcpRoute.GetName(), tcpRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-
-		tcpRoutes = trs
-	}
-
-	for _, tcpRoute := range tcpRoutes {
-		tcpRoute := tcpRoute
 		r.log.Info("processing TCPRoute", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
 
 		for _, rule := range tcpRoute.Spec.Rules {
@@ -467,7 +429,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
@@ -488,7 +450,8 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 // processUDPRoutes finds UDPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the UDPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+) error {
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayUDPRouteIndex, gatewayNamespaceName),
@@ -497,27 +460,16 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	udpRoutes := udpRouteList.Items
-	if len(r.namespaceLabels) != 0 {
-		var urs []gwapiv1a2.UDPRoute
-		for _, ur := range udpRoutes {
-			ns := ur.GetNamespace()
-			ok, err := r.checkObjectNamespaceLabels(ns)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for UDPRoute %s in namespace %s: %w", ur.GetName(), ns, err)
-			}
-
-			if ok {
-				urs = append(urs, ur)
+	for _, udpRoute := range udpRouteList.Items {
+		udpRoute := udpRoute
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(&udpRoute); err != nil {
+				r.log.Error(err, "failed to check namespace labels for UDPRoute %s in namespace %s: %w", udpRoute.GetName(), udpRoute.GetNamespace())
+				continue
+			} else if !ok {
+				continue
 			}
 		}
-
-		udpRoutes = urs
-	}
-
-	for _, udpRoute := range udpRoutes {
-		udpRoute := udpRoute
 		r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
 
 		for _, rule := range udpRoute.Spec.Rules {
@@ -548,7 +500,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}

@@ -1,4 +1,7 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -12,7 +15,10 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -26,7 +32,10 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -53,9 +62,16 @@
     name: envoy.transport_sockets.tls
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.foo.com
   type: STRICT_DNS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -82,5 +98,9 @@
     name: envoy.transport_sockets.tls
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.bar.com
   type: STRICT_DNS

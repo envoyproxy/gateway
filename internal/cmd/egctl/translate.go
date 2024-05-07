@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -45,14 +46,17 @@ import (
 const (
 	gatewayAPIType = "gateway-api"
 	xdsType        = "xds"
+	irType         = "ir"
 )
 
 type TranslationResult struct {
 	gatewayapi.Resources
-	Xds map[string]interface{} `json:"xds,omitempty"`
+	XdsIR   gatewayapi.XdsIRMap    `json:"xdsIR,omitempty" yaml:"xdsIR,omitempty"`
+	InfraIR gatewayapi.InfraIRMap  `json:"infraIR,omitempty" yaml:"infraIR,omitempty"`
+	Xds     map[string]interface{} `json:"xds,omitempty"`
 }
 
-func NewTranslateCommand() *cobra.Command {
+func newTranslateCommand() *cobra.Command {
 	var (
 		inFile, inType, output, resourceType string
 		addMissingResources                  bool
@@ -93,6 +97,9 @@ func NewTranslateCommand() *cobra.Command {
   # Translate Gateway API Resources into All xDS Resources in YAML output,
   # also print the Gateway API Resources with updated status in the same output.
   egctl experimental translate --from gateway-api --to gateway-api,xds --type all --output yaml --file <input file>
+
+  # Translate Gateway API Resources into IR in YAML output,
+  egctl experimental translate --from gateway-api --to ir --output yaml --file <input file>
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, dnsDomain)
@@ -130,7 +137,7 @@ func getValidInputTypesStr() string {
 }
 
 func validOutputTypes() []string {
-	return []string{xdsType, gatewayAPIType}
+	return []string{xdsType, gatewayAPIType, irType}
 }
 
 func findInvalidOutputType(outTypes []string) string {
@@ -154,12 +161,14 @@ func getValidOutputTypesStr() string {
 }
 
 func validResourceTypes() []envoyConfigType {
-	return []envoyConfigType{BootstrapEnvoyConfigType,
+	return []envoyConfigType{
+		BootstrapEnvoyConfigType,
 		EndpointEnvoyConfigType,
 		ClusterEnvoyConfigType,
 		ListenerEnvoyConfigType,
 		RouteEnvoyConfigType,
-		AllEnvoyConfigType}
+		AllEnvoyConfigType,
+	}
 }
 
 func isValidResourceType(outType envoyConfigType) bool {
@@ -243,6 +252,15 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				}
 				result.Xds = res
 			}
+			if outType == irType {
+				res, err := translateGatewayAPIToIR(resources)
+				if err != nil {
+					return err
+				}
+				result.Resources = res.Resources
+				result.XdsIR = res.XdsIR
+				result.InfraIR = res.InfraIR
+			}
 		}
 		// Print
 		if err = printOutput(w, result, output); err != nil {
@@ -254,6 +272,32 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
+func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.TranslateResult, error) {
+	if resources.GatewayClass == nil {
+		return nil, fmt.Errorf("the GatewayClass resource is required")
+	}
+
+	t := &gatewayapi.Translator{
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
+		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
+		EnvoyPatchPolicyEnabled: true,
+	}
+
+	// Fix the services in the resources section so that they have an IP address - this prevents nasty
+	// errors in the translation.
+	for _, svc := range resources.Services {
+		if svc.Spec.ClusterIP == "" {
+			svc.Spec.ClusterIP = "10.96.1.2"
+		}
+	}
+
+	result := t.Translate(resources)
+
+	return result, nil
+}
+
 func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
 	if resources.GatewayClass == nil {
 		return gatewayapi.Resources{}, fmt.Errorf("the GatewayClass resource is required")
@@ -261,10 +305,11 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
+		EnvoyPatchPolicyEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
@@ -292,10 +337,11 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
+		EnvoyPatchPolicyEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 
@@ -315,6 +361,9 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
+		}
+		if resources.EnvoyProxy != nil {
+			xTranslator.FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
 		}
 		xRes, err := xTranslator.Translate(val)
 		if err != nil {
@@ -644,6 +693,10 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
+			// fill controller name by default controller name when gatewayclass controller name empty.
+			if gatewayClass.Spec.ControllerName == "" {
+				gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
+			}
 			resources.GatewayClass = gatewayClass
 		case gatewayapi.KindGateway:
 			typedSpec := spec.Interface()
@@ -847,21 +900,19 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			if provided, found := providedServiceMap[key]; !found {
 				resources.Services = append(resources.Services, service)
 			} else {
-				providedPorts := map[string]bool{}
+				providedPorts := sets.NewString()
 				for _, port := range provided.Spec.Ports {
-					providedPorts[fmt.Sprintf("%s-%d", port.Protocol, port.Port)] = true
+					portKey := fmt.Sprintf("%s-%d", port.Protocol, port.Port)
+					providedPorts.Insert(portKey)
 				}
 
 				for _, port := range service.Spec.Ports {
-					protocol := port.Protocol
-					port := port.Port
-					name := fmt.Sprintf("%s-%d", protocol, port)
-
-					if _, found := providedPorts[name]; !found {
+					name := fmt.Sprintf("%s-%d", port.Protocol, port.Port)
+					if !providedPorts.Has(name) {
 						servicePort := v1.ServicePort{
 							Name:     name,
-							Protocol: protocol,
-							Port:     port,
+							Protocol: port.Protocol,
+							Port:     port.Port,
 						}
 						provided.Spec.Ports = append(provided.Spec.Ports, servicePort)
 					}

@@ -41,3 +41,24 @@ type HTTPTimeout struct {
 	// +optional
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
 }
+
+type ClientTimeout struct {
+	// Timeout settings for HTTP.
+	//
+	// +optional
+	HTTP *HTTPClientTimeout `json:"http,omitempty"`
+}
+
+type HTTPClientTimeout struct {
+	// RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
+	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+	//
+	// +optional
+	RequestReceivedTimeout *gwapiv1.Duration `json:"requestReceivedTimeout,omitempty"`
+
+	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	// Default: 1 hour.
+	//
+	// +optional
+	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
+}

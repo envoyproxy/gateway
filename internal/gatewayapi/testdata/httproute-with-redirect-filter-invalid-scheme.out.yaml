@@ -55,10 +55,7 @@ httpRoutes:
       namespace: envoy-gateway
       sectionName: http
     rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
+    - filters:
       - requestRedirect:
           scheme: unknown
           statusCode: 301
@@ -93,7 +90,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

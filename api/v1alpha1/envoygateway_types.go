@@ -90,6 +90,21 @@ type EnvoyGatewaySpec struct {
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 }
 
+// LeaderElection defines the desired leader election settings.
+type LeaderElection struct {
+	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.
+	// It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
+	LeaseDuration *gwapiv1.Duration `json:"leaseDuration,omitempty"`
+	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership
+	// status before relinquishing its position. The default setting is 10 seconds.
+	RenewDeadline *gwapiv1.Duration `json:"renewDeadline,omitempty"`
+	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.
+	// The default setting is 2 seconds.
+	RetryPeriod *gwapiv1.Duration `json:"retryPeriod,omitempty"`
+	// Disable provides the option to turn off leader election, which is enabled by default.
+	Disable *bool `json:"disable,omitempty"`
+}
+
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.
 // Control plane will focus on metrics observability telemetry and tracing telemetry later.
 type EnvoyGatewayTelemetry struct {
@@ -140,7 +155,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -194,15 +209,19 @@ type EnvoyGatewayKubernetesProvider struct {
 	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
 	// +optional
 	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
+	// LeaderElection specifies the configuration for leader election.
+	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
+	// +optional
+	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
 }
 
 const (
 	// KubernetesWatchModeTypeNamespaces indicates that the namespace watch mode is used.
 	KubernetesWatchModeTypeNamespaces = "Namespaces"
 
-	// KubernetesWatchModeTypeNamespaceSelectors indicates that namespaceSelectors watch
+	// KubernetesWatchModeTypeNamespaceSelector indicates that namespaceSelector watch
 	// mode is used.
-	KubernetesWatchModeTypeNamespaceSelectors = "NamespaceSelectors"
+	KubernetesWatchModeTypeNamespaceSelector = "NamespaceSelector"
 )
 
 // KubernetesWatchModeType defines the type of KubernetesWatchMode
@@ -211,7 +230,7 @@ type KubernetesWatchModeType string
 // KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
 type KubernetesWatchMode struct {
 	// Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and
-	// KubernetesWatchModeTypeNamespaceSelectors are currently supported
+	// KubernetesWatchModeTypeNamespaceSelector are currently supported
 	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
 	// from all namespaces.
 	Type KubernetesWatchModeType `json:"type,omitempty"`
@@ -219,14 +238,13 @@ type KubernetesWatchMode struct {
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
 	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
-	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set.
+	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set.
 	Namespaces []string `json:"namespaces,omitempty"`
 
-	// NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched.
-	// Note this doesn't set the informer to watch the namespaces with the given labels. Informer still
-	// watches all namespaces. But the events for objects whose namespace do not match given labels
-	// will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set.
-	NamespaceSelectors []string `json:"namespaceSelectors,omitempty"`
+	// NamespaceSelector holds the label selector used to dynamically select namespaces.
+	// Envoy Gateway will watch for namespaces matching the specified label selector.
+	// Precisely one of Namespaces and NamespaceSelector must be set.
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
@@ -327,6 +345,56 @@ type RateLimit struct {
 	// otherwise, don't let the traffic pass and return 500.
 	// If not set, FailClosed is False.
 	FailClosed bool `json:"failClosed"`
+
+	// Telemetry defines telemetry configuration for RateLimit.
+	// +optional
+	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+}
+
+type RateLimitTelemetry struct {
+	// Metrics defines metrics configuration for RateLimit.
+	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+
+	// Tracing defines traces configuration for RateLimit.
+	Tracing *RateLimitTracing `json:"tracing,omitempty"`
+}
+
+type RateLimitMetrics struct {
+	// Prometheus defines the configuration for prometheus endpoint.
+	Prometheus *RateLimitMetricsPrometheusProvider `json:"prometheus,omitempty"`
+}
+
+type RateLimitMetricsPrometheusProvider struct {
+	// Disable the Prometheus endpoint.
+	Disable bool `json:"disable,omitempty"`
+}
+
+type RateLimitTracing struct {
+	// SamplingRate controls the rate at which traffic will be
+	// selected for tracing if no prior sampling decision has been made.
+	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+	// +optional
+	SamplingRate *uint32 `json:"samplingRate,omitempty"`
+
+	// Provider defines the rateLimit tracing provider.
+	// Only OpenTelemetry is supported currently.
+	Provider *RateLimitTracingProvider `json:"provider,omitempty"`
+}
+
+type RateLimitTracingProviderType string
+
+const (
+	RateLimitTracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+)
+
+// RateLimitTracingProvider defines the tracing provider configuration of RateLimit
+type RateLimitTracingProvider struct {
+	// Type defines the tracing provider type.
+	// Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported
+	Type *RateLimitTracingProviderType `json:"type,omitempty"`
+
+	// URL is the endpoint of the trace collector that supports the OTLP protocol
+	URL string `json:"url"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with
@@ -438,7 +506,6 @@ type ExtensionTLS struct {
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.
 type EnvoyGatewayAdmin struct {
-
 	// Address defines the address of Envoy Gateway Admin Server.
 	//
 	// +optional

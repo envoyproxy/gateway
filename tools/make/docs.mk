@@ -37,7 +37,8 @@ docs-api: docs-api-gen helm-readme-gen docs-api-headings
 .PHONY: helm-readme-gen
 helm-readme-gen: $(tools/helm-docs)
 	@$(LOG_TARGET)
-	$(tools/helm-docs) charts/gateway-helm/ -f values.tmpl.yaml -o api.md
+	@ImageRepository=docker.io/envoyproxy/gateway ImageTag=latest ImagePullPolicy=IfNotPresent envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml # use production ENV to generate helm api doc
+	$(tools/helm-docs) charts/gateway-helm/ -f values.yaml -o api.md
 	mv charts/gateway-helm/api.md site/content/en/latest/install/api.md
 
 .PHONY: docs-api-gen
@@ -46,6 +47,7 @@ docs-api-gen: $(tools/crd-ref-docs)
 	$(tools/crd-ref-docs) \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
+	--templates-dir=tools/crd-ref-docs/templates \
 	--output-path=site/content/en/latest/api/extension_types.md \
 	--max-depth 10 \
 	--renderer=markdown
@@ -80,7 +82,15 @@ docs-release-gen:
 	@echo '  version = "$(TAG)"' >> site/hugo.toml
 	@echo '  url = "/$(TAG)"' >> site/hugo.toml
 
-.PHONY: release-notes-docs
+.PHONY: docs-check-links
+docs-check-links:
+	@$(LOG_TARGET)
+	# Check for broken links, right now we are focusing on the v1.0.0
+	# github.com does not allow access too often, there're a lot of 429 errors
+	# TODO: find a way to remove github.com from ignore list
+	# TODO: example.com is not a valid domain, we should remove it from ignore list
+	linkinator site/public/ -r --concurrency 25 -s "github.com example.com _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
+
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
 	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \

@@ -13,3 +13,5 @@
         requestMirrorPolicies:
         - cluster: mirror-route-dest
         - cluster: mirror-route-dest1
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -90,7 +90,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -127,6 +127,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -145,6 +146,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
+        isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false

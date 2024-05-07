@@ -1,0 +1,53 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        retryPolicy:
+          hostSelectionRetryMaxAttempts: "5"
+          numRetries: 5
+          perTryTimeout: 0.250s
+          retriableStatusCodes:
+          - 429
+          - 503
+          retryBackOff:
+            baseInterval: 0.100s
+            maxInterval: 10s
+          retryHostPredicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
+          retryOn: reset,connect-failure,retriable-status-codes
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - foo
+    name: first-listener/foo
+    routes:
+    - match:
+        prefix: /
+      name: second-route-defaults
+      route:
+        cluster: first-route-dest
+        retryPolicy:
+          hostSelectionRetryMaxAttempts: "5"
+          numRetries: 2
+          retriableStatusCodes:
+          - 503
+          retryHostPredicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
+          retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar
+    name: first-listener/bar

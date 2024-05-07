@@ -16,9 +16,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
-
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -436,8 +434,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: " valid config: min, max, nil",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				valMax := pointer.Int64(4294967295)
-				valMin := pointer.Int64(0)
+				valMax := ptr.To[int64](4294967295)
+				valMin := ptr.To[int64](0)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
@@ -450,16 +448,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						MaxConnections:      valMax,
 						MaxPendingRequests:  valMin,
 						MaxParallelRequests: nil,
+						MaxParallelRetries:  nil,
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: " invalid config: min and max valyues",
+			desc: " invalid config: min and max values",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				valOverMax := pointer.Int64(4294967296)
-				valUnderMin := pointer.Int64(-1)
+				valOverMax := ptr.To[int64](4294967296)
+				valUnderMin := ptr.To[int64](-1)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
@@ -469,13 +468,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					CircuitBreaker: &egv1a1.CircuitBreaker{
-						MaxConnections:      valOverMax,
-						MaxPendingRequests:  valUnderMin,
-						MaxParallelRequests: valOverMax,
+						MaxConnections:           valOverMax,
+						MaxPendingRequests:       valUnderMin,
+						MaxParallelRequests:      valOverMax,
+						MaxRequestsPerConnection: valUnderMin,
+						MaxParallelRetries:       valOverMax,
 					},
 				}
 			},
 			wantErrors: []string{
+				"spec.circuitBreaker.MaxParallelRetries: Invalid value: 4294967296: spec.circuitBreaker.MaxParallelRetries in body should be less than or equal to 4294967295",
+				"spec.circuitBreaker.maxRequestsPerConnection: Invalid value: -1: spec.circuitBreaker.maxRequestsPerConnection in body should be greater than or equal to 0",
 				"spec.circuitBreaker.maxParallelRequests: Invalid value: 4294967296: spec.circuitBreaker.maxParallelRequests in body should be less than or equal to 4294967295",
 				"spec.circuitBreaker.maxPendingRequests: Invalid value: -1: spec.circuitBreaker.maxPendingRequests in body should be greater than or equal to 0",
 				"spec.circuitBreaker.maxConnections: Invalid value: 4294967296: spec.circuitBreaker.maxConnections in body should be less than or equal to 4294967295",
@@ -493,15 +496,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path: "",
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path: "",
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.http.path: Invalid value: "": spec.healthCheck.http.path in body should be at least 1 chars long`,
+				`spec.HealthCheck.active.http.path: Invalid value: "": spec.HealthCheck.active.http.path in body should be at least 1 chars long`,
 			},
 		},
 		{
@@ -516,16 +521,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						UnhealthyThreshold: ptr.To[uint32](0),
-						Type:               egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path: "/healthz",
+						Active: &egv1a1.ActiveHealthCheck{
+							UnhealthyThreshold: ptr.To[uint32](0),
+							Type:               egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path: "/healthz",
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.unhealthyThreshold: Invalid value: 0: spec.healthCheck.unhealthyThreshold in body should be greater than or equal to 1`,
+				`spec.HealthCheck.active.unhealthyThreshold: Invalid value: 0: spec.HealthCheck.active.unhealthyThreshold in body should be greater than or equal to 1`,
 			},
 		},
 		{
@@ -540,16 +547,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						HealthyThreshold: ptr.To[uint32](0),
-						Type:             egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path: "/healthz",
+						Active: &egv1a1.ActiveHealthCheck{
+							HealthyThreshold: ptr.To[uint32](0),
+							Type:             egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path: "/healthz",
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.healthyThreshold: Invalid value: 0: spec.healthCheck.healthyThreshold in body should be greater than or equal to 1`,
+				`spec.HealthCheck.active.healthyThreshold: Invalid value: 0: spec.HealthCheck.active.healthyThreshold in body should be greater than or equal to 1`,
 			},
 		},
 		{
@@ -564,13 +573,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeHTTP,
-						TCP:  &egv1a1.TCPHealthChecker{},
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+							TCP:  &egv1a1.TCPActiveHealthChecker{},
+						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck: Invalid value: "object": If Health Checker type is HTTP, http field needs to be set., spec.healthCheck: Invalid value: "object": If Health Checker type is TCP, tcp field needs to be set`,
+				`spec.HealthCheck.active: Invalid value: "object": If Health Checker type is HTTP, http field needs to be set., spec.HealthCheck.active: Invalid value: "object": If Health Checker type is TCP, tcp field needs to be set`,
 			},
 		},
 		{
@@ -585,16 +596,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path:             "/healthz",
-							ExpectedStatuses: []egv1a1.HTTPStatus{99, 200},
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path:             "/healthz",
+								ExpectedStatuses: []egv1a1.HTTPStatus{99, 200},
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.http.expectedStatuses[0]: Invalid value: 99: spec.healthCheck.http.expectedStatuses[0] in body should be greater than or equal to 100`,
+				`spec.HealthCheck.active.http.expectedStatuses[0]: Invalid value: 99: spec.HealthCheck.active.http.expectedStatuses[0] in body should be greater than or equal to 100`,
 			},
 		},
 		{
@@ -609,10 +622,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path:             "/healthz",
-							ExpectedStatuses: []egv1a1.HTTPStatus{100, 200, 201},
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path:             "/healthz",
+								ExpectedStatuses: []egv1a1.HTTPStatus{100, 200, 201},
+							},
 						},
 					},
 				}
@@ -631,16 +646,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path:             "/healthz",
-							ExpectedStatuses: []egv1a1.HTTPStatus{200, 300, 601},
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path:             "/healthz",
+								ExpectedStatuses: []egv1a1.HTTPStatus{200, 300, 601},
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.http.expectedStatuses[2]: Invalid value: 601: spec.healthCheck.http.expectedStatuses[2] in body should be less than 600`,
+				`spec.HealthCheck.active.http.expectedStatuses[2]: Invalid value: 601: spec.HealthCheck.active.http.expectedStatuses[2] in body should be less than 600`,
 			},
 		},
 		{
@@ -655,19 +672,21 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path: "/healthz",
-							ExpectedResponse: &egv1a1.HealthCheckPayload{
-								Type:   egv1a1.HealthCheckPayloadTypeText,
-								Binary: []byte{'f', 'o', 'o'},
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path: "/healthz",
+								ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
+									Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
+									Binary: []byte{'f', 'o', 'o'},
+								},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`[spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				`[spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
 		{
@@ -682,19 +701,21 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPHealthChecker{
-							Path: "/healthz",
-							ExpectedResponse: &egv1a1.HealthCheckPayload{
-								Type: egv1a1.HealthCheckPayloadTypeBinary,
-								Text: ptr.To("foo"),
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+							HTTP: &egv1a1.HTTPActiveHealthChecker{
+								Path: "/healthz",
+								ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
+									Type: egv1a1.ActiveHealthCheckPayloadTypeBinary,
+									Text: ptr.To("foo"),
+								},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`[spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				`[spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
 		{
@@ -709,22 +730,24 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeTCP,
-						TCP: &egv1a1.TCPHealthChecker{
-							Send: &egv1a1.HealthCheckPayload{
-								Type:   egv1a1.HealthCheckPayloadTypeText,
-								Binary: []byte{'f', 'o', 'o'},
-							},
-							Receive: &egv1a1.HealthCheckPayload{
-								Type: egv1a1.HealthCheckPayloadTypeText,
-								Text: ptr.To("foo"),
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeTCP,
+							TCP: &egv1a1.TCPActiveHealthChecker{
+								Send: &egv1a1.ActiveHealthCheckPayload{
+									Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
+									Binary: []byte{'f', 'o', 'o'},
+								},
+								Receive: &egv1a1.ActiveHealthCheckPayload{
+									Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+									Text: ptr.To("foo"),
+								},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`spec.healthCheck.tcp.send: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.send: Invalid value: "object": If payload type is Binary, binary field needs to be set.`,
+				`spec.HealthCheck.active.tcp.send: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.tcp.send: Invalid value: "object": If payload type is Binary, binary field needs to be set.`,
 			},
 		},
 		{
@@ -739,22 +762,24 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HealthCheck: &egv1a1.HealthCheck{
-						Type: egv1a1.HealthCheckerTypeTCP,
-						TCP: &egv1a1.TCPHealthChecker{
-							Send: &egv1a1.HealthCheckPayload{
-								Type: egv1a1.HealthCheckPayloadTypeText,
-								Text: ptr.To("foo"),
-							},
-							Receive: &egv1a1.HealthCheckPayload{
-								Type:   egv1a1.HealthCheckPayloadTypeText,
-								Binary: []byte{'f', 'o', 'o'},
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeTCP,
+							TCP: &egv1a1.TCPActiveHealthChecker{
+								Send: &egv1a1.ActiveHealthCheckPayload{
+									Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+									Text: ptr.To("foo"),
+								},
+								Receive: &egv1a1.ActiveHealthCheckPayload{
+									Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
+									Binary: []byte{'f', 'o', 'o'},
+								},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				`[spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.healthCheck.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				`[spec.HealthCheck.active.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
 			},
 		},
 		{
@@ -781,6 +806,72 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "valid count of Global rate limit rules items",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				rules := make([]egv1a1.RateLimitRule, 64)
+				rule := egv1a1.RateLimitRule{
+					Limit: egv1a1.RateLimitValue{
+						Requests: 10,
+						Unit:     "Minute",
+					},
+				}
+				for i := range rules {
+					rules[i] = rule
+				}
+
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: rules,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid count of Global rate limit rules items",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				rules := make([]egv1a1.RateLimitRule, 65)
+				rule := egv1a1.RateLimitRule{
+					Limit: egv1a1.RateLimitValue{
+						Requests: 10,
+						Unit:     "Minute",
+					},
+				}
+				for i := range rules {
+					rules[i] = rule
+				}
+
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: rules,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`[spec.rateLimit.global.rules: Too many: 65: must have at most 64 items, <nil>: Invalid value: "null": some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
+			},
 		},
 	}
 

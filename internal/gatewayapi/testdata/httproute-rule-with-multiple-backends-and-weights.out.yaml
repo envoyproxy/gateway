@@ -61,6 +61,9 @@ httpRoutes:
       - name: service-3
         port: 8080
         weight: 3
+      - name: service-4
+        port: 8080
+        weight: 0
       matches:
       - path:
           value: /
@@ -89,7 +92,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -138,6 +141,7 @@ xdsIR:
             protocol: HTTP
             weight: 3
         hostname: '*'
+        isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

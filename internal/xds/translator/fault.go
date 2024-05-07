@@ -30,8 +30,7 @@ func init() {
 	registerHTTPFilter(&fault{})
 }
 
-type fault struct {
-}
+type fault struct{}
 
 var _ httpFilter = &fault{}
 
@@ -39,7 +38,6 @@ var _ httpFilter = &fault{}
 // if applicable, and it does not already exist.
 // Note: this method creates an fault filter for each route that contains an Fault config.
 func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -59,7 +57,7 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 		}
 	}
 
-	faultFilter, err := buildHCMFaultFilter(irListener)
+	faultFilter, err := buildHCMFaultFilter()
 	if err != nil {
 		return err
 	}
@@ -69,8 +67,8 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 }
 
 // buildHCMFaultFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
-func buildHCMFaultFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
-	faultProto := faultConfig(irListener)
+func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
+	faultProto := &xdshttpfaultv3.HTTPFault{}
 
 	if err := faultProto.ValidateAll(); err != nil {
 		return nil, err
@@ -89,10 +87,6 @@ func buildHCMFaultFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error)
 	}, nil
 }
 
-func faultConfig(irListener *ir.HTTPListener) *xdshttpfaultv3.HTTPFault {
-	return &xdshttpfaultv3.HTTPFault{}
-}
-
 // listenerContainsFault returns true if Fault exists for the provided listener.
 func listenerContainsFault(irListener *ir.HTTPListener) bool {
 	for _, route := range irListener.Routes {
@@ -105,23 +99,13 @@ func listenerContainsFault(irListener *ir.HTTPListener) bool {
 
 // routeContainsFault returns true if Fault exists for the provided route.
 func routeContainsFault(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
-	if irRoute != nil &&
-		irRoute.FaultInjection != nil {
+	if irRoute != nil && irRoute.FaultInjection != nil {
 		return true
 	}
-
 	return false
 }
 
 func (*fault) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
-	return nil
-}
-
-func (*fault) patchRouteConfig(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
 	return nil
 }
 
@@ -193,7 +177,6 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	route.TypedPerFilterConfig[wellknown.Fault] = routeCfgAny
 
 	return nil
-
 }
 
 // translatePercentToFractionalPercent translates an v1alpha3 Percent instance

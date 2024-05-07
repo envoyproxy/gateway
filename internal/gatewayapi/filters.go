@@ -64,7 +64,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
-	resources *Resources) *HTTPFiltersContext {
+	resources *Resources,
+) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
@@ -107,7 +108,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []v1alpha2.GRPCRouteFilter,
-	resources *Resources) *HTTPFiltersContext {
+	resources *Resources,
+) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
@@ -144,7 +146,8 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 
 func (t *Translator) processURLRewriteFilter(
 	rewrite *gwapiv1.HTTPURLRewriteFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	if filterContext.URLRewrite != nil {
 		filterContext.ParentRef.SetCondition(filterContext.Route,
 			gwapiv1.RouteConditionAccepted,
@@ -246,7 +249,8 @@ func (t *Translator) processURLRewriteFilter(
 
 func (t *Translator) processRedirectFilter(
 	redirect *gwapiv1.HTTPRequestRedirectFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Can't have two redirects for the same route
 	if filterContext.RedirectResponse != nil {
 		filterContext.ParentRef.SetCondition(filterContext.Route,
@@ -347,7 +351,8 @@ func (t *Translator) processRedirectFilter(
 
 func (t *Translator) processRequestHeaderModifierFilter(
 	headerModifier *gwapiv1.HTTPHeaderFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
@@ -500,7 +505,8 @@ func (t *Translator) processRequestHeaderModifierFilter(
 
 func (t *Translator) processResponseHeaderModifierFilter(
 	headerModifier *gwapiv1.HTTPHeaderFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
@@ -693,8 +699,8 @@ func (t *Translator) processRequestMirrorFilter(
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
-	resources *Resources) {
-
+	resources *Resources,
+) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
 		return
@@ -704,15 +710,17 @@ func (t *Translator) processRequestMirrorFilter(
 
 	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
 	weight := int32(1)
-	mirrorBackendRef := gwapiv1.BackendRef{
-		BackendObjectReference: mirrorBackend,
-		Weight:                 &weight,
+	mirrorBackendRef := gwapiv1.HTTPBackendRef{
+		BackendRef: gwapiv1.BackendRef{
+			BackendObjectReference: mirrorBackend,
+			Weight:                 &weight,
+		},
 	}
 
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	if !t.validateBackendRef(&mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
+	if !t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
 		resources, serviceNamespace, KindHTTPRoute) {
 		return
 	}

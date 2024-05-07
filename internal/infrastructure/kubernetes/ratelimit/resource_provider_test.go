@@ -6,6 +6,7 @@
 package ratelimit
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,6 +27,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
+
 const (
 	// RedisAuthEnvVar is the redis auth.
 	RedisAuthEnvVar = "REDIS_AUTH"
@@ -34,6 +38,30 @@ var ownerReferenceUID = map[string]types.UID{
 	ResourceKindService:        "test-owner-reference-uid-for-service",
 	ResourceKindDeployment:     "test-owner-reference-uid-for-deployment",
 	ResourceKindServiceAccount: "test-owner-reference-uid-for-service-account",
+}
+
+func TestRateLimitLabelSelector(t *testing.T) {
+	cases := []struct {
+		name     string
+		expected []string
+	}{
+		{
+			name: "rateLimit-labelSelector",
+			expected: []string{
+				"app.kubernetes.io/name=envoy-ratelimit",
+				"app.kubernetes.io/component=ratelimit",
+				"app.kubernetes.io/managed-by=envoy-gateway",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := LabelSelector()
+			require.ElementsMatch(t, tc.expected, got)
+		})
+	}
 }
 
 func TestRateLimitLabels(t *testing.T) {
@@ -97,6 +125,69 @@ func TestService(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
+	cases := []struct {
+		caseName  string
+		rateLimit *egv1a1.RateLimit
+	}{
+		{
+			caseName: "default",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+		},
+		{
+			caseName: "no-prometheus",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Metrics: &egv1a1.RateLimitMetrics{
+						Prometheus: &egv1a1.RateLimitMetricsPrometheusProvider{
+							Disable: true,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		cfg.EnvoyGateway.RateLimit = tc.rateLimit
+		r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+
+		svc, err := r.Service()
+		require.NoError(t, err)
+
+		expected, err := loadService(tc.caseName)
+		require.NoError(t, err)
+
+		assert.Equal(t, expected, svc)
+	}
+}
+
+func loadService(caseName string) (*corev1.Service, error) {
+	serviceYAML, err := os.ReadFile(fmt.Sprintf("testdata/services/envoy-ratelimit-service-%s.yaml", caseName))
+	if err != nil {
+		return nil, err
+	}
+	svc := &corev1.Service{}
+	_ = yaml.Unmarshal(serviceYAML, svc)
+	return svc, nil
+}
+
+func TestConfigmap(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
+
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
@@ -106,23 +197,32 @@ func TestService(t *testing.T) {
 		},
 	}
 	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
-	svc, err := r.Service()
+	cm, err := r.ConfigMap()
 	require.NoError(t, err)
 
-	expected, err := loadService()
+	if *overrideTestData {
+		cmYAML, err := yaml.Marshal(cm)
+		require.NoError(t, err)
+		// nolint:gosec
+		err = os.WriteFile("testdata/envoy-ratelimit-configmap.yaml", cmYAML, 0o644)
+		require.NoError(t, err)
+		return
+	}
+
+	expected, err := loadConfigmap()
 	require.NoError(t, err)
 
-	assert.Equal(t, expected, svc)
+	assert.Equal(t, expected, cm)
 }
 
-func loadService() (*corev1.Service, error) {
-	serviceYAML, err := os.ReadFile("testdata/envoy-ratelimit-service.yaml")
+func loadConfigmap() (*corev1.ConfigMap, error) {
+	configmapYAML, err := os.ReadFile("testdata/envoy-ratelimit-configmap.yaml")
 	if err != nil {
 		return nil, err
 	}
-	svc := &corev1.Service{}
-	_ = yaml.Unmarshal(serviceYAML, svc)
-	return svc, nil
+	cm := &corev1.ConfigMap{}
+	_ = yaml.Unmarshal(configmapYAML, cm)
+	return cm, nil
 }
 
 func TestDeployment(t *testing.T) {
@@ -147,6 +247,37 @@ func TestDeployment(t *testing.T) {
 			deploy:    cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 		},
 		{
+			caseName: "disable-prometheus",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Metrics: &egv1a1.RateLimitMetrics{
+						Prometheus: &egv1a1.RateLimitMetricsPrometheusProvider{
+							Disable: true,
+						},
+					},
+				},
+			},
+			deploy: cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		},
+		{
+			caseName:  "patch-deployment",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: v1.JSON{
+						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
+					},
+				},
+			},
+		},
+		{
 			caseName:  "custom",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
@@ -159,7 +290,6 @@ func TestDeployment(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: ptr.To[int64](1000),
 					},
-					HostNetwork: true,
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Image: ptr.To("custom-image"),
@@ -513,6 +643,43 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "enable-tracing",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						Provider: &egv1a1.RateLimitTracingProvider{
+							URL: "http://trace-collector.envoy-gateway-system.svc.cluster.local:4318",
+						},
+					},
+				},
+			},
+		},
+		{
+			caseName: "enable-tracing-custom",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+				Telemetry: &egv1a1.RateLimitTelemetry{
+					Tracing: &egv1a1.RateLimitTracing{
+						SamplingRate: ptr.To[uint32](55),
+						Provider: &egv1a1.RateLimitTracingProvider{
+							URL: "trace-collector.envoy-gateway-system.svc.cluster.local:4317",
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -522,10 +689,20 @@ func TestDeployment(t *testing.T) {
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 					RateLimitDeployment: tc.deploy,
-				}}
+				},
+			}
 			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
+
+			if *overrideTestData {
+				deploymentYAML, err := yaml.Marshal(dp)
+				require.NoError(t, err)
+				// nolint:gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0o644)
+				require.NoError(t, err)
+				return
+			}
 
 			expected, err := loadDeployment(tc.caseName)
 			require.NoError(t, err)

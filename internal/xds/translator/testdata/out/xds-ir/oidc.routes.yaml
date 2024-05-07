@@ -1,12 +1,5 @@
 - ignorePortInHostMatching: true
   name: first-listener
-  typedPerFilterConfig:
-    envoy.filters.http.oauth2_first-route:
-      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-      disabled: true
-    envoy.filters.http.oauth2_second-route:
-      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-      disabled: true
   virtualHosts:
   - domains:
     - '*'
@@ -17,8 +10,10 @@
       name: first-route
       route:
         cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.oauth2_first-route:
+        envoy.filters.http.oauth2/securitypolicy/default/policy-for-first-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
     - match:
@@ -26,7 +21,9 @@
       name: second-route
       route:
         cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.oauth2_second-route:
+        envoy.filters.http.oauth2/securitypolicy/default/policy-for-second-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

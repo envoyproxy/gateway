@@ -9,6 +9,8 @@ import (
 	appv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -19,7 +21,13 @@ const (
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
-	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
+	DefaultEnvoyProxyImage = "envoyproxy/envoy:distroless-dev"
+	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
+	DefaultShutdownManagerCPUResourceRequests = "10m"
+	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
+	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
+	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
+	DefaultShutdownManagerImage = "envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.
@@ -52,6 +60,11 @@ const (
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
+	// Patch defines how to perform the patch operation to deployment
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
+
 	// Replicas is the number of desired pods. Defaults to 1.
 	//
 	// +optional
@@ -78,6 +91,28 @@ type KubernetesDeploymentSpec struct {
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
+}
+
+// KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+type KubernetesDaemonSetSpec struct {
+	// Patch defines how to perform the patch operation to daemonset
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
+
+	// The daemonset strategy to use to replace existing pods with new ones.
+	// +optional
+	Strategy *appv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
+
+	// Pod defines the desired specification of pod.
+	//
+	// +optional
+	Pod *KubernetesPodSpec `json:"pod,omitempty"`
+
+	// Container defines the desired specification of main container.
+	//
+	// +optional
+	Container *KubernetesContainerSpec `json:"container,omitempty"`
 }
 
 // KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
@@ -113,10 +148,6 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
-
-	// HostNetwork, If this is set to true, the pod will use host's network namespace.
-	// +optional
-	HostNetwork bool `json:"hostNetwork,omitempty"`
 
 	// ImagePullSecrets is an optional list of references to secrets
 	// in the same namespace to use for pulling any of the images used by this PodSpec.
@@ -210,6 +241,9 @@ const (
 )
 
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
+// +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -239,10 +273,20 @@ type KubernetesServiceSpec struct {
 	// +optional
 	AllocateLoadBalancerNodePorts *bool `json:"allocateLoadBalancerNodePorts,omitempty"`
 
+	// LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
+	// firewall rules on the platform providers load balancer. This is not guaranteed to be working as
+	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
+	// This field may only be set for services with type LoadBalancer and will be cleared if the type
+	// is changed to any other type.
+	// +optional
+	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
+
 	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
 	// may be ignored if the load balancer provider does not support this feature.
 	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
 	// providers such as GCP.
+	//
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="self.matches(r\"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$\")"
 	// +optional
 	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
@@ -252,6 +296,11 @@ type KubernetesServiceSpec struct {
 	// +kubebuilder:default:="Local"
 	// +optional
 	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
+
+	// Patch defines how to perform the patch operation to the service
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
@@ -327,17 +376,23 @@ const (
 )
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
+// When HPA is enabled, it is recommended that the value in `KubernetesDeploymentSpec.replicas` be removed, otherwise
+// Envoy Gateway will revert back to this value every time reconciliation occurs.
 // See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
+//
+// +kubebuilder:validation:XValidation:message="maxReplicas cannot be less than minReplicas",rule="!has(self.minReplicas) || self.maxReplicas >= self.minReplicas"
 type KubernetesHorizontalPodAutoscalerSpec struct {
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler
 	// can scale down. It defaults to 1 replica.
 	//
+	// +kubebuilder:validation:XValidation:message="minReplicas must be greater than 0",rule="self > 0"
 	// +optional
 	MinReplicas *int32 `json:"minReplicas,omitempty"`
 
 	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
 	// It cannot be less that minReplicas.
 	//
+	// +kubebuilder:validation:XValidation:message="maxReplicas must be greater than 0",rule="self > 0"
 	MaxReplicas *int32 `json:"maxReplicas"`
 
 	// metrics contains the specifications for which to use to calculate the
@@ -355,4 +410,39 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	//
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+}
+
+// HTTPStatus defines the http status code.
+// +kubebuilder:validation:Minimum=100
+// +kubebuilder:validation:Maximum=600
+// +kubebuilder:validation:ExclusiveMaximum=true
+type HTTPStatus int
+
+// MergeType defines the type of merge operation
+type MergeType string
+
+const (
+	// StrategicMerge indicates a strategic merge patch type
+	StrategicMerge MergeType = "StrategicMerge"
+	// JSONMerge indicates a JSON merge patch type
+	JSONMerge MergeType = "JSONMerge"
+)
+
+// KubernetesPatchSpec defines how to perform the patch operation
+type KubernetesPatchSpec struct {
+	// Type is the type of merge operation to perform
+	//
+	// By default, StrategicMerge is used as the patch type.
+	// +optional
+	Type *MergeType `json:"type,omitempty"`
+
+	// Object contains the raw configuration for merged object
+	Value apiextensionsv1.JSON `json:"value"`
+}
+
+// BackendRef defines how an ObjectReference that is specific to BackendRef.
+type BackendRef struct {
+	// BackendObjectReference references a Kubernetes object that represents the backend.
+	// Only service Kind is supported for now.
+	gwapiv1.BackendObjectReference `json:",inline"`
 }

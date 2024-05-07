@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -18,8 +19,9 @@ import (
 
 func TestProcessTracing(t *testing.T) {
 	cases := []struct {
-		gw    gwapiv1.Gateway
-		proxy *egcfgv1a1.EnvoyProxy
+		gw       gwapiv1.Gateway
+		proxy    *egcfgv1a1.EnvoyProxy
+		mergedgw bool
 
 		expected *ir.Tracing
 	}{
@@ -40,7 +42,130 @@ func TestProcessTracing(t *testing.T) {
 			},
 			expected: &ir.Tracing{
 				ServiceName:  "fake-gw.fake-ns",
-				ProxyTracing: egcfgv1a1.ProxyTracing{},
+				SamplingRate: 100.0,
+			},
+		},
+		{
+			gw: gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-gw",
+					Namespace: "fake-ns",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "fake-gateway-class",
+				},
+			},
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Tracing: &egcfgv1a1.ProxyTracing{},
+					},
+				},
+			},
+			mergedgw: true,
+			expected: &ir.Tracing{
+				ServiceName:  "fake-gateway-class",
+				SamplingRate: 100.0,
+			},
+		},
+		{
+			gw: gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-gw",
+					Namespace: "fake-ns",
+				},
+			},
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Tracing: &egcfgv1a1.ProxyTracing{
+							Provider: egcfgv1a1.TracingProvider{
+								Host: ptr.To("fake-host"),
+								Port: 4317,
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.Tracing{
+				ServiceName:  "fake-gw.fake-ns",
+				SamplingRate: 100.0,
+				Host:         "fake-host",
+				Port:         4317,
+			},
+		},
+		{
+			gw: gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-gw",
+					Namespace: "fake-ns",
+				},
+			},
+			proxy: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-eproxy",
+					Namespace: "fake-ns",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Tracing: &egcfgv1a1.ProxyTracing{
+							Provider: egcfgv1a1.TracingProvider{
+								Host: ptr.To("fake-host"),
+								Port: 4317,
+								BackendRefs: []egcfgv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "fake-name",
+											Port: PortNumPtr(4317),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.Tracing{
+				ServiceName:  "fake-gw.fake-ns",
+				SamplingRate: 100.0,
+				Host:         "fake-name.fake-ns.svc",
+				Port:         4317,
+			},
+		},
+		{
+			gw: gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-gw",
+					Namespace: "fake-ns",
+				},
+			},
+			proxy: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-eproxy",
+					Namespace: "fake-ns",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Tracing: &egcfgv1a1.ProxyTracing{
+							Provider: egcfgv1a1.TracingProvider{
+								BackendRefs: []egcfgv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "fake-name",
+											Port: PortNumPtr(4317),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.Tracing{
+				ServiceName:  "fake-gw.fake-ns",
+				SamplingRate: 100.0,
+				Host:         "fake-name.fake-ns.svc",
+				Port:         4317,
 			},
 		},
 	}
@@ -48,7 +173,7 @@ func TestProcessTracing(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run("", func(t *testing.T) {
-			got := processTracing(&c.gw, c.proxy)
+			got := processTracing(&c.gw, c.proxy, c.mergedgw)
 			assert.Equal(t, c.expected, got)
 		})
 	}
@@ -77,6 +202,21 @@ func TestProcessMetrics(t *testing.T) {
 			},
 			expected: &ir.Metrics{
 				EnableVirtualHostStats: true,
+			},
+		},
+		{
+			name: "peer endpoint stats enabled",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: &egcfgv1a1.ProxyTelemetry{
+						Metrics: &egcfgv1a1.ProxyMetrics{
+							EnablePerEndpointStats: true,
+						},
+					},
+				},
+			},
+			expected: &ir.Metrics{
+				EnablePerEndpointStats: true,
 			},
 		},
 	}

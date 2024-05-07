@@ -17,7 +17,7 @@ tools/golangci-lint      = $(tools.bindir)/golangci-lint
 tools/kustomize          = $(tools.bindir)/kustomize
 tools/kind               = $(tools.bindir)/kind
 tools/setup-envtest      = $(tools.bindir)/setup-envtest
-tools/crd-ref-docs = $(tools.bindir)/crd-ref-docs
+tools/crd-ref-docs       = $(tools.bindir)/crd-ref-docs
 tools/buf                = $(tools.bindir)/buf
 tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
 tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
@@ -63,3 +63,11 @@ tools/bin/$(notdir $(SHELLCHECK_TXZ)):
 	mkdir -p $(@D)
 	tar -C $(@D) -Jxmf $< --strip-components=1 shellcheck-v$(SHELLCHECK_VERSION)/shellcheck
 endif
+
+tools.clean: # Remove all tools
+	@$(LOG_TARGET)
+	rm -rf $(tools.bindir)
+
+.PHONY: clean
+clean: ## Remove all files that are created during builds.
+clean: tools.clean
