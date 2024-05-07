@@ -186,7 +186,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 		})
 
 		t.Run("gateway with conflicted listener cannot be merged", func(t *testing.T) {
-			gw4HostPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, gw4NN)
+			gw4HostPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.GatewayRef{NamespacedName: gw4NN})
 			if err != nil {
 				t.Errorf("failed to get the address of gateway %s", gw4NN.String())
 			}

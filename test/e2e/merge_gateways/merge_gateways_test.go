@@ -10,6 +10,7 @@ package mergegateways
 
 import (
 	"flag"
+	"io/fs"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,7 @@ func TestMergeGateways(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	cSuite := suite.New(suite.Options{
+	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
@@ -54,13 +55,19 @@ func TestMergeGateways(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		SkipTests:            []string{},
 	})
+	if err != nil {
+		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
+	}
 
 	// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
 	// since this test suite reuse the base resources of previous test suite.
-	cSuite.Applier.FS = e2e.Manifests
+	cSuite.Applier.ManifestFS = []fs.FS{e2e.Manifests}
 	cSuite.Applier.GatewayClass = *flags.GatewayClassName
 	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
 
 	t.Logf("Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
-	cSuite.Run(t, tests.MergeGatewaysTests)
+	err = cSuite.Run(t, tests.MergeGatewaysTests)
+	if err != nil {
+		t.Fatalf("Failed to run MergeGateways tests: %v", err)
+	}
 }

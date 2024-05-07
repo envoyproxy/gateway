@@ -10,6 +10,7 @@ package upgrade
 
 import (
 	"flag"
+	"io/fs"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,20 +46,27 @@ func TestEGUpgrade(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	cSuite := suite.New(suite.Options{
+	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		FS:                   &e2e.Manifests,
+		ManifestFS:           []fs.FS{e2e.Manifests},
 		RunTest:              *flags.RunTest,
 		SkipTests: []string{
 			tests.EnvoyShutdownTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3262
 			tests.EGUpgradeTest.ShortName,     // https://github.com/envoyproxy/gateway/issues/3311
 		},
 	})
+	if err != nil {
+		t.Fatalf("Failed to create test suite: %v", err)
+	}
 
-	cSuite.Setup(t)
 	t.Logf("Running %d Upgrade tests", len(tests.UpgradeTests))
-	cSuite.Run(t, tests.UpgradeTests)
+	cSuite.Setup(t, tests.UpgradeTests)
+
+	err = cSuite.Run(t, tests.UpgradeTests)
+	if err != nil {
+		t.Fatalf("Failed to run tests: %v", err)
+	}
 }

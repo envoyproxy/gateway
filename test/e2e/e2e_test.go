@@ -10,6 +10,7 @@ package e2e
 
 import (
 	"flag"
+	"io/fs"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,19 +45,25 @@ func TestE2E(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	cSuite := suite.New(suite.Options{
+	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		FS:                   &Manifests,
+		ManifestFS:           []fs.FS{Manifests},
 		RunTest:              *flags.RunTest,
 		SkipTests: []string{
 			tests.ClientTimeoutTest.ShortName, // https://github.com/envoyproxy/gateway/issues/2720
 		},
 	})
+	if err != nil {
+		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
+	}
 
-	cSuite.Setup(t)
+	cSuite.Setup(t, tests.ConformanceTests)
 	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
-	cSuite.Run(t, tests.ConformanceTests)
+	err = cSuite.Run(t, tests.ConformanceTests)
+	if err != nil {
+		t.Fatalf("Failed to run E2E tests: %v", err)
+	}
 }
