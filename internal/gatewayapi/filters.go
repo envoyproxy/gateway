@@ -9,11 +9,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/envoyproxy/gateway/internal/ir"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 type FiltersTranslator interface {
@@ -107,7 +105,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 // ProcessGRPCFilters translates gateway api grpc filters to IRs.
 func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
-	filters []v1alpha2.GRPCRouteFilter,
+	filters []gwapiv1.GRPCRouteFilter,
 	resources *Resources,
 ) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
@@ -128,13 +126,13 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		}
 
 		switch filter.Type {
-		case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
+		case gwapiv1.GRPCRouteFilterRequestHeaderModifier:
 			t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
-		case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
-		case v1alpha2.GRPCRouteFilterRequestMirror:
+		case gwapiv1.GRPCRouteFilterRequestMirror:
 			t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
-		case v1alpha2.GRPCRouteFilterExtensionRef:
+		case gwapiv1.GRPCRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)

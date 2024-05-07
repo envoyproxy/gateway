@@ -95,11 +95,11 @@ backendTLSPolicies:
       name: policy-btls
       namespace: default
     spec:
-      targetRef:
-        group: ''
+      targetRefs:
+      - group: ''
         kind: Service
         name: http-backend
         sectionName: "8080"
-      tls:
-        wellKnownCACerts: System
+      validation:
+        wellKnownCACertificates: System
         hostname: example.com

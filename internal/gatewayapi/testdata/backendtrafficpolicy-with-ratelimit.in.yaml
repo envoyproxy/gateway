@@ -73,7 +73,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     rateLimit:
       type: Global
       global:
@@ -97,7 +96,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     rateLimit:
       type: Global
       global:

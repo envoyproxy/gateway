@@ -105,14 +105,13 @@ backendTLSPolicies:
       name: policy-btls
       namespace: policies
     spec:
-      targetRef:
-        group: ''
+      targetRefs:
+      - group: ''
         kind: Service
         name: http-backend
-        namespace: backends
         sectionName: "8080"
-      tls:
-        caCertRefs:
+      validation:
+        caCertificateRefs:
           - name: no-ca-cmap
             group: ''
             kind: ConfigMap

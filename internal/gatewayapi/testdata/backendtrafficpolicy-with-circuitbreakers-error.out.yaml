@@ -12,7 +12,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -41,7 +40,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -70,7 +68,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -182,6 +179,7 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -221,6 +219,7 @@ httpRoutes:
       matches:
       - path:
           value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -259,6 +258,7 @@ httpRoutes:
       matches:
       - path:
           value: /foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:

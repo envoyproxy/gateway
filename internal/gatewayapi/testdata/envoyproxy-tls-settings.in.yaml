@@ -90,12 +90,12 @@ backendTLSPolicies:
       name: policy-tls
       namespace: default
     spec:
-      targetRef:
-        group: ''
+      targetRefs:
+      - group: ''
         kind: Service
         name: https-backend
-      tls:
-        wellKnownCACerts: System
+      validation:
+        wellKnownCACertificates: System
         hostname: example.com
 envoyproxy:
   apiVersion: gateway.envoyproxy.io/v1alpha1

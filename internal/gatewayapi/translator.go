@@ -6,13 +6,13 @@
 package gatewayapi
 
 import (
+	"github.com/envoyproxy/gateway/internal/ir"
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	egv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -113,7 +113,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
-	backendTLSPolicies []*egv1a2.BackendTLSPolicy,
+	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap,
 ) *TranslateResult {

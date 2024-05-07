@@ -42,7 +42,7 @@ type EnvoyExtensionPolicySpec struct {
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway or xRoute.
-	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+	TargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// Wasm is a list of Wasm extensions to be loaded by the Gateway.
 	// Order matters, as the extensions will be loaded in the order they are

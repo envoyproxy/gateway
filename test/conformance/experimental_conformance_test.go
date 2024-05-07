@@ -23,7 +23,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-	confv1a1 "sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
+	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -33,7 +33,7 @@ var (
 	cfg                 *rest.Config
 	k8sClientset        *kubernetes.Clientset
 	mgrClient           client.Client
-	implementation      *confv1a1.Implementation
+	implementation      *conformancev1.Implementation
 	conformanceProfiles sets.Set[suite.ConformanceProfileName]
 )
 
