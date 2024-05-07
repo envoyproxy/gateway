@@ -464,51 +464,5 @@ curl -v http://$GATEWAY_HOST/get \
 request timeout
 ```
 
-### Configure Downstream Per Connection Buffer Limit
-
-This feature allows you to set a soft limit on size of the listener’s new connection read and write buffers.
-The size is configured using the `resource.Quantity` format, see examples [here](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory).
-
-{{< tabpane text=true >}}
-{{% tab header="Apply from stdin" %}}
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: ClientTrafficPolicy
-metadata:
-  name: client-timeout
-spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
-  connection:
-    bufferLimit: 1024
-EOF
-```
-
-{{% /tab %}}
-{{% tab header="Apply from file" %}}
-Save and apply the following resource to your cluster:
-
-```yaml
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: ClientTrafficPolicy
-metadata:
-  name: client-timeout
-spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
-  connection:
-    bufferLimit: 1024
-```
-
-{{% /tab %}}
-{{< /tabpane >}}
-
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
