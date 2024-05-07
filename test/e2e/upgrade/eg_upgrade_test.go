@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
@@ -34,6 +35,7 @@ func TestEGUpgrade(t *testing.T) {
 
 	c, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)
+	require.NoError(t, gwapiv1a3.AddToScheme(c.Scheme()))
 	require.NoError(t, gwapiv1a2.AddToScheme(c.Scheme()))
 	require.NoError(t, gwapiv1.AddToScheme(c.Scheme()))
 	require.NoError(t, egv1a1.AddToScheme(c.Scheme()))
