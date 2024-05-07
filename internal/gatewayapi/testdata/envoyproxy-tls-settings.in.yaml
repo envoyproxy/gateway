@@ -91,9 +91,9 @@ backendTLSPolicies:
       namespace: default
     spec:
       targetRefs:
-      - group: ''
-        kind: Service
-        name: https-backend
+        - group: ""
+          kind: Service
+          name: https-backend
       validation:
         wellKnownCACertificates: System
         hostname: example.com
