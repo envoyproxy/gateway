@@ -107,14 +107,14 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: ''
-    kind: Service
-    name: tls-backend-2
-    sectionName: "443"
+    - group: ""
+      kind: Service
+      name: tls-backend-2
+      sectionName: "443"
   validation:
     caCertificateRefs:
       - name: backend-tls-checks-certificate
-        group: ''
+        group: ""
         kind: ConfigMap
     hostname: example.com
 ---
