@@ -60,7 +60,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				r.Xds.Delete(key)
 			} else {
 				// Translate to xds resources
-				t := &translator.Translator{}
+				t := &translator.Translator{
+					FilterOrder: val.FilterOrder,
+				}
 
 				// Set the extension manager if an extension is loaded
 				if r.ExtensionManager != nil {
