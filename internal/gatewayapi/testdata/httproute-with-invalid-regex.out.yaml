@@ -98,6 +98,7 @@ httpRoutes:
       - path:
           type: RegularExpression
           value: '*.foo.bar.com'
+      sessionPersistence: null
   status:
     parents:
     - conditions:

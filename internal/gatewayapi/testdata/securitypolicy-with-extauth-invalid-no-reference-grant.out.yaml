@@ -60,6 +60,7 @@ httpRoutes:
       matches:
       - path:
           value: /foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -116,7 +117,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
