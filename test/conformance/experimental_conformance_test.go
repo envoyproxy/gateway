@@ -18,22 +18,23 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/yaml"
-
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
+	"sigs.k8s.io/yaml"
 )
 
 var (
 	cfg                 *rest.Config
 	k8sClientset        *kubernetes.Clientset
 	mgrClient           client.Client
-	implementation      *conformancev1.Implementation
+	implementation      conformancev1.Implementation
 	conformanceProfiles sets.Set[suite.ConformanceProfileName]
 )
 
@@ -52,21 +53,19 @@ func TestExperimentalConformance(t *testing.T) {
 		t.Fatalf("Error initializing Kubernetes REST client: %v", err)
 	}
 
-	err = v1alpha2.AddToScheme(mgrClient.Scheme())
-	require.NoError(t, err)
-	err = v1beta1.AddToScheme(mgrClient.Scheme())
-	require.NoError(t, err)
-	err = v1.AddToScheme(mgrClient.Scheme())
-	require.NoError(t, err)
+	require.NoError(t, v1alpha3.AddToScheme(mgrClient.Scheme()))
+	require.NoError(t, v1alpha2.AddToScheme(mgrClient.Scheme()))
+	require.NoError(t, v1beta1.AddToScheme(mgrClient.Scheme()))
+	require.NoError(t, v1.AddToScheme(mgrClient.Scheme()))
 
 	// experimental conformance flags
 	conformanceProfiles = sets.New(
-		suite.HTTPConformanceProfileName,
-		suite.TLSConformanceProfileName,
+		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayTLSConformanceProfileName,
 	)
 
 	// if some conformance profiles have been set, run the experimental conformance suite...
-	implementation, err = suite.ParseImplementation(
+	implementation = suite.ParseImplementation(
 		*flags.ImplementationOrganization,
 		*flags.ImplementationProject,
 		*flags.ImplementationURL,
@@ -84,31 +83,29 @@ func experimentalConformance(t *testing.T) {
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, conformanceProfiles)
 
-	cSuite, err := suite.NewExperimentalConformanceTestSuite(
-		suite.ExperimentalConformanceOptions{
-			Options: suite.Options{
-				Client:     mgrClient,
-				RestConfig: cfg,
-				// This clientset is needed in addition to the client only because
-				// controller-runtime client doesn't support non CRUD sub-resources yet (https://github.com/kubernetes-sigs/controller-runtime/issues/452).
-				Clientset:            k8sClientset,
-				GatewayClassName:     *flags.GatewayClassName,
-				Debug:                *flags.ShowDebug,
-				CleanupBaseResources: *flags.CleanupBaseResources,
-				SupportedFeatures:    suite.AllFeatures,
-				SkipTests: []string{
-					tests.GatewayStaticAddresses.ShortName,
-				},
-				ExemptFeatures: suite.MeshCoreFeatures,
+	cSuite, err := suite.NewConformanceTestSuite(
+		suite.ConformanceOptions{
+			Client:     mgrClient,
+			RestConfig: cfg,
+			// This Clientset is needed in addition to the client only because
+			// controller-runtime client doesn't support non-CRUD sub-resources yet (https://github.com/kubernetes-sigs/controller-runtime/issues/452).
+			Clientset:            k8sClientset,
+			GatewayClassName:     *flags.GatewayClassName,
+			Debug:                *flags.ShowDebug,
+			CleanupBaseResources: *flags.CleanupBaseResources,
+			SupportedFeatures:    features.AllFeatures,
+			SkipTests: []string{
+				tests.GatewayStaticAddresses.ShortName,
 			},
-			Implementation:      *implementation,
+			ExemptFeatures:      features.MeshCoreFeatures,
+			Implementation:      implementation,
 			ConformanceProfiles: conformanceProfiles,
 		})
 	if err != nil {
 		t.Fatalf("error creating experimental conformance test suite: %v", err)
 	}
 
-	cSuite.Setup(t)
+	cSuite.Setup(t, tests.ConformanceTests)
 	err = cSuite.Run(t, tests.ConformanceTests)
 	if err != nil {
 		t.Fatalf("error running conformance profile report: %v", err)
@@ -122,7 +119,7 @@ func experimentalConformance(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func experimentalConformanceReport(logf func(string, ...any), report confv1a1.ConformanceReport, output string) error {
+func experimentalConformanceReport(logf func(string, ...any), report conformancev1.ConformanceReport, output string) error {
 	rawReport, err := yaml.Marshal(report)
 	if err != nil {
 		return err

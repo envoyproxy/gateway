@@ -16,42 +16,50 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
 )
 
 func TestGatewayAPIConformance(t *testing.T) {
 	flag.Parse()
 
-	cfg, err := config.GetConfig()
+	clientCfg, err := config.GetConfig()
 	require.NoError(t, err)
 
-	client, err := client.New(cfg, client.Options{})
+	c, err := client.New(clientCfg, client.Options{})
 	require.NoError(t, err)
 
-	clientset, err := kubernetes.NewForConfig(cfg)
+	cs, err := kubernetes.NewForConfig(clientCfg)
 	require.NoError(t, err)
 
-	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
-	require.NoError(t, v1beta1.AddToScheme(client.Scheme()))
-	require.NoError(t, v1.AddToScheme(client.Scheme()))
+	require.NoError(t, v1alpha3.AddToScheme(c.Scheme()))
+	require.NoError(t, v1alpha2.AddToScheme(c.Scheme()))
+	require.NoError(t, v1beta1.AddToScheme(c.Scheme()))
+	require.NoError(t, v1.AddToScheme(c.Scheme()))
 
-	cSuite := suite.New(suite.Options{
-		Client:               client,
+	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
+		Client:               c,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
-		Clientset:            clientset,
+		Clientset:            cs,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		SupportedFeatures:    suite.AllFeatures,
+		SupportedFeatures:    features.AllFeatures,
 		SkipTests: []string{
 			tests.GatewayStaticAddresses.ShortName,
 		},
-		ExemptFeatures: suite.MeshCoreFeatures,
+		ExemptFeatures: features.MeshCoreFeatures,
 	})
-	cSuite.Setup(t)
-	cSuite.Run(t, tests.ConformanceTests)
+	if err != nil {
+		t.Fatalf("Error creating conformance test suite: %v", err)
+	}
+	cSuite.Setup(t, tests.ConformanceTests)
+	if err := cSuite.Run(t, tests.ConformanceTests); err != nil {
+		t.Fatalf("Error running conformance tests: %v", err)
+	}
 }
