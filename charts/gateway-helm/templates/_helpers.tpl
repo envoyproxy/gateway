@@ -39,8 +39,7 @@ helm.sh/chart: {{ include "eg.chart" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
-app.kubernetes.io/component: gateway-api
-app.kubernetes.io/part-of: {{ template "eg.name" . }}
+app.kubernetes.io/part-of: envoy-gateway
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if .Values.additionalLabels }}
 {{ toYaml .Values.additionalLabels }}

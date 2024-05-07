@@ -4,7 +4,8 @@ metadata:
   name: envoy-gateway
   namespace: '{{ .Release.Namespace }}'
   labels:
-  {{- include "eg.labels" . | nindent 4 }}
+    {{- include "eg.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -13,13 +14,15 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
     control-plane: envoy-gateway
-  {{- include "eg.labels" . | nindent 4 }}
+    {{- include "eg.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workload
 spec:
   replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
       control-plane: envoy-gateway
-    {{- include "eg.selectorLabels" . | nindent 6 }}
+      {{- include "eg.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: workload
   template:
     metadata:
       {{- with .Values.deployment.pod.annotations }}
@@ -28,10 +31,11 @@ spec:
       {{- end }}
       labels:
         control-plane: envoy-gateway
-      {{- include "eg.selectorLabels" . | nindent 8 }}
-      {{- with .Values.deployment.pod.labels }}
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- include "eg.labels" . | nindent 8 }}
+        app.kubernetes.io/component: workload
+        {{- with .Values.deployment.pod.labels }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.deployment.pod.affinity }}
       affinity:

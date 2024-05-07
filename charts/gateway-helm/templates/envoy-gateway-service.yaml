@@ -5,10 +5,11 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
     control-plane: envoy-gateway
-  {{- include "eg.labels" . | nindent 4 }}
+    {{- include "eg.labels" . | nindent 4 }}
+    app.kubernetes.io/component: networking
 spec:
   selector:
     control-plane: envoy-gateway
-  {{- include "eg.selectorLabels" . | nindent 4 }}
+    {{- include "eg.selectorLabels" . | nindent 4 }}
   ports:
   {{- .Values.deployment.ports | toYaml | nindent 2 -}}

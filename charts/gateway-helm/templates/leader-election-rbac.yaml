@@ -4,7 +4,8 @@ metadata:
   name: {{ include "eg.fullname" . }}-leader-election-role
   namespace: '{{ .Release.Namespace }}'
   labels:
-  {{- include "eg.labels" . | nindent 4 }}
+    {{- include "eg.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
 rules:
 - apiGroups:
   - ""
@@ -44,7 +45,8 @@ metadata:
   name: {{ include "eg.fullname" . }}-leader-election-rolebinding
   namespace: '{{ .Release.Namespace }}'
   labels:
-  {{- include "eg.labels" . | nindent 4 }}
+    {{- include "eg.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
