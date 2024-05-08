@@ -176,7 +176,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "consistentHash header field not nil when consistentHashType is header",
-			mutate: func(btp: *egv1a1.BackendTrafficPolicySpec{
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
@@ -191,11 +191,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Type: "Header",
 							Header: &egv1a1.Header{
 								HeaderName: "name",
-							}
+							},
 						},
 					},
-				},
-			}),
+				}
+			},
 			wantErrors: []string{},
 		},
 		{
