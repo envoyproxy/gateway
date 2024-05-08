@@ -25,7 +25,7 @@ import (
 //go:embed testdata/*.yaml base/*
 var Manifests embed.FS
 
-func InstallScheme(t *testing.T, c client.Client) {
+func CheckInstallScheme(t *testing.T, c client.Client) {
 	require.NoError(t, gwapiv1a3.Install(c.Scheme()))
 	require.NoError(t, gwapiv1a2.Install(c.Scheme()))
 	require.NoError(t, gwapiv1b1.Install(c.Scheme()))

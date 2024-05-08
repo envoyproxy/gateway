@@ -36,7 +36,7 @@ func TestMergeGateways(t *testing.T) {
 	require.NoError(t, err)
 
 	// Install all the scheme to kubernetes client.
-	e2e.InstallScheme(t, c)
+	e2e.CheckInstallScheme(t, c)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
