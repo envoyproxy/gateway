@@ -234,6 +234,9 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 
 	r.Kubernetes.RateLimitDeployment.defaultKubernetesDeploymentSpec(DefaultRateLimitImage)
 
+	if r.Kubernetes.ShutdownManager == nil {
+		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: ptr.To(DefaultShutdownManagerImage)}
+	}
 	return r.Kubernetes
 }
 

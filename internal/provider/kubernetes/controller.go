@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -866,7 +867,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
 ) error {
-	backendTLSPolicies := gwapiv1a2.BackendTLSPolicyList{}
+	backendTLSPolicies := gwapiv1a3.BackendTLSPolicyList{}
 	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
@@ -992,17 +993,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch GRPCRoute CRUDs and process affected Gateways.
-	grpcrPredicates := []predicate.TypedPredicate[*gwapiv1a2.GRPCRoute]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.GRPCRoute]{},
+	grpcrPredicates := []predicate.TypedPredicate[*gwapiv1.GRPCRoute]{
+		predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
 	}
 	if r.namespaceLabel != nil {
-		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.GRPCRoute](func(grpc *gwapiv1a2.GRPCRoute) bool {
+		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
 			return r.hasMatchingNamespaceLabels(grpc)
 		}))
 	}
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.GRPCRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.GRPCRoute](func(ctx context.Context, route *gwapiv1a2.GRPCRoute) []reconcile.Request {
+		source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
+			handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1.GRPCRoute](func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
 				return r.enqueueClass(ctx, route)
 			}),
 			grpcrPredicates...)); err != nil {
@@ -1329,18 +1330,18 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch BackendTLSPolicy
-	btlsPredicates := []predicate.TypedPredicate[*gwapiv1a2.BackendTLSPolicy]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.BackendTLSPolicy]{},
+	btlsPredicates := []predicate.TypedPredicate[*gwapiv1a3.BackendTLSPolicy]{
+		predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
 	}
 	if r.namespaceLabel != nil {
-		btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.BackendTLSPolicy](func(btp *gwapiv1a2.BackendTLSPolicy) bool {
+		btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a3.BackendTLSPolicy](func(btp *gwapiv1a3.BackendTLSPolicy) bool {
 			return r.hasMatchingNamespaceLabels(btp)
 		}))
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.BackendTLSPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a2.BackendTLSPolicy) []reconcile.Request {
+		source.Kind(mgr.GetCache(), &gwapiv1a3.BackendTLSPolicy{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a3.BackendTLSPolicy) []reconcile.Request {
 				return r.enqueueClass(ctx, btp)
 			}),
 			btlsPredicates...)); err != nil {
@@ -1506,10 +1507,10 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 
 func (r *gatewayAPIReconciler) processBackendTLSPolicyConfigMapRefs(ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
 	for _, policy := range resourceTree.BackendTLSPolicies {
-		tls := policy.Spec.TLS
+		tls := policy.Spec.Validation
 
-		if tls.CACertRefs != nil {
-			for _, caCertRef := range tls.CACertRefs {
+		if tls.CACertificateRefs != nil {
+			for _, caCertRef := range tls.CACertificateRefs {
 				if string(caCertRef.Kind) == gatewayapi.KindConfigMap {
 					caRefNew := gwapiv1b1.SecretObjectReference{
 						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),

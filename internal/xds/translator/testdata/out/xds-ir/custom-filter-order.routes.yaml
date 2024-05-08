@@ -1,0 +1,35 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - directResponse:
+        status: 500
+      match:
+        pathSeparatedPrefix: /foo
+      name: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com
+      typedPerFilterConfig:
+        envoy.filters.http.basic_auth:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuthPerRoute
+          users:
+            inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        envoy.filters.http.cors:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
+          allowCredentials: false
+          allowMethods: GET, POST
+          allowOriginStringMatch:
+          - safeRegex:
+              regex: https://.*\.test\.com:8080
+          - exact: https://www.test.org:8080
+          forwardNotMatchingPreflights: false
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com
+        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/1:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     tcpKeepalive:
       idleTime: 10s
       interval: 30m
@@ -41,7 +40,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
@@ -157,6 +155,7 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -196,6 +195,7 @@ httpRoutes:
       matches:
       - path:
           value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:

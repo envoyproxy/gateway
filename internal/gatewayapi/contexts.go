@@ -140,7 +140,7 @@ type GRPCRouteContext struct {
 	// GatewayControllerName is the name of the Gateway API controller.
 	GatewayControllerName string
 
-	*v1alpha2.GRPCRoute
+	*gwapiv1.GRPCRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -322,7 +322,7 @@ type RouteParentContext struct {
 	// TODO: [v1alpha2-gwapiv1] This can probably be replaced with
 	// a single field pointing to *gwapiv1.RouteStatus.
 	HTTPRoute *gwapiv1.HTTPRoute
-	GRPCRoute *v1alpha2.GRPCRoute
+	GRPCRoute *gwapiv1.GRPCRoute
 	TLSRoute  *v1alpha2.TLSRoute
 	TCPRoute  *v1alpha2.TCPRoute
 	UDPRoute  *v1alpha2.UDPRoute

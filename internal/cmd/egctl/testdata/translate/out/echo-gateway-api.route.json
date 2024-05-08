@@ -115,7 +115,8 @@
                 "port": 3000,
                 "weight": 1
               }
-            ]
+            ],
+            "sessionPersistence": null
           }
         ]
       },

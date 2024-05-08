@@ -223,8 +223,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "oidc",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -256,8 +256,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "basic-auth",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -362,7 +362,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
@@ -495,8 +495,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-auth-http",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -522,8 +522,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-proc",
 					},
 					Spec: v1alpha1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -553,8 +553,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-proc",
 					},
 					Spec: v1alpha1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -628,7 +628,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
