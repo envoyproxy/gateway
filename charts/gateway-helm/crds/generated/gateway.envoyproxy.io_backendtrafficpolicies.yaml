@@ -423,7 +423,7 @@ spec:
                         - name
                         type: object
                       type:
-                        description: Valid Type values are  "SourceIP" or "Header".
+                        description: Valid Type values are  "SourceIP".
                         enum:
                         - SourceIP
                         - Header
