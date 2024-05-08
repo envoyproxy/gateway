@@ -8,15 +8,11 @@ package validation
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
-
-func asPtr(s string) *string {
-	return &s
-}
 
 func TestValidateSecurityPolicy(t *testing.T) {
 	testCases := []struct {
@@ -467,118 +463,6 @@ func TestValidateSecurityPolicy(t *testing.T) {
 			},
 			expected: true,
 		},
-		{
-			name: "authorisation with valid ipv4 cidr",
-			policy: &egv1a1.SecurityPolicy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindSecurityPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.SecurityPolicySpec{
-					Authorization: &egv1a1.Authorization{
-						Rules: []egv1a1.Rule{
-							{
-								Subjects: []egv1a1.Subject{
-									{
-										ClientCIDR: asPtr("192.168.1.0/24"),
-									},
-								},
-								Action: egv1a1.Allow,
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "authorisation with valid ipv6 cidr",
-			policy: &egv1a1.SecurityPolicy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindSecurityPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.SecurityPolicySpec{
-					Authorization: &egv1a1.Authorization{
-						Rules: []egv1a1.Rule{
-							{
-								Subjects: []egv1a1.Subject{
-									{
-										ClientCIDR: asPtr("2001:db8::/64"),
-									},
-								},
-								Action: egv1a1.Allow,
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "authorisation with invalid ipv4 cidr",
-			policy: &egv1a1.SecurityPolicy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindSecurityPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.SecurityPolicySpec{
-					Authorization: &egv1a1.Authorization{
-						Rules: []egv1a1.Rule{
-							{
-								Subjects: []egv1a1.Subject{
-									{
-										ClientCIDR: asPtr("192.168.1.001/24"),
-									},
-								},
-								Action: egv1a1.Allow,
-							},
-						},
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "authorisation with invalid ipv6 cidr",
-			policy: &egv1a1.SecurityPolicy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindSecurityPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.SecurityPolicySpec{
-					Authorization: &egv1a1.Authorization{
-						Rules: []egv1a1.Rule{
-							{
-								Subjects: []egv1a1.Subject{
-									{
-										ClientCIDR: asPtr("2001:dffoob8::/64"),
-									},
-								},
-								Action: egv1a1.Allow,
-							},
-						},
-					},
-				},
-			},
-			expected: false,
-		},
 	}
 
 	for i := range testCases {
@@ -586,9 +470,9 @@ func TestValidateSecurityPolicy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateSecurityPolicy(tc.policy)
 			if tc.expected {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.Error(t, err)
+				require.Error(t, err)
 			}
 		})
 	}

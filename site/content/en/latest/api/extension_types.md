@@ -182,7 +182,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules. |
+| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped. |
 
 
 #### BackOffPolicy
@@ -2248,6 +2248,21 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
+#### Policy
+
+
+
+Policy defines the authorization policy.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `subjects` | _[Subject](#subject)_ |  false  | Subject contains the subject configuration.<br />If empty, all subjects are included. |
+| `permissions` | _string array_ |  false  | Permissions contains allowed HTTP methods.<br />If empty, all methods are matching. |
+
+
 #### ProcessingModeOptions
 
 
@@ -2890,9 +2905,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `subjects` | _[Subject](#subject) array_ |  false  | Subjects contains the subject configuration.<br />If empty, all subjects are included. |
-| `permissions` | _string array_ |  false  | Permissions contains allowed HTTP methods.<br />If empty, all methods are matching. |
 | `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
+| `policies` | _[Policy](#policy) array_ |  true  | Policies contains the list of authorization policies. |
 
 
 #### RuleActionType
@@ -3086,11 +3100,11 @@ _Appears in:_
 Subject contains the subject configuration.
 
 _Appears in:_
-- [Rule](#rule)
+- [Policy](#policy)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientCIDR` | _string_ |  false  | ClientCIDR contains client cidr configuration.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
+| `clientCIDR` | _string array_ |  false  | ClientCIDR contains client cidr configuration.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
 
 
 #### TCPActiveHealthChecker

@@ -8,6 +8,8 @@ package v1alpha1
 // Authorization defines the authorization configuration.
 type Authorization struct {
 	// Rules contains all the authorization rules.
+	// Rules are evaluated in order, the first matching rule will be applied,
+	// and the rest will be skipped.
 	//
 	// +kubebuilder:validation:MinItems=1
 	Rules []Rule `json:"rules,omitempty"`
@@ -15,20 +17,26 @@ type Authorization struct {
 
 // Rule defines the single authorization rule.
 type Rule struct {
-	// Subjects contains the subject configuration.
+	// Action defines the action to be taken if the rule matches.
+	Action RuleActionType `json:"action"`
+
+	// Policies contains the list of authorization policies.
+	Policies []Policy `json:"policies"`
+}
+
+// Policy defines the authorization policy.
+type Policy struct {
+	// Subject contains the subject configuration.
 	// If empty, all subjects are included.
 	//
 	// +optional
-	Subjects []Subject `json:"subjects,omitempty"`
+	Subject Subject `json:"subjects,omitempty"`
 
 	// Permissions contains allowed HTTP methods.
 	// If empty, all methods are matching.
 	//
 	// +optional
 	Permissions []string `json:"permissions,omitempty"`
-
-	// Action defines the action to be taken if the rule matches.
-	Action RuleActionType `json:"action"`
 }
 
 // Subject contains the subject configuration.
@@ -37,7 +45,7 @@ type Subject struct {
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	//
 	// +optional
-	ClientCIDR *string `json:"clientCIDR,omitempty"`
+	ClientCIDR []string `json:"clientCIDR,omitempty"`
 }
 
 // RuleActionType specifies the types of authorization rule action.

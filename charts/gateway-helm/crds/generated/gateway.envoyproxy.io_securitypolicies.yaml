@@ -53,7 +53,10 @@ spec:
                 description: Authorization defines the authorization configuration.
                 properties:
                   rules:
-                    description: Rules contains all the authorization rules.
+                    description: |-
+                      Rules contains all the authorization rules.
+                      Rules are evaluated in order, the first matching rule will be applied,
+                      and the rest will be skipped.
                     items:
                       description: Rule defines the single authorization rule.
                       properties:
@@ -65,29 +68,37 @@ spec:
                           - Deny
                           - Log
                           type: string
-                        permissions:
-                          description: |-
-                            Permissions contains allowed HTTP methods.
-                            If empty, all methods are matching.
+                        policies:
+                          description: Policies contains the list of authorization
+                            policies.
                           items:
-                            type: string
-                          type: array
-                        subjects:
-                          description: |-
-                            Subjects contains the subject configuration.
-                            If empty, all subjects are included.
-                          items:
-                            description: Subject contains the subject configuration.
+                            description: Policy defines the authorization policy.
                             properties:
-                              clientCIDR:
+                              permissions:
                                 description: |-
-                                  ClientCIDR contains client cidr configuration.
-                                  Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-                                type: string
+                                  Permissions contains allowed HTTP methods.
+                                  If empty, all methods are matching.
+                                items:
+                                  type: string
+                                type: array
+                              subjects:
+                                description: |-
+                                  Subject contains the subject configuration.
+                                  If empty, all subjects are included.
+                                properties:
+                                  clientCIDR:
+                                    description: |-
+                                      ClientCIDR contains client cidr configuration.
+                                      Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                             type: object
                           type: array
                       required:
                       - action
+                      - policies
                       type: object
                     minItems: 1
                     type: array
