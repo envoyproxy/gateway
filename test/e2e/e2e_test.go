@@ -34,7 +34,7 @@ func TestE2E(t *testing.T) {
 	require.NoError(t, err)
 
 	// Install all the scheme for kubernetes client.
-	InstallScheme(t, c)
+	CheckInstallScheme(t, c)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
