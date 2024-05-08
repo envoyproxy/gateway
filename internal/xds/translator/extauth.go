@@ -14,8 +14,8 @@ import (
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -29,8 +29,7 @@ func init() {
 	registerHTTPFilter(&extAuth{})
 }
 
-type extAuth struct {
-}
+type extAuth struct{}
 
 var _ httpFilter = &extAuth{}
 
@@ -133,7 +132,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 					EnvoyGrpc: grpcService(extAuth.GRPC),
 				},
-				Timeout: &duration.Duration{
+				Timeout: &durationpb.Duration{
 					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
@@ -169,7 +168,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		HttpUpstreamType: &corev3.HttpUri_Cluster{
 			Cluster: http.Destination.Name,
 		},
-		Timeout: &duration.Duration{
+		Timeout: &durationpb.Duration{
 			Seconds: defaultExtServiceRequestTimeout,
 		},
 	}
@@ -212,7 +211,8 @@ func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
 
 // patchResources patches the cluster resources for the external auth services.
 func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}

@@ -108,13 +108,8 @@ kubectl get gateway/eg -o yaml
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
-
-It is not possible at the moment to port-forward UDP protocol in kubernetes service 
-check out https://github.com/kubernetes/kubernetes/issues/47862. 
-Hence we need external loadbalancer to test this feature out.
-
-### Clusters with External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
 
 Get the External IP of the Gateway:
 
@@ -124,8 +119,18 @@ export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].
 
 Query the example app through the Gateway:
 
-Below example uses a custom docker image with custom curl binary with built-in http3.
+The below example uses a custom docker image with custom `curl` binary with built-in http3.
 
 ```shell
 docker run --net=host --rm ghcr.io/macbre/curl-http3 curl -kv --http3 -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" https://www.example.com/get
 ```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+It is not possible at the moment to port-forward UDP protocol in kubernetes service 
+check out https://github.com/kubernetes/kubernetes/issues/47862. 
+Hence we need external loadbalancer to test this feature out.
+
+{{% /tab %}}
+{{< /tabpane >}}

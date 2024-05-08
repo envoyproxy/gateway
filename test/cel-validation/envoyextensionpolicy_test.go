@@ -46,8 +46,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "valid gateway targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -61,8 +61,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "valid httproute targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("HTTPRoute"),
 							Name:  gwapiv1a2.ObjectName("httpbin-route"),
@@ -88,8 +88,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "targetRef unsupported kind",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("foo"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -105,8 +105,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "targetRef unsupported group",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("foo"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -122,8 +122,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "targetRef unsupported group and kind",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("foo"),
 							Kind:  gwapiv1a2.Kind("bar"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -140,8 +140,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "sectionName disabled until supported",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -162,16 +162,18 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-proc-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "Gateway",
 							Name:  "eg",
@@ -187,17 +189,19 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Group: ptr.To(gwapiv1.Group("unsupported")),
-									Name:  "grpc-proc-service",
-									Port:  ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Group: ptr.To(gwapiv1.Group("unsupported")),
+										Name:  "grpc-proc-service",
+										Port:  ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "Gateway",
 							Name:  "eg",
@@ -205,7 +209,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"},
+			wantErrors: []string{" spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Core group."},
 		},
 		{
 			desc: "ExtProc with invalid BackendRef Kind",
@@ -213,17 +217,19 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Kind: ptr.To(gwapiv1.Kind("unsupported")),
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Kind: ptr.To(gwapiv1.Kind("unsupported")),
+										Name: "grpc-proc-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "Gateway",
 							Name:  "eg",
@@ -231,7 +237,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"},
+			wantErrors: []string{"spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Service kind."},
 		},
 		{
 			desc: "ExtProc with invalid fields",
@@ -239,10 +245,12 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRef: egv1a1.ExtProcBackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Name: "grpc-proc-service",
-									Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-proc-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
@@ -255,8 +263,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "Gateway",
 							Name:  "eg",

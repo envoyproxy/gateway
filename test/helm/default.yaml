@@ -34,6 +34,9 @@ data:
       level:
         default: info
     provider:
+      kubernetes:
+        shutdownManager:
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -369,7 +372,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
@@ -517,7 +520,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
       restartPolicy: Never
       securityContext:

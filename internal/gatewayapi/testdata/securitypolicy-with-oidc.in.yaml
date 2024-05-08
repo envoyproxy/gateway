@@ -93,7 +93,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     oidc:
       provider:
         issuer: "https://accounts.google.com"
@@ -113,7 +112,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     oidc:
       provider:
         issuer: "https://oauth.foo.com"

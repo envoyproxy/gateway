@@ -92,7 +92,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     loadBalancer:
       type: Random
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -105,7 +104,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     loadBalancer:
       type: ConsistentHash
       consistentHash:
@@ -120,7 +118,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
     loadBalancer:
       type: RoundRobin
       slowStart:
@@ -135,7 +132,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
     loadBalancer:
       type: LeastRequest
       slowStart:

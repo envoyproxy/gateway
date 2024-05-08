@@ -30,10 +30,10 @@ var (
 	ErrListenerAddressInvalid                  = errors.New("field Address must be a valid IP address")
 	ErrListenerPortInvalid                     = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty              = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPListenerSNIsEmpty                    = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTCPRouteSNIsEmpty                       = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSServerCertEmpty                      = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                           = errors.New("field PrivateKey must be specified")
-	ErrHTTPRouteNameEmpty                      = errors.New("field Name must be specified")
+	ErrRouteNameEmpty                          = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                  = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
@@ -84,6 +84,8 @@ type Xds struct {
 	UDP []*UDPListener `json:"udp,omitempty" yaml:"udp,omitempty"`
 	// EnvoyPatchPolicies is the intermediate representation of the EnvoyPatchPolicy resource
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
+	// FilterOrder holds the custom order of the HTTP filters
+	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
@@ -777,7 +779,7 @@ type FaultInjectionAbort struct {
 func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = errors.Join(errs, ErrHTTPRouteNameEmpty)
+		errs = errors.Join(errs, ErrRouteNameEmpty)
 	}
 	if h.Hostname == "" {
 		errs = errors.Join(errs, ErrHTTPRouteHostnameEmpty)
@@ -1177,14 +1179,25 @@ type TCPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
-	// TLS holds information for configuring TLS on a listener
-	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
-	// Destinations associated with TCP traffic to the service.
-	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// Routes associated with TCP traffic to the listener.
+	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
+}
+
+// TCPRoute holds the route information associated with the TCP Route
+// +k8s:deepcopy-gen=true
+type TCPRoute struct {
+	// Name of the TCPRoute.
+	Name string `json:"name" yaml:"name"`
+	// TLS holds information for configuring TLS on a listener
+	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
+	// Destinations associated with TCP traffic to the service.
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
+	// TCPKeepalive settings associated with the upstream client connection.
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Request and connection timeout settings
@@ -1208,34 +1221,61 @@ type TLS struct {
 }
 
 // Validate the fields within the TCPListener structure
-func (h TCPListener) Validate() error {
+func (t TCPListener) Validate() error {
 	var errs error
-	if h.Name == "" {
+	if t.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
 	}
-	if _, err := netip.ParseAddr(h.Address); err != nil {
+	if _, err := netip.ParseAddr(t.Address); err != nil {
 		errs = errors.Join(errs, ErrListenerAddressInvalid)
 	}
-	if h.Port == 0 {
+	if t.Port == 0 {
 		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
-	if h.TLS != nil && h.TLS.Passthrough != nil {
-		if err := h.TLS.Passthrough.Validate(); err != nil {
+	for _, route := range t.Routes {
+		if err := route.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
+func (t TCPRoute) Validate() error {
+	var errs error
+	if t.Name == "" {
+		errs = errors.Join(errs, ErrRouteNameEmpty)
+	}
+
+	if t.TLS != nil && t.TLS.Passthrough != nil {
+		if err := t.TLS.Passthrough.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
-	if h.TLS != nil && h.TLS.Terminate != nil {
-		if err := h.TLS.Terminate.Validate(); err != nil {
+	if t.TLS != nil && t.TLS.Terminate != nil {
+		if err := t.TLS.Terminate.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 
-	if h.Destination != nil {
-		if err := h.Destination.Validate(); err != nil {
+	if t.Destination != nil {
+		if err := t.Destination.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
+
+	if t.LoadBalancer != nil {
+		if err := t.LoadBalancer.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if t.HealthCheck != nil {
+		if err := t.HealthCheck.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
 	return errs
 }
 
@@ -1253,7 +1293,7 @@ type TLSInspectorConfig struct {
 func (t TLSInspectorConfig) Validate() error {
 	var errs error
 	if len(t.SNIs) == 0 {
-		errs = errors.Join(errs, ErrTCPListenerSNIsEmpty)
+		errs = errors.Join(errs, ErrTCPRouteSNIsEmpty)
 	}
 	return errs
 }
@@ -1909,6 +1949,17 @@ type ConnectionLimit struct {
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }
 
+type ExtProcBodyProcessingMode egv1a1.ExtProcBodyProcessingMode
+
+const (
+	// ExtProcBodyStreamed sets the streamed body processing mode
+	ExtProcBodyStreamed = ExtProcBodyProcessingMode(egv1a1.StreamedExtProcBodyProcessingMode)
+	// ExtProcBodyBuffered sets the buffered body processing mode
+	ExtProcBodyBuffered = ExtProcBodyProcessingMode(egv1a1.BufferedExtProcBodyProcessingMode)
+	// ExtProcBodyBufferedPartial sets the partial buffered body processing mode
+	ExtProcBodyBufferedPartial = ExtProcBodyProcessingMode(egv1a1.BufferedPartialExtBodyHeaderProcessingMode)
+)
+
 // ExtProc holds the information associated with the ExtProc extensions.
 // +k8s:deepcopy-gen=true
 type ExtProc struct {
@@ -1917,10 +1968,29 @@ type ExtProc struct {
 	Name string `json:"name" yaml:"name"`
 
 	// Destination defines the destination for the gRPC External Processing service.
-	Destination RouteDestination `json:"destination"`
+	Destination RouteDestination `json:"destination" yaml:"destination"`
 
 	// Authority is the hostname:port of the HTTP External Processing service.
-	Authority string `json:"authority"`
+	Authority string `json:"authority" yaml:"authority"`
+
+	// MessageTimeout is the timeout for a response to be returned from the external processor
+	MessageTimeout *metav1.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
+
+	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
+	// external processor are terminated or passed-through.
+	FailOpen *bool `json:"failOpen,omitempty" yaml:"failOpen,omitempty"`
+
+	// RequestHeaderProcessing Defines if request headers are processed
+	RequestHeaderProcessing bool `json:"requestHeaderProcessing,omitempty" yaml:"requestHeaderProcessing,omitempty"`
+
+	// RequestBodyProcessingMode Defines request body processing
+	RequestBodyProcessingMode *ExtProcBodyProcessingMode `json:"requestBodyProcessingMode,omitempty" yaml:"requestBodyProcessingMode,omitempty"`
+
+	// ResponseHeaderProcessingMode Defines if response headers are processed
+	ResponseHeaderProcessing bool `json:"responseHeaderProcessing,omitempty" yaml:"responseHeaderProcessing,omitempty"`
+
+	// ResponseBodyProcessingMode Defines response body processing
+	ResponseBodyProcessingMode *ExtProcBodyProcessingMode `json:"responseBodyProcessingMode,omitempty" yaml:"responseBodyProcessingMode,omitempty"`
 }
 
 // Wasm holds the information associated with the Wasm extensions.

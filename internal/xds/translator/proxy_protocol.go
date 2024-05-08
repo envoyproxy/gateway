@@ -32,7 +32,8 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, irListener *ir.H
 	proxyProtocolFilter := buildProxyProtocolFilter()
 
 	if proxyProtocolFilter != nil {
-		xdsListener.ListenerFilters = append(xdsListener.ListenerFilters, proxyProtocolFilter)
+		// Add the Proxy Protocol filter as first to listeners.
+		xdsListener.ListenerFilters = append([]*listenerv3.ListenerFilter{proxyProtocolFilter}, xdsListener.ListenerFilters...)
 	}
 }
 

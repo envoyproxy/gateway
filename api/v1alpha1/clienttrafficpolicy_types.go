@@ -45,7 +45,7 @@ type ClientTrafficPolicySpec struct {
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway.
 	// TargetRef
-	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+	TargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRef"`
 	// TcpKeepalive settings associated with the downstream client connection.
 	// If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.
 	// Disabled by default.
@@ -176,8 +176,7 @@ type CustomHeaderExtensionSettings struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct {
-}
+type HTTP3Settings struct{}
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {

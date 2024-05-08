@@ -100,21 +100,21 @@ spec:
               - key: tls.key
                 path: key
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: policy-btls
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: ''
-    kind: Service
-    name: tls-backend-2
-    sectionName: "443"
-  tls:
-    caCertRefs:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: tls-backend-2
+      sectionName: "443"
+  validation:
+    caCertificateRefs:
       - name: backend-tls-checks-certificate
-        group: ''
+        group: ""
         kind: ConfigMap
     hostname: example.com
 ---

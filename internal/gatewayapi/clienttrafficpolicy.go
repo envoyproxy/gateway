@@ -17,12 +17,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -41,7 +40,8 @@ func hasSectionName(policy *egv1a1.ClientTrafficPolicy) bool {
 
 func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap) []*egv1a1.ClientTrafficPolicy {
+	xdsIR XdsIRMap, infraIR InfraIRMap,
+) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
 	clientTrafficPolicies := resources.ClientTrafficPolicies
@@ -265,16 +265,12 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 }
 
 func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := policy.Spec.TargetRef.Namespace
-	// If empty, default to namespace of policy
-	if targetNs == nil {
-		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-	}
+	targetNs := policy.Namespace
 
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(policy.Spec.TargetRef.Name),
-		Namespace: string(*targetNs),
+		Namespace: targetNs,
 	}
 	gateway, ok := gateways[key]
 
@@ -284,9 +280,9 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 	}
 
 	// Ensure Policy and target Gateway are in the same namespace
-	if policy.Namespace != string(*targetNs) {
+	if policy.Namespace != targetNs {
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, ClientTrafficPolicy can only target a Gateway in the same namespace.",
-			policy.Namespace, *targetNs)
+			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
 			Reason:  gwv1a2.PolicyReasonInvalid,
@@ -322,7 +318,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
 
-	irListenerName := irHTTPListenerName(l)
+	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range xds.HTTP {
 		if http.Name == irListenerName {
@@ -362,7 +358,8 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 }
 
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) error {
+	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources,
+) error {
 	// Find IR
 	irKey := t.getIRKey(l.gateway)
 	// It must exist since we've already finished processing the gateways
@@ -372,7 +369,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
 
-	irListenerName := irHTTPListenerName(l)
+	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range gwXdsIR.HTTP {
 		if http.Name == irListenerName {
@@ -632,7 +629,8 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 }
 
 func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
-	httpIR *ir.HTTPListener, resources *Resources) error {
+	httpIR *ir.HTTPListener, resources *Resources,
+) error {
 	// Return if this listener isn't a TLS listener. There has to be
 	// at least one certificate defined, which would cause httpIR to
 	// have a TLS structure.
