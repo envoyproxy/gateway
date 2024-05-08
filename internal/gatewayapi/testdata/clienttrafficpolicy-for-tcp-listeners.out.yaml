@@ -16,7 +16,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
