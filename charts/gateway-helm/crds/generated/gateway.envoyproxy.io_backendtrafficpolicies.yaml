@@ -418,7 +418,7 @@ spec:
                           prime number limited to 5000011.
                         format: int64
                         maximum: 5000011
-                        minimum: 1
+                        minimum: 2
                         type: integer
                       type:
                         description: ConsistentHashType defines the type of input

@@ -58,7 +58,7 @@ type ConsistentHash struct {
 
 	// The table size for consistent hashing, must be prime number limited to 5000011.
 	//
-	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Minimum=2
 	// +kubebuilder:validation:Maximum=5000011
 	// +kubebuilder:default=65537
 	// +optional
