@@ -457,7 +457,7 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
 				Header: &routev3.RouteAction_HashPolicy_Header{
-					HeaderName: httpRoute.LoadBalancer.ConsistentHash.Header.HeaderName,
+					HeaderName: httpRoute.LoadBalancer.ConsistentHash.Header.Name,
 				},
 			},
 		}

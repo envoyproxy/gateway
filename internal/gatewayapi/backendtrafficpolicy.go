@@ -810,9 +810,9 @@ func (t *Translator) buildConsistentLoadBalancer(policy *egv1a1.BackendTrafficPo
 	case egv1a1.SourceIPConsistentHashType:
 		ch.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
-		ch.Header = ptr.To(ir.Header{
-			HeaderName: policy.Spec.LoadBalancer.ConsistentHash.Header.HeaderName,
-		})
+		ch.Header = &ir.Header{
+			Name: policy.Spec.LoadBalancer.ConsistentHash.Header.Name,
+		}
 	}
 	return ch
 }

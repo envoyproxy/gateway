@@ -1581,7 +1581,7 @@ type ConsistentHash struct {
 
 // Header consistent hash type settings
 type Header struct {
-	HeaderName string `json:"header_name"`
+	Name string `json:"name"`
 }
 
 type ProxyProtocolVersion string

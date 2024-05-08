@@ -1243,7 +1243,7 @@ func TestValidateLoadBalancer(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "consistent hash",
+			name: "consistent hash with source IP hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
 					SourceIP: ptr.To(true),
@@ -1251,7 +1251,17 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: nil,
 		},
-
+		{
+			name: "consistent hash with header hash policy",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					Header: &Header{
+						Name: "name",
+					},
+				},
+			},
+			want: nil,
+		},
 		{
 			name: "least request and random set",
 			input: LoadBalancer{
