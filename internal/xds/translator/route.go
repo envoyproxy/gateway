@@ -441,6 +441,15 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 	}
 
 	switch {
+	case httpRoute.LoadBalancer.ConsistentHash.Header != nil:
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+				Header: &routev3.RouteAction_HashPolicy_Header{
+					HeaderName: httpRoute.LoadBalancer.ConsistentHash.Header.Name,
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
 	case httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil:
 		if !*httpRoute.LoadBalancer.ConsistentHash.SourceIP {
 			return nil
@@ -449,15 +458,6 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
 				ConnectionProperties: &routev3.RouteAction_HashPolicy_ConnectionProperties{
 					SourceIp: true,
-				},
-			},
-		}
-		return []*routev3.RouteAction_HashPolicy{hashPolicy}
-	case httpRoute.LoadBalancer.ConsistentHash.Header != nil:
-		hashPolicy := &routev3.RouteAction_HashPolicy{
-			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
-				Header: &routev3.RouteAction_HashPolicy_Header{
-					HeaderName: httpRoute.LoadBalancer.ConsistentHash.Header.Name,
 				},
 			},
 		}

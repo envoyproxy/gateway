@@ -1576,12 +1576,12 @@ type Random struct{}
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
 	SourceIP *bool   `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Header   *Header `json:"header"`
+	Header   *Header `json:"header,omitempty" yaml:"header,omitempty"`
 }
 
 // Header consistent hash type settings
 type Header struct {
-	Name string `json:"name"`
+	Name string `json:"name" yaml:"name"`
 }
 
 type ProxyProtocolVersion string
