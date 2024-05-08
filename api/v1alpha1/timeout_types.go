@@ -43,10 +43,24 @@ type HTTPTimeout struct {
 }
 
 type ClientTimeout struct {
+	// Timeout settings for TCP.
+	//
+	// +optional
+	TCP *TCPClientTimeout `json:"tcp,omitempty"`
+
 	// Timeout settings for HTTP.
 	//
 	// +optional
 	HTTP *HTTPClientTimeout `json:"http,omitempty"`
+}
+
+type TCPClientTimeout struct {
+	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
+	// bytes sent or received on either the upstream or downstream connection.
+	// Default: 1 hour.
+	//
+	// +optional
+	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
 }
 
 type HTTPClientTimeout struct {

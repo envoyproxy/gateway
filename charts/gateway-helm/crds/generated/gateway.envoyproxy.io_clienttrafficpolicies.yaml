@@ -348,6 +348,17 @@ spec:
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
+                  tcp:
+                    description: Timeout settings for TCP.
+                    properties:
+                      idleTimeout:
+                        description: |-
+                          IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
+                          bytes sent or received on either the upstream or downstream connection.
+                          Default: 1 hour.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                 type: object
               tls:
                 description: TLS settings configure TLS termination settings with

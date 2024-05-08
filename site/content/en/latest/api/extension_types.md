@@ -413,6 +413,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `tcp` | _[TCPClientTimeout](#tcpclienttimeout)_ |  false  | Timeout settings for TCP. |
 | `http` | _[HTTPClientTimeout](#httpclienttimeout)_ |  false  | Timeout settings for HTTP. |
 
 
@@ -3060,6 +3061,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `send` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  | Send defines the request payload. |
 | `receive` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  | Receive defines the expected response payload. |
+
+
+#### TCPClientTimeout
+
+
+
+
+
+_Appears in:_
+- [ClientTimeout](#clienttimeout)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `idleTimeout` | _[Duration](#duration)_ |  false  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
 
 
 #### TCPKeepalive
