@@ -14,8 +14,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
@@ -70,7 +70,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case gwapiv1.UDPProtocolType:
 				t.validateAllowedRoutes(listener, KindUDPRoute)
 			default:
-				listener.SetCondition(
+				status.SetGatewayListenerStatusCondition(listener.gateway,
+					listener.listenerStatusIdx,
 					gwapiv1.ListenerConditionAccepted,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonUnsupportedProtocol,
