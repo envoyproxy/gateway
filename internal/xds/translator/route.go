@@ -440,7 +440,11 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 		return nil
 	}
 
-	if httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil && *httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+	switch {
+	case httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil:
+		if !*httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+			return nil
+		}
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
 				ConnectionProperties: &routev3.RouteAction_HashPolicy_ConnectionProperties{
@@ -449,9 +453,18 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case httpRoute.LoadBalancer.ConsistentHash.Header != nil:
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+				Header: &routev3.RouteAction_HashPolicy_Header{
+					HeaderName: httpRoute.LoadBalancer.ConsistentHash.Header.HeaderName,
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {

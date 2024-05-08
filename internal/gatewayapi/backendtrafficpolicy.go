@@ -766,9 +766,8 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		lb = &ir.LoadBalancer{
 			ConsistentHash: &ir.ConsistentHash{},
 		}
-		if policy.Spec.LoadBalancer.ConsistentHash != nil &&
-			policy.Spec.LoadBalancer.ConsistentHash.Type == egv1a1.SourceIPConsistentHashType {
-			lb.ConsistentHash.SourceIP = ptr.To(true)
+		if policy.Spec.LoadBalancer.ConsistentHash != nil {
+			lb.ConsistentHash = t.buildConsistentLoadBalancer(policy)
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
 		lb = &ir.LoadBalancer{}
@@ -803,6 +802,19 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 	}
 
 	return lb
+}
+
+func (t *Translator) buildConsistentLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.ConsistentHash {
+	ch := &ir.ConsistentHash{}
+	switch policy.Spec.LoadBalancer.ConsistentHash.Type {
+	case egv1a1.SourceIPConsistentHashType:
+		ch.SourceIP = ptr.To(true)
+	case egv1a1.HeaderConsistentHashType:
+		ch.Header = ptr.To(ir.Header{
+			HeaderName: policy.Spec.LoadBalancer.ConsistentHash.Header.HeaderName,
+		})
+	}
+	return ch
 }
 
 func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {
