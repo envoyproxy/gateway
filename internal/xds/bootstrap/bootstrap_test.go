@@ -22,11 +22,11 @@ import (
 func TestGetRenderedBootstrapConfig(t *testing.T) {
 	cases := []struct {
 		name string
-		opts *RenderBootsrapConfigOptions
+		opts *RenderBootstrapConfigOptions
 	}{
 		{
 			name: "disable-prometheus",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
@@ -36,7 +36,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "enable-prometheus",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
@@ -44,7 +44,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "enable-prometheus-gzip-compression",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Compression: &egv1a1.Compression{
@@ -56,7 +56,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "otel-metrics",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
@@ -75,7 +75,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "otel-metrics-backendref",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
@@ -103,7 +103,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "custom-stats-matcher",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Matches: []egv1a1.StringMatch{
 						{
@@ -132,7 +132,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "with-max-heap-size-bytes",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				MaxHeapSizeBytes: 1073741824,
 			},
 		},
