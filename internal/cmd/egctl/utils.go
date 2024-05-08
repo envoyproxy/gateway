@@ -90,7 +90,6 @@ func newGatewayScheme() (*runtime.Scheme, error) {
 	if err := gwv1a3.Install(scheme); err != nil {
 		return nil, err
 	}
-
 	if err := egv1a1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
