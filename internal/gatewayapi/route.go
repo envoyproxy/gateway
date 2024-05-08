@@ -688,16 +688,12 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					IsHTTP2:               routeRoute.IsHTTP2,
 					BackendWeights:        routeRoute.BackendWeights,
 				}
-<<<<<<< HEAD
 				if routeRoute.Traffic != nil {
 					hostRoute.Traffic = &ir.TrafficFeatures{
 						Timeout: routeRoute.Traffic.Timeout,
 						Retry:   routeRoute.Traffic.Retry,
 					}
 				}
-=======
-
->>>>>>> ca7809dc (add xds configuration)
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
@@ -1254,21 +1250,21 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	case KindHTTPRoute:
 		backendFilters = GetFilters(backendRefContext).([]gwapiv1.HTTPRouteFilter)
 	case KindGRPCRoute:
-		backendFilters = GetFilters(backendRefContext).([]gwapiv1a2.GRPCRouteFilter)
+		backendFilters = GetFilters(backendRefContext).([]gwapiv1.GRPCRouteFilter)
 	}
 	return
 }
 
 func (t *Translator) processFilters(backendFilters any, parentRef *RouteParentContext, route RouteContext, resources *Resources) *HTTPFiltersContext {
 	var httpFilters []gwapiv1.HTTPRouteFilter
-	var grpcFilters []gwapiv1a2.GRPCRouteFilter
+	var grpcFilters []gwapiv1.GRPCRouteFilter
 
 	switch filters := backendFilters.(type) {
 	case []gwapiv1.HTTPRouteFilter:
 		httpFilters = append(httpFilters, filters...)
 		return t.ProcessHTTPFilters(parentRef, route, httpFilters, 0, resources)
 
-	case []gwapiv1a2.GRPCRouteFilter:
+	case []gwapiv1.GRPCRouteFilter:
 		grpcFilters = append(grpcFilters, filters...)
 		return t.ProcessGRPCFilters(parentRef, route, grpcFilters, resources)
 	}

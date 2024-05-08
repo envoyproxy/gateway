@@ -78,8 +78,8 @@ httpRoutes:
         weight: 3
       matches:
       - path:
-          type: Exact
-          value: /exact
+          value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:

@@ -90,38 +90,6 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 	return true
 }
 
-<<<<<<< HEAD
-func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, parentRef *RouteParentContext, route RouteContext, routeKind gwapiv1.Kind) bool {
-	var filtersLen int
-	switch routeKind {
-	case KindHTTPRoute:
-		filters := GetFilters(backendRef).([]gwapiv1.HTTPRouteFilter)
-		filtersLen = len(filters)
-	case KindGRPCRoute:
-		filters := GetFilters(backendRef).([]gwapiv1.GRPCRouteFilter)
-		filtersLen = len(filters)
-	default:
-		return true
-	}
-
-	if filtersLen > 0 {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"UnsupportedRefValue",
-			"The filters field within BackendRef is not supported",
-		)
-		return false
-	}
-
-	return true
-}
-
-=======
->>>>>>> b0aad73a (feat: support for BackendRef HTTP filters)
 func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
 	resources *Resources, routeKind gwapiv1.Kind,
 ) bool {

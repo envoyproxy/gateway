@@ -23,9 +23,18 @@ func TestGatewayAPIConformance(t *testing.T) {
 	flag.Parse()
 
 	opts := conformance.DefaultOptions(t)
+<<<<<<< HEAD
 	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
 	opts.SupportedFeatures = internalconf.EnvoyGatewaySuite.SupportedFeatures
 	opts.ExemptFeatures = internalconf.EnvoyGatewaySuite.ExemptFeatures
+=======
+	opts.SkipTests = []string{
+		tests.GatewayStaticAddresses.ShortName,
+		tests.GatewayHTTPListenerIsolation.ShortName, // https://github.com/kubernetes-sigs/gateway-api/issues/3049
+	}
+	opts.SupportedFeatures = features.AllFeatures
+	opts.ExemptFeatures = features.MeshCoreFeatures
+>>>>>>> 81edb95a (enable backendRef filters conformance tests)
 
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {
