@@ -416,11 +416,11 @@ spec:
                         description: Header configures the header hash policy when
                           the consistent hash type is set to Header.
                         properties:
-                          header_name:
+                          name:
                             description: Name of the header to hash.
                             type: string
                         required:
-                        - header_name
+                        - name
                         type: object
                       type:
                         description: Valid Type values are  "SourceIP" or "Header".
