@@ -38,6 +38,6 @@
             - header:
                 key: add-header-2
                 value: some-value
-            weight: 10
+            weight: 8
           - name: second-route-dest
-            weight: 10
+            weight: 2

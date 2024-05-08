@@ -266,7 +266,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 		if destinationSetting.Filters != nil {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   httpRoute.Destination.Name,
-				Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
+				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 
 			if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
