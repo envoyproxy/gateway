@@ -412,6 +412,14 @@ spec:
                       ConsistentHash defines the configuration when the load balancer type is
                       set to ConsistentHash
                     properties:
+                      tableSize:
+                        default: 65537
+                        description: The table size for consistent hashing, must be
+                          prime number limited to 5000011.
+                        format: int64
+                        maximum: 5000011
+                        minimum: 1
+                        type: integer
                       type:
                         description: ConsistentHashType defines the type of input
                           to hash on.

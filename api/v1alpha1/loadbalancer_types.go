@@ -55,6 +55,14 @@ const (
 // load balancer policy
 type ConsistentHash struct {
 	Type ConsistentHashType `json:"type"`
+
+	// The table size for consistent hashing, must be prime number limited to 5000011.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=5000011
+	// +kubebuilder:default=65537
+	// +optional
+	TableSize *uint64 `json:"tableSize,omitempty"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
