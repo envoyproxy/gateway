@@ -63,7 +63,9 @@ type ConsistentHash struct {
 	Type ConsistentHashType `json:"type"`
 
 	// Header configures the header hash policy when the consistent hash type is set to Header.
+	//
 	// +optional
+	// +notImplementedHide
 	Header *Header `json:"header,omitempty"`
 }
 
