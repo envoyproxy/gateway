@@ -143,7 +143,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
-	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
+	maxHeapSizeBytes := caclulateMaxHeapSizeBytes(containerSpec.Resources)
 
 	// Get the default Bootstrap
 	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootsrapConfigOptions{
@@ -395,9 +395,9 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 	}
 }
 
-// calculateMaxHeapSizeBytes calculates the maximum heap size in bytes as 80% of Envoy container memory limits.
+// caclulateMaxHeapSizeBytes calculates the maximum heap size in bytes as 80% of Envoy container memory limits.
 // In case no limits are defined '0' is returned, which means no heap size limit is set.
-func calculateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequirements) uint64 {
+func caclulateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequirements) uint64 {
 	if envoyResourceRequirements == nil || envoyResourceRequirements.Limits == nil {
 		return 0
 	}
