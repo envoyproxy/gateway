@@ -175,6 +175,26 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "consistentHash field nil when type is consistentHash",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					LoadBalancer: &egv1a1.LoadBalancer{
+						Type: egv1a1.ConsistentHashLoadBalancerType,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value: \"object\": If LoadBalancer type is consistentHash, consistentHash field needs to be set",
+			},
+		},
+		{
 			desc: "consistentHash header field not nil when consistentHashType is header",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -190,7 +210,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						ConsistentHash: &egv1a1.ConsistentHash{
 							Type: "Header",
 							Header: &egv1a1.Header{
-								HeaderName: "name",
+								Name: "name",
 							},
 						},
 					},
@@ -218,27 +238,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": If consistent hash type is header, the header field must be set",
-			},
-		},
-		{
-			desc: "consistentHash field nil when type is consistentHash",
-			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
-						},
-					},
-					LoadBalancer: &egv1a1.LoadBalancer{
-						Type: egv1a1.ConsistentHashLoadBalancerType,
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": If LoadBalancer type is consistentHash, consistentHash field needs to be set",
+				"spec.loadBalancer.consistentHash: Invalid value: \"object\": If consistent hash type is header, the header field must be set",
 			},
 		},
 		{

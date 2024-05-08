@@ -18,7 +18,7 @@ type LoadBalancer struct {
 	// "ConsistentHash",
 	// "LeastRequest",
 	// "Random",
-	// "RoundRobin",
+	// "RoundRobin".
 	//
 	// +unionDiscriminator
 	Type LoadBalancerType `json:"type"`
@@ -55,11 +55,9 @@ const (
 // load balancer policy.
 // +union
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
 type ConsistentHash struct {
-	// Valid Type values are
-	// "SourceIP",
-	// "Header",
+	// Valid Type values are  "SourceIP" or "Header".
 	//
 	// +unionDiscriminator
 	Type ConsistentHashType `json:"type"`
@@ -72,11 +70,12 @@ type ConsistentHash struct {
 // Header defines the header hashing configuration for consistent hash based
 // load balancing.
 type Header struct {
-	HeaderName string `json:"header_name"`
+	// Name of the header to hash.
+	Name string `json:"header_name"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
-// +kubebuilder:validation:Enum=SourceIP
+// +kubebuilder:validation:Enum=SourceIP;Header
 type ConsistentHashType string
 
 const (
