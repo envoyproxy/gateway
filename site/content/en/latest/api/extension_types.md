@@ -563,7 +563,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | Valid Type values are  "SourceIP" or "Header". |
-| `header` | _[Header](#header)_ |  false  | Header configures the header hash policy when the consistent hash type is set to Header. |
 
 
 #### ConsistentHashType
