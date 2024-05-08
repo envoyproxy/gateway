@@ -423,10 +423,7 @@ spec:
                         - header_name
                         type: object
                       type:
-                        description: |-
-                          Valid Type values are
-                          "SourceIP",
-                          "Header",
+                        description: Valid Type values are  "SourceIP" or "Header".
                         enum:
                         - SourceIP
                         - Header
@@ -461,7 +458,7 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin",
+                      "RoundRobin".
                     enum:
                     - ConsistentHash
                     - LeastRequest
