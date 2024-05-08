@@ -64,7 +64,6 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: envoy-gateway
       cors:
         allowOrigins:
           - "https://*.test.com:8080"
@@ -106,7 +105,6 @@ envoyextensionpolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: envoy-gateway
       wasm:
         - name: wasm-filter-1
           code:

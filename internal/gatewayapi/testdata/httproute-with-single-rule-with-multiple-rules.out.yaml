@@ -66,6 +66,7 @@ httpRoutes:
         - name: QueryParam-1
           type: Exact
           value: exact
+      sessionPersistence: null
     - backendRefs:
       - name: service-2
         port: 8080
@@ -73,6 +74,7 @@ httpRoutes:
       - path:
           type: PathPrefix
           value: /prefix
+      sessionPersistence: null
     - backendRefs:
       - name: service-3
         port: 8080
@@ -88,6 +90,7 @@ httpRoutes:
         - name: QueryParam-1
           type: RegularExpression
           value: '*regex*'
+      sessionPersistence: null
   status:
     parents:
     - conditions:

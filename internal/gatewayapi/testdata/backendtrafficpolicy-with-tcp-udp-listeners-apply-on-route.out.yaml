@@ -46,7 +46,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: UDPRoute
       name: udp-app-1
-      namespace: default
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
@@ -119,7 +118,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: TCPRoute
       name: tcp-app-1
-      namespace: default
     tcpKeepalive:
       idleTime: 20m
       interval: 60s

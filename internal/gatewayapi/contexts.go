@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"reflect"
-	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,38 +51,6 @@ type ListenerContext struct {
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
 	tlsSecrets        []*v1.Secret
-}
-
-func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, status metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
-	cond := metav1.Condition{
-		Type:               string(conditionType),
-		Status:             status,
-		Reason:             string(reason),
-		Message:            message,
-		ObservedGeneration: l.gateway.Generation,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-	}
-
-	idx := -1
-	for i, existing := range l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions {
-		if existing.Type == cond.Type {
-			// return early if the condition is unchanged
-			if existing.Status == cond.Status &&
-				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message &&
-				existing.ObservedGeneration == cond.ObservedGeneration {
-				return
-			}
-			idx = i
-			break
-		}
-	}
-
-	if idx > -1 {
-		l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions[idx] = cond
-	} else {
-		l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions = append(l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions, cond)
-	}
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
@@ -173,7 +140,7 @@ type GRPCRouteContext struct {
 	// GatewayControllerName is the name of the Gateway API controller.
 	GatewayControllerName string
 
-	*v1alpha2.GRPCRoute
+	*gwapiv1.GRPCRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -355,7 +322,7 @@ type RouteParentContext struct {
 	// TODO: [v1alpha2-gwapiv1] This can probably be replaced with
 	// a single field pointing to *gwapiv1.RouteStatus.
 	HTTPRoute *gwapiv1.HTTPRoute
-	GRPCRoute *v1alpha2.GRPCRoute
+	GRPCRoute *gwapiv1.GRPCRoute
 	TLSRoute  *v1alpha2.TLSRoute
 	TCPRoute  *v1alpha2.TCPRoute
 	UDPRoute  *v1alpha2.UDPRoute
@@ -366,39 +333,6 @@ type RouteParentContext struct {
 
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 	r.listeners = append(r.listeners, listeners...)
-}
-
-func (r *RouteParentContext) SetCondition(route RouteContext, conditionType gwapiv1.RouteConditionType, status metav1.ConditionStatus, reason gwapiv1.RouteConditionReason, message string) {
-	cond := metav1.Condition{
-		Type:               string(conditionType),
-		Status:             status,
-		Reason:             string(reason),
-		Message:            message,
-		ObservedGeneration: route.GetGeneration(),
-		LastTransitionTime: metav1.NewTime(time.Now()),
-	}
-
-	idx := -1
-	routeStatus := GetRouteStatus(route)
-	for i, existing := range routeStatus.Parents[r.routeParentStatusIdx].Conditions {
-		if existing.Type == cond.Type {
-			// return early if the condition is unchanged
-			if existing.Status == cond.Status &&
-				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message &&
-				existing.ObservedGeneration == cond.ObservedGeneration {
-				return
-			}
-			idx = i
-			break
-		}
-	}
-
-	if idx > -1 {
-		routeStatus.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
-	} else {
-		routeStatus.Parents[r.routeParentStatusIdx].Conditions = append(routeStatus.Parents[r.routeParentStatusIdx].Conditions, cond)
-	}
 }
 
 func (r *RouteParentContext) ResetConditions(route RouteContext) {

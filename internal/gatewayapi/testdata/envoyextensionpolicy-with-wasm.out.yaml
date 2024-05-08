@@ -10,7 +10,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     wasm:
     - code:
         http:
@@ -51,7 +50,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     wasm:
     - code:
         http:
@@ -155,6 +153,7 @@ httpRoutes:
       matches:
       - path:
           value: /foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -193,6 +192,7 @@ httpRoutes:
       matches:
       - path:
           value: /bar
+      sessionPersistence: null
   status:
     parents:
     - conditions:
