@@ -6,7 +6,7 @@ title: "Control Plane Observability: Metrics"
 This document aims to cover all aspects of envoy gateway control plane metrics observability.
 
 {{% alert title="Note" color="secondary" %}}
-**Data plane** observability (while important) is outside of scope for this document. For data plane observability, refer to [here](../proxy-metrics).
+**Data plane** observability (while important) is outside of scope for this document. For data plane observability, refer to [here](./proxy-metrics).
 {{% /alert %}}
 
 ## Current State
