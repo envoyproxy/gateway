@@ -60,24 +60,6 @@ xdsIR:
     accessLog:
       text:
       - path: /dev/stdout
-    envoyPatchPolicies:
-    - name: edit-conn-buffer-bytes
-      namespace: envoy-gateway-2
-      status:
-        ancestors:
-        - ancestorRef:
-            group: gateway.networking.k8s.io
-            kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-          conditions:
-          - lastTransitionTime: null
-            message: Namespace:envoy-gateway-2 TargetRef.Namespace:envoy-gateway,
-              EnvoyPatchPolicy can only target a Gateway in the same namespace.
-            reason: Invalid
-            status: "False"
-            type: Accepted
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
     http:
     - address: 0.0.0.0
       hostnames:

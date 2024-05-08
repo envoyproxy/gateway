@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -343,19 +342,19 @@ func TestProcessGRPCRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name               string
-		routes             []*gwapiv1a2.GRPCRoute
+		routes             []*gwapiv1.GRPCRoute
 		extensionAPIGroups []schema.GroupVersionKind
 		expected           bool
 	}{
 		{
 			name: "valid grpcroute",
-			routes: []*gwapiv1a2.GRPCRoute{
+			routes: []*gwapiv1.GRPCRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      "test",
 					},
-					Spec: gwapiv1a2.GRPCRouteSpec{
+					Spec: gwapiv1.GRPCRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
 								{
@@ -363,16 +362,16 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								},
 							},
 						},
-						Rules: []gwapiv1a2.GRPCRouteRule{
+						Rules: []gwapiv1.GRPCRouteRule{
 							{
-								Matches: []gwapiv1a2.GRPCRouteMatch{
+								Matches: []gwapiv1.GRPCRouteMatch{
 									{
-										Method: &gwapiv1a2.GRPCMethodMatch{
+										Method: &gwapiv1.GRPCMethodMatch{
 											Method: ptr.To("Ping"),
 										},
 									},
 								},
-								BackendRefs: []gwapiv1a2.GRPCBackendRef{
+								BackendRefs: []gwapiv1.GRPCBackendRef{
 									{
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
@@ -419,7 +418,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(objs...).
-				WithIndex(&gwapiv1a2.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
+				WithIndex(&gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
 				Build()
 
 			// Process the test case httproutes.

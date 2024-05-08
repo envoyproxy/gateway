@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     timeout:
       http:
         connectionIdleTimeout: 21s
@@ -43,7 +42,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     timeout:
       http:
         connectionIdleTimeout: 16s
@@ -161,6 +159,7 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -200,6 +199,7 @@ httpRoutes:
       matches:
       - path:
           value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:

@@ -150,6 +150,7 @@ grpcRoutes:
         - name: magic
           type: Exact
           value: foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -185,6 +186,7 @@ httpRoutes:
       matches:
       - path:
           value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -252,7 +254,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -278,7 +279,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -305,7 +305,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -331,7 +330,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
-      namespace: envoy-gateway
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -345,7 +343,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -377,7 +374,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -404,7 +400,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-      namespace: envoy-gateway
   status:
     ancestors: null
 xdsIR:
@@ -464,3 +459,7 @@ xdsIR:
         isHTTP2: true
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
         security: {}
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/tcp
+      port: 10053
