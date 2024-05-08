@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestContexts(t *testing.T) {
@@ -37,7 +39,8 @@ func TestContexts(t *testing.T) {
 	lctx := gctx.listeners[0]
 	require.NotNil(t, lctx)
 
-	lctx.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionFalse, gwapiv1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
+	status.SetGatewayListenerStatusCondition(lctx.gateway, lctx.listenerStatusIdx,
+		gwapiv1.ListenerConditionAccepted, metav1.ConditionFalse, gwapiv1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
 
 	require.Len(t, gateway.Status.Listeners, 1)
 	require.EqualValues(t, "http", gateway.Status.Listeners[0].Name)

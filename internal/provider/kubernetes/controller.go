@@ -37,9 +37,9 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
@@ -47,7 +47,7 @@ import (
 type gatewayAPIReconciler struct {
 	client          client.Client
 	log             logging.Logger
-	statusUpdater   status.Updater
+	statusUpdater   Updater
 	classController gwapiv1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
@@ -59,7 +59,7 @@ type gatewayAPIReconciler struct {
 }
 
 // newGatewayAPIController
-func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater,
+func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
 ) error {
 	ctx := context.Background()
