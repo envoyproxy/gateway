@@ -1227,22 +1227,21 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			"Mixed endpointslice address type for the same backendRef is not supported")
 	}
 
-	var destFilters *ir.DestinationFilters
-	backendFilters := getBackendFilters(routeType, backendRefContext)
-	if backendFilters != nil {
-		httpFiltersContext := t.processFilters(backendFilters, parentRef, route, resources)
-		destFilters = assignDestinationFilters(httpFiltersContext)
-	}
-
 	ds = &ir.DestinationSetting{
 		Weight:      &weight,
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
 		TLS:         backendTLS,
-		Filters:     destFilters,
 	}
-	return ds
+
+	backendFilters := getBackendFilters(routeType, backendRefContext)
+	if backendFilters != nil {
+		httpFiltersContext := t.processFilters(backendFilters, parentRef, route, resources)
+		ds.Filters = assignDestinationFilters(httpFiltersContext)
+	}
+
+	return ds, weight
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {

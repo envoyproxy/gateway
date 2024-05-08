@@ -40,11 +40,4 @@
                 value: some-value
             weight: 10
           - name: second-route-dest
-            requestHeadersToAdd:
-            - header:
-                key: add-header-1
-                value: some-value
-            - header:
-                key: add-header-2
-                value: some-value
             weight: 10

@@ -43,8 +43,8 @@ httpRoutes:
               port: 8080
               weight: 2
         - matches:
-          - path:
-              value: "/foo"
+            - path:
+                value: "/foo"
           backendRefs:
             - name: service-3
               port: 8080

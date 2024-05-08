@@ -70,20 +70,10 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-<<<<<<< HEAD
 		backendWeights := httpRoute.Destination.ToBackendWeights()
 		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination.Settings)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
-=======
-		var routeAction *routev3.RouteAction
-		if hasFiltersInSettings(httpRoute.Destination.Settings) || httpRoute.BackendWeights.Invalid != 0 {
-			// If there are backend weights stored then a weighted cluster is required for the route
-			routeAction = buildXdsWeightedRouteAction(httpRoute)
-		} else {
-			routeAction = buildXdsRouteAction(httpRoute)
-		}
->>>>>>> 77e3aa8f (build multiple weighted clusters)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -264,12 +254,21 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 		}
 	}
 
+<<<<<<< HEAD
 	validCluster := &routev3.WeightedCluster_ClusterWeight{
 		Name:   backendWeights.Name,
 		Weight: &wrapperspb.UInt32Value{Value: backendWeights.Valid},
 	}
 	for _, destinationSetting := range settings {
+=======
+	for _, destinationSetting := range httpRoute.Destination.Settings {
+>>>>>>> 3a85fdc9 (fix lint)
 		if destinationSetting.Filters != nil {
+			validCluster := &routev3.WeightedCluster_ClusterWeight{
+				Name:   httpRoute.Destination.Name,
+				Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
+			}
+
 			if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
 				validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
 			}
@@ -285,8 +284,8 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 			if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
 				validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
 			}
+			weightedClusters = append(weightedClusters, validCluster)
 		}
-		weightedClusters = append(weightedClusters, validCluster)
 	}
 
 	return &routev3.RouteAction{
@@ -630,7 +629,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 	for _, setting := range settings {
 		filters := setting.Filters
-		if filters != nil {
+		if filters != nil && (len(filters.AddRequestHeaders) > 0 || len(filters.RemoveRequestHeaders) > 0 || len(filters.AddResponseHeaders) > 0 || len(filters.RemoveResponseHeaders) > 0) {
 			return true
 		}
 	}
