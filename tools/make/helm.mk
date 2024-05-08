@@ -33,4 +33,4 @@ helm-generate:
 
 helm-template: ## Template envoy gateway helm chart.
 	@$(LOG_TARGET)
-	helm template eg charts/gateway-helm --set deployment.envoyGateway.image.tag=latest > ./test/helm/default.yaml --namespace=envoy-gateway-system
+	helm template eg charts/gateway-helm --set deployment.envoyGateway.image.tag=latest --set config.envoyGateway.provider.kubernetes.shutdownManager.image="docker.io/envoyproxy/gateway-dev:latest" > ./test/helm/default.yaml --namespace=envoy-gateway-system

@@ -72,7 +72,7 @@ func ObjectNamePtr(val string) *v1alpha2.ObjectName {
 
 var (
 	PathMatchTypeDerefOr       = ptr.Deref[gwapiv1.PathMatchType]
-	GRPCMethodMatchTypeDerefOr = ptr.Deref[v1alpha2.GRPCMethodMatchType]
+	GRPCMethodMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCMethodMatchType]
 	HeaderMatchTypeDerefOr     = ptr.Deref[gwapiv1.HeaderMatchType]
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
@@ -185,15 +185,15 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 }
 
 // ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
-func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
+func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
 	case filter == nil:
 		return errors.New("filter is nil")
-	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
-		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
-		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+	case filter.Type == gwapiv1.GRPCRouteFilterRequestMirror ||
+		filter.Type == gwapiv1.GRPCRouteFilterRequestHeaderModifier ||
+		filter.Type == gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 		return nil
-	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
+	case filter.Type == gwapiv1.GRPCRouteFilterExtensionRef:
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
@@ -343,16 +343,8 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
-func irHTTPListenerName(listener *ListenerContext) string {
+func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
-}
-
-func irTLSListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
-}
-
-func irTCPListenerName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
 }
 
 func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {
@@ -371,6 +363,10 @@ func irRoutePrefix(route RouteContext) string {
 
 func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%srule/%d/match/%d", irRoutePrefix(route), ruleIdx, matchIdx)
+}
+
+func irTCPRouteName(route RouteContext) string {
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
 }
 
 func irRouteDestinationName(route RouteContext, ruleIdx int) string {

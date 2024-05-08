@@ -25,7 +25,7 @@ deployment:
   replicas: 1
   pod:
     affinity: {}
-    annotations: 
+    annotations:
       prometheus.io/scrape: 'true'
       prometheus.io/port: '19001'
     labels: {}
@@ -36,6 +36,9 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
+      kubernetes:
+        shutdownManager:
+          image: ${ImageRepository}:${ImageTag}
     logging:
       level:
         default: info

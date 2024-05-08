@@ -495,7 +495,7 @@ Handling connection for 8888
 
 ### Enable HTTP Request Received Timeout
 
-This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
+This feature allows you to limit the time taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
 This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
 
 {{< tabpane text=true >}}
@@ -572,6 +572,117 @@ curl -v http://$GATEWAY_HOST/get \
 * Closing connection
 request timeout
 ```
+
+### Configure Client HTTP Idle Timeout
+
+The idle timeout is defined as the period in which there are no active requests. When the idle timeout is reached the connection will be closed.
+For more details see [here](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-idle-timeout:~:text=...%7D%0A%7D-,idle_timeout,-(Duration)%20The).
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  timeout:
+    http:
+      idleTimeout: 5s
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  timeout:
+    http:
+      idleTimeout: 5s
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Curl the example app through Envoy proxy:
+
+```shell
+openssl s_client -crlf -connect $GATEWAY_HOST:443
+```
+
+You should expect the connection to be closed after 5s.
+
+You can also check the number of connections closed due to idle timeout by using the following query:
+
+```shell
+envoy_http_downstream_cx_idle_timeout{envoy_http_conn_manager_prefix="<name of connection manager>"} 
+```
+
+The number of connections closed due to idle timeout should be increased by 1.
+
+
+### Configure Downstream Per Connection Buffer Limit
+
+This feature allows you to set a soft limit on size of the listener’s new connection read and write buffers.
+The size is configured using the `resource.Quantity` format, see examples [here](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory).
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  connection:
+    bufferLimit: 1024
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  connection:
+    bufferLimit: 1024
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

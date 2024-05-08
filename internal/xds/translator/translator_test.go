@@ -122,6 +122,7 @@ func TestTranslateXds(t *testing.T) {
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
+				FilterOrder: x.FilterOrder,
 			}
 
 			tCtx, err := tr.Translate(x)
