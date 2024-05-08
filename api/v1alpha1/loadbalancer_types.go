@@ -57,7 +57,7 @@ const (
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
 type ConsistentHash struct {
-	// Valid Type values are  "SourceIP" or "Header".
+	// Valid Type values are  "SourceIP".
 	//
 	// +unionDiscriminator
 	Type ConsistentHashType `json:"type"`

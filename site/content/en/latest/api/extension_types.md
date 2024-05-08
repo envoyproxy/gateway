@@ -562,7 +562,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | Valid Type values are  "SourceIP" or "Header". |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | Valid Type values are  "SourceIP". |
 
 
 #### ConsistentHashType
