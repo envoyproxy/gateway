@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -66,31 +67,62 @@ func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
 }
 
 func (u *UpdateHandler) apply(update Update) {
-	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		obj := update.Resource
+	var (
+		statusUpdateErr error
 
+		startTime = time.Now()
+		obj       = update.Resource
+		objKind   = obj.GetObjectKind().GroupVersionKind().Kind
+	)
+
+	statusUpdateTotal.With(kindLabel.Value(objKind)).Increment()
+
+	defer func() {
+		updateDuration := time.Since(startTime)
+		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
+
+		if statusUpdateErr != nil {
+			statusUpdateFailed.With(kindLabel.Value(objKind)).Increment()
+		} else {
+			statusUpdateSuccess.With(kindLabel.Value(objKind)).Increment()
+		}
+	}()
+
+	if statusUpdateErr = retry.OnError(retry.DefaultBackoff, func(err error) bool {
+		if kerrors.IsConflict(err) {
+			statusUpdateConflict.With(kindLabel.Value(objKind)).Increment()
+			return true
+		}
+
+		if kerrors.IsNotFound(err) {
+			statusUpdateNotFound.With(kindLabel.Value(objKind)).Increment()
+			return true
+		}
+
+		return false
+	}, func() error {
 		// Get the resource.
 		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
-			if kerrors.IsNotFound(err) {
-				return nil
-			}
 			return err
 		}
 
 		newObj := update.Mutator.Mutate(obj)
 
 		if isStatusEqual(obj, newObj) {
+			statusUpdateNoop.With(kindLabel.Value(objKind)).Increment()
+
 			u.log.WithName(update.NamespacedName.Name).
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")
+
 			return nil
 		}
 
 		newObj.SetUID(obj.GetUID())
 
 		return u.client.Status().Update(context.Background(), newObj)
-	}); err != nil {
-		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
+	}); statusUpdateErr != nil {
+		u.log.Error(statusUpdateErr, "unable to update status", "name", update.NamespacedName.Name,
 			"namespace", update.NamespacedName.Namespace)
 	}
 }
@@ -233,7 +265,7 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case gwapiv1a3.BackendTLSPolicy:
+	case *gwapiv1a3.BackendTLSPolicy:
 		if b, ok := objB.(*gwapiv1a3.BackendTLSPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
