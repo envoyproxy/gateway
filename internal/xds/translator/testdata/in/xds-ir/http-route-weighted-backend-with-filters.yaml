@@ -1,45 +1,62 @@
 http:
-- name: "first-listener"
-  address: "0.0.0.0"
-  port: 10080
-  hostnames:
-  - "*"
-  path:
-    mergeSlashes: true
-    escapedSlashesAction: UnescapeAndRedirect
-  routes:
-  - name: "first-route"
-    backendWeights:
-      invalid: 0
-      valid: 20
-    hostname: "*"
-    destination:
-      name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.1.1.1"
-          port: 50001
-        weight: 20
-        filters:
-          addRequestHeaders:
-          - append: true
-            name: add-header-1
-            value: some-value
-          - append: true
-            name: add-header-2
-            value: some-value
-          - append: true
-            name: add-header-3
-            value: some-value
-      - endpoints:
-        - host: "2.2.2.2"
-          port: 50002
-        weight: 40
-      - endpoints:
-        - host: "3.3.3.3"
-          port: 50003
-        weight: 20
-      - endpoints:
-        - host: "4.4.4.4"
-          port: 50004
-        weight: 20
+  - name: "first-listener"
+    address: "0.0.0.0"
+    hostnames:
+      - '*'
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - backendWeights:
+          invalid: 0
+          valid: 1
+        destination:
+          name: "first-route-dest"
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 1.1.1.1
+                  port: 8080
+              filters:
+                addRequestHeaders:
+                  - append: false
+                    name: add-header-3
+                    value: some-value
+              protocol: HTTP
+              weight: 1
+        hostname: '*'
+        name: "first-route"
+        pathMatch:
+          prefix: /foo
+      - backendWeights:
+          invalid: 0
+          valid: 10
+        destination:
+          name: "second-route-dest"
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 2.2.2.2
+              port: 8080
+            filters:
+              addRequestHeaders:
+              - append: true
+                name: add-header-1
+                value: some-value
+              - append: true
+                name: add-header-2
+                value: some-value
+            protocol: HTTP
+            weight: 8
+          - addressType: IP
+            endpoints:
+            - host: 3.3.3.3
+              port: 8080
+            filters: {}
+            protocol: HTTP
+            weight: 2
+        hostname: '*'
+        name: "second-route"
+        pathMatch:
+          prefix: /

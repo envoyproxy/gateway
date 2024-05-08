@@ -30,7 +30,7 @@ httpRoutes:
           backendRefs:
             - name: service-1
               port: 8080
-              weight: 1
+              weight: 8
               filters:
                 - type: RequestHeaderModifier
                   requestHeaderModifier:
@@ -39,16 +39,19 @@ httpRoutes:
                         value: "some-value"
                       - name: "add-header-2"
                         value: "some-value"
-                - type: RequestHeaderModifier
-                  requestHeaderModifier:
-                    add:
-                      - name: "add-header-1"
-                        value: "some-value"
-                      - name: "add-header-3"
-                        value: "some-value"
             - name: service-2
               port: 8080
               weight: 2
+        - matches:
+          - path:
+              value: "/foo"
+          backendRefs:
             - name: service-3
               port: 8080
-              weight: 3
+              weight: 1
+              filters:
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    set:
+                      - name: "add-header-3"
+                        value: "some-value"

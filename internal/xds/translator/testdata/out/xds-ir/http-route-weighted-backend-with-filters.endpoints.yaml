@@ -5,38 +5,30 @@
         address:
           socketAddress:
             address: 1.1.1.1
-            portValue: 50001
+            portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 20
+    loadBalancingWeight: 1
     locality:
       region: first-route-dest/backend/0
+- clusterName: second-route-dest
+  endpoints:
   - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
             address: 2.2.2.2
-            portValue: 50002
+            portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 40
+    loadBalancingWeight: 8
     locality:
-      region: first-route-dest/backend/1
+      region: second-route-dest/backend/0
   - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
             address: 3.3.3.3
-            portValue: 50003
+            portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 20
+    loadBalancingWeight: 2
     locality:
-      region: first-route-dest/backend/2
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 4.4.4.4
-            portValue: 50004
-      loadBalancingWeight: 1
-    loadBalancingWeight: 20
-    locality:
-      region: first-route-dest/backend/3
+      region: second-route-dest/backend/1

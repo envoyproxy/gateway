@@ -60,25 +60,29 @@ httpRoutes:
             - name: add-header-2
               value: some-value
           type: RequestHeaderModifier
-        - requestHeaderModifier:
-            add:
-            - name: add-header-1
-              value: some-value
-            - name: add-header-3
-              value: some-value
-          type: RequestHeaderModifier
         name: service-1
         port: 8080
-        weight: 1
+        weight: 8
       - name: service-2
         port: 8080
         weight: 2
-      - name: service-3
-        port: 8080
-        weight: 3
       matches:
       - path:
           value: /
+      sessionPersistence: null
+    - backendRefs:
+      - filters:
+        - requestHeaderModifier:
+            set:
+            - name: add-header-3
+              value: some-value
+          type: RequestHeaderModifier
+        name: service-3
+        port: 8080
+        weight: 1
+      matches:
+      - path:
+          value: /foo
       sessionPersistence: null
   status:
     parents:
@@ -131,7 +135,31 @@ xdsIR:
       routes:
       - backendWeights:
           invalid: 0
-          valid: 6
+          valid: 1
+        destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters:
+              addRequestHeaders:
+              - append: false
+                name: add-header-3
+                value: some-value
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        name: httproute/default/httproute-1/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
+      - backendWeights:
+          invalid: 0
+          valid: 10
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -147,11 +175,8 @@ xdsIR:
               - append: true
                 name: add-header-2
                 value: some-value
-              - append: true
-                name: add-header-3
-                value: some-value
             protocol: HTTP
-            weight: 1
+            weight: 8
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
@@ -159,13 +184,6 @@ xdsIR:
             filters: {}
             protocol: HTTP
             weight: 2
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            filters: {}
-            protocol: HTTP
-            weight: 3
         hostname: '*'
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/*

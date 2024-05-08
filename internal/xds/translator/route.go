@@ -70,10 +70,20 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
+<<<<<<< HEAD
 		backendWeights := httpRoute.Destination.ToBackendWeights()
 		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination.Settings)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
+=======
+		var routeAction *routev3.RouteAction
+		if hasFiltersInSettings(httpRoute.Destination.Settings) || httpRoute.BackendWeights.Invalid != 0 {
+			// If there are backend weights stored then a weighted cluster is required for the route
+			routeAction = buildXdsWeightedRouteAction(httpRoute)
+		} else {
+			routeAction = buildXdsRouteAction(httpRoute)
+		}
+>>>>>>> 77e3aa8f (build multiple weighted clusters)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -276,8 +286,8 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 				validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
 			}
 		}
+		weightedClusters = append(weightedClusters, validCluster)
 	}
-	weightedClusters = append(weightedClusters, validCluster)
 
 	return &routev3.RouteAction{
 		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
@@ -615,4 +625,14 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
+	for _, setting := range settings {
+		filters := setting.Filters
+		if filters != nil {
+			return true
+		}
+	}
+	return false
 }
