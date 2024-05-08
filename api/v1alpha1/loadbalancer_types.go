@@ -53,10 +53,20 @@ const (
 
 // ConsistentHash defines the configuration related to the consistent hash
 // load balancer policy.
+// +union
+//
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must to be set."
 type ConsistentHash struct {
-	Type   ConsistentHashType `json:"type"`
-	Header *Header            `json:"header,omitempty"`
+	// Valid Type values are
+	// "SourceIP",
+	// "Header",
+	//
+	// +unionDiscriminator
+	Type ConsistentHashType `json:"type"`
+
+	// Header configures the header hash policy when the consistent hash type is set to Header.
+	// +optional
+	Header *Header `json:"header,omitempty"`
 }
 
 // Header defines the header hashing configuration for consistent hash based
@@ -66,11 +76,6 @@ type Header struct {
 }
 
 // ConsistentHashType defines the type of input to hash on.
-//
-// It accepts the following values:
-//
-// * `SourceIP` to hash the downstream IP address
-// * `Header` to has a request header
 // +kubebuilder:validation:Enum=SourceIP
 type ConsistentHashType string
 
