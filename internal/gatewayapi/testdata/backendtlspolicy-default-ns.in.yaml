@@ -69,7 +69,6 @@ services:
           protocol: TCP
           targetPort: 8080
 
-
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
     kind: EndpointSlice
@@ -88,7 +87,6 @@ endpointSlices:
           - "10.244.0.11"
         conditions:
           ready: true
-
 
 configMaps:
   - apiVersion: v1
@@ -124,14 +122,14 @@ backendTLSPolicies:
       name: policy-btls
       namespace: default
     spec:
-      targetRef:
-        group: ''
-        kind: Service
-        name: http-backend
-        sectionName: "8080"
-      tls:
-        caCertRefs:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: http-backend
+          sectionName: "8080"
+      validation:
+        caCertificateRefs:
           - name: ca-cmap
-            group: ''
+            group: ""
             kind: ConfigMap
         hostname: example.com

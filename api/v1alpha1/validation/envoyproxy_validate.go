@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/netip"
 
+	"github.com/dominikbraun/graph"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"github.com/google/go-cmp/cmp"
@@ -60,6 +61,13 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 	validateProxyTelemetryErrs := validateProxyTelemetry(spec)
 	if len(validateProxyTelemetryErrs) != 0 {
 		errs = append(errs, validateProxyTelemetryErrs...)
+	}
+
+	// validate filter order
+	if spec != nil && spec.FilterOrder != nil {
+		if err := validateFilterOrder(spec.FilterOrder); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return utilerrors.NewAggregate(errs)
@@ -268,4 +276,37 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	}
 
 	return errs
+}
+
+func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
+	g := graph.New(graph.StringHash, graph.Directed(), graph.PreventCycles())
+
+	for _, filter := range filterOrder {
+		// Ignore the error since the same filter can be added multiple times
+		_ = g.AddVertex(string(filter.Name))
+		if filter.Before != nil {
+			_ = g.AddVertex(string(*filter.Before))
+		}
+		if filter.After != nil {
+			_ = g.AddVertex(string(*filter.After))
+		}
+	}
+
+	for _, filter := range filterOrder {
+		var from, to string
+		if filter.Before != nil {
+			from = string(filter.Name)
+			to = string(*filter.Before)
+		} else {
+			from = string(*filter.After)
+			to = string(filter.Name)
+		}
+		if err := g.AddEdge(from, to); err != nil {
+			if errors.Is(err, graph.ErrEdgeCreatesCycle) {
+				return fmt.Errorf("there is a cycle in the filter order: %s -> %s", from, to)
+			}
+		}
+	}
+
+	return nil
 }
