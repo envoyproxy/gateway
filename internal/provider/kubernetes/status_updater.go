@@ -93,16 +93,13 @@ func (u *UpdateHandler) apply(update Update) {
 			statusUpdateConflict.With(kindLabel.Value(objKind)).Increment()
 			return true
 		}
-
-		if kerrors.IsNotFound(err) {
-			statusUpdateNotFound.With(kindLabel.Value(objKind)).Increment()
-			return true
-		}
-
 		return false
 	}, func() error {
 		// Get the resource.
 		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
+			if kerrors.IsNotFound(err) {
+				return nil
+			}
 			return err
 		}
 
