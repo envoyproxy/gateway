@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -77,15 +78,19 @@ func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *
 func newGatewayScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 
-	if err := gwv1.AddToScheme(scheme); err != nil {
+	if err := gwv1.Install(scheme); err != nil {
 		return nil, err
 	}
-	if err := gwv1b1.AddToScheme(scheme); err != nil {
+	if err := gwv1b1.Install(scheme); err != nil {
 		return nil, err
 	}
-	if err := gwv1a2.AddToScheme(scheme); err != nil {
+	if err := gwv1a2.Install(scheme); err != nil {
 		return nil, err
 	}
+	if err := gwv1a3.Install(scheme); err != nil {
+		return nil, err
+	}
+
 	if err := egv1a1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
