@@ -71,7 +71,7 @@ type ConsistentHash struct {
 // load balancing.
 type Header struct {
 	// Name of the header to hash.
-	Name string `json:"header_name"`
+	Name string `json:"name"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
