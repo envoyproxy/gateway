@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -31,7 +30,8 @@ import (
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
-	xdsIR XdsIRMap) []*egv1a1.BackendTrafficPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.BackendTrafficPolicy {
 	var res []*egv1a1.BackendTrafficPolicy
 
 	// Sort based on timestamp
@@ -198,16 +198,11 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 }
 
 func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := policy.Spec.TargetRef.Namespace
-	// If empty, default to namespace of policy
-	if targetNs == nil {
-		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-	}
-
+	targetNs := policy.Namespace
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(policy.Spec.TargetRef.Name),
-		Namespace: string(*targetNs),
+		Namespace: targetNs,
 	}
 	gateway, ok := gateways[key]
 
@@ -217,9 +212,9 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, gatewa
 	}
 
 	// Ensure Policy and target are in the same namespace
-	if policy.Namespace != string(*targetNs) {
+	if policy.Namespace != targetNs {
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, BackendTrafficPolicy can only target a resource in the same namespace.",
-			policy.Namespace, *targetNs)
+			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
 			Reason:  gwv1a2.PolicyReasonInvalid,
@@ -245,17 +240,13 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, gatewa
 }
 
 func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
-	targetNs := policy.Spec.TargetRef.Namespace
-	// If empty, default to namespace of policy
-	if targetNs == nil {
-		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-	}
+	targetNs := policy.Namespace
 
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(policy.Spec.TargetRef.Kind),
 		Name:      string(policy.Spec.TargetRef.Name),
-		Namespace: string(*targetNs),
+		Namespace: targetNs,
 	}
 
 	route, ok := routes[key]
@@ -265,9 +256,9 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 	}
 
 	// Ensure Policy and target are in the same namespace
-	if policy.Namespace != string(*targetNs) {
+	if policy.Namespace != targetNs {
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, BackendTrafficPolicy can only target a resource in the same namespace.",
-			policy.Namespace, *targetNs)
+			policy.Namespace, targetNs)
 
 		return route.RouteContext, &status.PolicyResolveError{
 			Reason:  gwv1a2.PolicyReasonInvalid,
@@ -350,13 +341,15 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 	for _, ir := range xdsIR {
 		for _, tcp := range ir.TCP {
-			if strings.HasPrefix(tcp.Destination.Name, prefix) {
-				tcp.LoadBalancer = lb
-				tcp.ProxyProtocol = pp
-				tcp.HealthCheck = hc
-				tcp.CircuitBreaker = cb
-				tcp.TCPKeepalive = ka
-				tcp.Timeout = to
+			for _, r := range tcp.Routes {
+				if strings.HasPrefix(r.Destination.Name, prefix) {
+					r.LoadBalancer = lb
+					r.ProxyProtocol = pp
+					r.HealthCheck = hc
+					r.CircuitBreaker = cb
+					r.TCPKeepalive = ka
+					r.Timeout = to
+				}
 			}
 		}
 
@@ -388,6 +381,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 							return errors.Wrap(err, "Timeout")
 						}
 						r.Timeout = to
+					}
+
+					if policy.Spec.UseClientProtocol != nil {
+						r.UseClientProtocol = policy.Spec.UseClientProtocol
 					}
 				}
 			}
@@ -450,10 +447,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
-	policyTarget := irStringKey(
-		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
-		string(policy.Spec.TargetRef.Name),
-	)
+	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
 
 	if policy.Spec.Timeout != nil {
 		if ct, err = t.buildTimeout(policy, nil); err != nil {
@@ -467,21 +461,23 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			continue
 		}
 
-		// policy(targeting xRoute) has already set it, so we skip it.
-		if tcp.LoadBalancer != nil || tcp.ProxyProtocol != nil ||
-			tcp.HealthCheck != nil || tcp.CircuitBreaker != nil ||
-			tcp.TCPKeepalive != nil || tcp.Timeout != nil {
-			continue
-		}
+		for _, r := range tcp.Routes {
+			// policy(targeting xRoute) has already set it, so we skip it.
+			if r.LoadBalancer != nil || r.ProxyProtocol != nil ||
+				r.HealthCheck != nil || r.CircuitBreaker != nil ||
+				r.TCPKeepalive != nil || r.Timeout != nil {
+				continue
+			}
 
-		tcp.LoadBalancer = lb
-		tcp.ProxyProtocol = pp
-		tcp.HealthCheck = hc
-		tcp.CircuitBreaker = cb
-		tcp.TCPKeepalive = ka
+			r.LoadBalancer = lb
+			r.ProxyProtocol = pp
+			r.HealthCheck = hc
+			r.CircuitBreaker = cb
+			r.TCPKeepalive = ka
 
-		if tcp.Timeout == nil {
-			tcp.Timeout = ct
+			if r.Timeout == nil {
+				r.Timeout = ct
+			}
 		}
 	}
 
@@ -560,6 +556,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 					r.Timeout = ct
 				}
 			}
+
+			if policy.Spec.UseClientProtocol != nil {
+				if r.UseClientProtocol == nil {
+					r.UseClientProtocol = policy.Spec.UseClientProtocol
+				}
+			}
 		}
 	}
 
@@ -621,7 +623,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	var err error
 	var irRule *ir.RateLimitRule
-	var irRules = make([]*ir.RateLimitRule, 0)
+	irRules := make([]*ir.RateLimitRule, 0)
 	for _, rule := range local.Rules {
 		// We don't process the rule without clientSelectors here because it's
 		// previously used as the default route-level limit.

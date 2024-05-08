@@ -97,7 +97,9 @@ func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef 
 func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
 	t.Helper()
 
-	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName)
+	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, timeoutConfig, kubernetes.GatewayRef{
+		NamespacedName: gw.NamespacedName,
+	})
 	require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
 
 	ns := gatewayv1.Namespace(gw.Namespace)

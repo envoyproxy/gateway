@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -84,7 +85,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// GRPCRoute object status updater
 	go func() {
 		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.GRPCRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -93,9 +94,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				val := update.Value
 				r.statusUpdater.Send(status.Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.GRPCRoute),
+					Resource:       new(gwapiv1.GRPCRoute),
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						h, ok := obj.(*gwapiv1a2.GRPCRoute)
+						h, ok := obj.(*gwapiv1.GRPCRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -347,9 +348,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				val := update.Value
 				r.statusUpdater.Send(status.Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.BackendTLSPolicy),
+					Resource:       new(gwapiv1a3.BackendTLSPolicy),
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.BackendTLSPolicy)
+						t, ok := obj.(*gwapiv1a3.BackendTLSPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -447,7 +448,8 @@ func (r *gatewayAPIReconciler) updateStatusForGatewayClass(
 	gc *gwapiv1.GatewayClass,
 	accepted bool,
 	reason,
-	msg string) error {
+	msg string,
+) error {
 	if r.statusUpdater != nil {
 		r.statusUpdater.Send(status.Update{
 			NamespacedName: types.NamespacedName{Name: gc.Name},

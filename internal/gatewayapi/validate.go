@@ -23,7 +23,8 @@ import (
 )
 
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
-	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind) bool {
+	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind,
+) bool {
 	if !t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind) {
 		return false
 	}
@@ -92,7 +93,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 		filters := GetFilters(backendRef).([]gwapiv1.HTTPRouteFilter)
 		filtersLen = len(filters)
 	case KindGRPCRoute:
-		filters := GetFilters(backendRef).([]gwapiv1a2.GRPCRouteFilter)
+		filters := GetFilters(backendRef).([]gwapiv1.GRPCRouteFilter)
 		filtersLen = len(filters)
 	default:
 		return true
@@ -112,7 +113,8 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 }
 
 func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
-	resources *Resources, routeKind gwapiv1.Kind) bool {
+	resources *Resources, routeKind gwapiv1.Kind,
+) bool {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
 		if !t.validateCrossNamespaceRef(
 			crossNamespaceFrom{
@@ -152,8 +154,10 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, paren
 	}
 	return true
 }
+
 func (t *Translator) validateBackendService(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,
-	serviceNamespace string, route RouteContext, protocol v1.Protocol) bool {
+	serviceNamespace string, route RouteContext, protocol v1.Protocol,
+) bool {
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 	if service == nil {
 		parentRef.SetCondition(route,
@@ -191,7 +195,8 @@ func (t *Translator) validateBackendService(backendRef *gwapiv1a2.BackendRef, pa
 }
 
 func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,
-	serviceImportNamespace string, route RouteContext, protocol v1.Protocol) bool {
+	serviceImportNamespace string, route RouteContext, protocol v1.Protocol,
+) bool {
 	serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
 	if serviceImport == nil {
 		parentRef.SetCondition(route,
@@ -767,8 +772,8 @@ func (t *Translator) validateSecretRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretObjRef gwapiv1b1.SecretObjectReference,
-	resources *Resources) (*v1.Secret, error) {
-
+	resources *Resources,
+) (*v1.Secret, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
 		return nil, err
 	}
@@ -791,8 +796,8 @@ func (t *Translator) validateConfigMapRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretObjRef gwapiv1b1.SecretObjectReference,
-	resources *Resources) (*v1.ConfigMap, error) {
-
+	resources *Resources,
+) (*v1.ConfigMap, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
 		return nil, err
 	}
@@ -815,7 +820,8 @@ func (t *Translator) validateSecretObjectRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretRef gwapiv1b1.SecretObjectReference,
-	resources *Resources) error {
+	resources *Resources,
+) error {
 	var kind string
 	if secretRef.Group != nil && string(*secretRef.Group) != "" {
 		return errors.New("secret ref group must be unspecified/empty")
@@ -875,8 +881,8 @@ func (t *Translator) validateSecretObjectRef(
 func (t *Translator) validateExtServiceBackendReference(
 	backendRef *gwapiv1.BackendObjectReference,
 	ownerNamespace string,
-	resources *Resources) error {
-
+	resources *Resources,
+) error {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
 	if backendRef.Group != nil && *backendRef.Group != "" {

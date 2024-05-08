@@ -63,7 +63,6 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     wasm:
     - name: wasm-filter-1
       code:
@@ -95,7 +94,6 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     wasm:
     - name: wasm-filter-3
       code:

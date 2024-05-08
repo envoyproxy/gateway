@@ -23,5 +23,5 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-  name: tls-terminate
+  name: tls-listener-terminate
   perConnectionBufferLimitBytes: 32768

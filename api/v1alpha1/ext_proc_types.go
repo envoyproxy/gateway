@@ -45,18 +45,15 @@ type ExtProcProcessingMode struct {
 	Response *ProcessingModeOptions `json:"response,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.group) || self.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
-//
 // ExtProc defines the configuration for External Processing filter.
 type ExtProc struct {
-	// BackendRef defines the configuration of the external processing service
-	BackendRef ExtProcBackendRef `json:"backendRef"`
-
 	// BackendRefs defines the configuration of the external processing service
 	//
-	// +optional
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
+	BackendRefs []BackendRef `json:"backendRefs"`
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms
@@ -76,14 +73,4 @@ type ExtProc struct {
 	//
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
-}
-
-// ExtProcService defines the gRPC External Processing service using the envoy grpc client
-// The processing request and response messages are defined in
-// https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/ext_proc/v3/external_processor.proto
-type ExtProcBackendRef struct {
-	// BackendObjectReference references a Kubernetes object that represents the
-	// backend server to which the processing requests will be sent.
-	// Only service Kind is supported for now.
-	gwapiv1.BackendObjectReference `json:",inline"`
 }

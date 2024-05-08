@@ -22,6 +22,9 @@ In addition to that the entire origin (with or without specifying a scheme) can 
 
 The below example defines a SecurityPolicy that allows CORS for all HTTP requests originating from `www.foo.com`.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -48,6 +51,39 @@ spec:
     - "x-header-4"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cors-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  cors:
+    allowOrigins:
+    - "http://*.foo.com"
+    - "http://*.foo.com:80"
+    allowMethods:
+    - GET
+    - POST
+    allowHeaders:
+    - "x-header-1"
+    - "x-header-2"
+    exposeHeaders:
+    - "x-header-3"
+    - "x-header-4"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the SecurityPolicy configuration:
 

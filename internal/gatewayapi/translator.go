@@ -9,7 +9,7 @@ import (
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	egv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -115,9 +115,10 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
-	backendTLSPolicies []*egv1a2.BackendTLSPolicy,
+	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
-	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
+	xdsIR XdsIRMap, infraIR InfraIRMap,
+) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
 		InfraIR: infraIR,
@@ -218,11 +219,19 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
+	// Set custom filter order if EnvoyProxy is set
+	// The custom filter order will be applied when generating the HTTP filter chain.
+	if resources.EnvoyProxy != nil {
+		for _, gateway := range gateways {
+			irKey := t.getIRKey(gateway.Gateway)
+			xdsIR[irKey].FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
+		}
+	}
+
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
 		xdsIR, infraIR)
-
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

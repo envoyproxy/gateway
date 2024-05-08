@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -479,8 +480,8 @@ http2     gateway/test-2   foobar4   test-status-4   test reason 4
 		},
 		{
 			name: "egctl x status btlspolicy",
-			resourceList: &gwv1a2.BackendTLSPolicyList{
-				Items: []gwv1a2.BackendTLSPolicy{
+			resourceList: &gwv1a3.BackendTLSPolicyList{
+				Items: []gwv1a3.BackendTLSPolicy{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "btls",

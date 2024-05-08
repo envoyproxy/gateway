@@ -119,7 +119,6 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 
 	req, err := http.NewRequest("GET", tempoURL.String(), nil)
 	if err != nil {
-
 		return -1, err
 	}
 

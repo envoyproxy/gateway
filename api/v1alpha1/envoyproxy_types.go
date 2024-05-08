@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -88,6 +89,7 @@ type EnvoyProxySpec struct {
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
 	//
@@ -116,6 +118,20 @@ type EnvoyProxySpec struct {
 	// +optional
 	// +notImplementedHide
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
+	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
+	// These settings are applied on backends for which TLS policies are specified.
+	// +optional
+	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
+}
+
+// BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
+type BackendTLSConfig struct {
+	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
+	// the client certificate and private key for Envoy to use when connecting to
+	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	// +optional
+	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
+	TLSSettings          `json:",inline"`
 }
 
 // FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
@@ -123,7 +139,7 @@ type EnvoyProxySpec struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.before) && !has(self.after)) || (!has(self.before) && has(self.after))",message="only one of before or after can be specified"
 type FilterPosition struct {
 	// Name of the filter.
-	Name EnvoyFilter `json:"filter"`
+	Name EnvoyFilter `json:"name"`
 
 	// Before defines the filter that should come before the filter.
 	// Only one of Before or After must be set.

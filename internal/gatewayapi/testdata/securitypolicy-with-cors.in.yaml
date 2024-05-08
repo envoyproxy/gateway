@@ -106,7 +106,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     cors:
       allowOrigins:
       - "http://*.example.com"
@@ -132,7 +131,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     cors:
       allowOrigins:
       - "https://*.test.com:8080"
@@ -157,7 +155,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
     cors:
       allowOrigins:
       - "*"

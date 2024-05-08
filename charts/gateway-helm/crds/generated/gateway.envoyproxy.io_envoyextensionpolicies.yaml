@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: envoyextensionpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -54,83 +54,6 @@ spec:
                   description: ExtProc defines the configuration for External Processing
                     filter.
                   properties:
-                    backendRef:
-                      description: BackendRef defines the configuration of the external
-                        processing service
-                      properties:
-                        group:
-                          default: ""
-                          description: |-
-                            Group is the group of the referent. For example, "gateway.networking.k8s.io".
-                            When unspecified or empty string, core API group is inferred.
-                          maxLength: 253
-                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                          type: string
-                        kind:
-                          default: Service
-                          description: |-
-                            Kind is the Kubernetes resource kind of the referent. For example
-                            "Service".
-
-
-                            Defaults to "Service" when not specified.
-
-
-                            ExternalName services can refer to CNAME DNS records that may live
-                            outside of the cluster and as such are difficult to reason about in
-                            terms of conformance. They also may not be safe to forward to (see
-                            CVE-2021-25740 for more information). Implementations SHOULD NOT
-                            support ExternalName Services.
-
-
-                            Support: Core (Services with a type other than ExternalName)
-
-
-                            Support: Implementation-specific (Services with type ExternalName)
-                          maxLength: 63
-                          minLength: 1
-                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                          type: string
-                        name:
-                          description: Name is the name of the referent.
-                          maxLength: 253
-                          minLength: 1
-                          type: string
-                        namespace:
-                          description: |-
-                            Namespace is the namespace of the backend. When unspecified, the local
-                            namespace is inferred.
-
-
-                            Note that when a namespace different than the local namespace is specified,
-                            a ReferenceGrant object is required in the referent namespace to allow that
-                            namespace's owner to accept the reference. See the ReferenceGrant
-                            documentation for details.
-
-
-                            Support: Core
-                          maxLength: 63
-                          minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                          type: string
-                        port:
-                          description: |-
-                            Port specifies the destination port number to use for this resource.
-                            Port is required when the referent is a Kubernetes Service. In this
-                            case, the port number is the service port number, not the target port.
-                            For other resources, destination port might be derived from the referent
-                            resource or this field.
-                          format: int32
-                          maximum: 65535
-                          minimum: 1
-                          type: integer
-                      required:
-                      - name
-                      type: object
-                      x-kubernetes-validations:
-                      - message: Must have port for Service reference
-                        rule: '(size(self.group) == 0 && self.kind == ''Service'')
-                          ? has(self.port) : true'
                     backendRefs:
                       description: BackendRefs defines the configuration of the external
                         processing service
@@ -211,7 +134,14 @@ spec:
                         - message: Must have port for Service reference
                           rule: '(size(self.group) == 0 && self.kind == ''Service'')
                             ? has(self.port) : true'
+                      maxItems: 1
+                      minItems: 1
                       type: array
+                      x-kubernetes-validations:
+                      - message: BackendRefs only supports Service kind.
+                        rule: self.all(f, f.kind == 'Service')
+                      - message: BackendRefs only supports Core group.
+                        rule: self.all(f, f.group == '')
                     failOpen:
                       description: |-
                         FailOpen defines if requests or responses that cannot be processed due to connectivity to the
@@ -257,26 +187,16 @@ spec:
                           type: object
                       type: object
                   required:
-                  - backendRef
+                  - backendRefs
                   type: object
-                  x-kubernetes-validations:
-                  - message: group is invalid, only the core API group (specified
-                      by omitting the group field or setting it to an empty string)
-                      is supported
-                    rule: 'has(self.backendRef) ? (!has(self.backendRef.group) ||
-                      self.backendRef.group == "") : true'
-                  - message: kind is invalid, only Service (specified by omitting
-                      the kind field or setting it to 'Service') is supported
-                    rule: 'has(self.backendRef) ? (!has(self.backendRef.kind) || self.backendRef.kind
-                      == ''Service'') : true'
+                maxItems: 16
                 type: array
               targetRef:
                 description: |-
-                  TargetRef is the name of the Gateway resource this policy
+                  TargetRef is the name of the resource this policy
                   is being attached to.
                   This Policy and the TargetRef MUST be in the same namespace
-                  for this Policy to have effect and be applied to the Gateway.
-                  TargetRef
+                  for this Policy to have effect and be applied to the Gateway or xRoute.
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -294,16 +214,6 @@ spec:
                     maxLength: 253
                     minLength: 1
                     type: string
-                  namespace:
-                    description: |-
-                      Namespace is the namespace of the referent. When unspecified, the local
-                      namespace is inferred. Even when policy targets a resource in a different
-                      namespace, it MUST only apply to traffic originating from the same
-                      namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
                   sectionName:
                     description: |-
                       SectionName is the name of a section within the target resource. When
@@ -311,8 +221,9 @@ spec:
                       resources, SectionName is interpreted as the following:
 
 
-                      * Gateway: Listener Name
-                      * Service: Port Name
+                      * Gateway: Listener name
+                      * HTTPRoute: HTTPRouteRule name
+                      * Service: Port name
 
 
                       If a SectionName is specified, but does not exist on the targeted object,
@@ -479,6 +390,7 @@ spec:
                   - code
                   - name
                   type: object
+                maxItems: 16
                 type: array
             required:
             - targetRef
@@ -589,7 +501,7 @@ spec:
 
 
                             * Gateway (Gateway conformance profile)
-                            * Service (Mesh conformance profile, experimental, ClusterIP Services only)
+                            * Service (Mesh conformance profile, ClusterIP Services only)
 
 
                             Support for other resources is Implementation-Specific.
@@ -675,9 +587,6 @@ spec:
 
 
                             Support: Extended
-
-
-                            <gateway:experimental>
                           format: int32
                           maximum: 65535
                           minimum: 1
@@ -688,14 +597,12 @@ spec:
                             following resources, SectionName is interpreted as the following:
 
 
-                            * Gateway: Listener Name. When both Port (experimental) and SectionName
+                            * Gateway: Listener name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
                             both specified values.
-                            * Service: Port Name. When both Port (experimental) and SectionName
+                            * Service: Port name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
-                            both specified values. Note that attaching Routes to Services as Parents
-                            is part of experimental Mesh support and is not supported for any other
-                            purpose.
+                            both specified values.
 
 
                             Implementations MAY choose to support attaching Routes to other resources.

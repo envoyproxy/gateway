@@ -24,7 +24,6 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests, RetryTest)
-
 }
 
 var RetryTest = suite.ConformanceTest{

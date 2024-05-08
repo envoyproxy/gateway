@@ -20,7 +20,7 @@ lint: lint.golint
 lint-deps: $(tools/golangci-lint)
 lint.golint: $(tools/golangci-lint)
 	@$(LOG_TARGET)
-	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e,celvalidation --config=tools/linter/golangci-lint/.golangci.yml
+	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e,celvalidation,conformance,experimental --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint
@@ -69,10 +69,10 @@ lint.shellcheck: $(tools/shellcheck)
 	$(tools/shellcheck) tools/hack/*.sh
 
 .PHONY: gen-check
-gen-check: generate manifests go.testdata.complete
+gen-check: generate manifests protos go.testdata.complete
 	@$(LOG_TARGET)
 	@if [ ! -z "`git status --porcelain`" ]; then \
-		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate' and 'make manifests' to include any changed files to your PR); \
+		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate', 'make manifests' and 'make protos' to include any changed files to your PR); \
 		git diff --exit-code; \
 	fi
 

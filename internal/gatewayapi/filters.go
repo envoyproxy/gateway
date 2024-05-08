@@ -11,7 +11,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -64,7 +63,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
-	resources *Resources) *HTTPFiltersContext {
+	resources *Resources,
+) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
@@ -106,8 +106,9 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 // ProcessGRPCFilters translates gateway api grpc filters to IRs.
 func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
-	filters []v1alpha2.GRPCRouteFilter,
-	resources *Resources) *HTTPFiltersContext {
+	filters []gwapiv1.GRPCRouteFilter,
+	resources *Resources,
+) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
@@ -126,13 +127,13 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		}
 
 		switch filter.Type {
-		case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
+		case gwapiv1.GRPCRouteFilterRequestHeaderModifier:
 			t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
-		case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
-		case v1alpha2.GRPCRouteFilterRequestMirror:
+		case gwapiv1.GRPCRouteFilterRequestMirror:
 			t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
-		case v1alpha2.GRPCRouteFilterExtensionRef:
+		case gwapiv1.GRPCRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
@@ -144,7 +145,8 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 
 func (t *Translator) processURLRewriteFilter(
 	rewrite *gwapiv1.HTTPURLRewriteFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	if filterContext.URLRewrite != nil {
 		filterContext.ParentRef.SetCondition(filterContext.Route,
 			gwapiv1.RouteConditionAccepted,
@@ -246,7 +248,8 @@ func (t *Translator) processURLRewriteFilter(
 
 func (t *Translator) processRedirectFilter(
 	redirect *gwapiv1.HTTPRequestRedirectFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Can't have two redirects for the same route
 	if filterContext.RedirectResponse != nil {
 		filterContext.ParentRef.SetCondition(filterContext.Route,
@@ -347,7 +350,8 @@ func (t *Translator) processRedirectFilter(
 
 func (t *Translator) processRequestHeaderModifierFilter(
 	headerModifier *gwapiv1.HTTPHeaderFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
@@ -500,7 +504,8 @@ func (t *Translator) processRequestHeaderModifierFilter(
 
 func (t *Translator) processResponseHeaderModifierFilter(
 	headerModifier *gwapiv1.HTTPHeaderFilter,
-	filterContext *HTTPFiltersContext) {
+	filterContext *HTTPFiltersContext,
+) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
@@ -693,8 +698,8 @@ func (t *Translator) processRequestMirrorFilter(
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
-	resources *Resources) {
-
+	resources *Resources,
+) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
 		return

@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -174,7 +175,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindHTTPRoute
 
 	case "grpcroute":
-		grpcroute := gwv1a2.GRPCRouteList{}
+		grpcroute := gwv1.GRPCRouteList{}
 		if err := cli.List(ctx, &grpcroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -206,7 +207,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindTLSRoute
 
 	case "btlspolicy", "backendtlspolicy":
-		btlspolicy := gwv1a2.BackendTLSPolicyList{}
+		btlspolicy := gwv1a3.BackendTLSPolicyList{}
 		if err := cli.List(ctx, &btlspolicy, client.InNamespace(namespace)); err != nil {
 			return err
 		}

@@ -114,25 +114,52 @@ It required the node with 3rd generation Intel Xeon Scalable processor server pr
 
 * Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway.
 
-* Lets enable the EnvoyPatchPolicy feature, which will allow us to directly configure the Private Key Provider Envoy Filter, since Envoy Gateway does not directly expose this functionality.
+* Enable the EnvoyPatchPolicy feature, which will allow us to directly configure the Private Key Provider Envoy Filter, since Envoy Gateway does not directly expose this functionality.
 
-  ```shell
-  cat <<EOF | kubectl apply -f -
-  apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    name: envoy-gateway-config
-    namespace: envoy-gateway-system
-  data:
-    envoy-gateway.yaml: |
-      apiVersion: gateway.envoyproxy.io/v1alpha1
-      kind: EnvoyGateway
-      gateway:
-        controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      extensionApis:
-        enableEnvoyPatchPolicy: true
-  EOF
-  ```
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 * After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
 
@@ -146,25 +173,53 @@ It required the node with 3rd generation Intel Xeon Scalable processor server pr
 
 * Update GatewayClass for using the envoyproxy image with contrib extensions and requests required resources.
 
-  ```shell
-  cat <<EOF | kubectl apply -f -
-  apiVersion: gateway.networking.k8s.io/v1
-  kind: GatewayClass
-  metadata:
-    name: eg
-  spec:
-    controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    parametersRef:
-      group: gateway.envoyproxy.io
-      kind: EnvoyProxy
-      name: custom-proxy-config
-      namespace: envoy-gateway-system
-  EOF
-  ```
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ### Change EnvoyProxy configuration for QAT
 
 Using the envoyproxy image with contrib extensions and add qat resources requesting, ensure the k8s scheduler find out a machine with required resource.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -195,9 +250,47 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  concurrency: 1
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+      envoyDeployment:
+        container:
+          image: envoyproxy/envoy-contrib-dev:latest
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 4096Mi
+              qat.intel.com/cy: '1'
+            limits:
+              cpu: 1000m
+              memory: 4096Mi
+              qat.intel.com/cy: '1'
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ### Change EnvoyProxy configuration for CryptoMB
 
 Using the envoyproxy image with contrib extensions and add the node affinity to scheduling the Envoy Gateway pod on the machine with required CPU instructions.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -242,6 +335,55 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  concurrency: 1
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+      envoyDeployment:
+        container:
+          image: envoyproxy/envoy-contrib-dev:latest
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 4096Mi
+            limits:
+              cpu: 1000m
+              memory: 4096Mi
+        pod:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: feature.node.kubernetes.io/cpu-cpuid.AVX512F
+                    operator: Exists
+                  - key: feature.node.kubernetes.io/cpu-cpuid.AVX512DQ
+                    operator: Exists
+                  - key: feature.node.kubernetes.io/cpu-cpuid.AVX512BW
+                    operator: Exists
+                  - key: feature.node.kubernetes.io/cpu-cpuid.AVX512IFMA
+                    operator: Exists
+                  - key: feature.node.kubernetes.io/cpu-cpuid.AVX512VBMI2
+                    operator: Exists
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Or using `preferredDuringSchedulingIgnoredDuringExecution` for best effort scheduling, or not doing any node affinity, just doing the random scheduling. The CryptoMB private key provider supports software fallback if the required CPU instructions aren't here.
 
 ## Apply EnvoyPatchPolicy to enable private key provider
@@ -275,6 +417,9 @@ fortio load -c 10 -k -qps 0 -t 30s -keepalive=false https://www.example.com:${NO
 ```
 
 ### For QAT
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -314,7 +459,54 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: key-provider-patch-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+      name: default/example-cert
+      operation:
+        op: add
+        path: "/tls_certificate/private_key_provider"
+        value:
+          provider_name: qat
+          typed_config:
+            "@type": "type.googleapis.com/envoy.extensions.private_key_providers.qat.v3alpha.QatPrivateKeyMethodConfig"
+            private_key:
+              inline_string: |
+                abcd
+            poll_delay: 0.001s
+          fallback: true
+    - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+      name: default/example-cert
+      operation:
+        op: copy
+        from: "/tls_certificate/private_key"
+        path: "/tls_certificate/private_key_provider/typed_config/private_key"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ### For CryptoMB
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -353,6 +545,50 @@ spec:
         path: "/tls_certificate/private_key_provider/typed_config/private_key"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: key-provider-patch-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+      name: default/example-cert
+      operation:
+        op: add
+        path: "/tls_certificate/private_key_provider"
+        value:
+          provider_name: cryptomb
+          typed_config:  
+            "@type": "type.googleapis.com/envoy.extensions.private_key_providers.cryptomb.v3alpha.CryptoMbPrivateKeyMethodConfig"
+            private_key:
+              inline_string: |
+                abcd
+            poll_delay: 0.001s
+          fallback: true
+    - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+      name: default/example-cert
+      operation:
+        op: copy
+        from: "/tls_certificate/private_key"
+        path: "/tls_certificate/private_key_provider/typed_config/private_key"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ### Benchmark after enabling private key provider
 
