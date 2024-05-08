@@ -46,7 +46,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     timeout:
       tcp:
         connectTimeout: 20kib

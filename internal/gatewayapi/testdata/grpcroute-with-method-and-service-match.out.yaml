@@ -64,6 +64,7 @@ grpcRoutes:
           method: Foobar
           service: foo.*
           type: RegularExpression
+      sessionPersistence: null
   status:
     parents:
     - conditions:

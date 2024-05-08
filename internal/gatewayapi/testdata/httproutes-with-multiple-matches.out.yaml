@@ -57,6 +57,7 @@ httpRoutes:
       matches:
       - path:
           value: /
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -94,6 +95,7 @@ httpRoutes:
       matches:
       - path:
           value: /foo
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -133,6 +135,7 @@ httpRoutes:
         queryParams:
         - name: debug
           value: "yes"
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -169,6 +172,7 @@ httpRoutes:
       matches:
       - path:
           value: /v1/example
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -208,6 +212,7 @@ httpRoutes:
           value: one
         path:
           value: /v1/status
+      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -244,6 +249,7 @@ httpRoutes:
       matches:
       - path:
           value: /v1/status
+      sessionPersistence: null
   status:
     parents:
     - conditions:
