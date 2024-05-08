@@ -218,7 +218,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": If consistent hash type is eader, the header field must be set",
+				"spec.loadBalancer: Invalid value: \"object\": If consistent hash type is header, the header field must be set",
 			},
 		},
 		{

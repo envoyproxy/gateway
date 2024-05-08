@@ -52,7 +52,7 @@ const (
 )
 
 // ConsistentHash defines the configuration related to the consistent hash
-// load balancer policy
+// load balancer policy.
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must to be set."
 type ConsistentHash struct {
 	Type   ConsistentHashType `json:"type"`
