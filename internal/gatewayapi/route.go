@@ -1226,19 +1226,14 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			gwapiv1a2.RouteReasonResolvedRefs,
 			"Mixed endpointslice address type for the same backendRef is not supported")
 	}
-
+	destinationFilters := t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	ds = &ir.DestinationSetting{
 		Weight:      &weight,
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
 		TLS:         backendTLS,
-	}
-
-	backendFilters := getBackendFilters(routeType, backendRefContext)
-	if backendFilters != nil {
-		httpFiltersContext := t.processFilters(backendFilters, parentRef, route, resources)
-		ds.Filters = assignDestinationFilters(httpFiltersContext)
+		Filters:     destinationFilters,
 	}
 
 	return ds, weight
@@ -1254,31 +1249,43 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return
 }
 
-func (t *Translator) processFilters(backendFilters any, parentRef *RouteParentContext, route RouteContext, resources *Resources) *HTTPFiltersContext {
+func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *Resources) *ir.DestinationFilters {
+	backendFilters := getBackendFilters(routeType, backendRefContext)
+	if backendFilters == nil {
+		return nil
+	}
 	var httpFilters []gwapiv1.HTTPRouteFilter
 	var grpcFilters []gwapiv1.GRPCRouteFilter
+	var httpFiltersContext *HTTPFiltersContext
+	var destFilters ir.DestinationFilters
 
 	switch filters := backendFilters.(type) {
 	case []gwapiv1.HTTPRouteFilter:
 		httpFilters = append(httpFilters, filters...)
-		return t.ProcessHTTPFilters(parentRef, route, httpFilters, 0, resources)
+		httpFiltersContext = t.ProcessHTTPFilters(parentRef, route, httpFilters, 0, resources)
 
 	case []gwapiv1.GRPCRouteFilter:
 		grpcFilters = append(grpcFilters, filters...)
-		return t.ProcessGRPCFilters(parentRef, route, grpcFilters, resources)
+		httpFiltersContext = t.ProcessGRPCFilters(parentRef, route, grpcFilters, resources)
 	}
+	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
 
-	return nil
+	return &destFilters
 }
 
-func assignDestinationFilters(httpFiltersContext *HTTPFiltersContext) *ir.DestinationFilters {
-	destFilters := &ir.DestinationFilters{}
-	destFilters.AddRequestHeaders = httpFiltersContext.HTTPFilterIR.AddRequestHeaders
-	destFilters.RemoveRequestHeaders = httpFiltersContext.HTTPFilterIR.RemoveRequestHeaders
-	destFilters.AddResponseHeaders = httpFiltersContext.HTTPFilterIR.AddResponseHeaders
-	destFilters.RemoveResponseHeaders = httpFiltersContext.HTTPFilterIR.RemoveResponseHeaders
-
-	return destFilters
+func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFiltersContext, destFilters *ir.DestinationFilters) {
+	if len(httpFiltersContext.AddRequestHeaders) > 0 {
+		destFilters.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
+	}
+	if len(httpFiltersContext.RemoveRequestHeaders) > 0 {
+		destFilters.RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
+	}
+	if len(httpFiltersContext.AddResponseHeaders) > 0 {
+		destFilters.AddResponseHeaders = httpFiltersContext.AddResponseHeaders
+	}
+	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
+		destFilters.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
+	}
 }
 
 func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
