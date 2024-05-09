@@ -195,7 +195,6 @@ grpcRoutes:
       - method:
           method: DoThing
           service: com.example.Things
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -235,7 +234,6 @@ httpRoutes:
       - path:
           type: PathPrefix
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:

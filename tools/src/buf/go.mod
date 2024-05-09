@@ -1,6 +1,6 @@
 module local
 
-go 1.22.2
+go 1.22.3
 
 require github.com/bufbuild/buf v1.31.0
 
