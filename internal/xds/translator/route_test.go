@@ -37,6 +37,11 @@ func Test_buildHashPolicy(t *testing.T) {
 			want:      nil,
 		},
 		{
+			name:      "ConsistentHash with nil SourceIP and Header",
+			httpRoute: &ir.HTTPRoute{LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}}},
+			want:      nil,
+		},
+		{
 			name:      "ConsistentHash with SourceIP set to false",
 			httpRoute: &ir.HTTPRoute{LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: ptr.To(false)}}},
 			want:      nil,
