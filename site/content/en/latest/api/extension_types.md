@@ -2248,20 +2248,6 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
-#### Policy
-
-
-
-Policy defines the authorization policy.
-
-_Appears in:_
-- [Rule](#rule)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `subjects` | _[Subject](#subject)_ |  false  | Subject contains the subject configuration.<br />If empty, all subjects are included. |
-
-
 #### ProcessingModeOptions
 
 
@@ -2905,7 +2891,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
-| `policies` | _[Policy](#policy) array_ |  true  | Policies contains the list of authorization policies. |
+| `subjects` | _[Subject](#subject)_ |  false  | Subject contains the subject configuration.<br />If empty, all subjects are included. |
 
 
 #### RuleActionType
@@ -3098,7 +3084,7 @@ _Appears in:_
 Subject contains the subject configuration.
 
 _Appears in:_
-- [Policy](#policy)
+- [Rule](#rule)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |

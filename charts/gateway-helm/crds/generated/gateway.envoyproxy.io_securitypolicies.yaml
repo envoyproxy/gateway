@@ -68,30 +68,21 @@ spec:
                           - Deny
                           - Log
                           type: string
-                        policies:
-                          description: Policies contains the list of authorization
-                            policies.
-                          items:
-                            description: Policy defines the authorization policy.
-                            properties:
-                              subjects:
-                                description: |-
-                                  Subject contains the subject configuration.
-                                  If empty, all subjects are included.
-                                properties:
-                                  clientCIDR:
-                                    description: |-
-                                      ClientCIDR contains client cidr configuration.
-                                      Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-                                    items:
-                                      type: string
-                                    type: array
-                                type: object
-                            type: object
-                          type: array
+                        subjects:
+                          description: |-
+                            Subject contains the subject configuration.
+                            If empty, all subjects are included.
+                          properties:
+                            clientCIDR:
+                              description: |-
+                                ClientCIDR contains client cidr configuration.
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+                              items:
+                                type: string
+                              type: array
+                          type: object
                       required:
                       - action
-                      - policies
                       type: object
                     minItems: 1
                     type: array

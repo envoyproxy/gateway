@@ -20,12 +20,6 @@ type Rule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action RuleActionType `json:"action"`
 
-	// Policies contains the list of authorization policies.
-	Policies []Policy `json:"policies"`
-}
-
-// Policy defines the authorization policy.
-type Policy struct {
 	// Subject contains the subject configuration.
 	// If empty, all subjects are included.
 	//
