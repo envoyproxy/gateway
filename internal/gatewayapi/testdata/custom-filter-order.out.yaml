@@ -107,7 +107,6 @@ httpRoutes:
       matches:
       - path:
           value: /foo
-      sessionPersistence: null
   status:
     parents:
     - conditions:

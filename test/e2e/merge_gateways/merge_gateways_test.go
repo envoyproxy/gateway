@@ -17,15 +17,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/test/e2e"
 	"github.com/envoyproxy/gateway/test/e2e/tests"
 )
@@ -38,10 +34,9 @@ func TestMergeGateways(t *testing.T) {
 
 	c, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)
-	require.NoError(t, gwapiv1a3.AddToScheme(c.Scheme()))
-	require.NoError(t, gwapiv1a2.AddToScheme(c.Scheme()))
-	require.NoError(t, gwapiv1.AddToScheme(c.Scheme()))
-	require.NoError(t, egv1a1.AddToScheme(c.Scheme()))
+
+	// Install all the scheme to kubernetes client.
+	e2e.CheckInstallScheme(t, c)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",

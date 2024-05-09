@@ -70,7 +70,6 @@ httpRoutes:
       - path:
           type: PathPrefix
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
