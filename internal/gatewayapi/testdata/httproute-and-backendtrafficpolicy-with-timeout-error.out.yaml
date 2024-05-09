@@ -92,7 +92,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
       timeouts:
         request: 1s
   status:

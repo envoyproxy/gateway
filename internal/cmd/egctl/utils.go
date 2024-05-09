@@ -10,14 +10,10 @@ import (
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
 type envoyConfigType string
@@ -73,31 +69,8 @@ func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *
 	return nil, fmt.Errorf("unknown resourceType %s", resourceType)
 }
 
-// newGatewayScheme creates scheme for K8s Gateway API and Envoy Gateway.
-func newGatewayScheme() (*runtime.Scheme, error) {
-	scheme := runtime.NewScheme()
-
-	if err := gwv1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := gwv1b1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := gwv1a2.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := egv1a1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-
-	return scheme, nil
-}
-
 func newK8sClient() (client.Client, error) {
-	scheme, err := newGatewayScheme()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load gateway shceme: %w", err)
-	}
+	scheme := envoygateway.GetScheme()
 
 	cli, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
 	if err != nil {

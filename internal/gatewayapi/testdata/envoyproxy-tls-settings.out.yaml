@@ -86,7 +86,6 @@ httpRoutes:
       - name: https-backend
         namespace: default
         port: 443
-      sessionPersistence: null
   status:
     parents:
     - conditions:
