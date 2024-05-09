@@ -52,11 +52,21 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	case httpRoute.DirectResponse != nil:
 		router.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
 	case httpRoute.Redirect != nil:
-		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
+		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
+		}
+
+		if !httpRoute.IsHTTP2 {
+			// Allow websocket upgrades for HTTP 1.1
+			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
+				{
+					UpgradeType: "websocket",
+				},
+			}
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
@@ -269,8 +279,11 @@ func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
 	return nil
 }
 
-func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
-	routeAction := &routev3.RedirectAction{}
+func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
+	var (
+		redirection = httpRoute.Redirect
+		routeAction = &routev3.RedirectAction{}
+	)
 
 	if redirection.Scheme != nil {
 		routeAction.SchemeRewriteSpecifier = &routev3.RedirectAction_SchemeRedirect{
@@ -283,8 +296,14 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 				PathRedirect: *redirection.Path.FullReplace,
 			}
 		} else if redirection.Path.PrefixMatchReplace != nil {
-			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PrefixRewrite{
-				PrefixRewrite: *redirection.Path.PrefixMatchReplace,
+			if useRegexRewriteForPrefixMatchReplace(httpRoute.PathMatch, *redirection.Path.PrefixMatchReplace) {
+				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_RegexRewrite{
+					RegexRewrite: prefix2RegexRewrite(*httpRoute.PathMatch.Prefix),
+				}
+			} else {
+				routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PrefixRewrite{
+					PrefixRewrite: *redirection.Path.PrefixMatchReplace,
+				}
 			}
 		}
 	}
@@ -301,6 +320,24 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 	}
 
 	return routeAction
+}
+
+// useRegexRewriteForPrefixMatchReplace checks if the regex rewrite should be used for prefix match replace
+// due to the issue with Envoy not handling the case of "//" when the replace string is "/".
+// See: https://github.com/envoyproxy/envoy/issues/26055
+func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatchReplace string) bool {
+	return pathMatch != nil &&
+		pathMatch.Prefix != nil &&
+		(prefixMatchReplace == "" || prefixMatchReplace == "/")
+}
+
+func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
+	return &matcherv3.RegexMatchAndSubstitute{
+		Pattern: &matcherv3.RegexMatcher{
+			Regex: "^" + prefix + `\/*`,
+		},
+		Substitution: "/",
+	}
 }
 
 func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
@@ -323,14 +360,8 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			// An empty replace string does not seem to solve the issue so we are using
 			// a regex match and replace instead
 			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
-			if pathMatch != nil && pathMatch.Prefix != nil &&
-				(*urlRewrite.Path.PrefixMatchReplace == "" || *urlRewrite.Path.PrefixMatchReplace == "/") {
-				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
-					Pattern: &matcherv3.RegexMatcher{
-						Regex: "^" + *pathMatch.Prefix + `\/*`,
-					},
-					Substitution: "/",
-				}
+			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
+				routeAction.RegexRewrite = prefix2RegexRewrite(*pathMatch.Prefix)
 			} else {
 				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
 			}
@@ -409,7 +440,20 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 		return nil
 	}
 
-	if httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil && *httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+	switch {
+	case httpRoute.LoadBalancer.ConsistentHash.Header != nil:
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+				Header: &routev3.RouteAction_HashPolicy_Header{
+					HeaderName: httpRoute.LoadBalancer.ConsistentHash.Header.Name,
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil:
+		if !*httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+			return nil
+		}
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
 				ConnectionProperties: &routev3.RouteAction_HashPolicy_ConnectionProperties{
@@ -418,9 +462,9 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {

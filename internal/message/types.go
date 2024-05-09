@@ -72,7 +72,7 @@ func (p *ProviderResources) Close() {
 type GatewayAPIStatuses struct {
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
-	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
+	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
 	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
 	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
@@ -94,6 +94,7 @@ type PolicyStatuses struct {
 	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 }
 
 func (p *PolicyStatuses) Close() {
@@ -101,6 +102,7 @@ func (p *PolicyStatuses) Close() {
 	p.SecurityPolicyStatuses.Close()
 	p.EnvoyPatchPolicyStatuses.Close()
 	p.BackendTLSPolicyStatuses.Close()
+	p.EnvoyExtensionPolicyStatuses.Close()
 }
 
 // XdsIR message

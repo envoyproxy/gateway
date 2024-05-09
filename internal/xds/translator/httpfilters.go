@@ -6,7 +6,10 @@
 package translator
 
 import (
+	"container/list"
+	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -14,6 +17,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"k8s.io/utils/ptr"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 
@@ -44,11 +48,13 @@ func registerHTTPFilter(filter httpFilter) {
 //   - PatchRouteWithPerRouteConfig: EG enables the corresponding filter for each
 //     route in the typedFilterConfig of that route.
 //
-// The filter types that haven't native per-route support: oauth2, basic authn, ext_authz.
+// The filter types that haven't native per-route support: oauth2, ext_authz.
 // Note: The filter types that have native per-route configuration support should
 // always se their own native per-route configuration.
 type httpFilter interface {
 	// patchHCM patches the HttpConnectionManager with the filter.
+	// Note: this method may be called multiple times for the same filter, please
+	// make sure to avoid duplicate additions of the same filter.
 	patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error
 
 	// patchRoute patches the provide Route with a filter's Route level configuration.
@@ -72,7 +78,9 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 
 // newOrderedHTTPFilter gives each HTTP filter a rational order.
 // This is needed because the order of the filters is important.
-// For example, the cors filter should be put at the first to avoid unnecessary
+// For example, the fault filter should be placed in the first position because
+// it doesn't rely on the functionality of other filters, and rejecting early can save computation costs
+// for the remaining filters, the cors filter should be put at the second to avoid unnecessary
 // processing of other filters for unauthorized cross-region access.
 // The router filter must be the last one since it's a terminal filter.
 //
@@ -84,25 +92,31 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	order := 50
 
 	// Set a rational order for all the filters.
+	// When the fault filter is configured to be at the first, the computation of
+	// the remaining filters is skipped when rejected early
 	switch {
-	case filter.Name == wellknown.CORS:
+	case isFilterType(filter, wellknown.Fault):
 		order = 1
-	case isFilterType(filter, extAuthFilter):
+	case isFilterType(filter, wellknown.CORS):
 		order = 2
-	case isFilterType(filter, basicAuthFilter):
+	case isFilterType(filter, extAuthFilter):
 		order = 3
-	case isFilterType(filter, oauth2Filter):
+	case isFilterType(filter, basicAuthFilter):
 		order = 4
-	case filter.Name == jwtAuthn:
+	case isFilterType(filter, oauth2Filter):
 		order = 5
-	case filter.Name == wellknown.Fault:
+	case isFilterType(filter, jwtAuthn):
 		order = 6
-	case filter.Name == localRateLimitFilter:
-		order = 7
-	case filter.Name == wellknown.HTTPRateLimit:
-		order = 8
-	case filter.Name == wellknown.Router:
-		order = 100
+	case isFilterType(filter, extProcFilter):
+		order = 7 + mustGetFilterIndex(filter.Name)
+	case isFilterType(filter, wasmFilter):
+		order = 100 + mustGetFilterIndex(filter.Name)
+	case isFilterType(filter, localRateLimitFilter):
+		order = 201
+	case isFilterType(filter, wellknown.HTTPRateLimit):
+		order = 202
+	case isFilterType(filter, wellknown.Router):
+		order = 203
 	}
 
 	return &OrderedHTTPFilter{
@@ -130,16 +144,87 @@ func (o OrderedHTTPFilters) Swap(i, j int) {
 // For example, the cors filter should be put at the first to avoid unnecessary
 // processing of other filters for unauthorized cross-region access.
 // The router filter must be the last one since it's a terminal filter.
-func sortHTTPFilters(filters []*hcmv3.HttpFilter) []*hcmv3.HttpFilter {
+func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterPosition) []*hcmv3.HttpFilter {
+	// Sort the filters in the default order.
 	orderedFilters := make(OrderedHTTPFilters, len(filters))
 	for i := 0; i < len(filters); i++ {
 		orderedFilters[i] = newOrderedHTTPFilter(filters[i])
 	}
 	sort.Sort(orderedFilters)
 
-	for i := 0; i < len(filters); i++ {
-		filters[i] = orderedFilters[i].filter
+	// Use a linked list to sort the filters in the custom order.
+	l := list.New()
+	for i := 0; i < len(orderedFilters); i++ {
+		l.PushBack(orderedFilters[i].filter)
 	}
+
+	// Sort the filters in the custom order.
+	for i := 0; i < len(filterOrder); i++ {
+		var (
+			// The filter name in the filterOrder is the filter type.
+			// For example, "envoy.filters.http.oauth2".
+			filterType = string(filterOrder[i].Name)
+			// currentFilters holds all the filters of the specified filter type
+			// in the custom FilterOrder that we are currently processing.
+			//
+			// We need an array to store the filters because there may be multiple
+			// filters of the same filter type for a specific HTTPRoute.
+			// For example, there may be multiple wasm filters or extProc filters, for
+			// different custom extensions.
+			currentFilters []*list.Element
+		)
+
+		// Find all the filters for the current filter type in the custom FilterOrder.
+		//
+		// The real filter name is a generated name prefixed with the filter type,
+		// for example,"envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route-1".
+		for element := l.Front(); element != nil; element = element.Next() {
+			if isFilterType(element.Value.(*hcmv3.HttpFilter), filterType) {
+				currentFilters = append(currentFilters, element)
+			}
+		}
+
+		// Skip if there are no filters found for the filter type in a custom order.
+		if len(currentFilters) == 0 {
+			continue
+		}
+
+		switch {
+		// Move all the current filters before the first filter of the filter type
+		// specified in the `FilterOrder.Before` field.
+		case filterOrder[i].Before != nil:
+			for element := l.Front(); element != nil; element = element.Next() {
+				if isFilterType(element.Value.(*hcmv3.HttpFilter), string(*filterOrder[i].Before)) {
+					for _, filter := range currentFilters {
+						l.MoveBefore(filter, element)
+					}
+					break
+				}
+			}
+		// Move all the current filters after the last filter of the filter type
+		// specified in the `FilterOrder.After` field.
+		case filterOrder[i].After != nil:
+			var afterFilter *list.Element
+			for element := l.Front(); element != nil; element = element.Next() {
+				if isFilterType(element.Value.(*hcmv3.HttpFilter), string(*filterOrder[i].After)) {
+					afterFilter = element
+				}
+			}
+			if afterFilter != nil {
+				for i := range currentFilters {
+					l.MoveAfter(currentFilters[len(currentFilters)-1-i], afterFilter)
+				}
+			}
+		}
+	}
+
+	// Collect the sorted filters.
+	i := 0
+	for element := l.Front(); element != nil; element = element.Next() {
+		filters[i] = element.Value.(*hcmv3.HttpFilter)
+		i++
+	}
+
 	return filters
 }
 
@@ -149,7 +234,8 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter) []*hcmv3.HttpFilter {
 // newOrderedHTTPFilter method.
 func (t *Translator) patchHCMWithFilters(
 	mgr *hcmv3.HttpConnectionManager,
-	irListener *ir.HTTPListener) error {
+	irListener *ir.HTTPListener,
+) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
 	//
@@ -165,12 +251,21 @@ func (t *Translator) patchHCMWithFilters(
 	// rate limit server configuration.
 	t.patchHCMWithRateLimit(mgr, irListener)
 
-	// Add the router filter
-	headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
-	mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
+	// Add the router filter if it doesn't exist.
+	hasRouter := false
+	for _, filter := range mgr.HttpFilters {
+		if filter.Name == wellknown.Router {
+			hasRouter = true
+			break
+		}
+	}
+	if !hasRouter {
+		headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
+		mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
+	}
 
 	// Sort the filters in the correct order.
-	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters)
+	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters, t.FilterOrder)
 	return nil
 }
 
@@ -178,8 +273,8 @@ func (t *Translator) patchHCMWithFilters(
 // provided route.
 func patchRouteWithPerRouteConfig(
 	route *routev3.Route,
-	irRoute *ir.HTTPRoute) error {
-
+	irRoute *ir.HTTPRoute,
+) error {
 	for _, filter := range httpFilters {
 		if err := filter.patchRoute(route, irRoute); err != nil {
 			return err
@@ -188,8 +283,7 @@ func patchRouteWithPerRouteConfig(
 
 	// RateLimit filter is handled separately because it relies on the global
 	// rate limit server configuration.
-	if err :=
-		patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
+	if err := patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
 		return nil
 	}
 
@@ -202,6 +296,16 @@ func isFilterType(filter *hcmv3.HttpFilter, filterType string) bool {
 	// route. The filter name is prefixed with the filter type, for example:
 	// "envoy.filters.http.oauth2_first-route".
 	return strings.HasPrefix(filter.Name, filterType)
+}
+
+// mustGetFilterIndex returns the index of the filter in its filter type.
+func mustGetFilterIndex(filterName string) int {
+	a := strings.Split(filterName, "/")
+	index, err := strconv.Atoi(a[len(a)-1])
+	if err != nil {
+		panic(fmt.Errorf("cannot get filter index from %s :%w", filterName, err))
+	}
+	return index
 }
 
 // patchResources adds all the other needed resources referenced by this

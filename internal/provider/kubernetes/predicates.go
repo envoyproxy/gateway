@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -33,13 +34,7 @@ const oidcHMACSecretName = "envoy-oidc-hmac"
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
 // or false otherwise.
-func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
-	gc, ok := obj.(*gwapiv1.GatewayClass)
-	if !ok {
-		r.log.Info("bypassing reconciliation due to unexpected object type", "type", obj)
-		return false
-	}
-
+func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) bool {
 	if gc.Spec.ControllerName == r.classController {
 		r.log.Info("gatewayclass has matching controller name, processing", "name", gc.Name)
 		return true
@@ -69,7 +64,6 @@ type NamespaceGetter interface {
 
 // checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
 func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
-
 	var nsString string
 	// TODO: it requires extra condition validate cluster resources or resources without namespace?
 	if nsString = obj.GetNamespace(); len(nsString) == 0 {
@@ -251,7 +245,11 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
@@ -292,7 +290,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		return false
 	}
 
-	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
+	grpcRouteList := &gwapiv1.GRPCRouteList{}
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
 	}); err != nil {
@@ -363,7 +361,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
@@ -519,7 +521,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return false
 	}
 
-	btlsList := &gwapiv1a2.BackendTLSPolicyList{}
+	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
 	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
 	}); err != nil {
@@ -532,4 +534,16 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 	}
 
 	return true
+}
+
+func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *types.NamespacedName) bool {
+	spList := &egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendEnvoyExtensionPolicyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyExtensionPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
 }

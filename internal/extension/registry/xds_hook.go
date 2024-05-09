@@ -53,7 +53,6 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 				ExtensionResources: extensionResourceBytes,
 			},
 		})
-
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +68,6 @@ func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.Virtu
 			VirtualHost:            vh,
 			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
 		})
-
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +83,6 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener) (*listener.Li
 			Listener:            l,
 			PostListenerContext: &extension.PostHTTPListenerExtensionContext{},
 		})
-
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +99,6 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 			Clusters:             clusters,
 			Secrets:              secrets,
 		})
-
 	if err != nil {
 		return nil, nil, err
 	}

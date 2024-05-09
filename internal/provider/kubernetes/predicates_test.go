@@ -33,18 +33,18 @@ import (
 func TestGatewayClassHasMatchingController(t *testing.T) {
 	testCases := []struct {
 		name   string
-		obj    client.Object
+		gc     *gwapiv1.GatewayClass
 		client client.Client
 		expect bool
 	}{
 		{
 			name:   "matching controller name",
-			obj:    test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+			gc:     test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 			expect: true,
 		},
 		{
 			name:   "non-matching controller name",
-			obj:    test.GetGatewayClass("test-gc", "not.configured/controller", nil),
+			gc:     test.GetGatewayClass("test-gc", "not.configured/controller", nil),
 			expect: false,
 		},
 	}
@@ -60,7 +60,7 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			res := r.hasMatchingController(tc.obj)
+			res := r.hasMatchingController(tc.gc)
 			require.Equal(t, tc.expect, res)
 		})
 	}
@@ -223,8 +223,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "oidc",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -256,8 +256,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "basic-auth",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -362,7 +362,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
@@ -495,8 +495,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-auth-http",
 					},
 					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Kind: "Gateway",
 								Name: "scheduled-status-test",
 							},
@@ -513,6 +513,68 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			},
 			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service"}, nil, nil),
 			expect:  true,
+		},
+		{
+			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service",
+			configs: []client.Object{
+				&v1alpha1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-proc",
+					},
+					Spec: v1alpha1.EnvoyExtensionPolicySpec{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtProc: []v1alpha1.ExtProc{
+							{
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-proc-service",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-proc-service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service unrelated",
+			configs: []client.Object{
+				&v1alpha1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-proc",
+					},
+					Spec: v1alpha1.EnvoyExtensionPolicySpec{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtProc: []v1alpha1.ExtProc{
+							{
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-proc-service",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-proc-service-unrelated"}, nil, nil),
+			expect:  false,
 		},
 		{
 			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
@@ -566,11 +628,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			WithIndex(&v1alpha1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
+			WithIndex(&v1alpha1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)

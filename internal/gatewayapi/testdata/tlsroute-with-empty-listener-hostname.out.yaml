@@ -47,7 +47,7 @@ infraIR:
         name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10091
-          name: tls
+          name: tls-91
           protocol: TLS
           servicePort: 91
       metadata:
@@ -96,18 +96,20 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      destination:
-        name: tlsroute/default/tlsroute-1/rule/-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-          protocol: HTTPS
-          weight: 1
-      name: envoy-gateway/gateway-1/tls/tlsroute-1
+      name: envoy-gateway/gateway-1/tls
       port: 10091
-      tls:
-        inspector:
-          snis:
-          - foo.com
+      routes:
+      - destination:
+          name: tlsroute/default/tlsroute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTPS
+            weight: 1
+        name: tlsroute/default/tlsroute-1
+        tls:
+          inspector:
+            snis:
+            - foo.com

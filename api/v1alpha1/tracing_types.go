@@ -28,6 +28,9 @@ const (
 	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
 )
 
+// TracingProvider defines the tracing provider configuration.
+//
+// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type TracingProvider struct {
 	// Type defines the tracing provider type.
 	// EG currently only supports OpenTelemetry.
@@ -35,13 +38,25 @@ type TracingProvider struct {
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
-	Host string `json:"host"`
+	// Deprecated: Use BackendRef instead.
+	//
+	// +optional
+	Host *string `json:"host,omitempty"`
 	// Port defines the port the provider service is exposed on.
+	// Deprecated: Use BackendRef instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// BackendRefs references a Kubernetes object that represents the
+	// backend server to which the accesslog will be sent.
+	// Only service Kind is supported for now.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 }
 
 type CustomTagType string

@@ -38,17 +38,19 @@ const (
 )
 
 type xdsClusterArgs struct {
-	name           string
-	settings       []*ir.DestinationSetting
-	tSocket        *corev3.TransportSocket
-	endpointType   EndpointType
-	loadBalancer   *ir.LoadBalancer
-	proxyProtocol  *ir.ProxyProtocol
-	circuitBreaker *ir.CircuitBreaker
-	healthCheck    *ir.HealthCheck
-	http1Settings  *ir.HTTP1Settings
-	timeout        *ir.Timeout
-	tcpkeepalive   *ir.TCPKeepalive
+	name              string
+	settings          []*ir.DestinationSetting
+	tSocket           *corev3.TransportSocket
+	endpointType      EndpointType
+	loadBalancer      *ir.LoadBalancer
+	proxyProtocol     *ir.ProxyProtocol
+	circuitBreaker    *ir.CircuitBreaker
+	healthCheck       *ir.HealthCheck
+	http1Settings     *ir.HTTP1Settings
+	timeout           *ir.Timeout
+	tcpkeepalive      *ir.TCPKeepalive
+	metrics           *ir.Metrics
+	useClientProtocol bool
 }
 
 type EndpointType int
@@ -80,12 +82,21 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
-				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
+				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
+			},
+		},
 		OutlierDetection:              &clusterv3.OutlierDetection{},
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
 	}
 
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
+
+	// set peer endpoint stats
+	if args.metrics != nil && args.metrics.EnablePerEndpointStats {
+		cluster.TrackClusterStats = &clusterv3.TrackClusterStats{
+			PerEndpointStats: args.metrics.EnablePerEndpointStats,
+		}
+	}
 
 	// Set Proxy Protocol
 	if args.proxyProtocol != nil {
@@ -182,7 +193,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
-
 	}
 
 	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
@@ -206,6 +216,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	}
 	if healthcheck.HTTP != nil {
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
+			Host: healthcheck.HTTP.Host,
 			Path: healthcheck.HTTP.Path,
 		}
 		if healthcheck.HTTP.Method != nil {
@@ -438,7 +449,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 
 	requiresHTTP1Options := args.http1Settings != nil && (args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
-	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options) {
+	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || args.useClientProtocol) {
 		return nil
 	}
 
@@ -449,13 +460,11 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 
 		if args.timeout != nil && args.timeout.HTTP != nil {
 			if args.timeout.HTTP.ConnectionIdleTimeout != nil {
-				protocolOptions.CommonHttpProtocolOptions.IdleTimeout =
-					durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
+				protocolOptions.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
 			}
 
 			if args.timeout.HTTP.MaxConnectionDuration != nil {
-				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration =
-					durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
+				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
 			}
 		}
 
@@ -464,25 +473,11 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 				Value: *args.circuitBreaker.MaxRequestsPerConnection,
 			}
 		}
-
 	}
 
-	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory
-	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
-	// Default to http1 otherwise
-	// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
-	// so that when ALPN is supported then enabling http1 options doesn't force HTTP/1.1
-	switch {
-	case requiresHTTP2Options:
-		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
-			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
-			},
-		}
-	case requiresHTTP1Options:
-		http1opts := &corev3.Http1ProtocolOptions{
-			EnableTrailers: args.http1Settings.EnableTrailers,
-		}
+	http1opts := &corev3.Http1ProtocolOptions{}
+	if args.http1Settings != nil {
+		http1opts.EnableTrailers = args.http1Settings.EnableTrailers
 		if args.http1Settings.PreserveHeaderCase {
 			preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
 			http1opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
@@ -498,6 +493,28 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 			http1opts.AcceptHttp_10 = true
 			http1opts.DefaultHostForHttp_10 = ptr.Deref(args.http1Settings.HTTP10.DefaultHost, "")
 		}
+	}
+
+	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory
+	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
+	// Default to http1 otherwise
+	// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
+	// so that when ALPN is supported then enabling http1 options doesn't force HTTP/1.1
+	switch {
+	case args.useClientProtocol:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
+			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
+				HttpProtocolOptions:  http1opts,
+				Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
+			},
+		}
+	case requiresHTTP2Options:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
+			},
+		}
+	case requiresHTTP1Options:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
@@ -599,7 +616,7 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 		ka.TcpKeepalive.KeepaliveProbes = wrapperspb.UInt32(*tcpkeepalive.Probes)
 	}
 
-	if tcpkeepalive.Probes != nil {
+	if tcpkeepalive.IdleTime != nil {
 		ka.TcpKeepalive.KeepaliveTime = wrapperspb.UInt32(*tcpkeepalive.IdleTime)
 	}
 
@@ -608,5 +625,4 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 	}
 
 	return ka
-
 }

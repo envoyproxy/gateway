@@ -44,7 +44,6 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       extAuth:
         http:
           backendRef:
@@ -54,3 +53,4 @@ securityPolicies:
           headersToBackend:
             - header1
             - header2
+        failOpen: false

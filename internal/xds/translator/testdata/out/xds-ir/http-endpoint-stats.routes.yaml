@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: listener-enable-endpoint-stats
+  virtualHosts:
+  - domains:
+    - '*'
+    name: listener-enable-endpoint-stats/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

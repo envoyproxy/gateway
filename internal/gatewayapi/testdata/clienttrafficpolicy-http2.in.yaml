@@ -1,0 +1,53 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-1
+  spec:
+    http2:
+      initialStreamWindowSize: 64Ki
+      initialConnectionWindowSize: 32Mi
+      maxConcurrentStreams: 200
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-2
+  spec:
+    http2:
+      initialStreamWindowSize: 1Ki
+      initialConnectionWindowSize: 1Ti
+      maxConcurrentStreams: 200
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-2
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: http-2
+      protocol: HTTP
+      hostname: www.example.com
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same

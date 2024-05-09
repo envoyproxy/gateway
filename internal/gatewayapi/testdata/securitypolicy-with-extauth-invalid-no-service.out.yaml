@@ -86,7 +86,7 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -103,6 +103,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      failOpen: false
       http:
         backendRef:
           name: http-backend
@@ -115,7 +116,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -165,3 +165,4 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+        security: {}

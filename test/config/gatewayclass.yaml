@@ -22,8 +22,10 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            host: otel-collector.monitoring.svc.cluster.local
-            port: 4317
+            backendRefs:
+              - name: otel-collector
+                namespace: monitoring
+                port: 4317
     accessLog:
       settings:
         - format:
@@ -36,14 +38,18 @@ spec:
                 path: /dev/stdout
             - type: OpenTelemetry
               openTelemetry:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
+                backendRefs:
+                  - name: otel-collector
+                    namespace: monitoring
+                    port: 4317
                 resources:
                   k8s.cluster.name: "envoy-gateway"
     tracing:
       provider:
-        host: otel-collector.monitoring.svc.cluster.local
-        port: 4317
+        backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4317
       customTags:
         "k8s.cluster.name":
           type: Literal
@@ -81,11 +87,28 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
-  shutdown:
-    drainTimeout: 15s
   provider:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
         replicas: 2
-
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: merge-gateways
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: merge-gateways-config
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: merge-gateways-config
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true

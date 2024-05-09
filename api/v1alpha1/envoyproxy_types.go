@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -86,7 +87,105 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
+
+	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// The FilterPosition in the list will be applied in the order they are defined.
+	// If unspecified, the default filter order is applied.
+	// Default filter order is:
+	//
+	// - envoy.filters.http.fault
+	//
+	// - envoy.filters.http.cors
+	//
+	// - envoy.filters.http.ext_authz
+	//
+	// - envoy.filters.http.basic_authn
+	//
+	// - envoy.filters.http.oauth2
+	//
+	// - envoy.filters.http.jwt_authn
+	//
+	// - envoy.filters.http.ext_proc
+	//
+	// - envoy.filters.http.wasm
+	//
+	// - envoy.filters.http.local_ratelimit
+	//
+	// - envoy.filters.http.ratelimit
+	//
+	// - envoy.filters.http.router
+	//
+	// +optional
+	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
+	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
+	// These settings are applied on backends for which TLS policies are specified.
+	// +optional
+	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 }
+
+// BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
+type BackendTLSConfig struct {
+	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
+	// the client certificate and private key for Envoy to use when connecting to
+	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	// +optional
+	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
+	TLSSettings          `json:",inline"`
+}
+
+// FilterPosition defines the position of an Envoy HTTP filter in the filter chain.
+// +kubebuilder:validation:XValidation:rule="(has(self.before) || has(self.after))",message="one of before or after must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.before) && !has(self.after)) || (!has(self.before) && has(self.after))",message="only one of before or after can be specified"
+type FilterPosition struct {
+	// Name of the filter.
+	Name EnvoyFilter `json:"name"`
+
+	// Before defines the filter that should come before the filter.
+	// Only one of Before or After must be set.
+	Before *EnvoyFilter `json:"before,omitempty"`
+
+	// After defines the filter that should come after the filter.
+	// Only one of Before or After must be set.
+	After *EnvoyFilter `json:"after,omitempty"`
+}
+
+// EnvoyFilter defines the type of Envoy HTTP filter.
+// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc
+type EnvoyFilter string
+
+const (
+	// EnvoyFilterFault defines the Envoy HTTP fault filter.
+	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
+	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
+	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
+
+	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
+	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
+
+	// EnvoyFilterBasicAuthn defines the Envoy HTTP basic authentication filter.
+	EnvoyFilterBasicAuthn EnvoyFilter = "envoy.filters.http.basic_authn"
+
+	// EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.
+	EnvoyFilterOAuth2 EnvoyFilter = "envoy.filters.http.oauth2"
+
+	// EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.
+	EnvoyFilterJWTAuthn EnvoyFilter = "envoy.filters.http.jwt_authn"
+
+	// EnvoyFilterExtProc defines the Envoy HTTP external process filter.
+	EnvoyFilterExtProc EnvoyFilter = "envoy.filters.http.ext_proc"
+
+	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
+	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
+
+	// EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.
+	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
+
+	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
+	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
+
+	// EnvoyFilterRouter defines the Envoy HTTP router filter.
+	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
+)
 
 type ProxyTelemetry struct {
 	// AccessLogs defines accesslog parameters for managed proxies.
@@ -134,6 +233,9 @@ type ShutdownConfig struct {
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"
+// +kubebuilder:validation:XValidation:rule="((has(self.envoyHpa) && !has(self.envoyDaemonSet)) || (!has(self.envoyHpa) && has(self.envoyDaemonSet))) || (!has(self.envoyHpa) && !has(self.envoyDaemonSet))",message="cannot use envoyHpa if envoyDaemonSet is used"
+//
 // EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource
 // provider.
 type EnvoyProxyKubernetesProvider struct {
@@ -143,6 +245,12 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
+
+	// EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.
+	// Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet
+	//
+	// +optional
+	EnvoyDaemonSet *KubernetesDaemonSetSpec `json:"envoyDaemonSet,omitempty"`
 
 	// EnvoyService defines the desired state of the Envoy service resource.
 	// If unspecified, default settings for the managed Envoy service resource

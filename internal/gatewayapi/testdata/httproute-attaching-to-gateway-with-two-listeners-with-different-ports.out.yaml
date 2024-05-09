@@ -117,14 +117,14 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10443
-          name: tls
+          name: https-443
           protocol: HTTPS
           servicePort: 443
       metadata:

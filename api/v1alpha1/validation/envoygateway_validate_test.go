@@ -646,7 +646,7 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.NotNil(t, envoyGateway.Provider)
 
 	envoyGatewayProvider := envoyGateway.GetEnvoyGatewayProvider()
-	assert.Nil(t, envoyGatewayProvider.Kubernetes)
+	assert.NotNil(t, envoyGatewayProvider.Kubernetes)
 	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
 
 	envoyGatewayProvider.Kubernetes = v1alpha1.DefaultEnvoyGatewayKubeProvider()
@@ -660,7 +660,8 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 			Replicas:  nil,
 			Pod:       nil,
 			Container: nil,
-		}}
+		},
+	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod)
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container)
@@ -674,7 +675,8 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 				SecurityContext: nil,
 				Image:           nil,
 			},
-		}}
+		},
+	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources)
 	envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 

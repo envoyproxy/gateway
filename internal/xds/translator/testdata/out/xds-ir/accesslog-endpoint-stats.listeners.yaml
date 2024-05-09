@@ -1,0 +1,144 @@
+- accessLog:
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      logFormat:
+        textFormatSource:
+          inlineString: |
+            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+      path: /dev/stdout
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      logFormat:
+        jsonFormat:
+          method: '%REQ(:METHOD)%'
+          path: '%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%'
+          protocol: '%PROTOCOL%'
+          response_code: '%RESPONSE_CODE%'
+          start_time: '%START_TIME%'
+      path: /dev/stdout
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.open_telemetry
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
+      attributes:
+        values:
+        - key: k8s.namespace.name
+          value:
+            stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+        - key: k8s.pod.name
+          value:
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+        - key: response_code
+          value:
+            stringValue: '%RESPONSE_CODE%'
+      body:
+        stringValue: |
+          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+      commonConfig:
+        grpcService:
+          envoyGrpc:
+            authority: otel-collector.default.svc.cluster.local
+            clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+        logName: otel_envoy_accesslog
+        transportApiVersion: V3
+      resourceAttributes:
+        values:
+        - key: cluster_name
+          value:
+            stringValue: cluster1
+  address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        accessLog:
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
+              textFormatSource:
+                inlineString: |
+                  [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+            path: /dev/stdout
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
+              jsonFormat:
+                method: '%REQ(:METHOD)%'
+                path: '%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%'
+                protocol: '%PROTOCOL%'
+                response_code: '%RESPONSE_CODE%'
+                start_time: '%START_TIME%'
+            path: /dev/stdout
+        - name: envoy.access_loggers.open_telemetry
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
+            attributes:
+              values:
+              - key: k8s.namespace.name
+                value:
+                  stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+              - key: k8s.pod.name
+                value:
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+              - key: response_code
+                value:
+                  stringValue: '%RESPONSE_CODE%'
+            body:
+              stringValue: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+            commonConfig:
+              grpcService:
+                envoyGrpc:
+                  authority: otel-collector.default.svc.cluster.local
+                  clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+              logName: otel_envoy_accesslog
+              transportApiVersion: V3
+            resourceAttributes:
+              values:
+              - key: cluster_name
+                value:
+                  stringValue: cluster1
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http
+        useRemoteAddress: true
+  drainType: MODIFY_ONLY
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

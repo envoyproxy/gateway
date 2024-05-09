@@ -6,13 +6,13 @@ backendTLSPolicies:
     name: policy-btls
     namespace: default
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: http-backend
       sectionName: "8080"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - group: ""
         kind: ConfigMap
         name: ca-cmap
@@ -25,7 +25,7 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: BackendTLSPolicy is Accepted
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
@@ -118,7 +118,7 @@ infraIR:
         name: envoy-gateway/gateway-btls/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

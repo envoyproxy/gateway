@@ -16,9 +16,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
-
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -47,8 +45,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "valid gateway targetRef",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -62,8 +60,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "valid httproute targetRef",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("HTTPRoute"),
 							Name:  gwapiv1a2.ObjectName("httpbin-route"),
@@ -89,8 +87,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "targetRef unsupported kind",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("foo"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -106,8 +104,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "targetRef unsupported group",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("foo"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -123,8 +121,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "targetRef unsupported group and kind",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("foo"),
 							Kind:  gwapiv1a2.Kind("bar"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -141,8 +139,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "sectionName disabled until supported",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -159,8 +157,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "consistentHash field not nil when type is consistentHash",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -180,8 +178,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "consistentHash field nil when type is consistentHash",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -197,11 +195,58 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "consistentHash header field not nil when consistentHashType is header",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					LoadBalancer: &egv1a1.LoadBalancer{
+						Type: egv1a1.ConsistentHashLoadBalancerType,
+						ConsistentHash: &egv1a1.ConsistentHash{
+							Type: "Header",
+							Header: &egv1a1.Header{
+								Name: "name",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "consistentHash header field nil when consistentHashType is header",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					LoadBalancer: &egv1a1.LoadBalancer{
+						Type: egv1a1.ConsistentHashLoadBalancerType,
+						ConsistentHash: &egv1a1.ConsistentHash{
+							Type: "Header",
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.consistentHash: Invalid value: \"object\": If consistent hash type is header, the header field must be set",
+			},
+		},
+		{
 			desc: "leastRequest with ConsistentHash nil",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -218,8 +263,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "leastRequest with SlowStar is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -241,8 +286,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "roundrobin with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -264,8 +309,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: " random with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -289,8 +334,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: " consistenthash with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -314,8 +359,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "Using both httpStatus and grpcStatus in abort fault injection",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -337,8 +382,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "Using httpStatus in abort fault injection",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -358,8 +403,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "Using grpcStatus in abort fault injection",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -379,8 +424,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "httpStatus and grpcStatus are set at least one",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -399,8 +444,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "Neither delay nor abort faults are set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -415,8 +460,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "Using delay fault injection",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -436,11 +481,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: " valid config: min, max, nil",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				valMax := pointer.Int64(4294967295)
-				valMin := pointer.Int64(0)
+				valMax := ptr.To[int64](4294967295)
+				valMin := ptr.To[int64](0)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -459,11 +504,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: " invalid config: min and max values",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				valOverMax := pointer.Int64(4294967296)
-				valUnderMin := pointer.Int64(-1)
+				valOverMax := ptr.To[int64](4294967296)
+				valUnderMin := ptr.To[int64](-1)
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -490,8 +535,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid path of http health checker",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -515,8 +560,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid unhealthy threshold",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -541,8 +586,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid healthy threshold",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -567,8 +612,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid health checker type",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -590,8 +635,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid http expected statuses",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -616,8 +661,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "valid http expected statuses",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -640,8 +685,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid http expected statuses - out of range",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -666,8 +711,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "http expected responses - invalid text payload",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -695,8 +740,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "http expected responses - invalid binary payload",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -724,8 +769,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid tcp send",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -756,8 +801,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid tcp receive",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -789,8 +834,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				d := gwapiv1.Duration("3s")
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -812,7 +857,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "valid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-
 				rules := make([]egv1a1.RateLimitRule, 64)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{
@@ -825,8 +869,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),
@@ -845,7 +889,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "invalid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-
 				rules := make([]egv1a1.RateLimitRule, 65)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{
@@ -858,8 +901,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
 							Kind:  gwapiv1a2.Kind("Gateway"),
 							Name:  gwapiv1a2.ObjectName("eg"),

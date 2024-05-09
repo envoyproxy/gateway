@@ -63,7 +63,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     circuitBreaker:
       maxConnections: 2048
       maxPendingRequests: 1

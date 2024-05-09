@@ -1,0 +1,52 @@
+{
+  "Resource": [
+    {
+      "Key": "metric.type",
+      "Value": {
+        "Type": "STRING",
+        "Value": "Gauge"
+      }
+    },
+    {
+      "Key": "service.name",
+      "Value": {
+        "Type": "STRING",
+        "Value": "test"
+      }
+    }
+  ],
+  "ScopeMetrics": [
+    {
+      "Scope": {
+        "Name": "envoy-gateway",
+        "Version": "",
+        "SchemaURL": ""
+      },
+      "Metrics": [
+        {
+          "Name": "current_irs_queue_num",
+          "Description": "current number of ir in queue, by ir type",
+          "Unit": "1",
+          "Data": {
+            "DataPoints": [
+              {
+                "Attributes": [
+                  {
+                    "Key": "ir-type",
+                    "Value": {
+                      "Type": "STRING",
+                      "Value": "xds"
+                    }
+                  }
+                ],
+                "StartTime": "0001-01-01T00:00:00Z",
+                "Time": "0001-01-01T00:00:00Z",
+                "Value": 2
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

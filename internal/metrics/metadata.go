@@ -94,7 +94,8 @@ func (d *store) preAddOptions() []metric.Option {
 			metric.Stream{
 				Aggregation: metric.AggregationExplicitBucketHistogram{
 					Boundaries: store.Bounds,
-				}},
+				},
+			},
 		))
 		opts = append(opts, v)
 	}

@@ -174,14 +174,21 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 
 			var cli client.Client
 			if tc.current != nil {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.current).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			} else {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			}
 
 			kube := NewInfra(cli, cfg)
 
-			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra())
+			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 
@@ -214,7 +221,7 @@ func TestDeleteProxyServiceAccount(t *testing.T) {
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
+			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra(), kube.EnvoyGateway)
 
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)

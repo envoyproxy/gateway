@@ -15,29 +15,28 @@ import (
 	"sort"
 	"strings"
 
+	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
+	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
-	"sigs.k8s.io/yaml"
-
-	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
-	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
-	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
@@ -161,12 +160,14 @@ func getValidOutputTypesStr() string {
 }
 
 func validResourceTypes() []envoyConfigType {
-	return []envoyConfigType{BootstrapEnvoyConfigType,
+	return []envoyConfigType{
+		BootstrapEnvoyConfigType,
 		EndpointEnvoyConfigType,
 		ClusterEnvoyConfigType,
 		ListenerEnvoyConfigType,
 		RouteEnvoyConfigType,
-		AllEnvoyConfigType}
+		AllEnvoyConfigType,
+	}
 }
 
 func isValidResourceType(outType envoyConfigType) bool {
@@ -276,7 +277,7 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 	}
 
 	t := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -303,7 +304,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -335,7 +336,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1a1.GatewayControllerName,
+		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -359,6 +360,9 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
+		}
+		if resources.EnvoyProxy != nil {
+			xTranslator.FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
 		}
 		xRes, err := xTranslator.Translate(val)
 		if err != nil {
@@ -551,7 +555,7 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 				refs = append(refs, httpBakcendRef.BackendRef)
 			}
 		}
-	case *gwapiv1a2.GRPCRoute:
+	case *gwapiv1.GRPCRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			for _, gRPCBakcendRef := range rule.BackendRefs {
@@ -688,6 +692,10 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
+			// fill controller name by default controller name when gatewayclass controller name empty.
+			if gatewayClass.Spec.ControllerName == "" {
+				gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
+			}
 			resources.GatewayClass = gatewayClass
 		case gatewayapi.KindGateway:
 			typedSpec := spec.Interface()
@@ -753,7 +761,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
 		case gatewayapi.KindGRPCRoute:
 			typedSpec := spec.Interface()
-			grpcRoute := &gwapiv1a2.GRPCRoute{
+			grpcRoute := &gwapiv1.GRPCRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindGRPCRoute,
 				},
@@ -761,7 +769,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a2.GRPCRouteSpec),
+				Spec: typedSpec.(gwapiv1.GRPCRouteSpec),
 			}
 			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case gatewayapi.KindNamespace:
