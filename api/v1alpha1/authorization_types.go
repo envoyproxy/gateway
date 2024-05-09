@@ -16,10 +16,13 @@ type Authorization struct {
 	// If the first rule denies the request, and the second rule allows it,
 	// the request will be denied.
 	//
-	// If no rules match, the request will be denied.
-	//
-	// +kubebuilder:validation:MinItems=1
+	// +optional
 	Rules []Rule `json:"rules"`
+
+	// DefaultAction defines the default action to be taken if no rules match.
+	// If not specified, the default action is Deny.
+	// +optional
+	DefaultAction *RuleActionType `json:"defaultAction"`
 }
 
 // Rule defines the single authorization rule.
@@ -28,9 +31,6 @@ type Rule struct {
 	Action RuleActionType `json:"action"`
 
 	// Subject contains the subject of the rule.
-	// If empty, all subjects are matching.
-	//
-	// +optional
 	Subject Subject `json:"subjects,omitempty"`
 
 	// Permissions contains allowed HTTP methods.
@@ -45,8 +45,8 @@ type Subject struct {
 	// ClientCIDR contains client cidr configuration.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	//
-	// +optional
-	ClientCIDR []string `json:"clientCIDR,omitempty"`
+	// +kubebuilder:validation:MinItems=1
+	ClientCIDR []string `json:"clientCIDR"`
 }
 
 // RuleActionType specifies the types of authorization rule action.

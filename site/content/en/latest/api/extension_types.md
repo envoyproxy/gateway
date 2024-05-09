@@ -182,7 +182,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules, the first rule allows the request,<br />and the second rule denies the request, the request will be allowed.<br />If the first rule denies the request, and the second rule allows it,<br />the request will be denied.<br /><br />If no rules match, the request will be denied. |
+| `rules` | _[Rule](#rule) array_ |  false  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules, the first rule allows the request,<br />and the second rule denies the request, the request will be allowed.<br />If the first rule denies the request, and the second rule allows it,<br />the request will be denied. |
+| `defaultAction` | _[RuleActionType](#ruleactiontype)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
 
 
 #### BackOffPolicy
@@ -2891,7 +2892,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
-| `subjects` | _[Subject](#subject)_ |  false  | Subject contains the subject of the rule.<br />If empty, all subjects are matching. |
+| `subjects` | _[Subject](#subject)_ |  true  | Subject contains the subject of the rule. |
 
 
 #### RuleActionType
@@ -2901,6 +2902,7 @@ _Underlying type:_ _string_
 RuleActionType specifies the types of authorization rule action.
 
 _Appears in:_
+- [Authorization](#authorization)
 - [Rule](#rule)
 
 | Value | Description |
@@ -3087,7 +3089,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientCIDR` | _string array_ |  false  | ClientCIDR contains client cidr configuration.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
+| `clientCIDR` | _string array_ |  true  | ClientCIDR contains client cidr configuration.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
 
 
 #### TCPActiveHealthChecker

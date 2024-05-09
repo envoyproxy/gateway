@@ -52,6 +52,14 @@ spec:
               authorization:
                 description: Authorization defines the authorization configuration.
                 properties:
+                  defaultAction:
+                    description: |-
+                      DefaultAction defines the default action to be taken if no rules match.
+                      If not specified, the default action is Deny.
+                    enum:
+                    - Allow
+                    - Deny
+                    type: string
                   rules:
                     description: |-
                       Rules contains all the authorization rules.
@@ -63,9 +71,6 @@ spec:
                       and the second rule denies the request, the request will be allowed.
                       If the first rule denies the request, and the second rule allows it,
                       the request will be denied.
-
-
-                      If no rules match, the request will be denied.
                     items:
                       description: Rule defines the single authorization rule.
                       properties:
@@ -77,9 +82,7 @@ spec:
                           - Deny
                           type: string
                         subjects:
-                          description: |-
-                            Subject contains the subject of the rule.
-                            If empty, all subjects are matching.
+                          description: Subject contains the subject of the rule.
                           properties:
                             clientCIDR:
                               description: |-
@@ -87,15 +90,15 @@ spec:
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
                               items:
                                 type: string
+                              minItems: 1
                               type: array
+                          required:
+                          - clientCIDR
                           type: object
                       required:
                       - action
                       type: object
-                    minItems: 1
                     type: array
-                required:
-                - rules
                 type: object
               basicAuth:
                 description: BasicAuth defines the configuration for the HTTP Basic
