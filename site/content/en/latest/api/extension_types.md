@@ -3067,7 +3067,7 @@ _Appears in:_
 
 
 
-
+TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
 
 _Appears in:_
 - [ClientTimeout](#clienttimeout)

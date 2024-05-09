@@ -54,6 +54,7 @@ type ClientTimeout struct {
 	HTTP *HTTPClientTimeout `json:"http,omitempty"`
 }
 
+// TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
 type TCPClientTimeout struct {
 	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
 	// bytes sent or received on either the upstream or downstream connection.
