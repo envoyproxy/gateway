@@ -60,14 +60,12 @@ httpRoutes:
       matches:
       - path:
           value: /foo1
-      sessionPersistence: null
     - backendRefs:
       - name: service-2
         port: 8080
       matches:
       - path:
           value: /foo2
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -106,7 +104,6 @@ httpRoutes:
       matches:
       - path:
           value: /bar
-      sessionPersistence: null
   status:
     parents:
     - conditions:
