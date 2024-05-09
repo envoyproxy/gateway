@@ -349,7 +349,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		return errors.New("tcp listener is nil")
 	}
 
-	isTLSPassthrough := irListener.TLS != nil && irListener.TLS.Passthrough != nil
+	isTLSPassthrough := irListener.TLS != nil && irListener.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irListener.TLS != nil && irListener.TLS.Terminate != nil
 	statPrefix := "tcp"
 	if isTLSPassthrough {
@@ -382,13 +382,21 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 	}
 
 	if isTLSPassthrough {
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.Passthrough.SNIs); err != nil {
+		var snis []string
+		if cfg := irListener.TLS.TLSInspectorConfig; cfg != nil {
+			snis = cfg.SNIs
+		}
+		if err := addServerNamesMatch(xdsListener, filterChain, snis); err != nil {
 			return err
 		}
 	}
 
 	if isTLSTerminate {
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.Terminate.Inspector.SNIs); err != nil {
+		var snis []string
+		if cfg := irListener.TLS.TLSInspectorConfig; cfg != nil {
+			snis = cfg.SNIs
+		}
+		if err := addServerNamesMatch(xdsListener, filterChain, snis); err != nil {
 			return err
 		}
 		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS.Terminate)

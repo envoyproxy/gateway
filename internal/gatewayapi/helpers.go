@@ -373,7 +373,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
-func irTLSConfigs(tlsSecrets []*v1.Secret, sni *gwapiv1.Hostname) *ir.TLSConfig {
+func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
 	}
@@ -387,9 +387,6 @@ func irTLSConfigs(tlsSecrets []*v1.Secret, sni *gwapiv1.Hostname) *ir.TLSConfig 
 			ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
 			PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
 		}
-	}
-	if sni != nil {
-		tlsListenerConfigs.Inspector.SNIs = []string{string(*sni)}
 	}
 	return tlsListenerConfigs
 }

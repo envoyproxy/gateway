@@ -141,7 +141,7 @@ xdsIR:
       name: envoy-gateway/gateway-1/tls/tlsroute-1
       port: 10091
       tls:
-        passthrough:
+        inspector:
           snis:
           - foo.com
     - address: 0.0.0.0
@@ -157,6 +157,6 @@ xdsIR:
       name: envoy-gateway/gateway-1/tls/tlsroute-2
       port: 10091
       tls:
-        passthrough:
+        inspector:
           snis:
           - bar.com

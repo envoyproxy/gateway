@@ -108,6 +108,6 @@ xdsIR:
       name: envoy-gateway/gateway-1/tls/tlsroute-1
       port: 10090
       tls:
-        passthrough:
+        inspector:
           snis:
           - foo.com

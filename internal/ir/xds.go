@@ -294,9 +294,6 @@ type TLSConfig struct {
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
 	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
-	// TLS information required for TLS termination, If provided, incoming
-	// connections' server names are inspected and routed to backends accordingly.
-	Inspector TLSInspectorConfig `json:"inspector,omitempty" yaml:"inspector,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -1088,7 +1085,7 @@ type TCPListener struct {
 type TLS struct {
 	// TLS information required for TLS Passthrough, If provided, incoming
 	// connections' server names are inspected and routed to backends accordingly.
-	Passthrough *TLSInspectorConfig `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
+	TLSInspectorConfig *TLSInspectorConfig `json:"inspector,omitempty" yaml:"inspector,omitempty"`
 	// TLS information required for TLS Termination
 	Terminate *TLSConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
 }
@@ -1105,8 +1102,8 @@ func (h TCPListener) Validate() error {
 	if h.Port == 0 {
 		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
-	if h.TLS != nil && h.TLS.Passthrough != nil {
-		if err := h.TLS.Passthrough.Validate(); err != nil {
+	if h.TLS != nil && h.TLS.TLSInspectorConfig != nil {
+		if err := h.TLS.TLSInspectorConfig.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

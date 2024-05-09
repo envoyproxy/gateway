@@ -103,7 +103,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Name:    irHTTPListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
-					TLS:     irTLSConfigs(listener.tlsSecrets, listener.Hostname),
+					TLS:     irTLSConfigs(listener.tlsSecrets),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,

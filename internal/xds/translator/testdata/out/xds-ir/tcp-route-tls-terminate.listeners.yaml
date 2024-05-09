@@ -26,6 +26,7 @@
   - filterChainMatch:
       serverNames:
       - '*.envoyproxy.io'
+      - example.com
     filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:

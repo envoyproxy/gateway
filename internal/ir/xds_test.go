@@ -83,7 +83,7 @@ var (
 		Name:        "happy",
 		Address:     "0.0.0.0",
 		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destination: &happyRouteDestination,
 	}
 
@@ -109,20 +109,20 @@ var (
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
 		Address:     "0.0.0.0",
 		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destination: &happyRouteDestination,
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
 		Name:        "invalid-addr",
 		Address:     "1.0.0",
 		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destination: &happyRouteDestination,
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
 		Address:     "0.0.0.0",
 		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{}}},
 		Destination: &happyRouteDestination,
 	}
 
