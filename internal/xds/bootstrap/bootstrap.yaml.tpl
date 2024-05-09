@@ -16,10 +16,10 @@ stats_config:
       {{- range $_, $item := .StatsMatcher.Exacts }}
       - exact: {{$item}}
       {{- end}}
-      {{- range $_, $item := .StatsMatcher.Prefixs }}
+      {{- range $_, $item := .StatsMatcher.Prefixes }}
       - prefix: {{$item}}
       {{- end}}
-      {{- range $_, $item := .StatsMatcher.Suffixs }}
+      {{- range $_, $item := .StatsMatcher.Suffixes }}
       - suffix: {{$item}}
       {{- end}}
       {{- range $_, $item := .StatsMatcher.RegularExpressions }}

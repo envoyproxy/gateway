@@ -240,13 +240,13 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			})
 		})
 
-		t.Run("clean-up conflicted gateway", func(t *testing.T) {
+		// Clean-up the conflicted gateway and route resources.
+		t.Cleanup(func() {
 			conflictedGateway := new(gwapiv1.Gateway)
 			conflictedHTTPRoute := new(gwapiv1.HTTPRoute)
 
 			if err := suite.Client.Get(ctx, gw4NN, conflictedGateway); err != nil {
 				t.Errorf("failed to get conflicted gateway: %v", err)
-				t.FailNow()
 			}
 			if err := suite.Client.Delete(ctx, conflictedGateway); err != nil {
 				t.Errorf("failed to delete conflicted gateway: %v", err)
@@ -254,7 +254,6 @@ var MergeGatewaysTest = suite.ConformanceTest{
 
 			if err := suite.Client.Get(ctx, route4NN, conflictedHTTPRoute); err != nil {
 				t.Errorf("failed to get conflicted httproute: %v", err)
-				t.FailNow()
 			}
 			if err := suite.Client.Delete(ctx, conflictedHTTPRoute); err != nil {
 				t.Errorf("failed to delete conflicted httproute: %v", err)

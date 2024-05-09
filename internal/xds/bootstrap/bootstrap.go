@@ -45,7 +45,7 @@ var bootstrapTmplStr string
 
 var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
 
-// envoyBootstrap defines the envoy Bootstrap configuration.
+// bootstrapConfig defines the envoy Bootstrap configuration.
 type bootstrapConfig struct {
 	// parameters defines configurable bootstrap configuration parameters.
 	parameters bootstrapParameters
@@ -53,7 +53,7 @@ type bootstrapConfig struct {
 	rendered string
 }
 
-// envoyBootstrap defines the envoy Bootstrap configuration.
+// bootstrapParameters defines the envoy Bootstrap configuration.
 type bootstrapParameters struct {
 	// XdsServer defines the configuration of the XDS server.
 	XdsServer xdsServerParameters
@@ -70,7 +70,7 @@ type bootstrapParameters struct {
 
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
-	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
+	// EnableStatConfig defines whether to customize the Envoy proxy stats.
 	EnableStatConfig bool
 	// StatsMatcher is to control creation of custom Envoy stats with prefix,
 	// suffix, and regex expressions match on the name of the stats.
@@ -113,8 +113,8 @@ type readyServerParameters struct {
 
 type StatsMatcherParameters struct {
 	Exacts             []string
-	Prefixs            []string
-	Suffixs            []string
+	Prefixes           []string
+	Suffixes           []string
 	RegularExpressions []string
 }
 
@@ -122,7 +122,7 @@ type overloadManagerParameters struct {
 	MaxHeapSizeBytes uint64
 }
 
-type RenderBootsrapConfigOptions struct {
+type RenderBootstrapConfigOptions struct {
 	ProxyMetrics     *egv1a1.ProxyMetrics
 	MaxHeapSizeBytes uint64
 }
@@ -139,7 +139,7 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, error) {
+func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, error) {
 	var (
 		enablePrometheus             = true
 		enablePrometheusCompression  = false
@@ -199,9 +199,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 				case egv1a1.StringMatchExact:
 					StatsMatcher.Exacts = append(StatsMatcher.Exacts, match.Value)
 				case egv1a1.StringMatchPrefix:
-					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
+					StatsMatcher.Prefixes = append(StatsMatcher.Prefixes, match.Value)
 				case egv1a1.StringMatchSuffix:
-					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
+					StatsMatcher.Suffixes = append(StatsMatcher.Suffixes, match.Value)
 				case egv1a1.StringMatchRegularExpression:
 					if err := regex.Validate(match.Value); err != nil {
 						return "", err
