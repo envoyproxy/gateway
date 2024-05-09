@@ -1432,7 +1432,7 @@ type OpenTelemetryAccessLog struct {
 	Host         string                `json:"host" yaml:"host"`
 	Port         uint32                `json:"port" yaml:"port"`
 	Resources    map[string]string     `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Destinations []*DestinationSetting `json:"destinations,omitempty" yaml:"destinations"`
+	Destinations []*DestinationSetting `json:"destinations,omitempty" yaml:"destinations,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.

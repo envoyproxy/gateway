@@ -356,7 +356,7 @@ func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespa
 			return nil, err
 		}
 
-		ds := t.serviceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources)
+		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {

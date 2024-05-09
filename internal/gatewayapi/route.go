@@ -1188,7 +1188,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			AddressType: addrType,
 		}
 	case KindService:
-		ds = t.serviceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS = t.processBackendTLSPolicy(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1219,7 +1219,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	return ds, weight
 }
 
-func (t *Translator) serviceDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string,
+func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string,
 	protocol ir.AppProtocol, resources *Resources,
 ) *ir.DestinationSetting {
 	var (
