@@ -3082,14 +3082,15 @@ _Appears in:_
 
 
 
-Subject contains the subject configuration.
+Subject is the subject of the rule.
 
 _Appears in:_
 - [Rule](#rule)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientCIDR` | _string array_ |  true  | ClientCIDR contains client cidr configuration.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
+| `clientCIDR` | _string array_ |  true  | ClientCIDR is the IP CIDR range of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
+| `notClientCIDR` | _string array_ |  true  | NotClientCIDR is the IP CIDR range of the client that should not match.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
 
 
 #### TCPActiveHealthChecker

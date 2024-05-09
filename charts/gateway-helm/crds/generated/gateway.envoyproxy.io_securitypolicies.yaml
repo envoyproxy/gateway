@@ -86,15 +86,22 @@ spec:
                           properties:
                             clientCIDR:
                               description: |-
-                                ClientCIDR contains client cidr configuration.
+                                ClientCIDR is the IP CIDR range of the client.
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
                               items:
                                 type: string
-                              minItems: 1
                               type: array
-                          required:
-                          - clientCIDR
+                            notClientCIDR:
+                              description: |-
+                                NotClientCIDR is the IP CIDR range of the client that should not match.
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+                              items:
+                                type: string
+                              type: array
                           type: object
+                          x-kubernetes-validations:
+                          - message: subject must not be empty
+                            rule: has(self.clientCIDR) || has(self.notClientCIDR)
                       required:
                       - action
                       type: object
