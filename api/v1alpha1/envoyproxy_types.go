@@ -116,7 +116,6 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.router
 	//
 	// +optional
-	// +notImplementedHide
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
 	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
 	// These settings are applied on backends for which TLS policies are specified.
