@@ -495,7 +495,7 @@ Handling connection for 8888
 
 ### Enable HTTP Request Received Timeout
 
-This feature allows you to limit the take taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
+This feature allows you to limit the time taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
 This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
 
 {{< tabpane text=true >}}
@@ -637,6 +637,52 @@ envoy_http_downstream_cx_idle_timeout{envoy_http_conn_manager_prefix="<name of c
 
 The number of connections closed due to idle timeout should be increased by 1.
 
+
+### Configure Downstream Per Connection Buffer Limit
+
+This feature allows you to set a soft limit on size of the listener’s new connection read and write buffers.
+The size is configured using the `resource.Quantity` format, see examples [here](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory).
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  connection:
+    bufferLimit: 1024
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  connection:
+    bufferLimit: 1024
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
