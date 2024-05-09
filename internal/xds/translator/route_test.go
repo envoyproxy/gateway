@@ -9,9 +9,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/envoyproxy/gateway/internal/ir"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"k8s.io/utils/ptr"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_buildHashPolicy(t *testing.T) {

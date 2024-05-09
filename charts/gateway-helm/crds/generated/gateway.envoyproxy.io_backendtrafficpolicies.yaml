@@ -423,7 +423,8 @@ spec:
                         - name
                         type: object
                       type:
-                        description: Valid Type values are  "SourceIP".
+                        description: ConsistentHashType defines the type of input
+                          to hash on. Valid Type values are "SourceIP" or "Header".
                         enum:
                         - SourceIP
                         - Header
