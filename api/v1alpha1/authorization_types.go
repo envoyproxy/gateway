@@ -11,8 +11,15 @@ type Authorization struct {
 	// Rules are evaluated in order, the first matching rule will be applied,
 	// and the rest will be skipped.
 	//
+	// For example, if there are two rules, the first rule allows the request,
+	// and the second rule denies the request, the request will be allowed.
+	// If the first rule denies the request, and the second rule allows it,
+	// the request will be denied.
+	//
+	// If no rules match, the request will be denied.
+	//
 	// +kubebuilder:validation:MinItems=1
-	Rules []Rule `json:"rules,omitempty"`
+	Rules []Rule `json:"rules"`
 }
 
 // Rule defines the single authorization rule.
@@ -20,8 +27,8 @@ type Rule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action RuleActionType `json:"action"`
 
-	// Subject contains the subject configuration.
-	// If empty, all subjects are included.
+	// Subject contains the subject of the rule.
+	// If empty, all subjects are matching.
 	//
 	// +optional
 	Subject Subject `json:"subjects,omitempty"`
@@ -43,7 +50,7 @@ type Subject struct {
 }
 
 // RuleActionType specifies the types of authorization rule action.
-// +kubebuilder:validation:Enum=Allow;Deny;Log
+// +kubebuilder:validation:Enum=Allow;Deny
 type RuleActionType string
 
 const (
@@ -51,6 +58,4 @@ const (
 	Allow RuleActionType = "Allow"
 	// Deny is the action to deny the request.
 	Deny RuleActionType = "Deny"
-	// Log is the action to log the request.
-	Log RuleActionType = "Log"
 )

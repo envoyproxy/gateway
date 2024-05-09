@@ -182,7 +182,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped. |
+| `rules` | _[Rule](#rule) array_ |  true  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules, the first rule allows the request,<br />and the second rule denies the request, the request will be allowed.<br />If the first rule denies the request, and the second rule allows it,<br />the request will be denied.<br /><br />If no rules match, the request will be denied. |
 
 
 #### BackOffPolicy
@@ -2891,7 +2891,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
-| `subjects` | _[Subject](#subject)_ |  false  | Subject contains the subject configuration.<br />If empty, all subjects are included. |
+| `subjects` | _[Subject](#subject)_ |  false  | Subject contains the subject of the rule.<br />If empty, all subjects are matching. |
 
 
 #### RuleActionType
@@ -2907,7 +2907,6 @@ _Appears in:_
 | ----- | ----------- |
 | `Allow` | Allow is the action to allow the request.<br /> | 
 | `Deny` | Deny is the action to deny the request.<br /> | 
-| `Log` | Log is the action to log the request.<br /> | 
 
 
 #### SecurityPolicy

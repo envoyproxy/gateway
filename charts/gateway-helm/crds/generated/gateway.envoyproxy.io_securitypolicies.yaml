@@ -57,6 +57,15 @@ spec:
                       Rules contains all the authorization rules.
                       Rules are evaluated in order, the first matching rule will be applied,
                       and the rest will be skipped.
+
+
+                      For example, if there are two rules, the first rule allows the request,
+                      and the second rule denies the request, the request will be allowed.
+                      If the first rule denies the request, and the second rule allows it,
+                      the request will be denied.
+
+
+                      If no rules match, the request will be denied.
                     items:
                       description: Rule defines the single authorization rule.
                       properties:
@@ -66,12 +75,11 @@ spec:
                           enum:
                           - Allow
                           - Deny
-                          - Log
                           type: string
                         subjects:
                           description: |-
-                            Subject contains the subject configuration.
-                            If empty, all subjects are included.
+                            Subject contains the subject of the rule.
+                            If empty, all subjects are matching.
                           properties:
                             clientCIDR:
                               description: |-
@@ -86,6 +94,8 @@ spec:
                       type: object
                     minItems: 1
                     type: array
+                required:
+                - rules
                 type: object
               basicAuth:
                 description: BasicAuth defines the configuration for the HTTP Basic
