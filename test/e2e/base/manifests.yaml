@@ -554,7 +554,7 @@ metadata:
 data:
   go.mod: |
          module srvr
-         go 1.23
+         go 1.22
          require (
          	github.com/andybalholm/brotli v1.0.5 // indirect
          	github.com/klauspost/compress v1.17.0 // indirect

@@ -8,7 +8,7 @@ data:
   go.mod: |
     module github.com/envoyproxy/gateway
 
-    go 1.23
+    go 1.22
 
     require (
     	github.com/envoyproxy/go-control-plane v0.12.1-0.20240322155512-db0b36a50fa8
