@@ -125,7 +125,6 @@ httpRoutes:
       matches:
       - path:
           value: /foo
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -164,7 +163,6 @@ httpRoutes:
       matches:
       - path:
           value: /bar
-      sessionPersistence: null
   status:
     parents:
     - conditions:
