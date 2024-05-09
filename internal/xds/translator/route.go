@@ -224,15 +224,15 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if backendWeights.Invalid == 0 {
-		return &routev3.RouteAction{
-			ClusterSpecifier: &routev3.RouteAction_Cluster{
-				Cluster: backendWeights.Name,
-			},
-		}
+	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
+		return buildXdsWeightedRouteAction(backendWeights, settings)
 	}
 
-	return buildXdsWeightedRouteAction(backendWeights, settings)
+	return &routev3.RouteAction{
+		ClusterSpecifier: &routev3.RouteAction_Cluster{
+			Cluster: backendWeights.Name,
+		},
+	}
 }
 
 func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
@@ -254,18 +254,10 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 		}
 	}
 
-<<<<<<< HEAD
-	validCluster := &routev3.WeightedCluster_ClusterWeight{
-		Name:   backendWeights.Name,
-		Weight: &wrapperspb.UInt32Value{Value: backendWeights.Valid},
-	}
 	for _, destinationSetting := range settings {
-=======
-	for _, destinationSetting := range httpRoute.Destination.Settings {
->>>>>>> 3a85fdc9 (fix lint)
 		if destinationSetting.Filters != nil {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
-				Name:   httpRoute.Destination.Name,
+				Name:   backendWeights.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 

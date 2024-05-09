@@ -232,14 +232,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-<<<<<<< HEAD
       - destination:
-=======
-      - backendWeights:
-          invalid: 0
-          valid: 1
-        destination:
->>>>>>> ca7809dc (add xds configuration)
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -274,14 +267,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
-<<<<<<< HEAD
       - destination:
-=======
-      - backendWeights:
-          invalid: 0
-          valid: 1
-        destination:
->>>>>>> ca7809dc (add xds configuration)
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -316,14 +302,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
-<<<<<<< HEAD
       - destination:
-=======
-      - backendWeights:
-          invalid: 0
-          valid: 1
-        destination:
->>>>>>> ca7809dc (add xds configuration)
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

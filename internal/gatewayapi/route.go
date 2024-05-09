@@ -686,7 +686,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 					IsHTTP2:               routeRoute.IsHTTP2,
-					BackendWeights:        routeRoute.BackendWeights,
 				}
 				if routeRoute.Traffic != nil {
 					hostRoute.Traffic = &ir.TrafficFeatures{
@@ -1226,6 +1225,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			gwapiv1a2.RouteReasonResolvedRefs,
 			"Mixed endpointslice address type for the same backendRef is not supported")
 	}
+
 	destinationFilters := t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	ds = &ir.DestinationSetting{
 		Weight:      &weight,
@@ -1236,7 +1236,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		Filters:     destinationFilters,
 	}
 
-	return ds, weight
+	return ds
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {

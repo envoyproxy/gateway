@@ -8,10 +8,7 @@ http:
       mergeSlashes: true
     port: 10080
     routes:
-      - backendWeights:
-          invalid: 0
-          valid: 1
-        destination:
+      - destination:
           name: "first-route-dest"
           settings:
             - addressType: IP
@@ -29,10 +26,7 @@ http:
         name: "first-route"
         pathMatch:
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 10
-        destination:
+      - destination:
           name: "second-route-dest"
           settings:
             - addressType: IP
