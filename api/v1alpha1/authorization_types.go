@@ -36,7 +36,7 @@ type Policy struct {
 	// If empty, all methods are matching.
 	//
 	// +optional
-	Permissions []string `json:"permissions,omitempty"`
+	// Permissions []string `json:"permissions,omitempty"`
 }
 
 // Subject contains the subject configuration.

@@ -2260,7 +2260,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `subjects` | _[Subject](#subject)_ |  false  | Subject contains the subject configuration.<br />If empty, all subjects are included. |
-| `permissions` | _string array_ |  false  | Permissions contains allowed HTTP methods.<br />If empty, all methods are matching. |
 
 
 #### ProcessingModeOptions
@@ -2976,7 +2975,6 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
-| `authorization` | _[Authorization](#authorization)_ |  false  | Authorization defines the authorization configuration. |
 
 
 #### ServiceExternalTrafficPolicy

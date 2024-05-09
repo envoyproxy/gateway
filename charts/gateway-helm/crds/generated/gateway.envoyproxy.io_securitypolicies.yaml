@@ -74,13 +74,6 @@ spec:
                           items:
                             description: Policy defines the authorization policy.
                             properties:
-                              permissions:
-                                description: |-
-                                  Permissions contains allowed HTTP methods.
-                                  If empty, all methods are matching.
-                                items:
-                                  type: string
-                                type: array
                               subjects:
                                 description: |-
                                   Subject contains the subject configuration.
