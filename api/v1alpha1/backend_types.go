@@ -15,6 +15,7 @@ const (
 )
 
 // +kubebuilder:validation:Enum=FQDN;UDS;IPv4;IPv6
+// +notImplementedHide
 type AddressType string
 
 const (
@@ -29,6 +30,7 @@ const (
 )
 
 // +kubebuilder:validation:Enum=TCP;UDP
+// +notImplementedHide
 type ProtocolType string
 
 const (
@@ -39,6 +41,7 @@ const (
 )
 
 // +kubebuilder:validation:Enum=HTTP2;WS
+// +notImplementedHide
 type ApplicationProtocolType string
 
 const (
@@ -53,6 +56,7 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +notImplementedHide
 //
 // Backend allows the user to configure the behavior of the connection
 // between the Envoy Proxy listener and the backend service.
@@ -72,19 +76,26 @@ type Backend struct {
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) || has(self.unixDomainSocketAddress))",message="one of socketAddress or unixDomainSocketAddress must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) && !has(self.unixDomainSocketAddress)) || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))",message="only one of socketAddress or unixDomainSocketAddress can be specified"
+// +kubebuilder:validation:XValidation:rule="((has(self.socketAddress) && (self.type == 'FQDN' || self.type == 'IPv4' || self.type == 'IPv6')) || has(self.unixDomainSocketAddress) && self.type == 'UDS')",message="if type is FQDN, IPv4 or IPv6, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"
+// +notImplementedHide
 type BackendAddress struct {
 	// Type is the the type name of the backend address: FQDN, UDS, IPv4, IPv6
 	Type AddressType `json:"type"`
 
 	// SocketAddress defines a FQDN, IPv4 or IPv6 address
+	//
+	// +optional
 	SocketAddress *SocketAddress `json:"socketAddress,omitempty"`
 
 	// UnixDomainSocketAddress defines the unix domain socket path
+	//
+	// +optional
 	UnixDomainSocketAddress *UnixDomainSocketAddress `json:"unixDomainSocketAddress,omitempty"`
 }
 
 // SocketAddress describes TCP/UDP socket address, corresponding to Envoy's SocketAddress
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+// +notImplementedHide
 type SocketAddress struct {
 	// Address defines to the FQDN or IP address of the backend service.
 	Address string `json:"address"`
@@ -93,26 +104,34 @@ type SocketAddress struct {
 	Port int32 `json:"port"`
 
 	// Protocol defines to the the transport protocol to use for communication with the backend.
+	//
+	// +optional
 	Protocol *ProtocolType `json:"protocol,omitempty"`
 }
 
 // UnixDomainSocketAddress describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
+// +notImplementedHide
 type UnixDomainSocketAddress struct {
 	Path string `json:"path"`
 }
 
 // BackendSpec describes the desired state of BackendSpec.
+// +notImplementedHide
 type BackendSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=4
+	// +kubebuilder:validation:XValidation:rule="self.all(f, f.type == 'FQDN') || !self.exists(f, f.type == 'FQDN')",message="FQDN addresses cannot be mixed with other address types"
 	BackendAddresses []BackendAddress `json:"addresses,omitempty"`
 
 	// ApplicationProtocol defines the application protocol to be used, e.g. HTTP2.
+	//
+	// +optional
 	ApplicationProtocol *ApplicationProtocolType `json:"applicationProtocol,omitempty"`
 }
 
 // BackendStatus defines the state of Backend
+// +notImplementedHide
 type BackendStatus struct {
 	// Conditions describe the current conditions of the Backend.
 	//
@@ -121,4 +140,17 @@ type BackendStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +notImplementedHide
+// BackendList contains a list of Backend resources.
+type BackendList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Backend `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&Backend{}, &BackendList{})
 }

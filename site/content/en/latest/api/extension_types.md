@@ -15,6 +15,7 @@ API group.
 
 ### Resource Types
 - [Backend](#backend)
+- [BackendList](#backendlist)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
@@ -220,7 +221,8 @@ _Appears in:_
 Backend allows the user to configure the behavior of the connection
 between the Envoy Proxy listener and the backend service.
 
-
+_Appears in:_
+- [BackendList](#backendlist)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -243,8 +245,24 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[AddressType](#addresstype)_ |  true  | Type is the the type name of the backend address: FQDN, UDS, IPv4, IPv6 |
-| `socketAddress` | _[SocketAddress](#socketaddress)_ |  true  | SocketAddress defines a FQDN, IPv4 or IPv6 address |
-| `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  true  | UnixDomainSocketAddress defines the unix domain socket path |
+| `socketAddress` | _[SocketAddress](#socketaddress)_ |  false  | SocketAddress defines a FQDN, IPv4 or IPv6 address |
+| `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  false  | UnixDomainSocketAddress defines the unix domain socket path |
+
+
+#### BackendList
+
+
+
+BackendList contains a list of Backend resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`BackendList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[Backend](#backend) array_ |  true  |  |
 
 
 #### BackendRef
@@ -281,7 +299,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
-| `applicationProtocol` | _[ApplicationProtocolType](#applicationprotocoltype)_ |  true  | ApplicationProtocol defines the application protocol to be used, e.g. HTTP2. |
+| `applicationProtocol` | _[ApplicationProtocolType](#applicationprotocoltype)_ |  false  | ApplicationProtocol defines the application protocol to be used, e.g. HTTP2. |
 
 
 
@@ -3106,7 +3124,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `address` | _string_ |  true  | Address defines to the FQDN or IP address of the backend service. |
 | `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
-| `protocol` | _[ProtocolType](#protocoltype)_ |  true  | Protocol defines to the the transport protocol to use for communication with the backend. |
+| `protocol` | _[ProtocolType](#protocoltype)_ |  false  | Protocol defines to the the transport protocol to use for communication with the backend. |
 
 
 

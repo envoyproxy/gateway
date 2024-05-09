@@ -110,9 +110,18 @@ spec:
                       can be specified
                     rule: (has(self.socketAddress) && !has(self.unixDomainSocketAddress))
                       || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))
+                  - message: if type is FQDN, IPv4 or IPv6, socketAddress must be
+                      set; if type is UDS, unixDomainSocketAddress must be set
+                    rule: ((has(self.socketAddress) && (self.type == 'FQDN' || self.type
+                      == 'IPv4' || self.type == 'IPv6')) || has(self.unixDomainSocketAddress)
+                      && self.type == 'UDS')
                 maxItems: 4
                 minItems: 1
                 type: array
+                x-kubernetes-validations:
+                - message: FQDN addresses cannot be mixed with other address types
+                  rule: self.all(f, f.type == 'FQDN') || !self.exists(f, f.type ==
+                    'FQDN')
               applicationProtocol:
                 description: ApplicationProtocol defines the application protocol
                   to be used, e.g. HTTP2.
