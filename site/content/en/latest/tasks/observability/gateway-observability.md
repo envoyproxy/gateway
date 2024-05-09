@@ -25,9 +25,19 @@ The default installation of Envoy Gateway installs a default [EnvoyGateway][] co
 using a `ConfigMap`. In this section, we will update this resource to enable various ways to retrieve metrics
 from Envoy Gateway.
 
-### Enable Prometheus Metrics in Envoy Gateway
+### Retrieve Prometheus Metrics from Envoy Gateway
 
-The following is an example to enable prometheus metric for Envoy Gateway, prometheus metric is disabled by default.
+By default, prometheus metric is enabled. You can directly retrieve metrics from Envoy Gateway:
+
+```shell
+export ENVOY_POD_NAME=$(kubectl get pod -n envoy-gateway-system --selector=control-plane=envoy-gateway,app.kubernetes.io/instance=eg -o jsonpath='{.items[0].metadata.name}')
+kubectl port-forward pod/$ENVOY_POD_NAME -n envoy-gateway-system 19001:19001
+
+# check metrics 
+curl localhost:19001/metrics
+```
+
+The following is an example to disable prometheus metric for Envoy Gateway.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -50,7 +60,7 @@ data:
     telemetry:
       metrics:
         prometheus:
-          disable: false
+          disable: true
 EOF
 ```
 
@@ -76,7 +86,7 @@ data:
     telemetry:
       metrics:
         prometheus:
-          disable: false
+          disable: true
 ```
 
 {{% /tab %}}
@@ -86,16 +96,6 @@ After updating the `ConfigMap`, you will need to restart the `envoy-gateway` dep
 
 ```shell
 kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
-
-Verify metrics:
-
-```shell
-export ENVOY_POD_NAME=$(kubectl get pod -n envoy-gateway-system --selector=control-plane=envoy-gateway,app.kubernetes.io/instance=eg -o jsonpath='{.items[0].metadata.name}')
-kubectl port-forward pod/$ENVOY_POD_NAME -n envoy-gateway-system 19001:19001
-
-# check metrics 
-curl localhost:19001/metrics
 ```
 
 ### Enable Open Telemetry sink in Envoy Gateway
