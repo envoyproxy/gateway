@@ -56,13 +56,6 @@ func TestBackend(t *testing.T) {
 								Port:    443,
 							},
 						},
-						{
-							Type: "IPv6",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "0:0:0:0:0:0:0:1",
-								Port:    443,
-							},
-						},
 					},
 				}
 			},
@@ -105,7 +98,7 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Unsupported value: \"not-a-type\": supported values: \"FQDN\", \"UDS\", \"IPv4\", \"IPv6\""},
+			wantErrors: []string{"Unsupported value: \"not-a-type\": supported values: \"FQDN\", \"UDS\", \"IPv4\""},
 		},
 		{
 			desc: "unsupported application protocol type",
@@ -195,7 +188,7 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": if type is FQDN, IPv4 or IPv6, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"},
+			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": if type is FQDN or IPv4, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"},
 		},
 		{
 			desc: "Unix socket with wrong type",
@@ -212,7 +205,7 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": if type is FQDN, IPv4 or IPv6, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"},
+			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": if type is FQDN or IPv4, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"},
 		},
 		{
 			desc: "Mixed types",

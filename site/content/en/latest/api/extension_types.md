@@ -244,8 +244,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[AddressType](#addresstype)_ |  true  | Type is the the type name of the backend address: FQDN, UDS, IPv4, IPv6 |
-| `socketAddress` | _[SocketAddress](#socketaddress)_ |  false  | SocketAddress defines a FQDN, IPv4 or IPv6 address |
+| `type` | _[AddressType](#addresstype)_ |  true  | Type is the the type name of the backend address: FQDN, UDS, IPv4 |
+| `socketAddress` | _[SocketAddress](#socketaddress)_ |  false  | SocketAddress defines a FQDN or IPv4 address |
 | `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  false  | UnixDomainSocketAddress defines the unix domain socket path |
 
 
@@ -2377,7 +2377,6 @@ _Appears in:_
 | `FQDN` | AddressTypeFQDN defines the RFC-1123 compliant fully qualified domain name address type.<br /> | 
 | `UDS` | AddressTypeUDS defines the unix domain socket address type.<br /> | 
 | `IPv4` | AddressTypeIPv4 defines the IPv4 address type.<br /> | 
-| `IPv6` | AddressTypeIPv6 defines the IPv4 address type.<br /> | 
 | `TCP` | ProtocolTypeTCP defines the TCP address protocol.<br /> | 
 | `UDP` | ProtocolTypeUDP defines the UDP address protocol.<br /> | 
 

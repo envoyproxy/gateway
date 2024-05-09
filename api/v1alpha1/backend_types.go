@@ -14,7 +14,7 @@ const (
 	KindBackend = "Backend"
 )
 
-// +kubebuilder:validation:Enum=FQDN;UDS;IPv4;IPv6
+// +kubebuilder:validation:Enum=FQDN;UDS;IPv4
 // +notImplementedHide
 type AddressType string
 
@@ -25,8 +25,6 @@ const (
 	AddressTypeUDS ProtocolType = "UDS"
 	// AddressTypeIPv4 defines the IPv4 address type.
 	AddressTypeIPv4 ProtocolType = "IPv4"
-	// AddressTypeIPv6 defines the IPv4 address type.
-	AddressTypeIPv6 ProtocolType = "IPv6"
 )
 
 // +kubebuilder:validation:Enum=TCP;UDP
@@ -76,13 +74,13 @@ type Backend struct {
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) || has(self.unixDomainSocketAddress))",message="one of socketAddress or unixDomainSocketAddress must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) && !has(self.unixDomainSocketAddress)) || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))",message="only one of socketAddress or unixDomainSocketAddress can be specified"
-// +kubebuilder:validation:XValidation:rule="((has(self.socketAddress) && (self.type == 'FQDN' || self.type == 'IPv4' || self.type == 'IPv6')) || has(self.unixDomainSocketAddress) && self.type == 'UDS')",message="if type is FQDN, IPv4 or IPv6, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"
+// +kubebuilder:validation:XValidation:rule="((has(self.socketAddress) && (self.type == 'FQDN' || self.type == 'IPv4')) || has(self.unixDomainSocketAddress) && self.type == 'UDS')",message="if type is FQDN or IPv4, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"
 // +notImplementedHide
 type BackendAddress struct {
-	// Type is the the type name of the backend address: FQDN, UDS, IPv4, IPv6
+	// Type is the the type name of the backend address: FQDN, UDS, IPv4
 	Type AddressType `json:"type"`
 
-	// SocketAddress defines a FQDN, IPv4 or IPv6 address
+	// SocketAddress defines a FQDN or IPv4 address
 	//
 	// +optional
 	SocketAddress *SocketAddress `json:"socketAddress,omitempty"`

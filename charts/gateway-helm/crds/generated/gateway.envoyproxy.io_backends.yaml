@@ -59,7 +59,7 @@ spec:
                     corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
                   properties:
                     socketAddress:
-                      description: SocketAddress defines a FQDN, IPv4 or IPv6 address
+                      description: SocketAddress defines a FQDN or IPv4 address
                       properties:
                         address:
                           description: Address defines to the FQDN or IP address of
@@ -83,12 +83,11 @@ spec:
                       type: object
                     type:
                       description: 'Type is the the type name of the backend address:
-                        FQDN, UDS, IPv4, IPv6'
+                        FQDN, UDS, IPv4'
                       enum:
                       - FQDN
                       - UDS
                       - IPv4
-                      - IPv6
                       type: string
                     unixDomainSocketAddress:
                       description: UnixDomainSocketAddress defines the unix domain
@@ -110,11 +109,11 @@ spec:
                       can be specified
                     rule: (has(self.socketAddress) && !has(self.unixDomainSocketAddress))
                       || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))
-                  - message: if type is FQDN, IPv4 or IPv6, socketAddress must be
-                      set; if type is UDS, unixDomainSocketAddress must be set
+                  - message: if type is FQDN or IPv4, socketAddress must be set; if
+                      type is UDS, unixDomainSocketAddress must be set
                     rule: ((has(self.socketAddress) && (self.type == 'FQDN' || self.type
-                      == 'IPv4' || self.type == 'IPv6')) || has(self.unixDomainSocketAddress)
-                      && self.type == 'UDS')
+                      == 'IPv4')) || has(self.unixDomainSocketAddress) && self.type
+                      == 'UDS')
                 maxItems: 4
                 minItems: 1
                 type: array
