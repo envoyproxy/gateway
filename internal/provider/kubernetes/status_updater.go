@@ -178,19 +178,19 @@ func (u *UpdateWriter) Send(update Update) {
 //
 // Supported objects:
 //
-//		GatewayClasses
-//		Gateway
-//		HTTPRoute
-//		TLSRoute
-//		TCPRoute
-//		UDPRoute
-//		GRPCRoute
-//		EnvoyPatchPolicy
-//		ClientTrafficPolicy
-//	 BackendTrafficPolicy
-//		SecurityPolicy
-//		BackendTLSPolicy
-//	 EnvoyExtensionPolicy
+//	GatewayClasses
+//	Gateway
+//	HTTPRoute
+//	TLSRoute
+//	TCPRoute
+//	UDPRoute
+//	GRPCRoute
+//	EnvoyPatchPolicy
+//	ClientTrafficPolicy
+//	BackendTrafficPolicy
+//	SecurityPolicy
+//	BackendTLSPolicy
+//	EnvoyExtensionPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
@@ -276,23 +276,24 @@ func isStatusEqual(objA, objB interface{}) bool {
 	return false
 }
 
-// kindOf returns the kind string for the given Kubernetes object.
+// kindOf returns the known kind string for the given Kubernetes object,
+// returns Unknown for the unsupported object.
 //
 // Supported objects:
 //
-//		GatewayClasses
-//		Gateway
-//		HTTPRoute
-//		TLSRoute
-//		TCPRoute
-//		UDPRoute
-//		GRPCRoute
-//		EnvoyPatchPolicy
-//		ClientTrafficPolicy
-//	 BackendTrafficPolicy
-//		SecurityPolicy
-//		BackendTLSPolicy
-//	 EnvoyExtensionPolicy
+//	GatewayClasses
+//	Gateway
+//	HTTPRoute
+//	TLSRoute
+//	TCPRoute
+//	UDPRoute
+//	GRPCRoute
+//	EnvoyPatchPolicy
+//	ClientTrafficPolicy
+//	BackendTrafficPolicy
+//	SecurityPolicy
+//	BackendTLSPolicy
+//	EnvoyExtensionPolicy
 func kindOf(obj interface{}) string {
 	var kind string
 	switch obj.(type) {
