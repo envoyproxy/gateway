@@ -136,6 +136,7 @@ spec:
   require different cluster service discovery types (Static/EDS and Strict-DNS accordingly).
 * If a Backend that is referenced by a route cannot be translated, the `Route` resource will have an `Accepted=False` 
   condition with a `UnsupportedValue` reason. 
+* This API needs to be explicitly enabled using the [EnvoyGateway][] API   
   
 ## Alternatives
 * The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
@@ -154,6 +155,7 @@ spec:
 [BackendLBPolicy]: https://gateway-api.sigs.k8s.io/geps/gep-1619/
 [Backend Protocol Selection]: https://gateway-api.sigs.k8s.io/geps/gep-1911/
 [EnvoyProxy]:../../latest/api/extension_types#envoyproxy
+[EnvoyGateway]: ../../latest/api/extension_types#envoygateway
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Envoy Patch Policy]: ../../latest/api/extension_types#envoypatchpolicy
 [Envoy Extension Manager]: ./extending-envoy-gateway

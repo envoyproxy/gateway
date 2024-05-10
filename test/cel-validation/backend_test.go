@@ -45,15 +45,15 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "UDS",
-							UnixDomainSocketAddress: &egv1a1.UnixDomainSocketAddress{
+							UnixDomainSocketAddress: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
 							},
 						},
 						{
 							Type: "IPv4",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "1.1.1.1",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "1.1.1.1",
+								Port: 443,
 							},
 						},
 					},
@@ -69,16 +69,16 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "FQDN",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "example.com",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "example.com",
+								Port: 443,
 							},
 						},
 						{
 							Type: "FQDN",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "example2.com",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "example2.com",
+								Port: 443,
 							},
 						},
 					},
@@ -93,7 +93,7 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type:          "not-a-type",
-							SocketAddress: &egv1a1.SocketAddress{},
+							SocketAddress: &egv1a1.NetworkSocket{},
 						},
 					},
 				}
@@ -108,9 +108,9 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "FQDN",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "example.com",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "example.com",
+								Port: 443,
 							},
 						},
 					},
@@ -126,8 +126,8 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "FQDN",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address:  "example.com",
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host:     "example.com",
 								Port:     443,
 								Protocol: ptr.To(egv1a1.ProtocolType("TDP")),
 							},
@@ -159,11 +159,11 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "FQDN",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "example.com",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "example.com",
+								Port: 443,
 							},
-							UnixDomainSocketAddress: &egv1a1.UnixDomainSocketAddress{
+							UnixDomainSocketAddress: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
 							},
 						},
@@ -180,9 +180,9 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "UDS",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "example.com",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "example.com",
+								Port: 443,
 							},
 						},
 					},
@@ -198,7 +198,7 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "FQDN",
-							UnixDomainSocketAddress: &egv1a1.UnixDomainSocketAddress{
+							UnixDomainSocketAddress: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
 							},
 						},
@@ -215,16 +215,16 @@ func TestBackend(t *testing.T) {
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							Type: "FQDN",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "example.com",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "example.com",
+								Port: 443,
 							},
 						},
 						{
 							Type: "IPv4",
-							SocketAddress: &egv1a1.SocketAddress{
-								Address: "1.1.1.1",
-								Port:    443,
+							SocketAddress: &egv1a1.NetworkSocket{
+								Host: "1.1.1.1",
+								Port: 443,
 							},
 						},
 					},

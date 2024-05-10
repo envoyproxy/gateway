@@ -70,7 +70,7 @@ type Backend struct {
 }
 
 // BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
-// corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+// corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) || has(self.unixDomainSocketAddress))",message="one of socketAddress or unixDomainSocketAddress must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) && !has(self.unixDomainSocketAddress)) || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))",message="only one of socketAddress or unixDomainSocketAddress can be specified"
@@ -80,40 +80,35 @@ type BackendAddress struct {
 	// Type is the the type name of the backend address: FQDN, UDS, IPv4
 	Type AddressType `json:"type"`
 
-	// SocketAddress defines a FQDN or IPv4 address
+	// NetworkSocket defines a FQDN or IPv4 address
 	//
 	// +optional
-	SocketAddress *SocketAddress `json:"socketAddress,omitempty"`
+	NetworkSocket *NetworkSocket `json:"networkSocket,omitempty"`
 
-	// UnixDomainSocketAddress defines the unix domain socket path
+	// UnixSocket defines the unix domain socket path
 	//
 	// +optional
-	UnixDomainSocketAddress *UnixDomainSocketAddress `json:"unixDomainSocketAddress,omitempty"`
+	UnixSocket *UnixSocket `json:"unixSocket,omitempty"`
 }
 
-// SocketAddress describes TCP/UDP socket address, corresponding to Envoy's SocketAddress
+// NetworkSocket describes TCP/UDP socket address, corresponding to Envoy's NetworkSocket
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 // +notImplementedHide
-type SocketAddress struct {
-	// Address defines to the FQDN or IP address of the backend service.
-	Address string `json:"address"`
+type NetworkSocket struct {
+	// Host defines to the FQDN or IP address of the backend service.
+	Host string `json:"address"`
 
 	// Port defines to the port of of the backend service.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
 	Port int32 `json:"port"`
-
-	// Protocol defines to the the transport protocol to use for communication with the backend.
-	//
-	// +optional
-	Protocol *ProtocolType `json:"protocol,omitempty"`
 }
 
-// UnixDomainSocketAddress describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
+// UnixSocket describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
 // +notImplementedHide
-type UnixDomainSocketAddress struct {
+type UnixSocket struct {
 	Path string `json:"path"`
 }
 
