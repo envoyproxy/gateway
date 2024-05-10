@@ -27,9 +27,6 @@ type Authorization struct {
 // Rule defines the single authorization rule.
 // +notImplementedHide
 type Rule struct {
-	// Name is an uer-friendly name for the rule.
-	Name string `json:"name"`
-
 	// Action defines the action to be taken if the rule matches.
 	Action RuleActionType `json:"action"`
 
