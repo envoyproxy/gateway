@@ -32,7 +32,7 @@ type Rule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action RuleActionType `json:"action"`
 
-	// Subject contains the subject of the rule.
+	// Subject specifies the client identity of a request.
 	Subject Subject `json:"subjects,omitempty"`
 
 	// Permissions contains allowed HTTP methods.
@@ -43,16 +43,11 @@ type Rule struct {
 }
 
 // Subject specifies the client identity of a request.
-// +kubebuilder:validation:XValidation:rule="has(self.clientCIDR) || has(self.notClientCIDR)",message="subject must not be empty"
 // +notImplementedHide
 type Subject struct {
 	// ClientCIDR is the IP CIDR range of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	ClientCIDR []string `json:"clientCIDR,omitempty"`
-
-	// NotClientCIDR is the IP CIDR range of the client that should not match.
-	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-	NotClientCIDR []string `json:"notClientCIDR,omitempty"`
 }
 
 // RuleActionType specifies the types of authorization rule action.

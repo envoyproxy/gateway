@@ -3082,7 +3082,7 @@ _Appears in:_
 
 
 
-Subject is the subject of the rule.
+Subject specifies the client identity of a request.
 
 _Appears in:_
 - [Rule](#rule)
