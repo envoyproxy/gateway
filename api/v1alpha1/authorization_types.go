@@ -12,10 +12,8 @@ type Authorization struct {
 	// Rules are evaluated in order, the first matching rule will be applied,
 	// and the rest will be skipped.
 	//
-	// For example, if there are two rules, the first rule allows the request,
-	// and the second rule denies the request, the request will be allowed.
-	// If the first rule denies the request, and the second rule allows it,
-	// the request will be denied.
+	// For example, if there are two rules: the first rule allows the request
+	// and the second rule denies it, when a request matches both rules, it will be allowed.
 	//
 	// +optional
 	Rules []Rule `json:"rules"`
@@ -32,8 +30,8 @@ type Rule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action RuleActionType `json:"action"`
 
-	// Subject specifies the client identity of a request.
-	Subject Subject `json:"subjects,omitempty"`
+	// Principal specifies the client identity of a request.
+	Principal Principal `json:"principal"`
 
 	// Permissions contains allowed HTTP methods.
 	// If empty, all methods are matching.
@@ -42,11 +40,15 @@ type Rule struct {
 	// Permissions []string `json:"permissions,omitempty"`
 }
 
-// Subject specifies the client identity of a request.
+// Principal specifies the client identity of a request.
 // +notImplementedHide
-type Subject struct {
+type Principal struct {
 	// ClientCIDR is the IP CIDR range of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+	//
+	// By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.
+	// You can use the `EnableProxyProtocol` and `ClientIPDetection` options in
+	// the `ClientTrafficPolicy` to configure how the client IP is detected.
 	ClientCIDR []string `json:"clientCIDR,omitempty"`
 }
 

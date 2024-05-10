@@ -67,10 +67,8 @@ spec:
                       and the rest will be skipped.
 
 
-                      For example, if there are two rules, the first rule allows the request,
-                      and the second rule denies the request, the request will be allowed.
-                      If the first rule denies the request, and the second rule allows it,
-                      the request will be denied.
+                      For example, if there are two rules: the first rule allows the request
+                      and the second rule denies it, when a request matches both rules, it will be allowed.
                     items:
                       description: Rule defines the single authorization rule.
                       properties:
@@ -81,29 +79,26 @@ spec:
                           - Allow
                           - Deny
                           type: string
-                        subjects:
-                          description: Subject contains the subject of the rule.
+                        principal:
+                          description: Principal specifies the client identity of
+                            a request.
                           properties:
                             clientCIDR:
                               description: |-
                                 ClientCIDR is the IP CIDR range of the client.
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-                              items:
-                                type: string
-                              type: array
-                            notClientCIDR:
-                              description: |-
-                                NotClientCIDR is the IP CIDR range of the client that should not match.
-                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+
+                                By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.
+                                You can use the `EnableProxyProtocol` and `ClientIPDetection` options in
+                                the `ClientTrafficPolicy` to configure how the client IP is detected.
                               items:
                                 type: string
                               type: array
                           type: object
-                          x-kubernetes-validations:
-                          - message: subject must not be empty
-                            rule: has(self.clientCIDR) || has(self.notClientCIDR)
                       required:
                       - action
+                      - principal
                       type: object
                     type: array
                 type: object

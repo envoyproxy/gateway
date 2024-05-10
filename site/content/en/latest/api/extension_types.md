@@ -182,7 +182,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  false  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules, the first rule allows the request,<br />and the second rule denies the request, the request will be allowed.<br />If the first rule denies the request, and the second rule allows it,<br />the request will be denied. |
+| `rules` | _[Rule](#rule) array_ |  false  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
 | `defaultAction` | _[RuleActionType](#ruleactiontype)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
 
 
@@ -394,7 +394,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
-| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
+| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
 #### ClientTLSSettings
@@ -2249,6 +2249,20 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
+#### Principal
+
+
+
+Principal specifies the client identity of a request.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCIDR` | _string array_ |  true  | ClientCIDR is the IP CIDR range of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.<br />You can use the `EnableProxyProtocol` and `ClientIPDetection` options in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+
+
 #### ProcessingModeOptions
 
 
@@ -2892,7 +2906,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
-| `subjects` | _[Subject](#subject)_ |  true  | Subject contains the subject of the rule. |
+| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
 
 
 #### RuleActionType
@@ -3076,21 +3090,6 @@ _Appears in:_
 | `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> | 
 | `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> | 
 | `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
-
-
-#### Subject
-
-
-
-Subject specifies the client identity of a request.
-
-_Appears in:_
-- [Rule](#rule)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `clientCIDR` | _string array_ |  true  | ClientCIDR is the IP CIDR range of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
-| `notClientCIDR` | _string array_ |  true  | NotClientCIDR is the IP CIDR range of the client that should not match.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64" |
 
 
 #### TCPActiveHealthChecker
