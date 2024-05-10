@@ -42,7 +42,7 @@ type Rule struct {
 	// Permissions []string `json:"permissions,omitempty"`
 }
 
-// Subject is the subject of the rule.
+// Subject specifies the client identity of a request.
 // +kubebuilder:validation:XValidation:rule="has(self.clientCIDR) || has(self.notClientCIDR)",message="subject must not be empty"
 // +notImplementedHide
 type Subject struct {
