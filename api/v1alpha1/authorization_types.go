@@ -16,7 +16,7 @@ type Authorization struct {
 	// and the second rule denies it, when a request matches both rules, it will be allowed.
 	//
 	// +optional
-	Rules []Rule `json:"rules, omitempty"`
+	Rules []Rule `json:"rules,omitempty"`
 
 	// DefaultAction defines the default action to be taken if no rules match.
 	// If not specified, the default action is Deny.
