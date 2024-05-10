@@ -69,6 +69,8 @@ spec:
                           description: Port defines to the port of of the backend
                             service.
                           format: int32
+                          maximum: 65535
+                          minimum: 0
                           type: integer
                         protocol:
                           description: Protocol defines to the the transport protocol

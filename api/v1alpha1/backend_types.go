@@ -99,6 +99,9 @@ type SocketAddress struct {
 	Address string `json:"address"`
 
 	// Port defines to the port of of the backend service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
 	Port int32 `json:"port"`
 
 	// Protocol defines to the the transport protocol to use for communication with the backend.
