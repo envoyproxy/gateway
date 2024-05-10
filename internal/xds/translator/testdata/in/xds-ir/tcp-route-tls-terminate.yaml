@@ -23,9 +23,9 @@ tcp:
     port: 10080
     tls:
       inspector:
-        snis: 
-          - "*.envoyproxy.io"
-          - "example.com"
+        snis:
+        - "*.envoyproxy.io"
+        - "example.com"
       terminate:
         certificates:
         - Name: envoy-gateway-tls-secret-1
