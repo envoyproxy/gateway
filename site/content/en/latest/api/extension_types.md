@@ -182,7 +182,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  false  | Rules contains all the authorization rules.<br />Rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
+| `rules` | _[Rule](#rule) array_ |  false  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it,<br />when a request matches both rules, it will be allowed. |
 | `defaultAction` | _[RuleActionType](#ruleactiontype)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
 
 
