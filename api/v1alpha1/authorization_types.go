@@ -13,8 +13,7 @@ type Authorization struct {
 	// and the rest will be skipped.
 	//
 	// For example, if there are two rules: the first rule allows the request
-	// and the second rule denies it,
-	//when a request matches both rules, it will be allowed.
+	// and the second rule denies it, when a request matches both rules, it will be allowed.
 	//
 	// +optional
 	Rules []Rule `json:"rules,omitempty"`

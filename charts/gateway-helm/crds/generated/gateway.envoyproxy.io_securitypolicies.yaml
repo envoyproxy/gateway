@@ -68,8 +68,7 @@ spec:
 
 
                       For example, if there are two rules: the first rule allows the request
-                      and the second rule denies it,
-                      when a request matches both rules, it will be allowed.
+                      and the second rule denies it, when a request matches both rules, it will be allowed.
                     items:
                       description: Rule defines the single authorization rule.
                       properties:
