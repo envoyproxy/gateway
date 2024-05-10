@@ -35,6 +35,9 @@ data:
         default: info
     provider:
       kubernetes:
+        rateLimitDeployment:
+          container:
+            image: envoyproxy/ratelimit:master
         shutdownManager:
           image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes

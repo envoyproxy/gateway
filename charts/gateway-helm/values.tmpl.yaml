@@ -39,6 +39,10 @@ config:
       kubernetes:
         shutdownManager:
           image: ${ImageRepository}:${ImageTag}
+        rateLimitDeployment:
+          container:
+            image: "envoyproxy/ratelimit:master"
+
     logging:
       level:
         default: info
