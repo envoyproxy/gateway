@@ -6,6 +6,7 @@
 package v1alpha1
 
 // Authorization defines the authorization configuration.
+// +notImplementedHide
 type Authorization struct {
 	// Rules contains all the authorization rules.
 	// Rules are evaluated in order, the first matching rule will be applied,
@@ -26,6 +27,7 @@ type Authorization struct {
 }
 
 // Rule defines the single authorization rule.
+// +notImplementedHide
 type Rule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action RuleActionType `json:"action"`
@@ -42,6 +44,7 @@ type Rule struct {
 
 // Subject is the subject of the rule.
 // +kubebuilder:validation:XValidation:rule="has(self.clientCIDR) || has(self.notClientCIDR)",message="subject must not be empty"
+// +notImplementedHide
 type Subject struct {
 	// ClientCIDR is the IP CIDR range of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -54,6 +57,7 @@ type Subject struct {
 
 // RuleActionType specifies the types of authorization rule action.
 // +kubebuilder:validation:Enum=Allow;Deny
+// +notImplementedHide
 type RuleActionType string
 
 const (
