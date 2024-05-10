@@ -793,7 +793,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			if irListener != nil {
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
-					TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
+					TLS: &ir.TLS{TLSInspectorConfig: &ir.TLSInspectorConfig{
 						SNIs: hosts,
 					}},
 					Destination: &ir.RouteDestination{
@@ -1082,6 +1082,14 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			accepted = true
 			irKey := t.getIRKey(listener.gateway)
 
+			tls := ir.TLS{
+				Terminate: irTLSConfigs(listener.tlsSecrets),
+			}
+			if listener.Hostname != nil {
+				tls.TLSInspectorConfig = &ir.TLSInspectorConfig{
+					SNIs: []string{string(*listener.Hostname)},
+				}
+			}
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
@@ -1091,7 +1099,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
 						Settings: destSettings,
 					},
-					TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
+					TLS: &tls,
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 
