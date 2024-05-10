@@ -1575,7 +1575,13 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP *bool `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	SourceIP *bool   `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Header   *Header `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// Header consistent hash type settings
+type Header struct {
+	Name string `json:"name" yaml:"name"`
 }
 
 type ProxyProtocolVersion string
