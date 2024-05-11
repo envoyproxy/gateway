@@ -653,6 +653,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 	}
 
+	// Populate traffic features.
 	bt := httpRoute.Traffic
 	if bt != nil {
 		clusterArgs.loadBalancer = bt.LoadBalancer
