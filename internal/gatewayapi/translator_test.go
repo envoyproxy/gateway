@@ -29,7 +29,9 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
@@ -77,6 +79,7 @@ func TestTranslate(t *testing.T) {
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				Logger:                  logging.NewLogger(&v1alpha1.EnvoyGatewayLogging{}),
 			}
 
 			// Add common test fixtures
@@ -318,8 +321,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				GatewayControllerName:  egv1a1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
-				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
-				MergeGateways:          IsMergeGatewaysEnabled(resources),
+				ExtensionGroupKinds: []schema.GroupKind{
+					{Group: "foo.example.io", Kind: "Foo"},
+					{Group: "bar.example.io", Kind: "Bar"},
+				},
+				MergeGateways: IsMergeGatewaysEnabled(resources),
+				Logger:        logging.NewLogger(&v1alpha1.EnvoyGatewayLogging{}),
 			}
 
 			// Add common test fixtures
@@ -469,6 +476,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			got := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			// Also fix lastTransitionTime in unstructured members
+			for i := range got.ExtServerPolicies {
+				field.SetMapValues(got.ExtServerPolicies[i].Object, "lastTransitionTime", nil)
+			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)

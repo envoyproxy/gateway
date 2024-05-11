@@ -306,7 +306,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Check if an extension want to modify the listener that was just configured/created
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 		// TODO zhaohuabing should we also process the quicXDSListener?
-		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, t.ExtensionManager); err != nil {
+		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, httpListener.ExtensionRefs, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

@@ -9,12 +9,14 @@ import (
 	"sort"
 
 	"golang.org/x/exp/maps"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 const (
@@ -101,6 +103,8 @@ type Translator struct {
 
 	// Namespace is the namespace that Envoy Gateway runs in.
 	Namespace string
+
+	Logger logging.Logger
 }
 
 type TranslateResult struct {
@@ -120,6 +124,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	securityPolicies []*egv1a1.SecurityPolicy,
 	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+	extPolicies []unstructured.Unstructured,
 	xdsIR XdsIRMap, infraIR InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -151,6 +156,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
 	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
 	translateResult.EnvoyExtensionPolicies = append(translateResult.EnvoyExtensionPolicies, envoyExtensionPolicies...)
+	translateResult.ExtServerPolicies = append(translateResult.ExtServerPolicies, extPolicies...)
 
 	return translateResult
 }
@@ -224,6 +230,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, gateways, routes, resources, xdsIR)
 
+	extServerPolicies := t.ProcessExtensionServerPolicies(
+		resources.ExtServerPolicies, gateways, xdsIR)
+
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
@@ -239,7 +248,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		xdsIR, infraIR)
+		extServerPolicies, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

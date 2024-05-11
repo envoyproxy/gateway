@@ -56,6 +56,7 @@ type Resources struct {
 	SecurityPolicies       []*egv1a1.SecurityPolicy       `json:"securityPolicies,omitempty" yaml:"securityPolicies,omitempty"`
 	BackendTLSPolicies     []*gwapiv1a3.BackendTLSPolicy  `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
 	EnvoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
+	ExtServerPolicies      []unstructured.Unstructured    `json:"extServerPolicies,omitempty" yaml:"extServerPolicies,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -77,6 +78,7 @@ func NewResources() *Resources {
 		SecurityPolicies:       []*egv1a1.SecurityPolicy{},
 		BackendTLSPolicies:     []*gwapiv1a3.BackendTLSPolicy{},
 		EnvoyExtensionPolicies: []*egv1a1.EnvoyExtensionPolicy{},
+		ExtServerPolicies:      []unstructured.Unstructured{},
 	}
 }
 

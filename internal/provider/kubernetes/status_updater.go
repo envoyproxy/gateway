@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -191,8 +192,14 @@ func (u *UpdateWriter) Send(update Update) {
 //	SecurityPolicy
 //	BackendTLSPolicy
 //	EnvoyExtensionPolicy
+//	Unstructured (for server extension policies)
 func isStatusEqual(objA, objB interface{}) bool {
-	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+	opts := cmp.Options{
+		cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+		cmpopts.IgnoreMapEntries(func(k string, _ any) bool {
+			return k == "lastTransitionTime"
+		}),
+	}
 	switch a := objA.(type) {
 	case *gwapiv1.GatewayClass:
 		if b, ok := objB.(*gwapiv1.GatewayClass); ok {
@@ -269,6 +276,12 @@ func isStatusEqual(objA, objB interface{}) bool {
 	case *egv1a1.EnvoyExtensionPolicy:
 		if b, ok := objB.(*egv1a1.EnvoyExtensionPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *unstructured.Unstructured:
+		if b, ok := objB.(*unstructured.Unstructured); ok {
+			if cmp.Equal(a.Object["status"], b.Object["status"], opts) {
 				return true
 			}
 		}
