@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     tcpKeepalive:
       idleTime: 10s
       interval: 30m
@@ -41,7 +40,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
@@ -222,7 +220,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -237,7 +235,7 @@ infraIR:
         name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

@@ -6,14 +6,13 @@ backendTLSPolicies:
     name: policy-btls
     namespace: policies
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: http-backend
-      namespace: backends
       sectionName: "8080"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - group: ""
         kind: ConfigMap
         name: ca-cmap
@@ -119,7 +118,7 @@ infraIR:
         name: envoy-gateway/gateway-btls/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

@@ -46,6 +46,9 @@ Let's create a `BackendTrafficPolicy` with a retry setting.
 
 The request will be retried 5 times with a 100ms base interval and a 10s maximum interval.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -73,6 +76,40 @@ spec:
         - retriable-status-codes
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: retry-for-route
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+    namespace: default
+  retry:
+    numRetries: 5
+    perRetry:
+      backOff:
+        baseInterval: 100ms
+        maxInterval: 10s
+      timeout: 250ms
+    retryOn:
+      httpStatusCodes:
+        - 500
+      triggers:
+        - connect-failure
+        - retriable-status-codes
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Execute the test again.
 

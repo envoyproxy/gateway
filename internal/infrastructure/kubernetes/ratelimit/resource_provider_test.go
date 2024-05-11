@@ -27,9 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 const (
 	// RedisAuthEnvVar is the redis auth.
@@ -43,7 +41,6 @@ var ownerReferenceUID = map[string]types.UID{
 }
 
 func TestRateLimitLabelSelector(t *testing.T) {
-
 	cases := []struct {
 		name     string
 		expected []string
@@ -65,7 +62,6 @@ func TestRateLimitLabelSelector(t *testing.T) {
 			require.ElementsMatch(t, tc.expected, got)
 		})
 	}
-
 }
 
 func TestRateLimitLabels(t *testing.T) {
@@ -126,7 +122,6 @@ func loadServiceAccount() (*corev1.ServiceAccount, error) {
 }
 
 func TestService(t *testing.T) {
-
 	cfg, err := config.New()
 	require.NoError(t, err)
 
@@ -209,7 +204,7 @@ func TestConfigmap(t *testing.T) {
 		cmYAML, err := yaml.Marshal(cm)
 		require.NoError(t, err)
 		// nolint:gosec
-		err = os.WriteFile("testdata/envoy-ratelimit-configmap.yaml", cmYAML, 0644)
+		err = os.WriteFile("testdata/envoy-ratelimit-configmap.yaml", cmYAML, 0o644)
 		require.NoError(t, err)
 		return
 	}
@@ -677,10 +672,7 @@ func TestDeployment(t *testing.T) {
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
 					Tracing: &egv1a1.RateLimitTracing{
-						SamplingRate: func() *uint32 {
-							var samplingRate uint32 = 55
-							return &samplingRate
-						}(),
+						SamplingRate: ptr.To[uint32](55),
 						Provider: &egv1a1.RateLimitTracingProvider{
 							URL: "trace-collector.envoy-gateway-system.svc.cluster.local:4317",
 						},
@@ -697,7 +689,8 @@ func TestDeployment(t *testing.T) {
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 					RateLimitDeployment: tc.deploy,
-				}}
+				},
+			}
 			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
@@ -706,7 +699,7 @@ func TestDeployment(t *testing.T) {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint:gosec
-				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0644)
+				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0o644)
 				require.NoError(t, err)
 				return
 			}

@@ -37,7 +37,8 @@ docs-api: docs-api-gen helm-readme-gen docs-api-headings
 .PHONY: helm-readme-gen
 helm-readme-gen: $(tools/helm-docs)
 	@$(LOG_TARGET)
-	$(tools/helm-docs) charts/gateway-helm/ -f values.tmpl.yaml -o api.md
+	@ImageRepository=docker.io/envoyproxy/gateway ImageTag=latest ImagePullPolicy=IfNotPresent envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml # use production ENV to generate helm api doc
+	$(tools/helm-docs) charts/gateway-helm/ -f values.yaml -o api.md
 	mv charts/gateway-helm/api.md site/content/en/latest/install/api.md
 
 .PHONY: docs-api-gen

@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     timeout:
       http:
         maxConnectionDuration: 22s
@@ -42,7 +41,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     timeout:
       http:
         connectionIdleTimeout: 16s
@@ -227,7 +225,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -242,7 +240,7 @@ infraIR:
         name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

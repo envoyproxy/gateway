@@ -3,7 +3,7 @@ title: "Routing outside Kubernetes"
 ---
 
 Routing to endpoints outside the Kubernetes cluster where Envoy Gateway and its corresponding Envoy Proxy fleet is
-running is a common use. This can be achieved by defining FQDN addresses in a [EndpointSlice][].
+running is a common use case. This can be achieved by defining FQDN addresses in a [EndpointSlice][].
 
 ## Installation
 
@@ -12,7 +12,10 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
-* Lets define a Service and EndpointSlice that represents https://httpbin.org
+Define a Service and EndpointSlice that represents https://httpbin.org
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -46,24 +49,63 @@ endpoints:
 EOF
 ```
 
-* Lets update the [Gateway][] to include a TLS Listener on port 443
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
 
-```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "tls",
-      "protocol": "TLS",
-      "port": 443,
-      "tls": {
-        "mode": "Passthrough",
-      },
-    },
-}]'
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: default
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 443
+      name: https
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: httpbin
+  namespace: default
+  labels:
+    kubernetes.io/service-name: httpbin 
+addressType: FQDN
+ports:
+- name: https
+  protocol: TCP
+  port: 443
+endpoints:
+- addresses:
+  - "httpbin.org"
 ```
 
-* Lets add a [TLSRoute][] that can route incoming traffic to the above backend that we created
+{{% /tab %}}
+{{< /tabpane >}}
+
+Update the [Gateway][] to include a TLS Listener on port 443
+
+```shell
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: tls
+      protocol: TLS
+      port: 443
+      tls:
+        mode: Passthrough
+  '
+```
+
+Add a [TLSRoute][] that can route incoming traffic to the above backend that we created
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -80,19 +122,41 @@ spec:
     - name: httpbin
       port: 443
 EOF
-```    
+```
 
-Lets get the Gateway address
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: httpbin 
+spec:
+  parentRefs:
+  - name: eg 
+    sectionName: tls
+  rules:
+  - backendRefs:
+    - name: httpbin
+      port: 443
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Get the Gateway address:
 
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-
-Lets send a request and view the response
+Send a request and view the response:
 
 ```shell
-curl -I -HHost:httpbin.org --resolve "httpbin.org:443:${GATEWAY_HOST}" https://httpbin.org:443
+curl -I -HHost:httpbin.org --resolve "httpbin.org:443:${GATEWAY_HOST}" https://httpbin.org/
 ```
 
 [EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/

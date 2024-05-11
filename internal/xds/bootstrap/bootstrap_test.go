@@ -22,11 +22,11 @@ import (
 func TestGetRenderedBootstrapConfig(t *testing.T) {
 	cases := []struct {
 		name string
-		opts *RenderBootsrapConfigOptions
+		opts *RenderBootstrapConfigOptions
 	}{
 		{
 			name: "disable-prometheus",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
@@ -36,15 +36,27 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "enable-prometheus",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
 			},
 		},
 		{
+			name: "enable-prometheus-gzip-compression",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: "gzip",
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "otel-metrics",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
@@ -63,7 +75,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "otel-metrics-backendref",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
@@ -91,7 +103,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "custom-stats-matcher",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Matches: []egv1a1.StringMatch{
 						{
@@ -120,7 +132,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "with-max-heap-size-bytes",
-			opts: &RenderBootsrapConfigOptions{
+			opts: &RenderBootstrapConfigOptions{
 				MaxHeapSizeBytes: 1073741824,
 			},
 		},
@@ -133,7 +145,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 
 			if *overrideTestData {
 				// nolint:gosec
-				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0644)
+				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0o644)
 				require.NoError(t, err)
 				return
 			}

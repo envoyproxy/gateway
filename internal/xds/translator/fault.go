@@ -30,8 +30,7 @@ func init() {
 	registerHTTPFilter(&fault{})
 }
 
-type fault struct {
-}
+type fault struct{}
 
 var _ httpFilter = &fault{}
 
@@ -39,7 +38,6 @@ var _ httpFilter = &fault{}
 // if applicable, and it does not already exist.
 // Note: this method creates a fault filter for each route that contains an Fault config.
 func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}

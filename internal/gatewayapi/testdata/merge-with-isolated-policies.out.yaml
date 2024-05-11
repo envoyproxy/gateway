@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
@@ -41,7 +40,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: default
     timeout:
       http:
         requestReceivedTimeout: 5s
@@ -236,14 +234,14 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: default/gateway-1/http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: default/gateway-2/http-2
         ports:
         - containerPort: 8888
-          name: default/gateway-2/http-2
+          name: http-8888
           protocol: HTTP
           servicePort: 8888
       metadata:
@@ -275,7 +273,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:

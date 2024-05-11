@@ -29,7 +29,7 @@ Create a certificate and a private key for `www.example.com`:
 
 ```shell
 openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
-openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
+openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
 ```
 
 Store the cert/key in a Secret:
@@ -49,59 +49,40 @@ kubectl create configmap example-ca --from-file=ca.crt
 Patch the existing quickstart backend to enable TLS. The patch will mount the TLS certificate secret into the backend as volume. 
 
 ```shell
-kubectl patch deployment backend --type=json --patch '[
-  {
-    "op": "add",
-    "path": "/spec/template/spec/containers/0/volumeMounts",
-    "value": [
-      {
-        "name": "secret-volume",
-        "mountPath": "/etc/secret-volume"
-      }
-    ]
-  },
-  {
-    "op": "add",
-    "path": "/spec/template/spec/volumes",
-    "value": [
-      {
-        "name": "secret-volume",
-        "secret": {
-          "secretName": "example-cert",
-          "items": [
-            {
-              "key": "tls.crt",
-              "path": "crt"
-            },
-            {
-              "key": "tls.key",
-              "path": "key"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "op": "add",
-    "path": "/spec/template/spec/containers/0/env/-",
-    "value": {
-      "name": "TLS_SERVER_CERT",
-      "value": "/etc/secret-volume/crt"
-    }
-  },
-  {
-    "op": "add",
-    "path": "/spec/template/spec/containers/0/env/-",
-    "value": {
-      "name": "TLS_SERVER_PRIVKEY",
-      "value": "/etc/secret-volume/key"
-    }
-  }
-]'
+kubectl patch deployment backend --type=json --patch '
+  - op: add
+    path: /spec/template/spec/containers/0/volumeMounts
+    value:
+    - name: secret-volume
+      mountPath: /etc/secret-volume
+  - op: add
+    path: /spec/template/spec/volumes
+    value:
+    - name: secret-volume
+      secret:
+        secretName: example-cert
+        items:
+        - key: tls.crt
+          path: crt
+        - key: tls.key
+          path: key
+  - op: add
+    path: /spec/template/spec/containers/0/env/-
+    value:
+      name: TLS_SERVER_CERT
+      value: /etc/secret-volume/crt
+  - op: add
+    path: /spec/template/spec/containers/0/env/-
+    value:
+      name: TLS_SERVER_PRIVKEY
+      value: /etc/secret-volume/key
+  '
 ```
 
 Create a service that exposes port 443 on the backend service. 
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -124,45 +105,99 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: backend
+    service: backend
+  name: tls-backend
+  namespace: default
+spec:
+  selector:
+    app: backend
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS connection with the backend and validate the backend certificate is issued by a trusted CA and contains an appropriate DNS SAN.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: enable-backend-tls
   namespace: default
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: tls-backend
     sectionName: "443"
-  tls:
-    caCertRefs:
-      - name: example-ca
-        group: ''
-        kind: ConfigMap
+  validation:
+    caCertificateRefs:
+    - name: example-ca
+      group: ''
+      kind: ConfigMap
     hostname: www.example.com
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: enable-backend-tls
+  namespace: default
+spec:
+  targetRefs:
+  - group: ''
+    kind: Service
+    name: tls-backend
+    sectionName: "443"
+  validation:
+    caCertificateRefs:
+    - name: example-ca
+      group: ''
+      kind: ConfigMap
+    hostname: www.example.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Patch the HTTPRoute's backend reference, so that it refers to the new TLS-enabled service:
 
 ```shell
-kubectl patch HTTPRoute backend --type=json --patch '[
-    {
-        "op": "replace",
-        "path": "/spec/rules/0/backendRefs/0/port",
-        "value": 443
-    },
-    {
-        "op": "replace",
-        "path": "/spec/rules/0/backendRefs/0/name",
-        "value": "tls-backend"
-    }
-]'
+kubectl patch HTTPRoute backend --type=json --patch '
+  - op: replace
+    path: /spec/rules/0/backendRefs/0/port
+    value: 443
+  - op: replace
+    path: /spec/rules/0/backendRefs/0/name
+    value: tls-backend
+  '
 ```
 
 Verify the HTTPRoute status:
@@ -173,7 +208,37 @@ kubectl get HTTPRoute backend -o yaml
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through the Gateway:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:80:${GATEWAY_HOST}" \
+http://www.example.com:80/get
+```
+
+Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
+
+```shell
+< HTTP/1.1 200 OK
+[...]
+ "tls": {
+  "version": "TLSv1.2",
+  "serverName": "www.example.com",
+  "negotiatedProtocol": "http/1.1",
+  "cipherSuite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+ }
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -207,32 +272,7 @@ Inspect the output and see that the response contains the details of the TLS han
  }
 ```
 
-### Clusters with External LoadBalancer Support
-
-Get the External IP of the Gateway:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-Query the example app through the Gateway:
-
-```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:80:${GATEWAY_HOST}" \
-http://www.example.com:80/get
-```
-
-Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
-
-```shell
-< HTTP/1.1 200 OK
-[...]
- "tls": {
-  "version": "TLSv1.2",
-  "serverName": "www.example.com",
-  "negotiatedProtocol": "http/1.1",
-  "cipherSuite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
- }
-```
+{{% /tab %}}
+{{< /tabpane >}}
 
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/

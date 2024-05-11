@@ -79,3 +79,15 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+  - name: "seventh-route"
+    hostname: "*"
+    loadBalancer:
+      consistentHash:
+        header:
+          name: name
+    destination:
+      name: "seventh-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

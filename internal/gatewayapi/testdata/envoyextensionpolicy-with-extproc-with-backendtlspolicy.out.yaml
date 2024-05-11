@@ -6,14 +6,13 @@ backendTLSPolicies:
     name: policy-btls-grpc
     namespace: default
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: grpc-backend
-      namespace: envoy-gateway
       sectionName: "8000"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - group: ""
         kind: ConfigMap
         name: ca-cmap
@@ -39,13 +38,13 @@ backendTLSPolicies:
     name: policy-btls-grpc-2
     namespace: default
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: grpc-backend-2
       sectionName: "9000"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - group: ""
         kind: ConfigMap
         name: ca-cmap
@@ -73,14 +72,16 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend-2
+    - backendRefs:
+      - name: grpc-backend-2
         port: 9000
+      processingMode:
+        request: {}
+        response: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -104,15 +105,21 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend
+    - backendRefs:
+      - name: grpc-backend
         namespace: envoy-gateway
         port: 8000
+      failOpen: true
+      messageTimeout: 5s
+      processingMode:
+        request:
+          body: Buffered
+        response:
+          body: Streamed
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -259,7 +266,7 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -298,7 +305,7 @@ xdsIR:
         extProc:
         - authority: grpc-backend-2.default:9000
           destination:
-            name: envoyextensionpolicy/default/policy-for-http-route/0/grpc-backend-2
+            name: envoyextensionpolicy/default/policy-for-http-route/0
             settings:
             - addressType: IP
               endpoints:
@@ -312,6 +319,8 @@ xdsIR:
                 sni: grpc-backend-2
               weight: 1
           name: envoyextensionpolicy/default/policy-for-http-route/0
+          requestHeaderProcessing: true
+          responseHeaderProcessing: true
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
@@ -334,7 +343,7 @@ xdsIR:
         extProc:
         - authority: grpc-backend.envoy-gateway:8000
           destination:
-            name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
+            name: envoyextensionpolicy/default/policy-for-gateway/0
             settings:
             - addressType: IP
               protocol: GRPC
@@ -344,7 +353,13 @@ xdsIR:
                   name: policy-btls-grpc/default-ca
                 sni: grpc-backend
               weight: 1
+          failOpen: true
+          messageTimeout: 5s
           name: envoyextensionpolicy/default/policy-for-gateway/0
+          requestBodyProcessingMode: Buffered
+          requestHeaderProcessing: true
+          responseBodyProcessingMode: Streamed
+          responseHeaderProcessing: true
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com

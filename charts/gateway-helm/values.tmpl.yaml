@@ -3,7 +3,7 @@ deployment:
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'
-    imagePullPolicy: Always
+    imagePullPolicy: ${ImagePullPolicy}
     imagePullSecrets: []
     resources:
       limits:
@@ -25,7 +25,7 @@ deployment:
   replicas: 1
   pod:
     affinity: {}
-    annotations: 
+    annotations:
       prometheus.io/scrape: 'true'
       prometheus.io/port: '19001'
     labels: {}
@@ -36,6 +36,9 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
+      kubernetes:
+        shutdownManager:
+          image: ${ImageRepository}:${ImageTag}
     logging:
       level:
         default: info
@@ -48,7 +51,7 @@ certgen:
   job:
     annotations: {}
     resources: {}
-    ttlSecondsAfterFinished: 0
+    ttlSecondsAfterFinished: 30
   rbac:
     annotations: {}
     labels: {}

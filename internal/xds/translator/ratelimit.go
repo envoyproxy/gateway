@@ -473,7 +473,7 @@ func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
 	}, nil
 }
 
-func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
+func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, metrics *ir.Metrics) error {
 	// Return early if rate limits don't exist.
 	if !t.isRateLimitPresent(irListener) {
 		return nil
@@ -497,6 +497,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,
+		metrics:      metrics,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

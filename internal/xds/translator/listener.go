@@ -24,7 +24,6 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -79,16 +78,20 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	return r
 }
 
-func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
+func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
+	if opts == nil {
+		opts = &ir.HTTP2Settings{}
+	}
+
 	return &corev3.Http2ProtocolOptions{
-		MaxConcurrentStreams: &wrappers.UInt32Value{
-			Value: http2MaxConcurrentStreamsLimit,
+		MaxConcurrentStreams: &wrapperspb.UInt32Value{
+			Value: ptr.Deref(opts.MaxConcurrentStreams, http2MaxConcurrentStreamsLimit),
 		},
-		InitialStreamWindowSize: &wrappers.UInt32Value{
-			Value: http2InitialStreamWindowSize,
+		InitialStreamWindowSize: &wrapperspb.UInt32Value{
+			Value: ptr.Deref(opts.InitialStreamWindowSize, http2InitialStreamWindowSize),
 		},
-		InitialConnectionWindowSize: &wrappers.UInt32Value{
-			Value: http2InitialConnectionWindowSize,
+		InitialConnectionWindowSize: &wrapperspb.UInt32Value{
+			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
 		},
 	}
 }
@@ -205,7 +208,8 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 //     The newly created TCP filter chain is configured with a filter chain match to
 //     match the server names(SNI) based on the listener's hostnames.
 func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection,
+) error {
 	al := buildXdsAccessLog(accesslog, false)
 
 	hcmTracing, err := buildHCMTracing(tracing)
@@ -222,8 +226,8 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 
 	// Client IP detection
-	var useRemoteAddress = true
-	var originalIPDetectionExtensions = originalIPDetectionExtensions(irListener.ClientIPDetection)
+	useRemoteAddress := true
+	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}
@@ -244,9 +248,9 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
-		Http2ProtocolOptions: http2ProtocolOptions(),
+		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress:              &wrappers.BoolValue{Value: useRemoteAddress},
+		UseRemoteAddress:              &wrapperspb.BoolValue{Value: useRemoteAddress},
 		XffNumTrustedHops:             xffNumTrustedHops(irListener.ClientIPDetection),
 		OriginalIpDetectionExtensions: originalIPDetectionExtensions,
 		// normalize paths according to RFC 3986
@@ -379,13 +383,13 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string, accesslog *ir.AccessLog, connection *ir.Connection) error {
-	if irListener == nil {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, connection *ir.Connection) error {
+	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
 
-	isTLSPassthrough := irListener.TLS != nil && irListener.TLS.Passthrough != nil
-	isTLSTerminate := irListener.TLS != nil && irListener.TLS.Terminate != nil
+	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
+	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := "tcp"
 	if isTLSPassthrough {
 		statPrefix = "passthrough"
@@ -401,7 +405,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
 		},
-		HashPolicy: buildTCPProxyHashPolicy(irListener.LoadBalancer),
+		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
 	}
 
 	var filters []*listenerv3.Filter
@@ -426,13 +430,20 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 	}
 
 	if isTLSPassthrough {
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.Passthrough.SNIs); err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, irRoute.TLS.TLSInspectorConfig.SNIs); err != nil {
 			return err
 		}
 	}
 
 	if isTLSTerminate {
-		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS.Terminate)
+		var snis []string
+		if cfg := irRoute.TLS.TLSInspectorConfig; cfg != nil {
+			snis = cfg.SNIs
+		}
+		if err := addServerNamesMatch(xdsListener, filterChain, snis); err != nil {
+			return err
+		}
+		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
 		if err != nil {
 			return err
 		}
@@ -503,7 +514,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 	}
 
 	if tlsConfig.CACertificate != nil {
-		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrapperspb.BoolValue{Value: true}
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
 				Name:      tlsConfig.CACertificate.Name,
@@ -543,7 +554,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 	}
 
 	if tlsConfig.CACertificate != nil {
-		tlsCtx.RequireClientCertificate = &wrappers.BoolValue{Value: true}
+		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
 		tlsCtx.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
 			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
 				Name:      tlsConfig.CACertificate.Name,
@@ -716,7 +727,6 @@ func makeConfigSource() *corev3.ConfigSource {
 }
 
 func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction {
-
 	lookup := map[ir.PathEscapedSlashAction]hcmv3.HttpConnectionManager_PathWithEscapedSlashesAction{
 		ir.KeepUnchangedAction: hcmv3.HttpConnectionManager_KEEP_UNCHANGED,
 		ir.RejectRequestAction: hcmv3.HttpConnectionManager_REJECT_REQUEST,

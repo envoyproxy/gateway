@@ -84,10 +84,9 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     extProc:
-    - backendRef:
-        name: grpc-backend
+    - backendRefs:
+      - name: grpc-backend
         port: 9000
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -99,8 +98,7 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     extProc:
-    - backendRef:
-        name: grpc-backend-2
+    - backendRefs:
+      - name: grpc-backend-2
         port: 8000

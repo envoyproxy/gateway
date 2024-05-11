@@ -23,11 +23,10 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -45,7 +44,8 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *Resources,
-	xdsIR XdsIRMap) []*egv1a1.SecurityPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
 
 	// Sort based on timestamp
@@ -225,17 +225,14 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 func resolveSecurityPolicyGatewayTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := policy.Spec.TargetRef.Namespace
-	// If empty, default to namespace of policy
-	if targetNs == nil {
-		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-	}
+	gateways map[types.NamespacedName]*policyGatewayTargetContext,
+) (*GatewayContext, *status.PolicyResolveError) {
+	targetNs := policy.Namespace
 
 	// Find the Gateway
 	key := types.NamespacedName{
 		Name:      string(policy.Spec.TargetRef.Name),
-		Namespace: string(*targetNs),
+		Namespace: targetNs,
 	}
 	gateway, ok := gateways[key]
 
@@ -248,10 +245,10 @@ func resolveSecurityPolicyGatewayTargetRef(
 	}
 
 	// Ensure Policy and target are in the same namespace
-	if policy.Namespace != string(*targetNs) {
+	if policy.Namespace != targetNs {
 		// TODO zhaohuabing use CEL to validate cross-namespace reference
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
-			policy.Namespace, *targetNs)
+			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
 			Reason:  gwv1a2.PolicyReasonInvalid,
@@ -278,18 +275,15 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 func resolveSecurityPolicyRouteTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
-	targetNs := policy.Spec.TargetRef.Namespace
-	// If empty, default to namespace of policy
-	if targetNs == nil {
-		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-	}
+	routes map[policyTargetRouteKey]*policyRouteTargetContext,
+) (RouteContext, *status.PolicyResolveError) {
+	targetNs := policy.Namespace
 
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(policy.Spec.TargetRef.Kind),
 		Name:      string(policy.Spec.TargetRef.Name),
-		Namespace: string(*targetNs),
+		Namespace: targetNs,
 	}
 	route, ok := routes[key]
 
@@ -303,9 +297,9 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Ensure Policy and target are in the same namespace
 	// TODO zhaohuabing use CEL to validate cross-namespace reference
-	if policy.Namespace != string(*targetNs) {
+	if policy.Namespace != targetNs {
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
-			policy.Namespace, *targetNs)
+			policy.Namespace, targetNs)
 
 		return route.RouteContext, &status.PolicyResolveError{
 			Reason:  gwv1a2.PolicyReasonInvalid,
@@ -333,7 +327,8 @@ func resolveSecurityPolicyRouteTargetRef(
 
 func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
-	resources *Resources, xdsIR XdsIRMap) error {
+	resources *Resources, xdsIR XdsIRMap,
+) error {
 	// Build IR
 	var (
 		cors      *ir.CORS
@@ -404,7 +399,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
-	resources *Resources, xdsIR XdsIRMap) error {
+	resources *Resources, xdsIR XdsIRMap,
+) error {
 	// Build IR
 	var (
 		cors      *ir.CORS
@@ -458,10 +454,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// Should exist since we've validated this
 	x := xdsIR[irKey]
 
-	policyTarget := irStringKey(
-		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
-		string(policy.Spec.TargetRef.Name),
-	)
+	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
 	for _, h := range x.HTTP {
 		gatewayName := h.Name[0:strings.LastIndex(h.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -527,13 +520,15 @@ func wildcard2regex(wildcard string) string {
 
 func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 	return &ir.JWT{
-		Providers: jwt.Providers,
+		AllowMissing: ptr.Deref(jwt.Optional, false),
+		Providers:    jwt.Providers,
 	}
 }
 
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.OIDC, error) {
+	resources *Resources,
+) (*ir.OIDC, error) {
 	var (
 		oidc         = policy.Spec.OIDC
 		clientSecret *v1.Secret
@@ -725,7 +720,8 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 
 func (t *Translator) buildBasicAuth(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.BasicAuth, error) {
+	resources *Resources,
+) (*ir.BasicAuth, error) {
 	var (
 		basicAuth   = policy.Spec.BasicAuth
 		usersSecret *v1.Secret
@@ -757,7 +753,8 @@ func (t *Translator) buildBasicAuth(
 
 func (t *Translator) buildExtAuth(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.ExtAuth, error) {
+	resources *Resources,
+) (*ir.ExtAuth, error) {
 	var (
 		http       = policy.Spec.ExtAuth.HTTP
 		grpc       = policy.Spec.ExtAuth.GRPC

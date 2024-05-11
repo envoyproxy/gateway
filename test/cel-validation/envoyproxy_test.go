@@ -121,6 +121,56 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allocateLoadBalancerNodePorts can only be set for LoadBalancer type"},
 		},
 		{
+			desc: "loadBalancerSourceRanges-pass-case1",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerSourceRanges-pass-case2",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerSourceRanges-fail",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     ptr.To(egv1a1.ServiceTypeClusterIP),
+								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerSourceRanges can only be set for LoadBalancer type"},
+		},
+		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -322,6 +372,33 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If AccessLogFormat type is JSON, json field needs to be set"},
 		},
 		{
+			desc: "ProxyAccessLogSink-with-TypeALS-but-no-als",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+										JSON: map[string]string{
+											"foo": "bar",
+										},
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If AccessLogSink type is ALS, als field needs to be set"},
+		},
+		{
 			desc: "ProxyAccessLogSink-with-TypeFile-but-no-file",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -398,6 +475,216 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "accesslog-ALS",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+										JSON: map[string]string{
+											"attr1": "value1",
+											"attr2": "value2",
+										},
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(9000)),
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "invalid-accesslog-ALS-type",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(9000)),
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeTCP,
+												HTTP: &egv1a1.ALSEnvoyProxyHTTPAccessLogConfig{},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The http field may only be set when type is HTTP."},
+		},
+		{
+			desc: "invalid-accesslog-ALS-backendrefs",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Kind: ptr.To(gwapiv1.Kind("foo")),
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"BackendRefs only supports Service Kind."},
+		},
+		{
+			desc: "invalid-accesslog-ALS-no-backendrefs",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Invalid value: \"null\""},
+		},
+		{
+			desc: "invalid-accesslog-ALS-empty-backendrefs",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{},
+												Type:        egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should have at least 1 items"},
+		},
+		{
+			desc: "invalid-accesslog-ALS-multi-backendrefs",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name: "fake-service",
+															Port: ptr.To(gwapiv1.PortNumber(8080)),
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"must have at most 1 items"},
 		},
 		{
 			desc: "accesslog-OpenTelemetry",
@@ -982,6 +1269,128 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 		},
+		{
+			desc: "ProxyFilterOrder-with-before-and-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterRateLimit,
+							Before: ptr.To(egv1a1.EnvoyFilterCORS),
+							After:  ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of before or after can be specified"},
+		},
+		{
+			desc: "ProxyFilterOrder-without-before-or-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name: egv1a1.EnvoyFilterRateLimit,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"one of before or after must be specified"},
+		},
+		{
+			desc: "ProxyFilterOrder-with-before",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterRateLimit,
+							Before: ptr.To(egv1a1.EnvoyFilterCORS),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyFilterOrder-with-after",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:  egv1a1.EnvoyFilterRateLimit,
+							After: ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "EnvoyDeployment-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{},
+							EnvoyDaemonSet:  &egv1a1.KubernetesDaemonSetSpec{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of envoyDeployment or envoyDaemonSet can be specified"},
+		},
+		{
+			desc: "EnvoyHpa-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](10),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"cannot use envoyHpa if envoyDaemonSet is used"},
+		},
+		{
+			desc: "EnvoyDeployment-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{},
+							EnvoyDaemonSet:  &egv1a1.KubernetesDaemonSetSpec{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of envoyDeployment or envoyDaemonSet can be specified"},
+		},
+		{
+			desc: "EnvoyHpa-and-EnvoyDaemonSet-both-used",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								MinReplicas: ptr.To[int32](5),
+								MaxReplicas: ptr.To[int32](10),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"cannot use envoyHpa if envoyDaemonSet is used"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -1000,7 +1409,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			}
 
 			if (len(tc.wantErrors) != 0) != (err != nil) {
-				t.Fatalf("Unexpected response while creating EnvoyProxy; got err=\n%v\n;want error=%v", err, tc.wantErrors != nil)
+				t.Fatalf("Unexpected response while creating EnvoyProxy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
 			}
 
 			var missingErrorStrings []string

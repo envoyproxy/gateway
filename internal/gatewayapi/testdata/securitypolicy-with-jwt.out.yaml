@@ -160,7 +160,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -175,7 +175,7 @@ infraIR:
         name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -206,7 +206,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -253,7 +252,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:

@@ -17,7 +17,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -51,7 +50,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -82,7 +80,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -303,7 +300,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -318,7 +315,7 @@ infraIR:
         name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
