@@ -1726,7 +1726,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 		polList.SetKind(gvk.Kind)
 
 		if err := r.client.List(ctx, &polList); err != nil {
-			return fmt.Errorf("error listing extension server policiy %s: %w", gvk, err)
+			return fmt.Errorf("error listing extension server policy %s: %w", gvk, err)
 		}
 
 		for _, policy := range polList.Items {

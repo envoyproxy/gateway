@@ -34,7 +34,7 @@ message PostVirtualHostExtensionContext {
 // additional context information can be added to this message as more use-cases are discovered
 message PostHTTPListenerExtensionContext {
     // Resources introduced by the extension that were used as extension server
-    // policies targetting the listener
+    // policies targeting the listener
     repeated ExtensionResource extension_resources = 1;
 }
 

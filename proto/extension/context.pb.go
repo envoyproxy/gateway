@@ -134,7 +134,7 @@ type PostHTTPListenerExtensionContext struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Resources introduced by the extension that were used as extension server
-	// policies targetting the listener
+	// policies targeting the listener
 	ExtensionResources []*ExtensionResource `protobuf:"bytes,1,rep,name=extension_resources,json=extensionResources,proto3" json:"extension_resources,omitempty"`
 }
 
