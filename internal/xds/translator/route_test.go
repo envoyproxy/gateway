@@ -35,7 +35,8 @@ func Test_buildHashPolicy(t *testing.T) {
 			name: "Nil ConsistentHash in LoadBalancer",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{}},
+					LoadBalancer: &ir.LoadBalancer{},
+				},
 			},
 			want: nil,
 		},
@@ -43,7 +44,8 @@ func Test_buildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with nil SourceIP and Header",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}}},
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}},
+				},
 			},
 			want: nil,
 		},
