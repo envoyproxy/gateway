@@ -22,8 +22,8 @@ envoyExtensionPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: A valid port number corresponding to a port on the Service must be
-          specified.
+        message: 'ExtProcs: a valid port number corresponding to a port on the Service
+          must be specified.'
         reason: Invalid
         status: "False"
         type: Accepted

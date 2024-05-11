@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -293,9 +294,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 	)
 
 	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
+		err = perr.WithMessage(err, "ExtProcs")
 		errs = errors.Join(errs, err)
 	}
 	if wasms, err = t.buildWasms(policy); err != nil {
+		err = perr.WithMessage(err, "WASMs")
 		errs = errors.Join(errs, err)
 	}
 
@@ -350,9 +353,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
 
 	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
+		err = perr.WithMessage(err, "ExtProcs")
 		errs = errors.Join(errs, err)
 	}
 	if wasms, err = t.buildWasms(policy); err != nil {
+		err = perr.WithMessage(err, "WASMs")
 		errs = errors.Join(errs, err)
 	}
 

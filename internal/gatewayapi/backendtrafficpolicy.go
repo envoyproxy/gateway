@@ -287,22 +287,23 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 
 func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR XdsIRMap) error {
 	var (
-		rl  *ir.RateLimit
-		lb  *ir.LoadBalancer
-		pp  *ir.ProxyProtocol
-		hc  *ir.HealthCheck
-		cb  *ir.CircuitBreaker
-		fi  *ir.FaultInjection
-		to  *ir.Timeout
-		ka  *ir.TCPKeepalive
-		rt  *ir.Retry
-		err error
+		rl        *ir.RateLimit
+		lb        *ir.LoadBalancer
+		pp        *ir.ProxyProtocol
+		hc        *ir.HealthCheck
+		cb        *ir.CircuitBreaker
+		fi        *ir.FaultInjection
+		to        *ir.Timeout
+		ka        *ir.TCPKeepalive
+		rt        *ir.Retry
+		err, errs error
 	)
 
 	// Build IR
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
-			return perr.WithMessage(err, "RateLimit")
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
@@ -316,7 +317,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
-			return perr.WithMessage(err, "CircuitBreaker")
+			err = perr.WithMessage(err, "CircuitBreaker")
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -325,7 +327,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
-			return perr.WithMessage(err, "TCPKeepalive")
+			err = perr.WithMessage(err, "TCPKeepalive")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.Retry != nil {
@@ -336,7 +339,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 	if policy.Spec.Timeout != nil {
 		if to, err = t.buildTimeout(policy, nil); err != nil {
-			return perr.WithMessage(err, "Timeout")
+			err = perr.WithMessage(err, "Timeout")
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -378,10 +382,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 					// some timeout setting originate from the route
 					if policy.Spec.Timeout != nil {
-						if to, err = t.buildTimeout(policy, r); err != nil {
-							return perr.WithMessage(err, "Timeout")
+						if to, err = t.buildTimeout(policy, r); err == nil {
+							r.Timeout = to
 						}
-						r.Timeout = to
 					}
 
 					if policy.Spec.UseClientProtocol != nil {
@@ -392,27 +395,28 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, gateway *GatewayContext, xdsIR XdsIRMap) error {
 	var (
-		rl  *ir.RateLimit
-		lb  *ir.LoadBalancer
-		pp  *ir.ProxyProtocol
-		hc  *ir.HealthCheck
-		cb  *ir.CircuitBreaker
-		fi  *ir.FaultInjection
-		ct  *ir.Timeout
-		ka  *ir.TCPKeepalive
-		rt  *ir.Retry
-		err error
+		rl        *ir.RateLimit
+		lb        *ir.LoadBalancer
+		pp        *ir.ProxyProtocol
+		hc        *ir.HealthCheck
+		cb        *ir.CircuitBreaker
+		fi        *ir.FaultInjection
+		ct        *ir.Timeout
+		ka        *ir.TCPKeepalive
+		rt        *ir.Retry
+		err, errs error
 	)
 
 	// Build IR
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
-			return perr.WithMessage(err, "RateLimit")
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
@@ -426,7 +430,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
-			return perr.WithMessage(err, "CircuitBreaker")
+			err = perr.WithMessage(err, "CircuitBreaker")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.FaultInjection != nil {
@@ -434,7 +439,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
-			return perr.WithMessage(err, "TCPKeepalive")
+			err = perr.WithMessage(err, "TCPKeepalive")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.Retry != nil {
@@ -452,7 +458,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 
 	if policy.Spec.Timeout != nil {
 		if ct, err = t.buildTimeout(policy, nil); err != nil {
-			return perr.WithMessage(err, "Timeout")
+			err = perr.WithMessage(err, "Timeout")
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -549,11 +556,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 
 			if policy.Spec.Timeout != nil {
-				if ct, err = t.buildTimeout(policy, r); err != nil {
-					return perr.WithMessage(err, "Timeout")
-				}
-
-				if r.Timeout == nil {
+				if ct, err = t.buildTimeout(policy, r); err == nil && r.Timeout == nil {
 					r.Timeout = ct
 				}
 			}
@@ -566,7 +569,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
