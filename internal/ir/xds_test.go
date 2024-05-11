@@ -119,7 +119,7 @@ var (
 	// TCPRoute
 	happyTCPRouteTLSPassthrough = TCPRoute{
 		Name:        "happy-tls-passthrough",
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destination: &happyRouteDestination,
 	}
 	happyTCPRouteTLSTermination = TCPRoute{
@@ -138,7 +138,7 @@ var (
 
 	invalidSNITCPRoute = TCPRoute{
 		Name:        "invalid-sni",
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{}}},
 		Destination: &happyRouteDestination,
 	}
 
