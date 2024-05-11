@@ -5,7 +5,7 @@ tcp:
   routes:
   - name: "tls-route-passthrough-foo"
     tls:
-      passthrough:
+      inspector:
         snis:
         - foo.com
     destination:
@@ -22,7 +22,7 @@ tcp:
   routes:
   - name: "tls-route-passthrough-bar"
     tls:
-      passthrough:
+      inspector:
         snis:
         - bar.com
     destination:

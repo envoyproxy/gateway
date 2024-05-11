@@ -793,7 +793,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			if irListener != nil {
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
-					TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
+					TLS: &ir.TLS{TLSInspectorConfig: &ir.TLSInspectorConfig{
 						SNIs: hosts,
 					}},
 					Destination: &ir.RouteDestination{
@@ -1095,6 +1095,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 				if irListener.TLS != nil {
 					irRoute.TLS = &ir.TLS{Terminate: irListener.TLS}
+
+					if listener.Hostname != nil {
+						irRoute.TLS.TLSInspectorConfig = &ir.TLSInspectorConfig{
+							SNIs: []string{string(*listener.Hostname)},
+						}
+					}
 				}
 
 				irListener.Routes = append(irListener.Routes, irRoute)
