@@ -64,7 +64,7 @@ func Test_buildTCPProxyHashPolicy(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "ConsistentHash without SourceIP",
+			name: "ConsistentHash without hash policy",
 			lb:   &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}},
 			want: nil,
 		},

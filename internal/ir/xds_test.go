@@ -80,50 +80,65 @@ var (
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:        "happy",
-		Address:     "0.0.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destination: &happyRouteDestination,
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 
 	happyTCPListenerTLSTerminate = TCPListener{
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
-		TLS: &TLS{Terminate: &TLSConfig{
-			Certificates: []TLSCertificate{{
-				Name:              "happy",
-				ServerCertificate: []byte("server-cert"),
-				PrivateKey:        []byte("priv-key"),
-			}},
-		}},
-		Destination: &happyRouteDestination,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSTermination},
 	}
 
 	emptySNITCPListenerTLSPassthrough = TCPListener{
-		Name:        "empty-sni",
-		Address:     "0.0.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		Name:    "empty-sni",
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&emptySNITCPRoute},
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destination: &happyRouteDestination,
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:        "invalid-addr",
-		Address:     "1.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destination: &happyRouteDestination,
+		Name:    "invalid-addr",
+		Address: "1.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&invalidSNITCPRoute},
+	}
+
+	// TCPRoute
+	happyTCPRouteTLSPassthrough = TCPRoute{
+		Name:        "happy-tls-passthrough",
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destination: &happyRouteDestination,
+	}
+	happyTCPRouteTLSTermination = TCPRoute{
+		Name: "happy-tls-termination",
+		TLS: &TLS{Terminate: &TLSConfig{Certificates: []TLSCertificate{{
+			Name:              "happy",
+			ServerCertificate: []byte("server-cert"),
+			PrivateKey:        []byte("priv-key"),
+		}}}},
+		Destination: &happyRouteDestination,
+	}
+	emptySNITCPRoute = TCPRoute{
+		Name:        "empty-sni",
+		Destination: &happyRouteDestination,
+	}
+
+	invalidSNITCPRoute = TCPRoute{
+		Name:        "invalid-sni",
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{}}},
 		Destination: &happyRouteDestination,
 	}
 
@@ -612,6 +627,11 @@ func TestValidateTCPListener(t *testing.T) {
 			want:  nil,
 		},
 		{
+			name:  "tls terminate happy",
+			input: happyTCPListenerTLSTerminate,
+			want:  nil,
+		},
+		{
 			name:  "tcp empty SNIs",
 			input: emptySNITCPListenerTLSPassthrough,
 			want:  nil,
@@ -629,7 +649,7 @@ func TestValidateTCPListener(t *testing.T) {
 		{
 			name:  "tls passthrough empty SNIs",
 			input: invalidSNITCPListenerTLSPassthrough,
-			want:  []error{ErrTCPListenerSNIsEmpty},
+			want:  []error{ErrTCPRouteSNIsEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -830,7 +850,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Destination: &happyRouteDestination,
 			},
-			want: []error{ErrHTTPRouteNameEmpty},
+			want: []error{ErrRouteNameEmpty},
 		},
 		{
 			name: "invalid hostname",
@@ -860,7 +880,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				HeaderMatches: []*StringMatch{ptr.To(StringMatch{})},
 				Destination:   &happyRouteDestination,
 			},
-			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
+			want: []error{ErrRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},
 		{
 			name:  "redirect-httproute",
@@ -956,6 +976,48 @@ func TestValidateHTTPRoute(t *testing.T) {
 				got := test.input.Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTCPRoute(t *testing.T) {
+	tests := []struct {
+		name  string
+		input TCPRoute
+		want  []error
+	}{
+		{
+			name:  "tls passthrough happy",
+			input: happyTCPRouteTLSPassthrough,
+			want:  nil,
+		},
+		{
+			name:  "tls terminatation happy",
+			input: happyTCPRouteTLSTermination,
+			want:  nil,
+		},
+		{
+			name:  "empty sni",
+			input: emptySNITCPRoute,
+			want:  nil,
+		},
+		{
+			name:  "invalid sni",
+			input: invalidSNITCPRoute,
+			want:  []error{ErrTCPRouteSNIsEmpty},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -1181,7 +1243,7 @@ func TestValidateLoadBalancer(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "consistent hash",
+			name: "consistent hash with source IP hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
 					SourceIP: ptr.To(true),
@@ -1189,7 +1251,17 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: nil,
 		},
-
+		{
+			name: "consistent hash with header hash policy",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					Header: &Header{
+						Name: "name",
+					},
+				},
+			},
+			want: nil,
+		},
 		{
 			name: "least request and random set",
 			input: LoadBalancer{

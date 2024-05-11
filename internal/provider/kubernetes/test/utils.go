@@ -138,21 +138,21 @@ func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.
 }
 
 // GetGRPCRoute returns a sample GRPCRoute with a parent reference.
-func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a2.GRPCRoute {
-	return &gwapiv1a2.GRPCRoute{
+func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1.GRPCRoute {
+	return &gwapiv1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
 			Name:      nsName.Name,
 		},
-		Spec: gwapiv1a2.GRPCRouteSpec{
+		Spec: gwapiv1.GRPCRouteSpec{
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{
 					{Name: gwapiv1.ObjectName(parent)},
 				},
 			},
-			Rules: []gwapiv1a2.GRPCRouteRule{
+			Rules: []gwapiv1.GRPCRouteRule{
 				{
-					BackendRefs: []gwapiv1a2.GRPCBackendRef{
+					BackendRefs: []gwapiv1.GRPCBackendRef{
 						{
 							BackendRef: gwapiv1.BackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{

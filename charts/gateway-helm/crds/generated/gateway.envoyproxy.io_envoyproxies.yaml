@@ -224,6 +224,7 @@ spec:
               filterOrder:
                 description: |-
                   FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+                  The FilterPosition in the list will be applied in the order they are defined.
                   If unspecified, the default filter order is applied.
                   Default filter order is:
 
@@ -295,7 +296,7 @@ spec:
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
                       type: string
-                    filter:
+                    name:
                       description: Name of the filter.
                       enum:
                       - envoy.filters.http.cors
@@ -310,7 +311,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       type: string
                   required:
-                  - filter
+                  - name
                   type: object
                   x-kubernetes-validations:
                   - message: one of before or after must be specified

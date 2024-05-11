@@ -89,6 +89,7 @@ type EnvoyProxySpec struct {
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
 	//
@@ -115,7 +116,6 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.router
 	//
 	// +optional
-	// +notImplementedHide
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
 	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
 	// These settings are applied on backends for which TLS policies are specified.
@@ -138,7 +138,7 @@ type BackendTLSConfig struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.before) && !has(self.after)) || (!has(self.before) && has(self.after))",message="only one of before or after can be specified"
 type FilterPosition struct {
 	// Name of the filter.
-	Name EnvoyFilter `json:"filter"`
+	Name EnvoyFilter `json:"name"`
 
 	// Before defines the filter that should come before the filter.
 	// Only one of Before or After must be set.

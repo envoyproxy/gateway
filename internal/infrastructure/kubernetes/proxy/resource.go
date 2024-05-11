@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -15,7 +14,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
-	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -103,6 +101,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig,
+	shutdownManager *egv1a1.ShutdownManager,
 ) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
@@ -144,10 +143,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
-	maxHeapSizeBytes := caclulateMaxHeapSizeBytes(containerSpec.Resources)
+	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
 
 	// Get the default Bootstrap
-	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootsrapConfigOptions{
+	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics:     proxyMetrics,
 		MaxHeapSizeBytes: maxHeapSizeBytes,
 	})
@@ -230,7 +229,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		{
 			Name:                     "shutdown-manager",
-			Image:                    expectedShutdownManagerImage(),
+			Image:                    expectedShutdownManagerImage(shutdownManager),
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
@@ -277,9 +276,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	return containers, nil
 }
 
-func expectedShutdownManagerImage() string {
-	if v := version.Get().ShutdownManagerVersion; v != "" {
-		return fmt.Sprintf("%s:%s", strings.Split(egv1a1.DefaultShutdownManagerImage, ":")[0], v)
+func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) string {
+	if shutdownManager != nil && shutdownManager.Image != nil {
+		return *shutdownManager.Image
 	}
 	return egv1a1.DefaultShutdownManagerImage
 }
@@ -396,9 +395,9 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 	}
 }
 
-// caclulateMaxHeapSizeBytes calculates the maximum heap size in bytes as 80% of Envoy container memory limits.
+// calculateMaxHeapSizeBytes calculates the maximum heap size in bytes as 80% of Envoy container memory limits.
 // In case no limits are defined '0' is returned, which means no heap size limit is set.
-func caclulateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequirements) uint64 {
+func calculateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequirements) uint64 {
 	if envoyResourceRequirements == nil || envoyResourceRequirements.Limits == nil {
 		return 0
 	}

@@ -6,13 +6,13 @@ backendTLSPolicies:
     name: policy-tls
     namespace: default
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: https-backend
-    tls:
+    validation:
       hostname: example.com
-      wellKnownCACerts: System
+      wellKnownCACertificates: System
   status:
     ancestors:
     - ancestorRef:
