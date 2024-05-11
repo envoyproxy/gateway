@@ -228,7 +228,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
-		if err = r.processExtensionServerPolicies(ctx, gwcResource, resourceMappings); err != nil {
+		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -1718,7 +1718,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 
 // processExtensionServerPolicies adds directly attached policies intended for the extension server
 func (r *gatewayAPIReconciler) processExtensionServerPolicies(
-	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
+	ctx context.Context, resourceTree *gatewayapi.Resources,
 ) error {
 	for _, gvk := range r.extServerPolicies {
 		polList := unstructured.UnstructuredList{}

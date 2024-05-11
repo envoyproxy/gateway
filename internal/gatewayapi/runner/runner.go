@@ -229,8 +229,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwv1a2.PolicyStatus {
 	var ret gwv1a2.PolicyStatus
+	// No need to check the json marshal/unmarshal error, the policyStatus was
+	// created via a typed object so the marshalling/unmarshalling will always
+	// work
 	d, _ := json.Marshal(policyStatus)
-	json.Unmarshal(d, &ret)
+	_ = json.Unmarshal(d, &ret)
 	return ret
 }
 

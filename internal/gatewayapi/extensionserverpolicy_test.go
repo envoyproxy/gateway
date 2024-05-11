@@ -15,7 +15,6 @@ import (
 )
 
 func TestExtractTargetRefs(t *testing.T) {
-
 	tests := []struct {
 		desc          string
 		specInput     map[string]any
@@ -166,10 +165,9 @@ func TestExtractTargetRefs(t *testing.T) {
 			if currTest.expectedError != "" {
 				require.EqualError(t, err, currTest.expectedError)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, currTest.output, targets)
 			}
 		})
 	}
-
 }

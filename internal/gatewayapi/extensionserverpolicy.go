@@ -26,7 +26,6 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	gateways []*GatewayContext,
 	xdsIR XdsIRMap,
 ) []unstructured.Unstructured {
-
 	var res []unstructured.Unstructured
 
 	// Sort based on timestamp
@@ -87,18 +86,13 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				continue
 			}
 
-			// Set conditions for translation error if it got any
-			if err := t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR); err != nil {
-				status.SetTranslationErrorForPolicyAncestors(&policyStatus,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.GetGeneration(),
-					status.Error2ConditionMsg(err),
-				)
+			// Set conditions for translation if it got any
+			if t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR) {
+				// Set Accepted condition if it is unset
+				// Only add a status condition if the policy was added into the IR
+				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName)
 			}
 
-			// Set Accepted condition if it is unset
-			status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName)
 		}
 		policy.Object["status"] = policyStatusToUnstructured(policyStatus)
 	}
@@ -157,8 +151,9 @@ func extractSingleTargetRef(data any) (gwv1a2.LocalPolicyTargetReferenceWithSect
 
 func policyStatusToUnstructured(policyStatus gwv1a2.PolicyStatus) map[string]any {
 	ret := map[string]any{}
+	// No need to check the marshal/unmarshal error here
 	d, _ := json.Marshal(policyStatus)
-	json.Unmarshal(d, &ret)
+	_ = json.Unmarshal(d, &ret)
 	return ret
 }
 
@@ -195,10 +190,11 @@ func (t *Translator) translateExtServerPolicyForGateway(
 	policy *unstructured.Unstructured,
 	gateway *GatewayContext,
 	target gwv1a2.LocalPolicyTargetReferenceWithSectionName,
-	xdsIR XdsIRMap) error {
-
+	xdsIR XdsIRMap,
+) bool {
 	irKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[irKey]
+	found := false
 	for _, currListener := range gwIR.HTTP {
 		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
@@ -207,6 +203,7 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
 			Object: policy,
 		})
+		found = true
 	}
-	return nil
+	return found
 }
