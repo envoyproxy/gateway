@@ -7,6 +7,8 @@ weight = -100
 
 Envoy Gateway can be installed via a Helm chart with a few simple steps, depending on if you are deploying for the first time, upgrading Envoy Gateway from an existing installation, or migrating from Envoy Gateway.
 
+You can get more information by referring to [README.md](https://github.com/envoyproxy/gateway/blob/main/charts/gateway-helm/README.md).
+
 ## Before you begin
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
