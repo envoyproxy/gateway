@@ -81,10 +81,11 @@ http:
           port: 50000
   - name: "seventh-route"
     hostname: "*"
-    loadBalancer:
-      consistentHash:
-        header:
-          name: name
+    traffic:
+      loadBalancer:
+        consistentHash:
+          header:
+            name: name
     destination:
       name: "seventh-route-dest"
       settings:
