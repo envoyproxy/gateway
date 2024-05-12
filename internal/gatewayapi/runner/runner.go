@@ -363,6 +363,10 @@ func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
 		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
 		delete(ds.EnvoyExtensionPolicyStatusKeys, key)
 	}
+	for key := range ds.ExtensionServerPolicyStatusKeys {
+		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
+		delete(ds.ExtensionServerPolicyStatusKeys, key)
+	}
 }
 
 // deleteAllStatusKeys deletes all status keys stored by the subscriber.
@@ -402,6 +406,9 @@ func (r *Runner) deleteAllStatusKeys() {
 	}
 	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
 		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
+	}
+	for key := range r.ProviderResources.ExtensionPolicyStatuses.LoadAll() {
+		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
 	}
 }
 

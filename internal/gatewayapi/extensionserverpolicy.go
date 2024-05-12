@@ -42,47 +42,35 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
-	// Process the policies targeting Gateways
+	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
+	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
 	for _, policy := range policies {
 		policy := policy.DeepCopy()
 		var policyStatus gwv1a2.PolicyStatus
 		res = append(res, *policy)
 		targetRefs, err := extractTargetRefs(policy)
 		if err != nil {
-			// TODO: mark as an error
-			t.Logger.Sugar().Errorf("error finding target refs: %w", err)
+			t.Logger.Sugar().Errorf("error finding targetRefs for policy %s: %w", policy.GetName(), err)
 			continue
 		}
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind != KindGateway {
 				// TODO: mark this targetRef as an error
-				t.Logger.Sugar().Errorf("extension policy doesn't target a Gateway: %s", policy.GetName())
+				t.Logger.Sugar().Errorf("extension policy %s doesn't target a Gateway", policy.GetName())
 				continue
 			}
 
 			// Negative statuses have already been assigned so its safe to skip
 			gateway, resolveErr := resolveExtServerPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
 			if gateway == nil {
-				t.Logger.Sugar().Infof("Continuing, gateway is nil")
+				t.Logger.Sugar().Warnf("unable to find a matching Gateway for policy %s", policy.GetName())
 				continue
 			}
 
-			// Find its ancestor reference by resolved gateway, even with resolve error
-			gatewayNN := utils.NamespacedName(gateway)
-			ancestorRefs := []gwv1a2.ParentReference{
-				getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
-			}
-
-			// Set conditions for resolve error, then skip current gateway
+			// Skip the gateway. Don't add anything to the policy status.
 			if resolveErr != nil {
-				t.Logger.Sugar().Info("resolveErr is  not nil: %s", resolveErr)
-				status.SetResolveErrorForPolicyAncestors(&policyStatus,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.GetGeneration(),
-					resolveErr,
-				)
-
+				t.Logger.Sugar().Warnf("targetRef %s in policy %s cannot be attached: %s",
+					currTarget, policy.GetName(), resolveErr)
 				continue
 			}
 
@@ -90,6 +78,11 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			if t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR) {
 				// Set Accepted condition if it is unset
 				// Only add a status condition if the policy was added into the IR
+				// Find its ancestor reference by resolved gateway, even with resolve error
+				gatewayNN := utils.NamespacedName(gateway)
+				ancestorRefs := []gwv1a2.ParentReference{
+					getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
+				}
 				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName)
 			}
 

@@ -413,7 +413,6 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				val := update.Value
 				obj := unstructured.Unstructured{}
 				obj.SetGroupVersionKind(key.GroupVersionKind)
-				r.log.Info("Called for updating an extension server policy status", "key", update.Key, "gvk", key.GroupVersionKind)
 
 				r.statusUpdater.Send(Update{
 					NamespacedName: key.NamespacedName,
@@ -427,7 +426,6 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Object["status"] = *val
-						r.log.Info("updating policy", "key", key)
 						return tCopy
 					}),
 				})
