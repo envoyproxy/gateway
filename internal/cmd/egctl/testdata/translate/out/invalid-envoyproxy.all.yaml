@@ -40,14 +40,9 @@ gatewayClass:
       type: Accepted
     supportedFeatures:
     - GRPCRoute
-    - Gateway
-    - GatewayHTTPListenerIsolation
     - GatewayPort8080
-    - GatewayStaticAddresses
-    - HTTPRoute
     - HTTPRouteBackendProtocolH2C
     - HTTPRouteBackendProtocolWebSocket
-    - HTTPRouteBackendRequestHeaderModification
     - HTTPRouteBackendTimeout
     - HTTPRouteDestinationPortMatching
     - HTTPRouteHostRewrite
@@ -62,8 +57,6 @@ gatewayClass:
     - HTTPRouteRequestTimeout
     - HTTPRouteResponseHeaderModification
     - HTTPRouteSchemeRedirect
-    - MeshClusterIPMatching
-    - MeshConsumerRoute
     - ReferenceGrant
     - TLSRoute
 gateways:

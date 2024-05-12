@@ -21,15 +21,17 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
+
+	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 )
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 
 	opts := conformance.DefaultOptions(t)
-	opts.SkipTests = EnvoyGatewaySuite.SkipTests
-	opts.SupportedFeatures = EnvoyGatewaySuite.SupportedFeatures
-	opts.ExemptFeatures = EnvoyGatewaySuite.ExemptFeatures
+	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
+	opts.SupportedFeatures = internalconf.EnvoyGatewaySuite.SupportedFeatures
+	opts.ExemptFeatures = internalconf.EnvoyGatewaySuite.ExemptFeatures
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,

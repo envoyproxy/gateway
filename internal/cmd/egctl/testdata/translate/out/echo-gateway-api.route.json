@@ -20,14 +20,9 @@
       ],
       "supportedFeatures": [
         "GRPCRoute",
-        "Gateway",
-        "GatewayHTTPListenerIsolation",
         "GatewayPort8080",
-        "GatewayStaticAddresses",
-        "HTTPRoute",
         "HTTPRouteBackendProtocolH2C",
         "HTTPRouteBackendProtocolWebSocket",
-        "HTTPRouteBackendRequestHeaderModification",
         "HTTPRouteBackendTimeout",
         "HTTPRouteDestinationPortMatching",
         "HTTPRouteHostRewrite",
@@ -42,8 +37,6 @@
         "HTTPRouteRequestTimeout",
         "HTTPRouteResponseHeaderModification",
         "HTTPRouteSchemeRedirect",
-        "MeshClusterIPMatching",
-        "MeshConsumerRoute",
         "ReferenceGrant",
         "TLSRoute"
       ]
