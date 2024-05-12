@@ -147,6 +147,38 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  forwardClientCert:
+                    description: Configure Envoy proxy how to handle the x-forwarded-client-cert
+                      (XFCC) HTTP header.
+                    properties:
+                      certDetailsToAdd:
+                        description: Specifies the fields in the client certificate
+                          to be forwarded on the x-forwarded-client-cert (XFCC) HTTP
+                          header
+                        items:
+                          description: |-
+                            Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+                            By default, x-forwarded-client-cert (XFCC) will always include By and Hash data
+                          enum:
+                          - Subject
+                          - Cert
+                          - Chain
+                          - Dns
+                          - Uri
+                          type: string
+                        maxItems: 5
+                        type: array
+                      mode:
+                        description: Envoy Proxy mode how to handle the x-forwarded-client-cert
+                          (XFCC) HTTP header.
+                        enum:
+                        - Sanitize
+                        - ForwardOnly
+                        - AppendForward
+                        - SanitizeSet
+                        - AlwaysForwardOnly
+                        type: string
+                    type: object
                   withUnderscoresAction:
                     description: |-
                       WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -464,38 +496,6 @@ spec:
                           type: object
                         maxItems: 8
                         type: array
-                      forwardClientCert:
-                        description: Configure Envoy proxy how to handle the x-forwarded-client-cert
-                          (XFCC) HTTP header.
-                        properties:
-                          mode:
-                            description: Envoy Proxy mode how to handle the x-forwarded-client-cert
-                              (XFCC) HTTP header.
-                            enum:
-                            - Sanitize
-                            - ForwardOnly
-                            - AppendForward
-                            - SanitizeSet
-                            - AlwaysForwardOnly
-                            type: string
-                          set:
-                            description: Specifies the fields in the client certificate
-                              to be forwarded on the x-forwarded-client-cert (XFCC)
-                              HTTP header
-                            items:
-                              description: Specifies the fields in the client certificate
-                                to be forwarded on the x-forwarded-client-cert (XFCC)
-                                HTTP header
-                              enum:
-                              - subject
-                              - cert
-                              - chain
-                              - dns
-                              - uri
-                              type: string
-                            maxItems: 5
-                            type: array
-                        type: object
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.

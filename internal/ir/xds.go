@@ -300,9 +300,6 @@ type TLSConfig struct {
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
 	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
-	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
-	ForwardClientCert *ForwardClientCert `json:"forwardClientCert,omitempty" yaml:"forwardClientCert,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -382,7 +379,7 @@ type ForwardClientCert struct {
 	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	Mode ForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
 	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-	Set []ClientCertData `json:"set,omitempty" yaml:"set,omitempty"`
+	CertDetailsToAdd []ClientCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
 }
 
 // Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
@@ -453,6 +450,10 @@ type HeaderSettings struct {
 	// The default is to suppress these headers.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
+
+	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
+	ForwardClientCert *ForwardClientCert `json:"forwardClientCert,omitempty" yaml:"forwardClientCert,omitempty"`
 
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.

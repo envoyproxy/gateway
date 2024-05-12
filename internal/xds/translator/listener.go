@@ -260,7 +260,12 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
-		Tracing: hcmTracing,
+		Tracing:                  hcmTracing,
+		ForwardClientCertDetails: buildForwardClientCertDetailsAction(irListener.Headers.ForwardClientCert),
+	}
+
+	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
+		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers.ForwardClientCert)
 	}
 
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
@@ -300,15 +305,6 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 			filters = append(filters, clf)
 		} else {
 			return err
-		}
-	}
-
-	if irListener.TLS != nil {
-		if irListener.TLS.ForwardClientCert != nil {
-			mgr.ForwardClientCertDetails = buildForwardClientCertDetailsAction(irListener.TLS.ForwardClientCert)
-			if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
-				mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.TLS.ForwardClientCert)
-			}
 		}
 	}
 
@@ -818,12 +814,12 @@ func buildSetCurrentClientCertDetails(in *ir.ForwardClientCert) *hcmv3.HttpConne
 		return nil
 	}
 
-	if len(in.Set) == 0 {
+	if len(in.CertDetailsToAdd) == 0 {
 		return nil
 	}
 
 	clientCertDetails := &hcmv3.HttpConnectionManager_SetCurrentClientCertDetails{}
-	for _, data := range in.Set {
+	for _, data := range in.CertDetailsToAdd {
 		switch data {
 		case ir.ClientCertDataCert:
 			clientCertDetails.Cert = true

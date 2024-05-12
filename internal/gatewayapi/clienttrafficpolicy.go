@@ -548,6 +548,23 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
 		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
 	}
+
+	if headerSettings.ForwardClientCert != nil {
+		httpIR.Headers.ForwardClientCert = &ir.ForwardClientCert{
+			Mode: ir.ForwardMode(ptr.Deref(headerSettings.ForwardClientCert.Mode, egv1a1.ForwardModeSanitize)),
+		}
+
+		var certDetailsToAdd []ir.ClientCertData
+		if httpIR.Headers.ForwardClientCert.Mode == ir.ForwardModeAppendForward || httpIR.Headers.ForwardClientCert.Mode == ir.ForwardModeSanitizeSet {
+			for _, data := range httpIR.Headers.ForwardClientCert.CertDetailsToAdd {
+				certDetailsToAdd = append(certDetailsToAdd, ir.ClientCertData(data))
+			}
+
+			httpIR.Headers.ForwardClientCert.CertDetailsToAdd = certDetailsToAdd
+		}
+		
+	}
+
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {
@@ -725,27 +742,27 @@ func (t *Translator) translateListenerTLSParameters(policy *egv1a1.ClientTraffic
 			}
 		}
 
-		forwardClientCert := &ir.ForwardClientCert{}
+		// forwardClientCert := &ir.ForwardClientCert{}
 
-		if tlsParams.ClientValidation.ForwardClientCert != nil {
-			forwardClientCert.Mode = ir.ForwardMode(ptr.Deref(tlsParams.ClientValidation.ForwardClientCert.Mode, egv1a1.ForwardModeSanitize))
+		// if tlsParams.ClientValidation.ForwardClientCert != nil {
+		// 	forwardClientCert.Mode = ir.ForwardMode(ptr.Deref(tlsParams.ClientValidation.ForwardClientCert.Mode, egv1a1.ForwardModeSanitize))
 
-			var Set []ir.ClientCertData
-			if forwardClientCert.Mode == ir.ForwardModeAppendForward || forwardClientCert.Mode == ir.ForwardModeSanitizeSet {
-				for _, data := range tlsParams.ClientValidation.ForwardClientCert.Set {
-					Set = append(Set, ir.ClientCertData(data))
-				}
-			}
+		// 	var CertDetailsToAdd []ir.ClientCertData
+		// 	if forwardClientCert.Mode == ir.ForwardModeAppendForward || forwardClientCert.Mode == ir.ForwardModeSanitizeSet {
+		// 		for _, data := range tlsParams.ClientValidation.ForwardClientCert.Set {
+		// 			CertDetailsToAdd = append(CertDetailsToAdd, ir.ClientCertData(data))
+		// 		}
+		// 	}
 
-			forwardClientCert.Set = Set
-		}
+		// 	forwardClientCert.CertDetailsToAdd = CertDetailsToAdd
+		// }
 
 		if len(irCACert.Certificate) > 0 {
 			httpIR.TLS.CACertificate = irCACert
 			httpIR.TLS.RequireClientCertificate = !tlsParams.ClientValidation.Optional
-			if tlsParams.ClientValidation.ForwardClientCert != nil {
-				httpIR.TLS.ForwardClientCert = forwardClientCert
-			}
+			// if tlsParams.ClientValidation.ForwardClientCert != nil {
+			// 	httpIR.TLS.ForwardClientCert = forwardClientCert
+			// }
 		}
 	}
 
