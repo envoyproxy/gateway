@@ -19,22 +19,25 @@ func TestSetValue(t *testing.T) {
 		fieldValue  any
 		expect      any
 		expectedErr bool
-	}{{
-		name:        "field name cannot be empty",
-		input:       "",
-		expectedErr: true,
-	},
+	}{
+		{
+			name:        "field name cannot be empty",
+			input:       "",
+			expectedErr: true,
+		},
 		{
 			name:        "input cannot be a string",
 			input:       "",
 			fieldName:   "K",
 			expectedErr: true,
-		}, {
+		},
+		{
 			name:        "input cannot be a struct",
 			input:       struct{}{},
 			fieldName:   "K",
 			expectedErr: true,
-		}, {
+		},
+		{
 			name: "field cannot be unexported",
 			input: &struct {
 				name string
@@ -45,7 +48,8 @@ func TestSetValue(t *testing.T) {
 			expectedErr: true,
 			fieldName:   "name",
 			fieldValue:  "test1",
-		}, {
+		},
+		{
 			name: "simple struct set value",
 			input: &struct {
 				Name string
@@ -56,7 +60,8 @@ func TestSetValue(t *testing.T) {
 			expectedErr: false,
 			fieldName:   "Name",
 			fieldValue:  "test1",
-		}, {
+		},
+		{
 			name: "simple recursive struct set value",
 			input: &struct {
 				Name  string
@@ -77,7 +82,8 @@ func TestSetValue(t *testing.T) {
 			expectedErr: false,
 			fieldName:   "Name",
 			fieldValue:  "test1",
-		}, {
+		},
+		{
 			name: "simple recursive child struct in slice set value",
 			input: &struct {
 				Name  string
@@ -100,7 +106,8 @@ func TestSetValue(t *testing.T) {
 			expectedErr: false,
 			fieldName:   "Name",
 			fieldValue:  "test1",
-		}, {
+		},
+		{
 			name: "simple recursive child struct in map set value",
 			input: &struct {
 				Name  string

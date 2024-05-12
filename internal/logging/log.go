@@ -34,7 +34,7 @@ func NewLogger(logging *v1alpha1.EnvoyGatewayLogging) Logger {
 }
 
 func FileLogger(file string, name string, level v1alpha1.LogLevel) Logger {
-	writer, err := os.OpenFile(file, os.O_WRONLY, 0666)
+	writer, err := os.OpenFile(file, os.O_WRONLY, 0o666)
 	if err != nil {
 		panic(err)
 	}

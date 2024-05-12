@@ -10,7 +10,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
@@ -26,7 +25,6 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-1
       sectionName: http-1
-      namespace: envoy-gateway
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

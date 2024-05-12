@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -19,9 +19,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -415,15 +412,30 @@ spec:
                       ConsistentHash defines the configuration when the load balancer type is
                       set to ConsistentHash
                     properties:
+                      header:
+                        description: Header configures the header hash policy when
+                          the consistent hash type is set to Header.
+                        properties:
+                          name:
+                            description: Name of the header to hash.
+                            type: string
+                        required:
+                        - name
+                        type: object
                       type:
                         description: ConsistentHashType defines the type of input
-                          to hash on.
+                          to hash on. Valid Type values are "SourceIP" or "Header".
                         enum:
                         - SourceIP
+                        - Header
                         type: string
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: If consistent hash type is header, the header field
+                        must be set.
+                      rule: 'self.type == ''Header'' ? has(self.header) : !has(self.header)'
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -447,7 +459,7 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin",
+                      "RoundRobin".
                     enum:
                     - ConsistentHash
                     - LeastRequest
@@ -574,6 +586,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
@@ -704,6 +719,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
@@ -863,16 +881,6 @@ spec:
                     maxLength: 253
                     minLength: 1
                     type: string
-                  namespace:
-                    description: |-
-                      Namespace is the namespace of the referent. When unspecified, the local
-                      namespace is inferred. Even when policy targets a resource in a different
-                      namespace, it MUST only apply to traffic originating from the same
-                      namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
                   sectionName:
                     description: |-
                       SectionName is the name of a section within the target resource. When
@@ -880,8 +888,9 @@ spec:
                       resources, SectionName is interpreted as the following:
 
 
-                      * Gateway: Listener Name
-                      * Service: Port Name
+                      * Gateway: Listener name
+                      * HTTPRoute: HTTPRouteRule name
+                      * Service: Port name
 
 
                       If a SectionName is specified, but does not exist on the targeted object,
@@ -961,6 +970,12 @@ spec:
                         type: string
                     type: object
                 type: object
+              useClientProtocol:
+                description: |-
+                  UseClientProtocol configures Envoy to prefer sending requests to backends using
+                  the same HTTP protocol that the incoming request used. Defaults to false, which means
+                  that Envoy will use the protocol indicated by the attached BackendRef.
+                type: boolean
             required:
             - targetRef
             type: object
@@ -1070,7 +1085,7 @@ spec:
 
 
                             * Gateway (Gateway conformance profile)
-                            * Service (Mesh conformance profile, experimental, ClusterIP Services only)
+                            * Service (Mesh conformance profile, ClusterIP Services only)
 
 
                             Support for other resources is Implementation-Specific.
@@ -1156,9 +1171,6 @@ spec:
 
 
                             Support: Extended
-
-
-                            <gateway:experimental>
                           format: int32
                           maximum: 65535
                           minimum: 1
@@ -1169,14 +1181,12 @@ spec:
                             following resources, SectionName is interpreted as the following:
 
 
-                            * Gateway: Listener Name. When both Port (experimental) and SectionName
+                            * Gateway: Listener name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
                             both specified values.
-                            * Service: Port Name. When both Port (experimental) and SectionName
+                            * Service: Port name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
-                            both specified values. Note that attaching Routes to Services as Parents
-                            is part of experimental Mesh support and is not supported for any other
-                            purpose.
+                            both specified values.
 
 
                             Implementations MAY choose to support attaching Routes to other resources.

@@ -192,7 +192,6 @@ func TestCreateProxyInfra(t *testing.T) {
 }
 
 func TestDeleteProxyInfra(t *testing.T) {
-
 	testCases := []struct {
 		name   string
 		in     *ir.Infra

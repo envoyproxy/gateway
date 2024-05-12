@@ -16,25 +16,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
-
 	"fortio.org/fortio/periodic"
-
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 )
 
 func init() {

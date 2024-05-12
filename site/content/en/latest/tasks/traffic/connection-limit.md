@@ -57,6 +57,9 @@ There are no connection limits, and so all 100 requests succeed.
 
 Next, we apply a limit of 5 connections. 
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -75,6 +78,31 @@ spec:
       value: 5    
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: connection-limit-ctp
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  connection:
+    connectionLimit:
+      value: 5    
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Execute the load simulation again.
 

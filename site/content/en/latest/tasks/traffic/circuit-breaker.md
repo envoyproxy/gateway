@@ -62,6 +62,9 @@ The default circuit breaker threshold (1024) is not met. As a result, requests d
 
 In order to fail fast, apply a `BackendTrafficPolicy` that limits concurrent requests to 10 and pending requests to 0.  
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -79,6 +82,30 @@ spec:
     maxParallelRequests: 10
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: circuitbreaker-for-route
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+    namespace: default
+  circuitBreaker:
+    maxPendingRequests: 0
+    maxParallelRequests: 10
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Execute the load simulation again.  
 

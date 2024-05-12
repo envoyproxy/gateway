@@ -81,6 +81,9 @@ kubectl patch deployment backend --type=json --patch '
 
 Create a service that exposes port 443 on the backend service. 
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -102,29 +105,87 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: backend
+    service: backend
+  name: tls-backend
+  namespace: default
+spec:
+  selector:
+    app: backend
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS connection with the backend and validate the backend certificate is issued by a trusted CA and contains an appropriate DNS SAN.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: enable-backend-tls
   namespace: default
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: tls-backend
     sectionName: "443"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: example-ca
       group: ''
       kind: ConfigMap
     hostname: www.example.com
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: enable-backend-tls
+  namespace: default
+spec:
+  targetRefs:
+  - group: ''
+    kind: Service
+    name: tls-backend
+    sectionName: "443"
+  validation:
+    caCertificateRefs:
+    - name: example-ca
+      group: ''
+      kind: ConfigMap
+    hostname: www.example.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Patch the HTTPRoute's backend reference, so that it refers to the new TLS-enabled service:
 
@@ -147,7 +208,37 @@ kubectl get HTTPRoute backend -o yaml
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through the Gateway:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:80:${GATEWAY_HOST}" \
+http://www.example.com:80/get
+```
+
+Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
+
+```shell
+< HTTP/1.1 200 OK
+[...]
+ "tls": {
+  "version": "TLSv1.2",
+  "serverName": "www.example.com",
+  "negotiatedProtocol": "http/1.1",
+  "cipherSuite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+ }
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -181,32 +272,7 @@ Inspect the output and see that the response contains the details of the TLS han
  }
 ```
 
-### Clusters with External LoadBalancer Support
-
-Get the External IP of the Gateway:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-Query the example app through the Gateway:
-
-```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:80:${GATEWAY_HOST}" \
-http://www.example.com:80/get
-```
-
-Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
-
-```shell
-< HTTP/1.1 200 OK
-[...]
- "tls": {
-  "version": "TLSv1.2",
-  "serverName": "www.example.com",
-  "negotiatedProtocol": "http/1.1",
-  "cipherSuite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
- }
-```
+{{% /tab %}}
+{{< /tabpane >}}
 
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/

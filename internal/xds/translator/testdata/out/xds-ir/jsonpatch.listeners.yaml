@@ -33,6 +33,7 @@
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        preserveExternalRequestId: true
         rds:
           configSource:
             ads: {}

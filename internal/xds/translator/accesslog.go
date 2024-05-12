@@ -8,12 +8,16 @@ package translator
 import (
 	"errors"
 	"sort"
+	"strings"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	cfgcore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	fileaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	grpcaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/grpc/v3"
 	otelaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/open_telemetry/v3"
+	celformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/cel/v3"
+	metadataformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/metadata/v3"
+	reqwithoutqueryformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/req_without_query/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	"golang.org/x/exp/maps"
@@ -22,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -46,14 +51,38 @@ const (
 
 	otelLogName   = "otel_envoy_accesslog"
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
+
+	reqWithoutQueryCommandOperator = "%REQ_WITHOUT_QUERY"
+	metadataCommandOperator        = "%METADATA"
+	celCommandOperator             = "%CEL"
 )
 
+// for the case when a route does not exist to upstream, hcm logs will not be present
+var listenerAccessLogFilter = &accesslog.AccessLogFilter{
+	FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
+		ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
+	},
+}
+
 var (
-	// for the case when a route does not exist to upstream, hcm logs will not be present
-	listenerAccessLogFilter = &accesslog.AccessLogFilter{
-		FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
-			ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
-		},
+	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
+	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.req_without_query",
+		TypedConfig: protocov.ToAny(&reqwithoutqueryformatter.ReqWithoutQuery{}),
+	}
+
+	// metadataFormatter configures additional formatters needed for some of the format strings like "METADATA"
+	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
+	metadataFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.metadata",
+		TypedConfig: protocov.ToAny(&metadataformatter.Metadata{}),
+	}
+
+	// celFormatter configures additional formatters needed for some of the format strings like "CEL"
+	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
+	celFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.cel",
+		TypedConfig: protocov.ToAny(&celformatter.Cel{}),
 	}
 )
 
@@ -84,6 +113,11 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 					},
 				},
 			},
+		}
+
+		formatters := accessLogTextFormatters(format)
+		if len(formatters) != 0 {
+			filelog.GetLogFormat().Formatters = formatters
 		}
 
 		// TODO: find a better way to handle this
@@ -122,6 +156,11 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 					},
 				},
 			},
+		}
+
+		formatters := accessLogJSONFormatters(json.JSON)
+		if len(formatters) != 0 {
+			filelog.GetLogFormat().Formatters = formatters
 		}
 
 		accesslogAny, _ := anypb.New(filelog)
@@ -184,6 +223,62 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 	return accessLogs
 }
 
+func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {
+	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
+
+	if strings.Contains(text, reqWithoutQueryCommandOperator) {
+		formatters = append(formatters, reqWithoutQueryFormatter)
+	}
+
+	if strings.Contains(text, metadataCommandOperator) {
+		formatters = append(formatters, metadataFormatter)
+	}
+
+	if strings.Contains(text, celCommandOperator) {
+		formatters = append(formatters, celFormatter)
+	}
+
+	return formatters
+}
+
+func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionConfig {
+	reqWithoutQuery, metadata, cel := false, false, false
+
+	for _, value := range json {
+		if reqWithoutQuery && metadata && cel {
+			break
+		}
+
+		if strings.Contains(value, reqWithoutQueryCommandOperator) {
+			reqWithoutQuery = true
+		}
+
+		if strings.Contains(value, metadataCommandOperator) {
+			metadata = true
+		}
+
+		if strings.Contains(value, celCommandOperator) {
+			cel = true
+		}
+	}
+
+	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
+
+	if reqWithoutQuery {
+		formatters = append(formatters, reqWithoutQueryFormatter)
+	}
+
+	if metadata {
+		formatters = append(formatters, metadataFormatter)
+	}
+
+	if cel {
+		formatters = append(formatters, celFormatter)
+	}
+
+	return formatters
+}
+
 // read more here: https://opentelemetry.io/docs/specs/otel/resource/semantic_conventions/k8s/
 const (
 	k8sNamespaceNameKey = "k8s.namespace.name"
@@ -233,7 +328,7 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	return keyValueList
 }
 
-func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog) error {
+func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog, metrics *ir.Metrics) error {
 	if al == nil {
 		return nil
 	}
@@ -251,6 +346,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      nil,
 			endpointType: EndpointTypeDNS,
+			metrics:      metrics,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}

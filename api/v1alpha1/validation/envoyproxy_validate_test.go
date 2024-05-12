@@ -447,7 +447,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
-		}, {
+		},
+		{
 			name: "should invalid when metrics type is OpenTelemetry, but `OpenTelemetry` field being empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -467,7 +468,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
-		}, {
+		},
+		{
 			name: "should valid when metrics type is OpenTelemetry and `OpenTelemetry` field being not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -491,7 +493,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
-		}, {
+		},
+		{
 			name: "should be invalid when service patch type is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -514,7 +517,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
-		}, {
+		},
+		{
 			name: "should be invalid when deployment patch type is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -537,7 +541,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
-		}, {
+		},
+		{
 			name: "should invalid when patch object is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -558,7 +563,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
-		}, {
+		},
+		{
 			name: "should valid when patch type and object are both not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -582,7 +588,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
-		}, {
+		},
+		{
 			name: "should valid when patch type is empty and object is not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -605,6 +612,54 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "valid filter order",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:  egv1a1.EnvoyFilterExtProc,
+							After: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid filter order with circular dependency",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterJWTAuthn,
+							Before: ptr.To(egv1a1.EnvoyFilterExtProc),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterExtProc,
+							Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 	}
 

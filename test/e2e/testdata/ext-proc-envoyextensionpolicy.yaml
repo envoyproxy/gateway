@@ -20,7 +20,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-without-ext-proc
+  name: http-without-procmode
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -46,24 +46,43 @@ spec:
     kind: HTTPRoute
     name: http-with-ext-proc
   extProc:
-  - backendRef:
-      name: grpc-ext-proc
+  - backendRefs:
+    - name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
+    processingMode:
+      request: {}
+      response: {}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-no-procmode-test
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-without-procmode
+  extProc:
+  - backendRefs:
+    - name: grpc-ext-proc
       namespace: gateway-conformance-infra
       port: 9002
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: grpc-ext-proc-btls
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: grpc-ext-proc
     sectionName: "9002"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: grpc-ext-proc-ca
       group: ''
       kind: ConfigMap

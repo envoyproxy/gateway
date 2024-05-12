@@ -18,9 +18,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-var (
-	inPath = "./testdata/decoder/in/"
-)
+var inPath = "./testdata/decoder/in/"
 
 func TestDecode(t *testing.T) {
 	testCases := []struct {

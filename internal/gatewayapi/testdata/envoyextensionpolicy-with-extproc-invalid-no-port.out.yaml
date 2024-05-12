@@ -7,13 +7,12 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRef:
-        name: grpc-backend
+    - backendRefs:
+      - name: grpc-backend
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
