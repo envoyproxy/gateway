@@ -69,6 +69,12 @@ type SecurityPolicySpec struct {
 	//
 	// +optional
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
+
+	// Authorization defines the authorization configuration.
+	//
+	// +optional
+	// +notImplementedHide
+	Authorization *Authorization `json:"authorization,omitempty"`
 }
 
 //+kubebuilder:object:root=true
