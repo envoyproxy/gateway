@@ -8,17 +8,18 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  rateLimit:
-    global:
-      rules:
-      - cidrMatch:
-          cidr: "192.168.0.0/16"
-          ipv6: false
-          maskLen: 16
-          distinct: true
-        limit:
-          requests: 5
-          unit: second
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - cidrMatch:
+            cidr: "192.168.0.0/16"
+            ipv6: false
+            maskLen: 16
+            distinct: true
+          limit:
+            requests: 5
+            unit: second
   pathMatch:
     exact: "foo/bar"
   destination:

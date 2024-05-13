@@ -91,7 +91,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -130,7 +129,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -181,11 +179,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - circuitBreaker:
-          maxConnections: 2048
-          maxParallelRequests: 4294967295
-          maxPendingRequests: 1
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -201,6 +195,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          circuitBreaker:
+            maxConnections: 2048
+            maxParallelRequests: 4294967295
+            maxPendingRequests: 1
       - destination:
           name: httproute/default/httproute-1-1/rule/0
           settings:

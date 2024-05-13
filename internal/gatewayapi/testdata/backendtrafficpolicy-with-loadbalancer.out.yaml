@@ -218,7 +218,6 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -258,7 +257,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -297,7 +295,6 @@ httpRoutes:
       matches:
       - path:
           value: /test2
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -374,9 +371,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: true
-        loadBalancer:
-          random: {}
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+        traffic:
+          loadBalancer:
+            random: {}
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -403,15 +401,16 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        loadBalancer:
-          leastRequest:
-            slowStart:
-              window: 5m0s
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /test2
+        traffic:
+          loadBalancer:
+            leastRequest:
+              slowStart:
+                window: 5m0s
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -423,11 +422,12 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        loadBalancer:
-          consistentHash:
-            sourceIP: true
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          loadBalancer:
+            consistentHash:
+              sourceIP: true

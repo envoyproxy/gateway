@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"sort"
+
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -21,6 +23,7 @@ const (
 	KindBackendTrafficPolicy = "BackendTrafficPolicy"
 	KindBackendTLSPolicy     = "BackendTLSPolicy"
 	KindEnvoyPatchPolicy     = "EnvoyPatchPolicy"
+	KindEnvoyExtensionPolicy = "EnvoyExtensionPolicy"
 	KindSecurityPolicy       = "SecurityPolicy"
 	KindEnvoyProxy           = "EnvoyProxy"
 	KindGateway              = "Gateway"
@@ -155,6 +158,11 @@ func newTranslateResult(gateways []*GatewayContext,
 func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
+
+	// Sort gateways based on timestamp.
+	sort.Slice(gateways, func(i, j int) bool {
+		return gateways[i].CreationTimestamp.Before(&(gateways[j].CreationTimestamp))
+	})
 
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(gateways, resources)

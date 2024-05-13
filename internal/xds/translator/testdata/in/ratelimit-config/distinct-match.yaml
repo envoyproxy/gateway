@@ -8,15 +8,16 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  rateLimit:
-    global:
-      rules:
-      - headerMatches:
-        - name: "x-user-id"
-          distinct: true
-        limit:
-          requests: 5
-          unit: second
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - headerMatches:
+          - name: "x-user-id"
+            distinct: true
+          limit:
+            requests: 5
+            unit: second
   pathMatch:
     exact: "foo/bar"
   destination:

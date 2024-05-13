@@ -150,7 +150,6 @@ grpcRoutes:
         - name: magic
           type: Exact
           value: foo
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -186,7 +185,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:

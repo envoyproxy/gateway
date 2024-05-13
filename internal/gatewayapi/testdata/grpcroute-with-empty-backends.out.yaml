@@ -56,7 +56,6 @@ grpcRoutes:
       - method:
           service: com.ExampleExact
           type: Exact
-      sessionPersistence: null
   status:
     parents:
     - conditions:

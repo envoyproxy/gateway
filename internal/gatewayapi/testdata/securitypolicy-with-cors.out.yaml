@@ -135,7 +135,6 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -175,7 +174,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -214,7 +212,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:

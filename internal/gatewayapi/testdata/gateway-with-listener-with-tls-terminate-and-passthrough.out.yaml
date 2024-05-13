@@ -94,7 +94,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -220,6 +219,6 @@ xdsIR:
             weight: 1
         name: tlsroute/default/tlsroute-1
         tls:
-          passthrough:
+          inspector:
             snis:
             - foo.bar.com

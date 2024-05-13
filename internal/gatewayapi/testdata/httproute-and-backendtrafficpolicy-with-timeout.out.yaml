@@ -158,7 +158,6 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -198,7 +197,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
       timeouts:
         request: 1s
   status:
@@ -278,12 +276,13 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-        timeout:
-          http:
-            connectionIdleTimeout: 16s
-            maxConnectionDuration: 17s
-          tcp:
-            connectTimeout: 15s
+        traffic:
+          timeout:
+            http:
+              connectionIdleTimeout: 16s
+              maxConnectionDuration: 17s
+            tcp:
+              connectTimeout: 15s
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -315,9 +314,9 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout:
-          http:
-            maxConnectionDuration: 22s
-            requestTimeout: 1s
-          tcp:
-            connectTimeout: 20s
+        traffic:
+          timeout:
+            http:
+              maxConnectionDuration: 22s
+            tcp:
+              connectTimeout: 20s

@@ -87,7 +87,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -154,4 +153,5 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic: {}
         useClientProtocol: true

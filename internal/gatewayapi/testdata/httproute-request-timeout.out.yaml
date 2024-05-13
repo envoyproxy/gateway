@@ -58,7 +58,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
       timeouts:
         request: 5s
   status:
@@ -127,6 +126,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout:
-          http:
-            requestTimeout: 5s
+        traffic:
+          timeout:
+            http:
+              requestTimeout: 5s

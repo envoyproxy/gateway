@@ -56,7 +56,6 @@ httpRoutes:
         port: 8080
       matches:
       - method: POST
-      sessionPersistence: null
   status:
     parents:
     - conditions:

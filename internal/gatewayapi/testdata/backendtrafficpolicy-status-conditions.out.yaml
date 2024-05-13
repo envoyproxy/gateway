@@ -376,7 +376,6 @@ grpcRoutes:
         - name: magic
           type: Exact
           value: foo
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -412,7 +411,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -447,7 +445,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -559,6 +556,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic: {}
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -585,6 +583,7 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
+        traffic: {}
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-2/tcp
