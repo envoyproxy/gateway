@@ -1064,9 +1064,13 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			accepted = true
 			irKey := t.getIRKey(listener.gateway)
 
-			tls := ir.TLS{
-				Terminate: irTLSConfigs(listener.tlsSecrets),
+			var tls *ir.TLS
+			if len(listener.tlsSecrets) > 0 {
+				tls = &ir.TLS{
+					Terminate: irTLSConfigs(listener.tlsSecrets),
+				}
 			}
+
 			if listener.Hostname != nil {
 				tls.TLSInspectorConfig = &ir.TLSInspectorConfig{
 					SNIs: []string{string(*listener.Hostname)},
@@ -1081,7 +1085,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
 						Settings: destSettings,
 					},
-					TLS: &tls,
+					TLS: tls,
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 

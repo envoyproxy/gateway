@@ -100,4 +100,3 @@ xdsIR:
           settings:
           - weight: 1
         name: tcproute/default/tcproute-1
-        tls: {}
