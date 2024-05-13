@@ -925,7 +925,7 @@ func (r *RouteDestination) Validate() error {
 	return errs
 }
 
-func (r *RouteDestination) ToWeightedBackend() *BackendWeights {
+func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	w := &BackendWeights{
 		Name: r.Name,
 	}
