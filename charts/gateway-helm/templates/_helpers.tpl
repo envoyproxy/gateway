@@ -60,3 +60,18 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{- define "envoy-gateway-config" -}}
+provider:
+  type: Kubernetes
+  kubernetes:
+    rateLimitDeployment:
+      container:
+        {{- if .Values.images.ratelimit.repository }}
+        image: {{ .Values.images.ratelimit.repository }}:{{ .Values.images.ratelimit.tag | default "master" }}
+        {{- end }}
+    shutdownManager:
+      {{- if .Values.images.shutdownManager.repository }}
+      image: {{ .Values.images.shutdownManager.repository }}:{{ .Values.images.shutdownManager.tag | default "latest" }}
+      {{- end }}
+{{- end }}

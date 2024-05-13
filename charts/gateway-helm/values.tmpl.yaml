@@ -1,3 +1,16 @@
+# The global image settings for all images in this chart.
+# These values will take precedence over the values in the other sections.
+images:
+  envoyGateway:
+    repository: ${ImageRepository}
+    tag: '${ImageTag}'
+  shutdownManager:
+    repository: ${ImageRepository}
+    tag: '${ImageTag}'
+  ratelimit:
+    repository: docker.io/envoyproxy/ratelimit
+    tag: 'master'
+
 deployment:
   envoyGateway:
     image:

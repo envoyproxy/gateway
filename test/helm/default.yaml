@@ -28,6 +28,9 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
+    
+    
+    
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     logging:
@@ -35,6 +38,9 @@ data:
         default: info
     provider:
       kubernetes:
+        rateLimitDeployment:
+          container:
+            image: docker.io/envoyproxy/ratelimit:master
         shutdownManager:
           image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
@@ -371,7 +377,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
+        image: docker.io/envoyproxy/gateway-dev:c30d09f2
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -519,7 +525,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
+        image: docker.io/envoyproxy/gateway-dev:c30d09f2
         imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
       restartPolicy: Never

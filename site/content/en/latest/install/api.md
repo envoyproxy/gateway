@@ -56,5 +56,11 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].port | int | `19001` |  |
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
+| images.envoyGateway.repository | string | `"docker.io/envoyproxy/gateway"` |  |
+| images.envoyGateway.tag | string | `"latest"` |  |
+| images.ratelimit.repository | string | `"docker.io/envoyproxy/ratelimit"` |  |
+| images.ratelimit.tag | string | `"master"` |  |
+| images.shutdownManager.repository | string | `"docker.io/envoyproxy/gateway"` |  |
+| images.shutdownManager.tag | string | `"latest"` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 
