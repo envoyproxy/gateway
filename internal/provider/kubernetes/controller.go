@@ -131,7 +131,7 @@ type resourceMappings struct {
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name of the filter and the value is the
 	// unstructured form of the resource.
-	extensionRefFilters map[types.NamespacedName]unstructured.Unstructured
+	extensionRefFilters map[message.NamespacedNameAndType]unstructured.Unstructured
 }
 
 func newResourceMapping() *resourceMappings {
@@ -143,7 +143,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedTCPRoutes:   map[string]struct{}{},
 		allAssociatedUDPRoutes:   map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
-		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
+		extensionRefFilters:      map[message.NamespacedNameAndType]unstructured.Unstructured{},
 	}
 }
 
