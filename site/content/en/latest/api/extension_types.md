@@ -177,7 +177,7 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-
+AppProtocolType defines various backend applications protocols supported by Envoy Gateway
 
 _Appears in:_
 - [BackendSpec](#backendspec)
@@ -223,8 +223,8 @@ _Appears in:_
 
 
 
-Backend allows the user to configure the behavior of the connection
-between the Envoy Proxy listener and the backend service.
+Backend allows the user to configure the endpoints of a backend and
+the behavior of the connection from Envoy Proxy to the backend.
 
 _Appears in:_
 - [BackendList](#backendlist)
@@ -241,17 +241,17 @@ _Appears in:_
 
 
 
-BackendEndpoint describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
-corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket
+corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 
 _Appears in:_
 - [BackendSpec](#backendspec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN address |
-| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IP defines a IPv4 address |
-| `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket path |
+| `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
+| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IP defines an IPv4 endpoint |
+| `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
 
 
 #### BackendList
@@ -303,8 +303,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  |  |
-| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocol to be used, e.g. HTTP2. |
+| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | BackendEndpoints defines the endpoints to be used when connecting to the backend. |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 
 
 
@@ -1443,8 +1443,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Address defines to the FQDN address of the backend service. |
-| `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
+| `address` | _string_ |  true  | Address defines the FQDN address of the backend endpoint. |
+| `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
 #### FaultInjection
@@ -1822,8 +1822,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Address defines to the IPv4 address of the backend service. |
-| `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
+| `address` | _string_ |  true  | Address defines the IPv4 address of the backend endpoint. |
+| `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
 #### ImageWasmCodeSource
@@ -3414,7 +3414,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `path` | _string_ |  true  |  |
+| `path` | _string_ |  true  | Path defines the unix domain socket path of the backend endpoint. |
 
 
 #### Wasm

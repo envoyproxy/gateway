@@ -14,6 +14,8 @@ const (
 	KindBackend = "Backend"
 )
 
+// AppProtocolType defines various backend applications protocols supported by Envoy Gateway
+//
 // +kubebuilder:validation:Enum=gateway.envoyproxy.io/h2c;gateway.envoyproxy.io/ws;gateway.envoyproxy.io/wss
 // +notImplementedHide
 type AppProtocolType string
@@ -27,15 +29,15 @@ const (
 	AppProtocolTypeWSS AppProtocolType = "gateway.envoyproxy.io/wss"
 )
 
+// Backend allows the user to configure the endpoints of a backend and
+// the behavior of the connection from Envoy Proxy to the backend.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=be
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +notImplementedHide
-//
-// Backend allows the user to configure the behavior of the connection
-// between the Envoy Proxy listener and the backend service.
 type Backend struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,24 +49,24 @@ type Backend struct {
 	Status BackendStatus `json:"status,omitempty"`
 }
 
-// BackendEndpoint describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
-// corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+// BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket
+// corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.fqdn) || has(self.ipv4) || has(self.unix))",message="one of fqdn, ipv4 or unix must be specified"
 // +kubebuilder:validation:XValidation:rule="((has(self.fqdn) && !(has(self.ipv4) || has(self.unix))) || (has(self.ipv4) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix) && !(has(self.ipv4) || has(self.fqdn))))",message="only one of fqdn, ipv4 or unix can be specified"
 // +notImplementedHide
 type BackendEndpoint struct {
-	// FQDN defines a FQDN address
+	// FQDN defines a FQDN endpoint
 	//
 	// +optional
 	FQDN *FQDNEndpoint `json:"fqdn,omitempty"`
 
-	// IP defines a IPv4 address
+	// IP defines an IPv4 endpoint
 	//
 	// +optional
 	IP *IPv4Endpoint `json:"ipv4,omitempty"`
 
-	// Unix defines the unix domain socket path
+	// Unix defines the unix domain socket endpoint
 	//
 	// +optional
 	Unix *UnixSocket `json:"unix,omitempty"`
@@ -72,16 +74,17 @@ type BackendEndpoint struct {
 
 // IPv4Endpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+//
 // +notImplementedHide
 type IPv4Endpoint struct {
-	// Address defines to the IPv4 address of the backend service.
+	// Address defines the IPv4 address of the backend endpoint.
 	//
 	// +kubebuilder:validation:MinLength=7
 	// +kubebuilder:validation:MaxLength=15
 	// +kubebuilder:validation:Pattern=`^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
 	Address string `json:"address"`
 
-	// Port defines to the port of of the backend service.
+	// Port defines the port of the backend endpoint.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
@@ -90,16 +93,17 @@ type IPv4Endpoint struct {
 
 // FQDNEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+//
 // +notImplementedHide
 type FQDNEndpoint struct {
-	// Address defines to the FQDN address of the backend service.
+	// Address defines the FQDN address of the backend endpoint.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Address string `json:"address"`
 
-	// Port defines to the port of of the backend service.
+	// Port defines the port of the backend endpoint.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
@@ -108,20 +112,25 @@ type FQDNEndpoint struct {
 
 // UnixSocket describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
+//
 // +notImplementedHide
 type UnixSocket struct {
+	// Path defines the unix domain socket path of the backend endpoint.
 	Path string `json:"path"`
 }
 
 // BackendSpec describes the desired state of BackendSpec.
+//
 // +notImplementedHide
 type BackendSpec struct {
+	// BackendEndpoints defines the endpoints to be used when connecting to the backend.
+	//
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=4
 	// +kubebuilder:validation:XValidation:rule="self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))",message="fqdn addresses cannot be mixed with other address types"
 	BackendEndpoints []BackendEndpoint `json:"endpoints,omitempty"`
 
-	// AppProtocols defines the application protocol to be used, e.g. HTTP2.
+	// AppProtocols defines the application protocols to be supported when connecting to the backend.
 	//
 	// +optional
 	AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
