@@ -49,8 +49,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
-        image: {{ .Values.images.envoyGateway.repository | default .Values.deployment.envoyGateway.image.repository }}:{{ .Values.images.envoyGateway.tag | default .Chart.AppVersion }}
-        imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy }}
+        image: {{ include "eg.image" . }}
+        imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.imagePullPolicy}}
         livenessProbe:
           httpGet:
             path: /healthz

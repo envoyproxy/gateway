@@ -1,19 +1,27 @@
-# The global settings for all images in this chart.
-# These values will take precedence over the values in the other sections.
-images:
-  envoyGateway:
-    repository: ${ImageRepository}
-    tag: '${ImageTag}'
-  ratelimit:
-    repository: docker.io/envoyproxy/ratelimit
-    tag: 'master'
+# The global settings for the Envoy Gateway Helm chart.
+# These values will be used if the values are not overridden in the other sections.
+global:
+  images:
+    # The default hub for the images
+    hub: '${ImageHub}'
+    # Specify image pull policy if default behavior isn't desired.
+    # Default behavior: latest images will be Always else IfNotPresent.
+    imagePullPolicy: ${ImagePullPolicy}
+    envoyGateway:
+      # This can be just the repo name or the full hub/repo name. If it's just the repo name, the default hub will be used.
+      image: '${GatewayImageRepository}'
+      tag: '${GatewayImageTag}'
+    ratelimit:
+      # This can be just the repo name or the full hub/repo name. If it's just the repo name, the default hub will be used.
+      image: ratelimit
+      tag: 'master'
 
 deployment:
   envoyGateway:
     image:
-      repository: ${ImageRepository}
-      tag: '${ImageTag}'
-    imagePullPolicy: ${ImagePullPolicy}
+      repository: ""
+      tag: ""
+    imagePullPolicy: ""
     imagePullSecrets: []
     resources:
       limits:
@@ -46,9 +54,6 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
-      kubernetes:
-        shutdownManager:
-          image: ${ImageRepository}:${ImageTag}
     logging:
       level:
         default: info

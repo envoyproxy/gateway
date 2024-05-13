@@ -61,17 +61,31 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
+{{- define "eg.image" -}}
+{{- if .Values.deployment.envoyGateway.image.repository }}
+{{- .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Values.global.images.envoyGateway.tag | default .Chart.AppVersion}}
+{{- else if contains "/" .Values.global.images.envoyGateway.image}}
+{{- .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
+{{- else }}
+{{- .Values.global.images.hub }}/{{ .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
+{{- end }}
+{{- end }}
+
 {{- define "envoy-gateway-config" -}}
 provider:
   type: Kubernetes
   kubernetes:
     rateLimitDeployment:
       container:
-        {{- if .Values.images.ratelimit.repository }}
-        image: {{ .Values.images.ratelimit.repository }}:{{ .Values.images.ratelimit.tag | default "master" }}
+        {{- if contains "/" .Values.global.images.ratelimit.image }}
+        image: "{{ .Values.global.images.ratelimit.image }}:{{ .Values.global.images.ratelimit.tag | default "master" }}
+        {{- else }}
+        image: {{ .Values.global.images.hub }}/{{ .Values.global.images.ratelimit.image }}:{{ .Values.global.images.ratelimit.tag | default "master" }}
         {{- end }}
     shutdownManager:
-      {{- if .Values.images.envoyGateway.repository }}
-      image: {{ .Values.images.envoyGateway.repository }}:{{ .Values.images.envoyGateway.tag | default .Chart.AppVersion }}
+      {{- if contains "/" .Values.global.images.envoyGateway.image }}
+      image: "{{ .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
+      {{- else }}
+      image: {{ .Values.global.images.hub }}/{{ .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
       {{- end }}
 {{- end }}

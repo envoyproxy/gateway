@@ -31,12 +31,11 @@ The Helm chart for Envoy Gateway
 | certgen.rbac.labels | object | `{}` |  |
 | config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
-| config.envoyGateway.provider.kubernetes.shutdownManager.image | string | `"docker.io/envoyproxy/gateway:latest"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
 | createNamespace | bool | `false` |  |
-| deployment.envoyGateway.image.repository | string | `"docker.io/envoyproxy/gateway"` |  |
-| deployment.envoyGateway.image.tag | string | `"latest"` |  |
-| deployment.envoyGateway.imagePullPolicy | string | `"IfNotPresent"` |  |
+| deployment.envoyGateway.image.repository | string | `""` |  |
+| deployment.envoyGateway.image.tag | string | `""` |  |
+| deployment.envoyGateway.imagePullPolicy | string | `""` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
@@ -56,9 +55,11 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].port | int | `19001` |  |
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
-| images.envoyGateway.repository | string | `"docker.io/envoyproxy/gateway"` |  |
-| images.envoyGateway.tag | string | `"latest"` |  |
-| images.ratelimit.repository | string | `"docker.io/envoyproxy/ratelimit"` |  |
-| images.ratelimit.tag | string | `"master"` |  |
+| global.images.envoyGateway.image | string | `""` |  |
+| global.images.envoyGateway.tag | string | `""` |  |
+| global.images.hub | string | `""` |  |
+| global.images.imagePullPolicy | string | `"IfNotPresent"` |  |
+| global.images.ratelimit.image | string | `"ratelimit"` |  |
+| global.images.ratelimit.tag | string | `"master"` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 

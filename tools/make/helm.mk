@@ -8,6 +8,8 @@ IMAGE_PULL_POLICY ?= IfNotPresent
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
+HUB := $(word 1,$(subst /, ,${IMAGE}))/$(word 2,$(subst /, ,${IMAGE})) # Extract the first word after splitting by '/'
+REPO := $(word 3,$(subst /, ,${IMAGE})) # Get the remaining words after the first
 
 ##@ Helm
 helm-package:
@@ -28,9 +30,9 @@ helm-install: helm-generate ## Install envoy gateway helm chart from OCI registr
 
 .PHONY: helm-generate
 helm-generate:
-	ImageRepository=${IMAGE} ImageTag=${TAG} ImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
+	ImageHub=${HUB} GatewayImageRepository=${REPO} GatewayImageTag=${TAG} ImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
 	helm lint charts/gateway-helm
 
-helm-template: ## Template envoy gateway helm chart.
+helm-template: ## Template envoy gateway helm chart.z
 	@$(LOG_TARGET)
-	helm template eg charts/gateway-helm --set deployment.envoyGateway.image.tag=latest --set config.envoyGateway.provider.kubernetes.shutdownManager.image="docker.io/envoyproxy/gateway-dev:latest" --set images.envoyGateway.tag="latest" --set images.shutdownManager.tag="latest"> ./test/helm/default.yaml --namespace=envoy-gateway-system
+	helm template eg charts/gateway-helm --set global.images.envoyGateway.tag=latest > ./test/helm/default.yaml --namespace=envoy-gateway-system

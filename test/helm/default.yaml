@@ -28,9 +28,6 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
-    
-    
-    
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     logging:
