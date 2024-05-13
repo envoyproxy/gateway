@@ -53,14 +53,13 @@ kind: Backend
 metadata:
   name: backend-mixed-ip-uds
 spec:
-  applicationProtocol: H2C
+  appProtocols: 
+    - gateway.envoyproxy.io/h2c
   addresses:
-    - type: UDS
-      unixDomainSocketAddress:
-        path: /var/run/backend.sock
-    - type: IPv4  
-      socketAddress:
-        address: 10.244.0.28
+    - unix:
+        path: /var/run/backend.sock   
+    - ip:
+        host: 10.244.0.28
         port: 3000
 ---
 apiVersion: gateway.networking.k8s.io/v1

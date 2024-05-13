@@ -23,7 +23,7 @@ const (
 	AppProtocolTypeH2C AppProtocolType = "gateway.envoyproxy.io/h2c"
 	// AppProtocolTypeWS defines the WebSocket over HTTP protocol.
 	AppProtocolTypeWS AppProtocolType = "gateway.envoyproxy.io/ws"
-	// AppProtocolTypeWSS defines the WebSocket over HTTP protocol.
+	// AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.
 	AppProtocolTypeWSS AppProtocolType = "gateway.envoyproxy.io/wss"
 )
 
@@ -124,7 +124,7 @@ type BackendSpec struct {
 	// AppProtocols defines the application protocol to be used, e.g. HTTP2.
 	//
 	// +optional
-	AppProtocols []AppProtocolType `json:"applicationProtocol,omitempty"`
+	AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
 }
 
 // BackendStatus defines the state of Backend

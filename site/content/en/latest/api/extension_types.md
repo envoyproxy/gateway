@@ -186,7 +186,7 @@ _Appears in:_
 | ----- | ----------- |
 | `gateway.envoyproxy.io/h2c` | AppProtocolTypeH2C defines the HTTP/2 application protocol.<br /> | 
 | `gateway.envoyproxy.io/ws` | AppProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> | 
-| `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTP protocol.<br /> | 
+| `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.<br /> | 
 
 
 #### Authorization
@@ -304,7 +304,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
-| `applicationProtocol` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocol to be used, e.g. HTTP2. |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocol to be used, e.g. HTTP2. |
 
 
 

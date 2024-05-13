@@ -122,7 +122,7 @@ spec:
                 x-kubernetes-validations:
                 - message: fqdn addresses cannot be mixed with other address types
                   rule: self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))
-              applicationProtocol:
+              appProtocols:
                 description: AppProtocols defines the application protocol to be used,
                   e.g. HTTP2.
                 items:
