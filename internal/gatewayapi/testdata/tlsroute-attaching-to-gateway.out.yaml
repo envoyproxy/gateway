@@ -109,6 +109,6 @@ xdsIR:
             weight: 1
         name: tlsroute/default/tlsroute-1
         tls:
-          passthrough:
+          inspector:
             snis:
             - foo.com

@@ -94,7 +94,7 @@ tcp:
   routes:
   - name: "fifth-route"
     tls:
-      passthrough:
+      inspector:
         snis:
         - bar.com
     destination:
@@ -109,7 +109,7 @@ tcp:
   routes:
   - name: "sixth-route"
     tls:
-      passthrough:
+      inspector:
         snis:
         - bar.net
     destination:

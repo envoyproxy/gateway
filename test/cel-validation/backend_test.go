@@ -15,8 +15,9 @@ import (
 	"testing"
 	"time"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestBackend(t *testing.T) {
