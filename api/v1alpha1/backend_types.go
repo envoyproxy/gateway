@@ -74,7 +74,7 @@ type BackendEndpoint struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 // +notImplementedHide
 type IPv4Endpoint struct {
-	// Host defines to the IPv4 address of the backend service.
+	// Address defines to the IPv4 address of the backend service.
 	//
 	// +kubebuilder:validation:MinLength=7
 	// +kubebuilder:validation:MaxLength=15
@@ -92,7 +92,7 @@ type IPv4Endpoint struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 // +notImplementedHide
 type FQDNEndpoint struct {
-	// Host defines to the FQDN address of the backend service.
+	// Address defines to the FQDN address of the backend service.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253

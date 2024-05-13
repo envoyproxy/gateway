@@ -72,8 +72,8 @@ spec:
                       description: FQDN defines a FQDN address
                       properties:
                         address:
-                          description: Host defines to the FQDN address of the backend
-                            service.
+                          description: Address defines to the FQDN address of the
+                            backend service.
                           maxLength: 253
                           minLength: 1
                           pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -93,8 +93,8 @@ spec:
                       description: IP defines a IPv4 address
                       properties:
                         address:
-                          description: Host defines to the IPv4 address of the backend
-                            service.
+                          description: Address defines to the IPv4 address of the
+                            backend service.
                           maxLength: 15
                           minLength: 7
                           pattern: ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$

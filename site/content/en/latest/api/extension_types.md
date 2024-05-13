@@ -1443,7 +1443,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Host defines to the FQDN address of the backend service. |
+| `address` | _string_ |  true  | Address defines to the FQDN address of the backend service. |
 | `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
 
 
@@ -1822,7 +1822,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Host defines to the IPv4 address of the backend service. |
+| `address` | _string_ |  true  | Address defines to the IPv4 address of the backend service. |
 | `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
 
 
