@@ -447,6 +447,8 @@ xdsIR:
           name: grpcroute/envoy-gateway/grpcroute-1/rule/0
           settings:
           - weight: 1
+        directResponse:
+          statusCode: 500
         headerMatches:
         - distinct: false
           exact: foo
