@@ -41,16 +41,16 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendAddresses: []egv1a1.BackendAddress{
+					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
 							Unix: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
 							},
 						},
 						{
-							IP: &egv1a1.IPAddress{
-								Host: "1.1.1.1",
-								Port: 443,
+							IP: &egv1a1.IPv4Endpoint{
+								Address: "1.1.1.1",
+								Port:    443,
 							},
 						},
 					},
@@ -63,17 +63,17 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendAddresses: []egv1a1.BackendAddress{
+					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "example.com",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "example.com",
+								Port:    443,
 							},
 						},
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "example2.com",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "example2.com",
+								Port:    443,
 							},
 						},
 					},
@@ -86,11 +86,11 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{"HTTP7"},
-					BackendAddresses: []egv1a1.BackendAddress{
+					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "example.com",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "example.com",
+								Port:    443,
 							},
 						},
 					},
@@ -103,21 +103,21 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols:     []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendAddresses: []egv1a1.BackendAddress{{}},
+					BackendEndpoints: []egv1a1.BackendEndpoint{{}},
 				}
 			},
-			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": one of fqdn, ip or unix must be specified"},
+			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": one of fqdn, ipv4 or unix must be specified"},
 		},
 		{
 			desc: "Multiple addresses",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendAddresses: []egv1a1.BackendAddress{
+					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "example.com",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "example.com",
+								Port:    443,
 							},
 							Unix: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
@@ -126,69 +126,69 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": only one of fqdn, ip or unix can be specified"},
+			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": only one of fqdn, ipv4 or unix can be specified"},
 		},
 		{
 			desc: "Mixed types",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendAddresses: []egv1a1.BackendAddress{
+					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "example.com",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "example.com",
+								Port:    443,
 							},
 						},
 						{
-							IP: &egv1a1.IPAddress{
-								Host: "1.1.1.1",
-								Port: 443,
+							IP: &egv1a1.IPv4Endpoint{
+								Address: "1.1.1.1",
+								Port:    443,
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.addresses: Invalid value: \"array\": FQDN addresses cannot be mixed with other address types"},
+			wantErrors: []string{"spec.endpoints: Invalid value: \"array\": FQDN addresses cannot be mixed with other address types"},
 		},
 		{
 			desc: "Invalid hostname",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendAddresses: []egv1a1.BackendAddress{
+					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "host name",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "host name",
+								Port:    443,
 							},
 						},
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "host_name",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "host_name",
+								Port:    443,
 							},
 						},
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "hostname:443",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "hostname:443",
+								Port:    443,
 							},
 						},
 						{
-							FQDN: &egv1a1.FQDNAddress{
-								Host: "host.*.name",
-								Port: 443,
+							FQDN: &egv1a1.FQDNEndpoint{
+								Address: "host.*.name",
+								Port:    443,
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.addresses[0].fqdn.host: Invalid value: \"host name\": spec.addresses[0].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.addresses[1].fqdn.host: Invalid value: \"host_name\": spec.addresses[1].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.addresses[2].fqdn.host: Invalid value: \"hostname:443\": spec.addresses[2].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.addresses[3].fqdn.host: Invalid value: \"host.*.name\": spec.addresses[3].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[0].fqdn.address: Invalid value: \"host name\": spec.endpoints[0].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[1].fqdn.address: Invalid value: \"host_name\": spec.endpoints[1].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[2].fqdn.address: Invalid value: \"hostname:443\": spec.endpoints[2].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[3].fqdn.address: Invalid value: \"host.*.name\": spec.endpoints[3].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
 			},
 		},
 		{
@@ -196,39 +196,39 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendAddresses: []egv1a1.BackendAddress{
+					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
-							IP: &egv1a1.IPAddress{
-								Host: "300.0.0.0",
-								Port: 443,
+							IP: &egv1a1.IPv4Endpoint{
+								Address: "300.0.0.0",
+								Port:    443,
 							},
 						},
 						{
-							IP: &egv1a1.IPAddress{
-								Host: "0.0.0.0:443",
-								Port: 443,
+							IP: &egv1a1.IPv4Endpoint{
+								Address: "0.0.0.0:443",
+								Port:    443,
 							},
 						},
 						{
-							IP: &egv1a1.IPAddress{
-								Host: "0.0.0.0/12",
-								Port: 443,
+							IP: &egv1a1.IPv4Endpoint{
+								Address: "0.0.0.0/12",
+								Port:    443,
 							},
 						},
 						{
-							IP: &egv1a1.IPAddress{
-								Host: "a.b.c.e",
-								Port: 443,
+							IP: &egv1a1.IPv4Endpoint{
+								Address: "a.b.c.e",
+								Port:    443,
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.addresses[0].ip.host: Invalid value: \"300.0.0.0\": spec.addresses[0].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
-				"spec.addresses[1].ip.host: Invalid value: \"0.0.0.0:443\": spec.addresses[1].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
-				"spec.addresses[2].ip.host: Invalid value: \"0.0.0.0/12\": spec.addresses[2].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
-				"spec.addresses[3].ip.host: Invalid value: \"a.b.c.e\": spec.addresses[3].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+				"spec.endpoints[0].ipv4.address: Invalid value: \"300.0.0.0\": spec.endpoints[0].ipv4.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+				"spec.endpoints[1].ipv4.address: Invalid value: \"0.0.0.0:443\": spec.endpoints[1].ipv4.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+				"spec.endpoints[2].ipv4.address: Invalid value: \"0.0.0.0/12\": spec.endpoints[2].ipv4.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+				"spec.endpoints[3].ipv4.address: Invalid value: \"a.b.c.e\": spec.endpoints[3].ipv4.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
 			},
 		},
 	}

@@ -237,11 +237,11 @@ _Appears in:_
 | `spec` | _[BackendSpec](#backendspec)_ |  true  | spec defines the desired state of Backend. |
 
 
-#### BackendAddress
+#### BackendEndpoint
 
 
 
-BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
+BackendEndpoint describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
 corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 
 _Appears in:_
@@ -249,8 +249,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `fqdn` | _[FQDNAddress](#fqdnaddress)_ |  false  | FQDN defines a FQDN address |
-| `ip` | _[IPAddress](#ipaddress)_ |  false  | IP defines a IPv4 address |
+| `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN address |
+| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IP defines a IPv4 address |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket path |
 
 
@@ -303,7 +303,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
+| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  |  |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocol to be used, e.g. HTTP2. |
 
 
@@ -1431,19 +1431,19 @@ _Appears in:_
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that<br />contains a TLS certificate and private keys. These certificates are used to<br />establish a TLS handshake to the extension server.<br /><br />CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
-#### FQDNAddress
+#### FQDNEndpoint
 
 
 
-FQDNAddress describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+FQDNEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 
 _Appears in:_
-- [BackendAddress](#backendaddress)
+- [BackendEndpoint](#backendendpoint)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host defines to the FQDN address of the backend service. |
+| `address` | _string_ |  true  | Host defines to the FQDN address of the backend service. |
 | `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
 
 
@@ -1810,19 +1810,19 @@ _Appears in:_
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
-#### IPAddress
+#### IPv4Endpoint
 
 
 
-IPAddress describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+IPv4Endpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 
 _Appears in:_
-- [BackendAddress](#backendaddress)
+- [BackendEndpoint](#backendendpoint)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host defines to the IPv4 address of the backend service. |
+| `address` | _string_ |  true  | Host defines to the IPv4 address of the backend service. |
 | `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
 
 
@@ -3410,7 +3410,7 @@ UnixSocket describes TCP/UDP unix domain socket address, corresponding to Envoy'
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
 
 _Appears in:_
-- [BackendAddress](#backendaddress)
+- [BackendEndpoint](#backendendpoint)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |

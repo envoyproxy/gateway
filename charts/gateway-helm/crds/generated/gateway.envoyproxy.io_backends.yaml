@@ -52,16 +52,26 @@ spec:
           spec:
             description: spec defines the desired state of Backend.
             properties:
-              addresses:
+              appProtocols:
+                description: AppProtocols defines the application protocol to be used,
+                  e.g. HTTP2.
+                items:
+                  enum:
+                  - gateway.envoyproxy.io/h2c
+                  - gateway.envoyproxy.io/ws
+                  - gateway.envoyproxy.io/wss
+                  type: string
+                type: array
+              endpoints:
                 items:
                   description: |-
-                    BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
+                    BackendEndpoint describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
                     corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
                   properties:
                     fqdn:
                       description: FQDN defines a FQDN address
                       properties:
-                        host:
+                        address:
                           description: Host defines to the FQDN address of the backend
                             service.
                           maxLength: 253
@@ -76,13 +86,13 @@ spec:
                           minimum: 0
                           type: integer
                       required:
-                      - host
+                      - address
                       - port
                       type: object
-                    ip:
+                    ipv4:
                       description: IP defines a IPv4 address
                       properties:
-                        host:
+                        address:
                           description: Host defines to the IPv4 address of the backend
                             service.
                           maxLength: 15
@@ -97,7 +107,7 @@ spec:
                           minimum: 0
                           type: integer
                       required:
-                      - host
+                      - address
                       - port
                       type: object
                     unix:
@@ -110,28 +120,18 @@ spec:
                       type: object
                   type: object
                   x-kubernetes-validations:
-                  - message: one of fqdn, ip or unix must be specified
-                    rule: (has(self.fqdn) || has(self.ip) || has(self.unix))
-                  - message: only one of fqdn, ip or unix can be specified
-                    rule: ((has(self.fqdn) && !(has(self.ip) || has(self.unix))) ||
-                      (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix)
-                      && !(has(self.ip) || has(self.fqdn))))
+                  - message: one of fqdn, ipv4 or unix must be specified
+                    rule: (has(self.fqdn) || has(self.ipv4) || has(self.unix))
+                  - message: only one of fqdn, ipv4 or unix can be specified
+                    rule: ((has(self.fqdn) && !(has(self.ipv4) || has(self.unix)))
+                      || (has(self.ipv4) && !(has(self.fqdn) || has(self.unix))) ||
+                      (has(self.unix) && !(has(self.ipv4) || has(self.fqdn))))
                 maxItems: 4
                 minItems: 1
                 type: array
                 x-kubernetes-validations:
                 - message: fqdn addresses cannot be mixed with other address types
                   rule: self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))
-              appProtocols:
-                description: AppProtocols defines the application protocol to be used,
-                  e.g. HTTP2.
-                items:
-                  enum:
-                  - gateway.envoyproxy.io/h2c
-                  - gateway.envoyproxy.io/ws
-                  - gateway.envoyproxy.io/wss
-                  type: string
-                type: array
             type: object
           status:
             description: status defines the current status of Backend.

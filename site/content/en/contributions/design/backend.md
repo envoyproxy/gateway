@@ -55,11 +55,11 @@ metadata:
 spec:
   appProtocols: 
     - gateway.envoyproxy.io/h2c
-  addresses:
+  endpoints:
     - unix:
         path: /var/run/backend.sock   
-    - ip:
-        host: 10.244.0.28
+    - ipv4:
+        address: 10.244.0.28
         port: 3000
 ---
 apiVersion: gateway.networking.k8s.io/v1
