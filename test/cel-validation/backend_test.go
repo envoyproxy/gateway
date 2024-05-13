@@ -15,10 +15,8 @@ import (
 	"testing"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestBackend(t *testing.T) {
@@ -41,17 +39,15 @@ func TestBackend(t *testing.T) {
 			desc: "Valid static",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
-							Type: "UDS",
-							UnixDomainSocketAddress: &egv1a1.UnixSocket{
+							Unix: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
 							},
 						},
 						{
-							Type: "IPv4",
-							SocketAddress: &egv1a1.NetworkSocket{
+							IP: &egv1a1.IPAddress{
 								Host: "1.1.1.1",
 								Port: 443,
 							},
@@ -65,18 +61,16 @@ func TestBackend(t *testing.T) {
 			desc: "Valid DNS",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
-							Type: "FQDN",
-							SocketAddress: &egv1a1.NetworkSocket{
+							FQDN: &egv1a1.FQDNAddress{
 								Host: "example.com",
 								Port: 443,
 							},
 						},
 						{
-							Type: "FQDN",
-							SocketAddress: &egv1a1.NetworkSocket{
+							FQDN: &egv1a1.FQDNAddress{
 								Host: "example2.com",
 								Port: 443,
 							},
@@ -87,28 +81,13 @@ func TestBackend(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "unsupported address type",
-			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{
-					BackendAddresses: []egv1a1.BackendAddress{
-						{
-							Type:          "not-a-type",
-							SocketAddress: &egv1a1.NetworkSocket{},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"Unsupported value: \"not-a-type\": supported values: \"FQDN\", \"UDS\", \"IPv4\""},
-		},
-		{
 			desc: "unsupported application protocol type",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolType("HTTP7")),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolType("HTTP7")},
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
-							Type: "FQDN",
-							SocketAddress: &egv1a1.NetworkSocket{
+							FQDN: &egv1a1.FQDNAddress{
 								Host: "example.com",
 								Port: 443,
 							},
@@ -116,113 +95,52 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Unsupported value: \"HTTP7\": supported values: \"HTTP2\", \"WS\""},
-		},
-		{
-			desc: "unsupported transport protocol type",
-			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
-					BackendAddresses: []egv1a1.BackendAddress{
-						{
-							Type: "FQDN",
-							SocketAddress: &egv1a1.NetworkSocket{
-								Host:     "example.com",
-								Port:     443,
-								Protocol: ptr.To(egv1a1.ProtocolType("TDP")),
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"Unsupported value: \"TDP\": supported values: \"TCP\", \"UDP\""},
+			wantErrors: []string{"spec.applicationProtocol[0]: Unsupported value: \"HTTP7\": supported values: \"gateway.envoyproxy.io/h2c\", \"gateway.envoyproxy.io/ws\", \"gateway.envoyproxy.io/wss\""},
 		},
 		{
 			desc: "No address",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
-					BackendAddresses: []egv1a1.BackendAddress{
-						{
-							Type: "FQDN",
-						},
-					},
+					AppProtocols:     []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					BackendAddresses: []egv1a1.BackendAddress{{}},
 				}
 			},
-			wantErrors: []string{"[spec.addresses[0]: Invalid value: \"object\": one of socketAddress or unixDomainSocketAddress must be specified"},
+			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": one of fqdn, ip or unix must be specified"},
 		},
 		{
-			desc: "Both addresses",
+			desc: "Multiple addresses",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
-							Type: "FQDN",
-							SocketAddress: &egv1a1.NetworkSocket{
+							FQDN: &egv1a1.FQDNAddress{
 								Host: "example.com",
 								Port: 443,
 							},
-							UnixDomainSocketAddress: &egv1a1.UnixSocket{
+							Unix: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": only one of socketAddress or unixDomainSocketAddress can be specified"},
-		},
-		{
-			desc: "Socket with wrong type",
-			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
-					BackendAddresses: []egv1a1.BackendAddress{
-						{
-							Type: "UDS",
-							SocketAddress: &egv1a1.NetworkSocket{
-								Host: "example.com",
-								Port: 443,
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": if type is FQDN or IPv4, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"},
-		},
-		{
-			desc: "Unix socket with wrong type",
-			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
-					BackendAddresses: []egv1a1.BackendAddress{
-						{
-							Type: "FQDN",
-							UnixDomainSocketAddress: &egv1a1.UnixSocket{
-								Path: "/path/to/service.sock",
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": if type is FQDN or IPv4, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"},
+			wantErrors: []string{"spec.addresses[0]: Invalid value: \"object\": only one of fqdn, ip or unix can be specified"},
 		},
 		{
 			desc: "Mixed types",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					ApplicationProtocol: ptr.To(egv1a1.ApplicationProtocolTypeHTTP2),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
-							Type: "FQDN",
-							SocketAddress: &egv1a1.NetworkSocket{
+							FQDN: &egv1a1.FQDNAddress{
 								Host: "example.com",
 								Port: 443,
 							},
 						},
 						{
-							Type: "IPv4",
-							SocketAddress: &egv1a1.NetworkSocket{
+							IP: &egv1a1.IPAddress{
 								Host: "1.1.1.1",
 								Port: 443,
 							},
@@ -231,6 +149,86 @@ func TestBackend(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"spec.addresses: Invalid value: \"array\": FQDN addresses cannot be mixed with other address types"},
+		},
+		{
+			desc: "Invalid hostname",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					BackendAddresses: []egv1a1.BackendAddress{
+						{
+							FQDN: &egv1a1.FQDNAddress{
+								Host: "host name",
+								Port: 443,
+							},
+						},
+						{
+							FQDN: &egv1a1.FQDNAddress{
+								Host: "host_name",
+								Port: 443,
+							},
+						},
+						{
+							FQDN: &egv1a1.FQDNAddress{
+								Host: "hostname:443",
+								Port: 443,
+							},
+						},
+						{
+							FQDN: &egv1a1.FQDNAddress{
+								Host: "host.*.name",
+								Port: 443,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.addresses[0].fqdn.host: Invalid value: \"host name\": spec.addresses[0].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.addresses[1].fqdn.host: Invalid value: \"host_name\": spec.addresses[1].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.addresses[2].fqdn.host: Invalid value: \"hostname:443\": spec.addresses[2].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.addresses[3].fqdn.host: Invalid value: \"host.*.name\": spec.addresses[3].fqdn.host in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+			},
+		},
+		{
+			desc: "Invalid IP",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					BackendAddresses: []egv1a1.BackendAddress{
+						{
+							IP: &egv1a1.IPAddress{
+								Host: "300.0.0.0",
+								Port: 443,
+							},
+						},
+						{
+							IP: &egv1a1.IPAddress{
+								Host: "0.0.0.0:443",
+								Port: 443,
+							},
+						},
+						{
+							IP: &egv1a1.IPAddress{
+								Host: "0.0.0.0/12",
+								Port: 443,
+							},
+						},
+						{
+							IP: &egv1a1.IPAddress{
+								Host: "a.b.c.e",
+								Port: 443,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.addresses[0].ip.host: Invalid value: \"300.0.0.0\": spec.addresses[0].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+				"spec.addresses[1].ip.host: Invalid value: \"0.0.0.0:443\": spec.addresses[1].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+				"spec.addresses[2].ip.host: Invalid value: \"0.0.0.0/12\": spec.addresses[2].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+				"spec.addresses[3].ip.host: Invalid value: \"a.b.c.e\": spec.addresses[3].ip.host in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'",
+			},
 		},
 	}
 

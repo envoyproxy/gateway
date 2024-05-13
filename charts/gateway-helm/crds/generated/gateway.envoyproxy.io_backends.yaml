@@ -56,14 +56,17 @@ spec:
                 items:
                   description: |-
                     BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
-                    corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+                    corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
                   properties:
-                    socketAddress:
-                      description: SocketAddress defines a FQDN or IPv4 address
+                    fqdn:
+                      description: FQDN defines a FQDN address
                       properties:
-                        address:
-                          description: Address defines to the FQDN or IP address of
-                            the backend service.
+                        host:
+                          description: Host defines to the FQDN address of the backend
+                            service.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
                         port:
                           description: Port defines to the port of of the backend
@@ -72,64 +75,63 @@ spec:
                           maximum: 65535
                           minimum: 0
                           type: integer
-                        protocol:
-                          description: Protocol defines to the the transport protocol
-                            to use for communication with the backend.
-                          enum:
-                          - TCP
-                          - UDP
-                          type: string
                       required:
-                      - address
+                      - host
                       - port
                       type: object
-                    type:
-                      description: 'Type is the the type name of the backend address:
-                        FQDN, UDS, IPv4'
-                      enum:
-                      - FQDN
-                      - UDS
-                      - IPv4
-                      type: string
-                    unixDomainSocketAddress:
-                      description: UnixDomainSocketAddress defines the unix domain
-                        socket path
+                    ip:
+                      description: IP defines a IPv4 address
+                      properties:
+                        host:
+                          description: Host defines to the IPv4 address of the backend
+                            service.
+                          maxLength: 15
+                          minLength: 7
+                          pattern: ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$
+                          type: string
+                        port:
+                          description: Port defines to the port of of the backend
+                            service.
+                          format: int32
+                          maximum: 65535
+                          minimum: 0
+                          type: integer
+                      required:
+                      - host
+                      - port
+                      type: object
+                    unix:
+                      description: Unix defines the unix domain socket path
                       properties:
                         path:
                           type: string
                       required:
                       - path
                       type: object
-                  required:
-                  - type
                   type: object
                   x-kubernetes-validations:
-                  - message: one of socketAddress or unixDomainSocketAddress must
-                      be specified
-                    rule: (has(self.socketAddress) || has(self.unixDomainSocketAddress))
-                  - message: only one of socketAddress or unixDomainSocketAddress
-                      can be specified
-                    rule: (has(self.socketAddress) && !has(self.unixDomainSocketAddress))
-                      || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))
-                  - message: if type is FQDN or IPv4, socketAddress must be set; if
-                      type is UDS, unixDomainSocketAddress must be set
-                    rule: ((has(self.socketAddress) && (self.type == 'FQDN' || self.type
-                      == 'IPv4')) || has(self.unixDomainSocketAddress) && self.type
-                      == 'UDS')
+                  - message: one of fqdn, ip or unix must be specified
+                    rule: (has(self.fqdn) || has(self.ip) || has(self.unix))
+                  - message: only one of fqdn, ip or unix can be specified
+                    rule: ((has(self.fqdn) && !(has(self.ip) || has(self.unix))) ||
+                      (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix)
+                      && !(has(self.ip) || has(self.fqdn))))
                 maxItems: 4
                 minItems: 1
                 type: array
                 x-kubernetes-validations:
-                - message: FQDN addresses cannot be mixed with other address types
-                  rule: self.all(f, f.type == 'FQDN') || !self.exists(f, f.type ==
-                    'FQDN')
+                - message: fqdn addresses cannot be mixed with other address types
+                  rule: self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))
               applicationProtocol:
-                description: ApplicationProtocol defines the application protocol
-                  to be used, e.g. HTTP2.
-                enum:
-                - HTTP2
-                - WS
-                type: string
+                description: AppProtocols defines the application protocol to be used,
+                  e.g. HTTP2.
+                items:
+                  enum:
+                  - gateway.envoyproxy.io/h2c
+                  - gateway.envoyproxy.io/ws
+                  - gateway.envoyproxy.io/wss
+                  type: string
+                type: array
             type: object
           status:
             description: status defines the current status of Backend.

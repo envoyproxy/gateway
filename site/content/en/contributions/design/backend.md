@@ -107,8 +107,8 @@ spec:
 
 ## Design Decisions
 * All instances of `BackendObjectReference` in Envoy Gateway MAY support referencing the `Backend` kind.
-* In some cases, Envoy Gateway may reject references to a `Backend` resource. For example, a backend with a UDS address 
-  will be rejected on xRoute references. 
+* For security reasons, Envoy Gateway MUST reject references to a `Backend` in xRoute resources. For example, UDS and 
+  localhost references will not be supported for xRoutes.  
 * All attributes of the Envoy Gateway extended `BackendRef` resource MUST be implemented for the `Backend` resource.  
 * A `Backend` resource referenced by `BackendObjectReference` will be translated to Envoy Gateway's IR DestinationSetting.
   As such, all `BackendAdresses` are treated as equivalent endpoints with identical weights, TLS settings, etc.  
@@ -120,8 +120,10 @@ spec:
   Users that wish to attach policies to some of the `BackendAddresses` in a `Backend` resource can use multiple `Backend` 
   resources and pluralized `BackendRefs` instead. 
 * The `Backend` API SHOULD support other Gateway-API backend features, such as [Backend Protocol Selection][]. 
-  Translation of explicit upstream application protocol setting MUST be consistent with the existing implementation for
+  Translation of explicit upstream application protocol setting SHOULD be consistent with the existing implementation for
   `Service` resources. 
+* The `Backend` upstream transport protocol (TCP, UDP) is inferred from the xRoute kind: TCP is inferred for all routes 
+  except for `UDPRoute` which is resolved to UDP.    
 * This API resource MUST be part of same namespace as the targetRef resource. The `Backend` API MUST be subject to 
   the same cross-namespace reference restriction as referenced `Service` resources.    
 * The `Backend` resource translation MUST NOT modify Infrastructure. Any change to infrastructure that is required to 

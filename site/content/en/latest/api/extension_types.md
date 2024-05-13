@@ -173,18 +173,7 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
-#### AddressType
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [BackendAddress](#backendaddress)
-
-
-
-#### ApplicationProtocolType
+#### AppProtocolType
 
 _Underlying type:_ _string_
 
@@ -195,8 +184,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `HTTP2` | ApplicationProtocolTypeHTTP2 defines the HTTP/2 application protocol.<br /> | 
-| `WS` | ApplicationProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> | 
+| `gateway.envoyproxy.io/h2c` | AppProtocolTypeH2C defines the HTTP/2 application protocol.<br /> | 
+| `gateway.envoyproxy.io/ws` | AppProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> | 
+| `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTP protocol.<br /> | 
 
 
 #### BackOffPolicy
@@ -237,16 +227,16 @@ _Appears in:_
 
 
 BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
-corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 
 _Appears in:_
 - [BackendSpec](#backendspec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[AddressType](#addresstype)_ |  true  | Type is the the type name of the backend address: FQDN, UDS, IPv4 |
-| `socketAddress` | _[SocketAddress](#socketaddress)_ |  false  | SocketAddress defines a FQDN or IPv4 address |
-| `unixDomainSocketAddress` | _[UnixDomainSocketAddress](#unixdomainsocketaddress)_ |  false  | UnixDomainSocketAddress defines the unix domain socket path |
+| `fqdn` | _[FQDNAddress](#fqdnaddress)_ |  false  | FQDN defines a FQDN address |
+| `ip` | _[IPAddress](#ipaddress)_ |  false  | IP defines a IPv4 address |
+| `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket path |
 
 
 #### BackendList
@@ -299,7 +289,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `addresses` | _[BackendAddress](#backendaddress) array_ |  true  |  |
-| `applicationProtocol` | _[ApplicationProtocolType](#applicationprotocoltype)_ |  false  | ApplicationProtocol defines the application protocol to be used, e.g. HTTP2. |
+| `applicationProtocol` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocol to be used, e.g. HTTP2. |
 
 
 
@@ -1361,6 +1351,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
+| `enableBackend` | _boolean_ |  true  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
 
 
 #### ExtensionHooks
@@ -1423,6 +1414,22 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that<br />contains a TLS certificate and private keys. These certificates are used to<br />establish a TLS handshake to the extension server.<br /><br />CertificateRef can only reference a Kubernetes Secret at this time. |
+
+
+#### FQDNAddress
+
+
+
+FQDNAddress describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+
+_Appears in:_
+- [BackendAddress](#backendaddress)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `host` | _string_ |  true  | Host defines to the FQDN address of the backend service. |
+| `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
 
 
 #### FaultInjection
@@ -1786,6 +1793,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
+
+
+#### IPAddress
+
+
+
+IPAddress describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+
+_Appears in:_
+- [BackendAddress](#backendaddress)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `host` | _string_ |  true  | Host defines to the IPv4 address of the backend service. |
+| `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
 
 
 #### ImageWasmCodeSource
@@ -2361,24 +2384,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
-
-
-#### ProtocolType
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [SocketAddress](#socketaddress)
-
-| Value | Description |
-| ----- | ----------- |
-| `FQDN` | AddressTypeFQDN defines the RFC-1123 compliant fully qualified domain name address type.<br /> | 
-| `UDS` | AddressTypeUDS defines the unix domain socket address type.<br /> | 
-| `IPv4` | AddressTypeIPv4 defines the IPv4 address type.<br /> | 
-| `TCP` | ProtocolTypeTCP defines the TCP address protocol.<br /> | 
-| `UDP` | ProtocolTypeUDP defines the UDP address protocol.<br /> | 
 
 
 #### ProviderType
@@ -3127,23 +3132,6 @@ _Appears in:_
 | `window` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently only supports linear growth of traffic. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
 
 
-#### SocketAddress
-
-
-
-SocketAddress describes TCP/UDP socket address, corresponding to Envoy's SocketAddress
-https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
-
-_Appears in:_
-- [BackendAddress](#backendaddress)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Address defines to the FQDN or IP address of the backend service. |
-| `port` | _integer_ |  true  | Port defines to the port of of the backend service. |
-| `protocol` | _[ProtocolType](#protocoltype)_ |  false  | Protocol defines to the the transport protocol to use for communication with the backend. |
-
-
 
 
 #### SourceMatchType
@@ -3354,11 +3342,11 @@ _Appears in:_
 | `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
 
 
-#### UnixDomainSocketAddress
+#### UnixSocket
 
 
 
-UnixDomainSocketAddress describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
+UnixSocket describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
 
 _Appears in:_

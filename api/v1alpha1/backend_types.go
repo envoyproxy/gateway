@@ -14,39 +14,17 @@ const (
 	KindBackend = "Backend"
 )
 
-// +kubebuilder:validation:Enum=FQDN;UDS;IPv4
+// +kubebuilder:validation:Enum=gateway.envoyproxy.io/h2c;gateway.envoyproxy.io/ws;gateway.envoyproxy.io/wss
 // +notImplementedHide
-type AddressType string
+type AppProtocolType string
 
 const (
-	// AddressTypeFQDN defines the RFC-1123 compliant fully qualified domain name address type.
-	AddressTypeFQDN ProtocolType = "FQDN"
-	// AddressTypeUDS defines the unix domain socket address type.
-	AddressTypeUDS ProtocolType = "UDS"
-	// AddressTypeIPv4 defines the IPv4 address type.
-	AddressTypeIPv4 ProtocolType = "IPv4"
-)
-
-// +kubebuilder:validation:Enum=TCP;UDP
-// +notImplementedHide
-type ProtocolType string
-
-const (
-	// ProtocolTypeTCP defines the TCP address protocol.
-	ProtocolTypeTCP ProtocolType = "TCP"
-	// ProtocolTypeUDP defines the UDP address protocol.
-	ProtocolTypeUDP ProtocolType = "UDP"
-)
-
-// +kubebuilder:validation:Enum=HTTP2;WS
-// +notImplementedHide
-type ApplicationProtocolType string
-
-const (
-	// ApplicationProtocolTypeHTTP2 defines the HTTP/2 application protocol.
-	ApplicationProtocolTypeHTTP2 ApplicationProtocolType = "HTTP2"
-	// ApplicationProtocolTypeWS defines the WebSocket over HTTP protocol.
-	ApplicationProtocolTypeWS ApplicationProtocolType = "WS"
+	// AppProtocolTypeH2C defines the HTTP/2 application protocol.
+	AppProtocolTypeH2C AppProtocolType = "gateway.envoyproxy.io/h2c"
+	// AppProtocolTypeWS defines the WebSocket over HTTP protocol.
+	AppProtocolTypeWS AppProtocolType = "gateway.envoyproxy.io/ws"
+	// AppProtocolTypeWSS defines the WebSocket over HTTP protocol.
+	AppProtocolTypeWSS AppProtocolType = "gateway.envoyproxy.io/wss"
 )
 
 // +kubebuilder:object:root=true
@@ -72,31 +50,54 @@ type Backend struct {
 // BackendAddress describes are backend address, which is can be either a TCP/UDP socket or a Unix Domain Socket
 // corresponding to Envoy's Host: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) || has(self.unixDomainSocketAddress))",message="one of socketAddress or unixDomainSocketAddress must be specified"
-// +kubebuilder:validation:XValidation:rule="(has(self.socketAddress) && !has(self.unixDomainSocketAddress)) || (!has(self.socketAddress) && has(self.unixDomainSocketAddress))",message="only one of socketAddress or unixDomainSocketAddress can be specified"
-// +kubebuilder:validation:XValidation:rule="((has(self.socketAddress) && (self.type == 'FQDN' || self.type == 'IPv4')) || has(self.unixDomainSocketAddress) && self.type == 'UDS')",message="if type is FQDN or IPv4, socketAddress must be set; if type is UDS, unixDomainSocketAddress must be set"
+// +kubebuilder:validation:XValidation:rule="(has(self.fqdn) || has(self.ip) || has(self.unix))",message="one of fqdn, ip or unix must be specified"
+// +kubebuilder:validation:XValidation:rule="((has(self.fqdn) && !(has(self.ip) || has(self.unix))) || (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix) && !(has(self.ip) || has(self.fqdn))))",message="only one of fqdn, ip or unix can be specified"
 // +notImplementedHide
 type BackendAddress struct {
-	// Type is the the type name of the backend address: FQDN, UDS, IPv4
-	Type AddressType `json:"type"`
-
-	// NetworkSocket defines a FQDN or IPv4 address
+	// FQDN defines a FQDN address
 	//
 	// +optional
-	NetworkSocket *NetworkSocket `json:"networkSocket,omitempty"`
+	FQDN *FQDNAddress `json:"fqdn,omitempty"`
 
-	// UnixSocket defines the unix domain socket path
+	// IP defines a IPv4 address
 	//
 	// +optional
-	UnixSocket *UnixSocket `json:"unixSocket,omitempty"`
+	IP *IPAddress `json:"ip,omitempty"`
+
+	// Unix defines the unix domain socket path
+	//
+	// +optional
+	Unix *UnixSocket `json:"unix,omitempty"`
 }
 
-// NetworkSocket describes TCP/UDP socket address, corresponding to Envoy's NetworkSocket
+// IPAddress describes TCP/UDP socket address, corresponding to Envoy's Socket Address
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 // +notImplementedHide
-type NetworkSocket struct {
-	// Host defines to the FQDN or IP address of the backend service.
-	Host string `json:"address"`
+type IPAddress struct {
+	// Host defines to the IPv4 address of the backend service.
+	//
+	// +kubebuilder:validation:MinLength=7
+	// +kubebuilder:validation:MaxLength=15
+	// +kubebuilder:validation:Pattern=`^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
+	Host string `json:"host"`
+
+	// Port defines to the port of of the backend service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int32 `json:"port"`
+}
+
+// FQDNAddress describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+// +notImplementedHide
+type FQDNAddress struct {
+	// Host defines to the FQDN address of the backend service.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Host string `json:"host"`
 
 	// Port defines to the port of of the backend service.
 	//
@@ -117,13 +118,13 @@ type UnixSocket struct {
 type BackendSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=4
-	// +kubebuilder:validation:XValidation:rule="self.all(f, f.type == 'FQDN') || !self.exists(f, f.type == 'FQDN')",message="FQDN addresses cannot be mixed with other address types"
+	// +kubebuilder:validation:XValidation:rule="self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))",message="fqdn addresses cannot be mixed with other address types"
 	BackendAddresses []BackendAddress `json:"addresses,omitempty"`
 
-	// ApplicationProtocol defines the application protocol to be used, e.g. HTTP2.
+	// AppProtocols defines the application protocol to be used, e.g. HTTP2.
 	//
 	// +optional
-	ApplicationProtocol *ApplicationProtocolType `json:"applicationProtocol,omitempty"`
+	AppProtocols []AppProtocolType `json:"applicationProtocol,omitempty"`
 }
 
 // BackendStatus defines the state of Backend
