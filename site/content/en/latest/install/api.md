@@ -60,7 +60,5 @@ The Helm chart for Envoy Gateway
 | images.envoyGateway.tag | string | `"latest"` |  |
 | images.ratelimit.repository | string | `"docker.io/envoyproxy/ratelimit"` |  |
 | images.ratelimit.tag | string | `"master"` |  |
-| images.shutdownManager.repository | string | `"docker.io/envoyproxy/gateway"` |  |
-| images.shutdownManager.tag | string | `"latest"` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 
