@@ -85,7 +85,7 @@ func TestBackend(t *testing.T) {
 			desc: "unsupported application protocol type",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolType("HTTP7")},
+					AppProtocols: []egv1a1.AppProtocolType{"HTTP7"},
 					BackendAddresses: []egv1a1.BackendAddress{
 						{
 							FQDN: &egv1a1.FQDNAddress{
@@ -96,7 +96,7 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.applicationProtocol[0]: Unsupported value: \"HTTP7\": supported values: \"gateway.envoyproxy.io/h2c\", \"gateway.envoyproxy.io/ws\", \"gateway.envoyproxy.io/wss\""},
+			wantErrors: []string{"spec.appProtocols[0]: Unsupported value: \"HTTP7\": supported values: \"gateway.envoyproxy.io/h2c\", \"gateway.envoyproxy.io/ws\", \"gateway.envoyproxy.io/wss\""},
 		},
 		{
 			desc: "No address",
