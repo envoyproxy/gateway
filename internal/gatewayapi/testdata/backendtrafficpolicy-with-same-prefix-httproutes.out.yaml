@@ -182,10 +182,6 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        circuitBreaker:
-          maxConnections: 2048
-          maxParallelRequests: 4294967295
-          maxPendingRequests: 1
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -202,6 +198,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          circuitBreaker:
+            maxConnections: 2048
+            maxParallelRequests: 4294967295
+            maxPendingRequests: 1
       - backendWeights:
           invalid: 0
           valid: 0
