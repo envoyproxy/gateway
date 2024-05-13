@@ -954,7 +954,9 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
-	// Weight associated with this destination.
+	// Weight associated with this destination,
+	// invalid endpoints are represents with a
+	// non-zero weight with an empty endpoints list
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
