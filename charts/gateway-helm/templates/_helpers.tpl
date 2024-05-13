@@ -71,7 +71,7 @@ provider:
         image: {{ .Values.images.ratelimit.repository }}:{{ .Values.images.ratelimit.tag | default "master" }}
         {{- end }}
     shutdownManager:
-      {{- if .Values.images.shutdownManager.repository }}
-      image: {{ .Values.images.shutdownManager.repository }}:{{ .Values.images.shutdownManager.tag | default "latest" }}
+      {{- if .Values.images.envoyGateway.repository }}
+      image: {{ .Values.images.envoyGateway.repository }}:{{ .Values.images.envoyGateway.tag | default .Chart.AppVersion }}
       {{- end }}
 {{- end }}

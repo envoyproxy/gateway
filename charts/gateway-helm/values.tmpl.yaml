@@ -4,9 +4,6 @@ images:
   envoyGateway:
     repository: ${ImageRepository}
     tag: '${ImageTag}'
-  shutdownManager:
-    repository: ${ImageRepository}
-    tag: '${ImageTag}'
   ratelimit:
     repository: docker.io/envoyproxy/ratelimit
     tag: 'master'
