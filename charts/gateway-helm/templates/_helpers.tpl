@@ -82,9 +82,6 @@ Pull policy for the Envoy Gateway image.
 {{- end }}
 
 {{/*
-{{- end }}
-
-{{/*
 Pull secrets for the Envoy Gateway image.
 */}}
 {{- define "eg.image.pullSecrets" -}}
