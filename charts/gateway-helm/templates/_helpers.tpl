@@ -78,7 +78,10 @@ docker.io/envoyproxy/gateway:{{ .Chart.Version }}
 Pull policy for the Envoy Gateway image.
 */}}
 {{- define "eg.image.pullPolicy" -}}
-{{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.envoyGateway.pullPolicy}}
+{{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.envoyGateway.pullPolicy | default "IfNotPresent" }}
+{{- end }}
+
+{{/*
 {{- end }}
 
 {{/*
