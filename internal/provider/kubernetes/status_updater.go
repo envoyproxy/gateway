@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -21,6 +22,7 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 // Update contains an all the information needed to update an object's status.
@@ -66,9 +68,26 @@ func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
 }
 
 func (u *UpdateHandler) apply(update Update) {
-	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		obj := update.Resource
+	var (
+		startTime = time.Now()
+		obj       = update.Resource
+		objKind   = kindOf(obj)
+	)
 
+	statusUpdateTotal.With(kindLabel.Value(objKind)).Increment()
+
+	defer func() {
+		updateDuration := time.Since(startTime)
+		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
+	}()
+
+	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
+		if kerrors.IsConflict(err) {
+			statusUpdateConflict.With(kindLabel.Value(objKind)).Increment()
+			return true
+		}
+		return false
+	}, func() error {
 		// Get the resource.
 		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
 			if kerrors.IsNotFound(err) {
@@ -83,6 +102,8 @@ func (u *UpdateHandler) apply(update Update) {
 			u.log.WithName(update.NamespacedName.Name).
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")
+
+			statusUpdateNoop.With(kindLabel.Value(objKind)).Increment()
 			return nil
 		}
 
@@ -92,6 +113,10 @@ func (u *UpdateHandler) apply(update Update) {
 	}); err != nil {
 		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
 			"namespace", update.NamespacedName.Namespace)
+
+		statusUpdateFailed.With(kindLabel.Value(objKind)).Increment()
+	} else {
+		statusUpdateSuccess.With(kindLabel.Value(objKind)).Increment()
 	}
 }
 
@@ -162,8 +187,10 @@ func (u *UpdateWriter) Send(update Update) {
 //	GRPCRoute
 //	EnvoyPatchPolicy
 //	ClientTrafficPolicy
+//	BackendTrafficPolicy
 //	SecurityPolicy
 //	BackendTLSPolicy
+//	EnvoyExtensionPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
@@ -233,7 +260,7 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case gwapiv1a3.BackendTLSPolicy:
+	case *gwapiv1a3.BackendTLSPolicy:
 		if b, ok := objB.(*gwapiv1a3.BackendTLSPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
@@ -247,4 +274,58 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	}
 	return false
+}
+
+// kindOf returns the known kind string for the given Kubernetes object,
+// returns Unknown for the unsupported object.
+//
+// Supported objects:
+//
+//	GatewayClasses
+//	Gateway
+//	HTTPRoute
+//	TLSRoute
+//	TCPRoute
+//	UDPRoute
+//	GRPCRoute
+//	EnvoyPatchPolicy
+//	ClientTrafficPolicy
+//	BackendTrafficPolicy
+//	SecurityPolicy
+//	BackendTLSPolicy
+//	EnvoyExtensionPolicy
+func kindOf(obj interface{}) string {
+	var kind string
+	switch obj.(type) {
+	case *gwapiv1.GatewayClass:
+		kind = gatewayapi.KindGatewayClass
+	case *gwapiv1.Gateway:
+		kind = gatewayapi.KindGateway
+	case *gwapiv1.HTTPRoute:
+		kind = gatewayapi.KindHTTPRoute
+	case *gwapiv1a2.TLSRoute:
+		kind = gatewayapi.KindTLSRoute
+	case *gwapiv1a2.TCPRoute:
+		kind = gatewayapi.KindTCPRoute
+	case *gwapiv1a2.UDPRoute:
+		kind = gatewayapi.KindUDPRoute
+	case *gwapiv1.GRPCRoute:
+		kind = gatewayapi.KindGRPCRoute
+	case *egv1a1.EnvoyPatchPolicy:
+		kind = gatewayapi.KindEnvoyPatchPolicy
+	case *egv1a1.ClientTrafficPolicy:
+		kind = gatewayapi.KindClientTrafficPolicy
+	case *egv1a1.BackendTrafficPolicy:
+		kind = gatewayapi.KindBackendTrafficPolicy
+	case *egv1a1.SecurityPolicy:
+		kind = gatewayapi.KindSecurityPolicy
+	case *egv1a1.EnvoyExtensionPolicy:
+		kind = gatewayapi.KindEnvoyExtensionPolicy
+	case *gwapiv1a3.BackendTLSPolicy:
+		kind = gatewayapi.KindBackendTLSPolicy
+	default:
+		kind = "Unknown"
+	}
+
+	return kind
 }
