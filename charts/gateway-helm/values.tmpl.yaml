@@ -17,7 +17,8 @@ global:
       # Default behavior: latest images will be Always else IfNotPresent.
       pullPolicy: IfNotPresent
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
-      imagePullSecrets: []
+      # imagePullSecrets: [] TODO: zhaohuabing add support for imagePullSecrets for ratelimit
+    # statsd: TODO: zhaohuabing add custom image support for statsd image
 
 deployment:
   envoyGateway:
