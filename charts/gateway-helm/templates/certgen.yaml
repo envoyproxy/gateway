@@ -32,7 +32,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
         image: {{ include "eg.image" . }}
-        imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.imagePullPolicy}}
+        imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.envoyGateway.pullPolicy}}
         name: envoy-gateway-certgen
         {{- with .Values.certgen.job.resources }}
         resources:

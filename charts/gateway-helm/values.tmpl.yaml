@@ -4,13 +4,13 @@ global:
   images:
     # The default hub for the images
     hub: '${ImageHub}'
-    # Specify image pull policy if default behavior isn't desired.
-    # Default behavior: latest images will be Always else IfNotPresent.
-    imagePullPolicy: ${ImagePullPolicy}
     envoyGateway:
       # This can be just the repo name or the full hub/repo name. If it's just the repo name, the default hub will be used.
       image: '${GatewayImageRepository}'
       tag: '${GatewayImageTag}'
+      # Specify image pull policy if default behavior isn't desired.
+      # Default behavior: latest images will be Always else IfNotPresent.
+      pullPolicy: ${GatewayImagePullPolicy}
     ratelimit:
       # This can be just the repo name or the full hub/repo name. If it's just the repo name, the default hub will be used.
       image: ratelimit

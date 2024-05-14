@@ -30,7 +30,7 @@ helm-install: helm-generate ## Install envoy gateway helm chart from OCI registr
 
 .PHONY: helm-generate
 helm-generate:
-	ImageHub=${HUB} GatewayImageRepository=${REPO} GatewayImageTag=${TAG} ImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
+	ImageHub=${HUB} GatewayImageRepository=${REPO} GatewayImageTag=${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
 	helm lint charts/gateway-helm
 
 helm-template: ## Template envoy gateway helm chart.z
