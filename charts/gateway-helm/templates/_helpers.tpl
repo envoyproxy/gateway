@@ -83,7 +83,7 @@ imagePullSecrets: []
 {{- end }}
 {{- end }}
 
-{{- define "envoy-gateway-config" -}}
+{{- define "eg.default-envoy-gateway-config" -}}
 provider:
   type: Kubernetes
   kubernetes:
