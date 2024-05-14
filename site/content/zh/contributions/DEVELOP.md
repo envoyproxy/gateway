@@ -46,7 +46,7 @@ Envoy Gateway 使用基于 [make][] 的构建系统进行构建。我们的 CI �
 
 * 运行 `make test` 来运行 golang 测试。
 
-* 运行 `make testdata` 生成黄金 YAML 测试数据文件。
+* 运行 `make testdata` 生成标准的 YAML 测试数据文件。
 
 ### 运行 Linter {#running-linters}
 
