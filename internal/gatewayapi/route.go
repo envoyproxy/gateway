@@ -248,8 +248,8 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		var rto *ir.Timeout
 
 		// Timeout is translated from multiple resources and may already be partially set
-		if irRoute.Timeout != nil {
-			rto = irRoute.Timeout.DeepCopy()
+		if irRoute.Traffic != nil && irRoute.Traffic.Timeout != nil {
+			rto = irRoute.Traffic.Timeout.DeepCopy()
 		} else {
 			rto = &ir.Timeout{}
 		}
@@ -272,7 +272,9 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			setRequestTimeout(rto, metav1.Duration{Duration: d})
 		}
 
-		irRoute.Timeout = rto
+		irRoute.Traffic = &ir.TrafficFeatures{
+			Timeout: rto,
+		}
 	}
 }
 
@@ -681,13 +683,17 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
-					Timeout:               routeRoute.Timeout,
-					Retry:                 routeRoute.Retry,
 					IsHTTP2:               routeRoute.IsHTTP2,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
 					hostRoute.BackendWeights = routeRoute.BackendWeights
+				}
+				if routeRoute.Traffic != nil {
+					hostRoute.Traffic = &ir.TrafficFeatures{
+						Timeout: routeRoute.Traffic.Timeout,
+						Retry:   routeRoute.Traffic.Retry,
+					}
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
@@ -793,7 +799,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			if irListener != nil {
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
-					TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
+					TLS: &ir.TLS{TLSInspectorConfig: &ir.TLSInspectorConfig{
 						SNIs: hosts,
 					}},
 					Destination: &ir.RouteDestination{
@@ -1082,6 +1088,14 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			accepted = true
 			irKey := t.getIRKey(listener.gateway)
 
+			tls := ir.TLS{
+				Terminate: irTLSConfigs(listener.tlsSecrets),
+			}
+			if listener.Hostname != nil {
+				tls.TLSInspectorConfig = &ir.TLSInspectorConfig{
+					SNIs: []string{string(*listener.Hostname)},
+				}
+			}
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
@@ -1091,7 +1105,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
 						Settings: destSettings,
 					},
-					TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
+					TLS: &tls,
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 

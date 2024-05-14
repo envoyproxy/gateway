@@ -129,6 +129,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout:
-          http:
-            requestTimeout: 5s
+        traffic:
+          timeout:
+            http:
+              requestTimeout: 5s
