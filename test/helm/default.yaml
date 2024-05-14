@@ -375,7 +375,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: 
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
@@ -523,7 +523,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: 
+        imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
       restartPolicy: Never
       securityContext:
