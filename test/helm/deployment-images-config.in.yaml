@@ -7,5 +7,5 @@ deployment:
       tag: abcdef12
     imagePullPolicy: IfNotPresent
     imagePullSecrets:
-      - name: "secret1"
-      - name: "secret2"
+    - name: "secret1"
+    - name: "secret2"
