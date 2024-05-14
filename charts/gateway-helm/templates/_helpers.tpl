@@ -61,6 +61,9 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
+{{/*
+The name of the Envoy Gateway image.
+*/}}
 {{- define "eg.image" -}}
 {{- if .Values.deployment.envoyGateway.image.repository }}
 {{- .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
@@ -71,6 +74,9 @@ docker.io/envoyproxy/gateway:{{ .Chart.Version }}
 {{- end }}
 {{- end }}
 
+{{/*
+Pull secrets for the Envoy Gateway image
+*/}}
 {{- define "eg.image.pullSecrets" -}}
 {{- if .Values.deployment.envoyGateway.imagePullSecrets -}}
 imagePullSecrets:
@@ -83,6 +89,9 @@ imagePullSecrets: []
 {{- end }}
 {{- end }}
 
+{{/*
+The default Envoy Gateway configuration.
+*/}}
 {{- define "eg.default-envoy-gateway-config" -}}
 provider:
   type: Kubernetes
