@@ -63,11 +63,11 @@ Create the name of the service account to use
 
 {{- define "eg.image" -}}
 {{- if .Values.deployment.envoyGateway.image.repository }}
-{{- .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Values.global.images.envoyGateway.tag | default .Chart.AppVersion}}
-{{- else if contains "/" .Values.global.images.envoyGateway.image}}
-{{- .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
+{{- .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
+{{- else if .Values.global.images.envoyGateway.image }}
+{{- .Values.global.images.envoyGateway.image }}
 {{- else }}
-{{- .Values.global.images.hub }}/{{ .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
+docker.io/envoyproxy/gateway:{{ .Chart.Version }}
 {{- end }}
 {{- end }}
 
@@ -77,10 +77,10 @@ provider:
   kubernetes:
     rateLimitDeployment:
       container:
-        {{- if contains "/" .Values.global.images.ratelimit.image }}
-        image: "{{ .Values.global.images.ratelimit.image }}:{{ .Values.global.images.ratelimit.tag | default "master" }}
+        {{- if .Values.global.images.ratelimit.image }}
+        image: {{ .Values.global.images.ratelimit.image }}
         {{- else }}
-        image: {{ .Values.global.images.hub }}/{{ .Values.global.images.ratelimit.image }}:{{ .Values.global.images.ratelimit.tag | default "master" }}
+        image: "docker.io/envoyproxy/ratelimit:master"
         {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}

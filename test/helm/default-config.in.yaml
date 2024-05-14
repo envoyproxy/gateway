@@ -1,4 +1,4 @@
 global:
   images:
     envoyGateway:
-      tag: latest
+      image: "docker.io/envoyproxy/gateway-dev:latest"

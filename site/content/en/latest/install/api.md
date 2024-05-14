@@ -55,11 +55,11 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].port | int | `19001` |  |
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
-| global.images.envoyGateway.image | string | `""` |  |
+| global.images.envoyGateway.image | string | `nil` |  |
+| global.images.envoyGateway.imagePullSecrets | list | `[]` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
-| global.images.envoyGateway.tag | string | `""` |  |
-| global.images.hub | string | `""` |  |
-| global.images.ratelimit.image | string | `"ratelimit"` |  |
-| global.images.ratelimit.tag | string | `"master"` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
+| global.images.ratelimit.imagePullSecrets | list | `[]` |  |
+| global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 

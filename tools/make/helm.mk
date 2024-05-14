@@ -8,8 +8,6 @@ IMAGE_PULL_POLICY ?= IfNotPresent
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
-HUB := $(word 1,$(subst /, ,${IMAGE}))/$(word 2,$(subst /, ,${IMAGE})) # Extract the first word after splitting by '/'
-REPO := $(word 3,$(subst /, ,${IMAGE})) # Get the remaining words after the first
 
 ##@ Helm
 helm-package:
@@ -30,7 +28,7 @@ helm-install: helm-generate ## Install envoy gateway helm chart from OCI registr
 
 .PHONY: helm-generate
 helm-generate:
-	ImageHub=${HUB} GatewayImageRepository=${REPO} GatewayImageTag=${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
+	GatewayImage=${REPO}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
 	helm lint charts/gateway-helm
 
 HELM_VALUES := $(wildcard test/helm/*.in.yaml)
