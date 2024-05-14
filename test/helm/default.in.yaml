@@ -1,0 +1,4 @@
+global:
+  images:
+    envoyGateway:
+      tag: latest

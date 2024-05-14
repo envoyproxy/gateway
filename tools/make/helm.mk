@@ -33,6 +33,12 @@ helm-generate:
 	ImageHub=${HUB} GatewayImageRepository=${REPO} GatewayImageTag=${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
 	helm lint charts/gateway-helm
 
+HELM_VALUES := $(wildcard test/helm/*.in.yaml)
+
 helm-template: ## Template envoy gateway helm chart.z
 	@$(LOG_TARGET)
-	helm template eg charts/gateway-helm --set global.images.envoyGateway.tag=latest > ./test/helm/default.yaml --namespace=envoy-gateway-system
+	@for file in $(HELM_VALUES); do \
+  		filename=$$(basename $${file}); \
+  		output="$${filename%.in.*}.out.yaml"; \
+		helm template envoy-gateway charts/gateway-helm -f $${file} > test/helm/$$output; \
+	done
