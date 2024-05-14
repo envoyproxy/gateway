@@ -7,8 +7,6 @@ weight = -100
 
 Envoy Gateway can be installed via a Helm chart with a few simple steps, depending on if you are deploying for the first time, upgrading Envoy Gateway from an existing installation, or migrating from Envoy Gateway.
 
-You can get more information by referring to [README.md](https://github.com/envoyproxy/gateway/blob/main/charts/gateway-helm/README.md).
-
 ## Before you begin
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
@@ -63,7 +61,11 @@ consideration when debugging.
 
 ## Helm chart customizations
 
-Some of the quick ways of using the helm install command for envoy gateway installation are below. 
+Some of the quick ways of using the helm install command for envoy gateway installation are below.
+
+{{% alert title="Helm Chart Values" color="primary" %}}
+If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../api).
+{{% /alert %}}
 
 ### Increase the replicas
 
@@ -115,10 +117,6 @@ You can use the below command to install the envoy gateway using values.yaml fil
 ```shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace -f values.yaml
 ```
-
-{{% alert title="Helm Chart Values" color="primary" %}}
-If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../api).
-{{% /alert %}}
 
 ## Open Ports
 
