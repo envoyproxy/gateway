@@ -72,10 +72,10 @@ docker.io/envoyproxy/gateway:{{ .Chart.Version }}
 {{- end }}
 
 {{- define "eg.image.pullSecrets" -}}
-{{- if .Values.deployment.envoyGateway.imagePullSecrets }}
+{{- if .Values.deployment.envoyGateway.imagePullSecrets -}}
 imagePullSecrets:
 {{ toYaml .Values.deployment.envoyGateway.imagePullSecrets }}
-{{- else if .Values.global.images.envoyGateway.imagePullSecrets }}
+{{- else if .Values.global.images.envoyGateway.imagePullSecrets -}}
 imagePullSecrets:
 {{ toYaml .Values.global.images.envoyGateway.imagePullSecrets }}
 {{- end }}
