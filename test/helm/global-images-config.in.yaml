@@ -1,0 +1,10 @@
+global:
+  images:
+    hub: private-hub/envoyproxy
+    envoyGateway:
+      image: gateway-fips
+      tag: abcdef12
+      pullPolicy: Always
+    ratelimit:
+      image: ratelimit-fips
+      tag: 'test'

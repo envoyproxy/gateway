@@ -83,9 +83,5 @@ provider:
         image: {{ .Values.global.images.hub }}/{{ .Values.global.images.ratelimit.image }}:{{ .Values.global.images.ratelimit.tag | default "master" }}
         {{- end }}
     shutdownManager:
-      {{- if contains "/" .Values.global.images.envoyGateway.image }}
-      image: "{{ .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
-      {{- else }}
-      image: {{ .Values.global.images.hub }}/{{ .Values.global.images.envoyGateway.image }}:{{ .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
-      {{- end }}
+      image: {{ include "eg.image" . }}
 {{- end }}
