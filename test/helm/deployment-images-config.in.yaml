@@ -6,3 +6,6 @@ deployment:
       repository: private-hub/envoyproxy/gateway-fips
       tag: abcdef12
     imagePullPolicy: IfNotPresent
+    imagePullSecrets:
+      - name: "secret1"
+      - name: "secret2"

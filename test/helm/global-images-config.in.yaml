@@ -3,5 +3,8 @@ global:
     envoyGateway:
       image: "private-hub/envoyproxy/gateway-fips:abcdef12"
       pullPolicy: Always
+      imagePullSecrets:
+      - name: "secret1"
+      - name: "secret2"
     ratelimit:
       image: "private-hub/envoyproxy/ratelimit-fips:test"

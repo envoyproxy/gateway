@@ -38,10 +38,7 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-      {{- with .Values.deployment.envoyGateway.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "eg.image.pullSecrets" . | nindent 6 }}
       restartPolicy: Never
       securityContext:
         runAsGroup: 65534

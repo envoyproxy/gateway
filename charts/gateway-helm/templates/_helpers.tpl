@@ -71,6 +71,16 @@ docker.io/envoyproxy/gateway:{{ .Chart.Version }}
 {{- end }}
 {{- end }}
 
+{{- define "eg.image.pullSecrets" -}}
+{{- if .Values.deployment.envoyGateway.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml .Values.deployment.envoyGateway.imagePullSecrets | nindent 0 }}
+{{- else if .Values.global.images.envoyGateway.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml .Values.global.images.envoyGateway.imagePullSecrets | nindent 0 }}
+{{- end }}
+{{- end }}
+
 {{- define "envoy-gateway-config" -}}
 provider:
   type: Kubernetes

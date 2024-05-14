@@ -80,10 +80,7 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      {{- with .Values.deployment.envoyGateway.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "eg.image.pullSecrets" . | nindent 6 }}
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway

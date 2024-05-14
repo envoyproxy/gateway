@@ -412,6 +412,10 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+      
+      imagePullSecrets:
+      - name: secret1
+      - name: secret2
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway
@@ -525,6 +529,10 @@ spec:
         image: private-hub/envoyproxy/gateway-fips:abcdef12
         imagePullPolicy: Always
         name: envoy-gateway-certgen
+      
+      imagePullSecrets:
+      - name: secret1
+      - name: secret2
       restartPolicy: Never
       securityContext:
         runAsGroup: 65534
