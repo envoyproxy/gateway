@@ -75,7 +75,14 @@ docker.io/envoyproxy/gateway:{{ .Chart.Version }}
 {{- end }}
 
 {{/*
-Pull secrets for the Envoy Gateway image
+Pull policy for the Envoy Gateway image.
+*/}}
+{{- define "eg.image.pullPolicy" -}}
+{{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.envoyGateway.pullPolicy}}
+{{- end }}
+
+{{/*
+Pull secrets for the Envoy Gateway image.
 */}}
 {{- define "eg.image.pullSecrets" -}}
 {{- if .Values.deployment.envoyGateway.imagePullSecrets -}}
