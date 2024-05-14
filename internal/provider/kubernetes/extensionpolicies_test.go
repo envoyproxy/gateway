@@ -9,15 +9,17 @@ import (
 	"context"
 	"testing"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/stretchr/testify/require"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestProcessExtensionPolicies(t *testing.T) {
@@ -218,7 +220,7 @@ func TestProcessExtensionPolicies(t *testing.T) {
 				objs = append(objs, policyObject)
 			}
 			if len(tc.extensionPolicyGroups) > 0 {
-				r.extServerPolicies = append(r.extGVKs, tc.extensionPolicyGroups...)
+				r.extServerPolicies = append(r.extServerPolicies, tc.extensionPolicyGroups...)
 			}
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
