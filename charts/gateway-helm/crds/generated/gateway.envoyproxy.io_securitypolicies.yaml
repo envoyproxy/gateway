@@ -49,6 +49,59 @@ spec:
           spec:
             description: Spec defines the desired state of SecurityPolicy.
             properties:
+              authorization:
+                description: Authorization defines the authorization configuration.
+                properties:
+                  defaultAction:
+                    description: |-
+                      DefaultAction defines the default action to be taken if no rules match.
+                      If not specified, the default action is Deny.
+                    enum:
+                    - Allow
+                    - Deny
+                    type: string
+                  rules:
+                    description: |-
+                      Rules defines a list of authorization rules.
+                      These rules are evaluated in order, the first matching rule will be applied,
+                      and the rest will be skipped.
+
+
+                      For example, if there are two rules: the first rule allows the request
+                      and the second rule denies it, when a request matches both rules, it will be allowed.
+                    items:
+                      description: Rule defines the single authorization rule.
+                      properties:
+                        action:
+                          description: Action defines the action to be taken if the
+                            rule matches.
+                          enum:
+                          - Allow
+                          - Deny
+                          type: string
+                        principal:
+                          description: Principal specifies the client identity of
+                            a request.
+                          properties:
+                            clientCIDR:
+                              description: |-
+                                ClientCIDR is the IP CIDR range of the client.
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+
+                                By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.
+                                You can use the `EnableProxyProtocol` and `ClientIPDetection` options in
+                                the `ClientTrafficPolicy` to configure how the client IP is detected.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                      required:
+                      - action
+                      - principal
+                      type: object
+                    type: array
+                type: object
               basicAuth:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.

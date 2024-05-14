@@ -156,4 +156,5 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic: {}
         useClientProtocol: true
