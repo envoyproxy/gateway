@@ -61,10 +61,10 @@ type BackendEndpoint struct {
 	// +optional
 	FQDN *FQDNEndpoint `json:"fqdn,omitempty"`
 
-	// IP defines an IPv4 endpoint
+	// IPv4 defines an IPv4 endpoint
 	//
 	// +optional
-	IP *IPv4Endpoint `json:"ipv4,omitempty"`
+	IPv4 *IPv4Endpoint `json:"ipv4,omitempty"`
 
 	// Unix defines the unix domain socket endpoint
 	//

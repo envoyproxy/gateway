@@ -93,7 +93,7 @@ spec:
                       - port
                       type: object
                     ipv4:
-                      description: IP defines an IPv4 endpoint
+                      description: IPv4 defines an IPv4 endpoint
                       properties:
                         address:
                           description: Address defines the IPv4 address of the backend

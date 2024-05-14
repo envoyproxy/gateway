@@ -238,8 +238,8 @@ func (in *BackendEndpoint) DeepCopyInto(out *BackendEndpoint) {
 		*out = new(FQDNEndpoint)
 		**out = **in
 	}
-	if in.IP != nil {
-		in, out := &in.IP, &out.IP
+	if in.IPv4 != nil {
+		in, out := &in.IPv4, &out.IPv4
 		*out = new(IPv4Endpoint)
 		**out = **in
 	}

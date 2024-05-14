@@ -48,7 +48,7 @@ func TestBackend(t *testing.T) {
 							},
 						},
 						{
-							IP: &egv1a1.IPv4Endpoint{
+							IPv4: &egv1a1.IPv4Endpoint{
 								Address: "1.1.1.1",
 								Port:    443,
 							},
@@ -141,7 +141,7 @@ func TestBackend(t *testing.T) {
 							},
 						},
 						{
-							IP: &egv1a1.IPv4Endpoint{
+							IPv4: &egv1a1.IPv4Endpoint{
 								Address: "1.1.1.1",
 								Port:    443,
 							},
@@ -192,31 +192,31 @@ func TestBackend(t *testing.T) {
 			},
 		},
 		{
-			desc: "Invalid IP",
+			desc: "Invalid IPv4",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					BackendEndpoints: []egv1a1.BackendEndpoint{
 						{
-							IP: &egv1a1.IPv4Endpoint{
+							IPv4: &egv1a1.IPv4Endpoint{
 								Address: "300.0.0.0",
 								Port:    443,
 							},
 						},
 						{
-							IP: &egv1a1.IPv4Endpoint{
+							IPv4: &egv1a1.IPv4Endpoint{
 								Address: "0.0.0.0:443",
 								Port:    443,
 							},
 						},
 						{
-							IP: &egv1a1.IPv4Endpoint{
+							IPv4: &egv1a1.IPv4Endpoint{
 								Address: "0.0.0.0/12",
 								Port:    443,
 							},
 						},
 						{
-							IP: &egv1a1.IPv4Endpoint{
+							IPv4: &egv1a1.IPv4Endpoint{
 								Address: "a.b.c.e",
 								Port:    443,
 							},
