@@ -38,5 +38,5 @@ helm-template: ## Template envoy gateway helm chart.z
 	@for file in $(HELM_VALUES); do \
   		filename=$$(basename $${file}); \
   		output="$${filename%.in.*}.out.yaml"; \
-		helm template envoy-gateway charts/gateway-helm -f $${file} > test/helm/$$output; \
+		helm template eg charts/gateway-helm -f $${file} > test/helm/$$output --namespace=envoy-gateway-system; \
 	done
