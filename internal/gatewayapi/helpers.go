@@ -366,7 +366,7 @@ func irTCPRouteName(route RouteContext) string {
 }
 
 func irUDPRouteName(route RouteContext) string {
-	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return irTCPRouteName(route)
 }
 
 func irRouteDestinationName(route RouteContext, ruleIdx int) string {
