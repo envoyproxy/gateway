@@ -412,7 +412,6 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      
       imagePullSecrets:
       - name: secret1
       - name: secret2
@@ -529,7 +528,6 @@ spec:
         image: private-hub/envoyproxy/gateway-fips:abcdef12
         imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
-      
       imagePullSecrets:
       - name: secret1
       - name: secret2
