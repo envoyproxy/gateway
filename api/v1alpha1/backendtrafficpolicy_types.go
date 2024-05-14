@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -103,6 +104,15 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
+
+	// PerConnectionBufferLimitBytes Soft limit on size of the cluster’s connections read and write buffers.
+	// If unspecified, an implementation defined default is applied (32768 bytes).
+	// For example, 20Mi, 1Gi, 256Ki etc.
+	// Note: that when the suffix is not provided, the value is interpreted as bytes.
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="PerConnectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +optional
+	PerConnectionBufferLimitBytes *resource.Quantity `json:"perConnectionBufferLimitBytes,omitempty"`
 }
 
 // +kubebuilder:object:root=true
