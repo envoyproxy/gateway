@@ -996,12 +996,12 @@ func (in *EnvoyGatewayMetricSink) DeepCopyInto(out *EnvoyGatewayMetricSink) {
 	}
 	if in.ExporterInterval != nil {
 		in, out := &in.ExporterInterval, &out.ExporterInterval
-		*out = new(ExporterDuration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.ExporterTimeout != nil {
 		in, out := &in.ExporterTimeout, &out.ExporterTimeout
-		*out = new(ExporterDuration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 }
