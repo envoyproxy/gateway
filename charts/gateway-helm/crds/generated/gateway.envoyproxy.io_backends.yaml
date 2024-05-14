@@ -65,8 +65,8 @@ spec:
                   type: string
                 type: array
               endpoints:
-                description: BackendEndpoints defines the endpoints to be used when
-                  connecting to the backend.
+                description: Endpoints defines the endpoints to be used when connecting
+                  to the backend.
                 items:
                   description: |-
                     BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket

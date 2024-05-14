@@ -41,7 +41,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendEndpoints: []egv1a1.BackendEndpoint{
+					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							Unix: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
@@ -63,7 +63,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendEndpoints: []egv1a1.BackendEndpoint{
+					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
 								Address: "example.com",
@@ -86,7 +86,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{"HTTP7"},
-					BackendEndpoints: []egv1a1.BackendEndpoint{
+					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
 								Address: "example.com",
@@ -102,8 +102,8 @@ func TestBackend(t *testing.T) {
 			desc: "No address",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					AppProtocols:     []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendEndpoints: []egv1a1.BackendEndpoint{{}},
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					Endpoints:    []egv1a1.BackendEndpoint{{}},
 				}
 			},
 			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": one of fqdn, ipv4 or unix must be specified"},
@@ -113,7 +113,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendEndpoints: []egv1a1.BackendEndpoint{
+					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
 								Address: "example.com",
@@ -133,7 +133,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendEndpoints: []egv1a1.BackendEndpoint{
+					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
 								Address: "example.com",
@@ -156,7 +156,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendEndpoints: []egv1a1.BackendEndpoint{
+					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
 								Address: "host name",
@@ -196,7 +196,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-					BackendEndpoints: []egv1a1.BackendEndpoint{
+					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							IPv4: &egv1a1.IPv4Endpoint{
 								Address: "300.0.0.0",

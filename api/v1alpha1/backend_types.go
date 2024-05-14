@@ -123,12 +123,12 @@ type UnixSocket struct {
 //
 // +notImplementedHide
 type BackendSpec struct {
-	// BackendEndpoints defines the endpoints to be used when connecting to the backend.
+	// Endpoints defines the endpoints to be used when connecting to the backend.
 	//
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=4
 	// +kubebuilder:validation:XValidation:rule="self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))",message="fqdn addresses cannot be mixed with other address types"
-	BackendEndpoints []BackendEndpoint `json:"endpoints,omitempty"`
+	Endpoints []BackendEndpoint `json:"endpoints,omitempty"`
 
 	// AppProtocols defines the application protocols to be supported when connecting to the backend.
 	//

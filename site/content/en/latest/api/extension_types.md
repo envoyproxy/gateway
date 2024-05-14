@@ -303,7 +303,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | BackendEndpoints defines the endpoints to be used when connecting to the backend. |
+| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 
 
