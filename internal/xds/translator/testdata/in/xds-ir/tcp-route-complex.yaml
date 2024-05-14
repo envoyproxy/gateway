@@ -5,7 +5,7 @@ tcp:
   routes:
   - name: "tcp-route-complex"
     tls:
-      passthrough:
+      inspector:
         snis:
         - foo.com
         - bar.com

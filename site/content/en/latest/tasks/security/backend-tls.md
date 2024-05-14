@@ -139,19 +139,19 @@ Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS conne
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: enable-backend-tls
   namespace: default
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: tls-backend
     sectionName: "443"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: example-ca
       group: ''
       kind: ConfigMap
@@ -165,19 +165,19 @@ Save and apply the following resource to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: enable-backend-tls
   namespace: default
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: tls-backend
     sectionName: "443"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: example-ca
       group: ''
       kind: ConfigMap

@@ -171,6 +171,21 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
+#### Authorization
+
+
+
+Authorization defines the authorization configuration.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `rules` | _[Rule](#rule) array_ |  false  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
+| `defaultAction` | _[RuleActionType](#ruleactiontype)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
+
+
 #### BackOffPolicy
 
 
@@ -379,7 +394,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
-| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
+| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
 #### ClientTLSSettings
@@ -562,8 +577,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | Valid Type values are  "SourceIP". |
-| `tableSize` | _integer_ |  false  | The table size for consistent hashing, must be prime number limited to 5000011. |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | ConsistentHashType defines the type of input to hash on. Valid Type values are "SourceIP" or "Header". |
+| `header` | _[Header](#header)_ |  false  | Header configures the header hash policy when the consistent hash type is set to Header. |
 
 
 #### ConsistentHashType
@@ -2253,6 +2268,20 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
+#### Principal
+
+
+
+Principal specifies the client identity of a request.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCIDR` | _string array_ |  true  | ClientCIDR is the IP CIDR range of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.<br />You can use the `EnableProxyProtocol` and `ClientIPDetection` options in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+
+
 #### ProcessingModeOptions
 
 
@@ -2882,6 +2911,37 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried.<br />The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
+
+
+#### Rule
+
+
+
+Rule defines the single authorization rule.
+
+_Appears in:_
+- [Authorization](#authorization)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
+| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
+
+
+#### RuleActionType
+
+_Underlying type:_ _string_
+
+RuleActionType specifies the types of authorization rule action.
+
+_Appears in:_
+- [Authorization](#authorization)
+- [Rule](#rule)
+
+| Value | Description |
+| ----- | ----------- |
+| `Allow` | Allow is the action to allow the request.<br /> | 
+| `Deny` | Deny is the action to deny the request.<br /> | 
 
 
 #### SecurityPolicy

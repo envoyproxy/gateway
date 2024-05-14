@@ -57,7 +57,7 @@ const (
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
 type ConsistentHash struct {
-	// Valid Type values are  "SourceIP".
+	// ConsistentHashType defines the type of input to hash on. Valid Type values are "SourceIP" or "Header".
 	//
 	// +unionDiscriminator
 	Type ConsistentHashType `json:"type"`
@@ -65,7 +65,6 @@ type ConsistentHash struct {
 	// Header configures the header hash policy when the consistent hash type is set to Header.
 	//
 	// +optional
-	// +notImplementedHide
 	Header *Header `json:"header,omitempty"`
 
 	// The table size for consistent hashing, must be prime number limited to 5000011.
