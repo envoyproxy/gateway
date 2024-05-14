@@ -448,7 +448,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 
 			if backendNamespace != policy.Namespace {
 				from := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindHTTPRoute,
+					kind:      gatewayapi.KindSecurityPolicy,
 					namespace: policy.Namespace,
 					name:      policy.Name,
 				}
