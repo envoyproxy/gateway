@@ -10,15 +10,16 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    rateLimit:
-      global:
-        rules:
-        - cidrMatch:
-            cidr: 192.168.0.0/16
-            maskLen: 16
-          limit:
-            requests: 5
-            unit: second
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - cidrMatch:
+              cidr: 192.168.0.0/16
+              maskLen: 16
+            limit:
+              requests: 5
+              unit: second
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -29,15 +30,16 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    rateLimit:
-      global:
-        rules:
-        - cidrMatch:
-            cidr: 192.168.0.0/24
-            maskLen: 24
-          limit:
-            requests: 5
-            unit: second
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - cidrMatch:
+              cidr: 192.168.0.0/24
+              maskLen: 24
+            limit:
+              requests: 5
+              unit: second
     pathMatch:
       exact: "example"
     destination:
@@ -48,12 +50,13 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    rateLimit:
-      global:
-        rules:
-        - limit:
-            requests: 5
-            unit: second
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - limit:
+              requests: 5
+              unit: second
     pathMatch:
       exact: "test"
     destination:
@@ -64,16 +67,17 @@ http:
           port: 50000
   - name: "fourth-route"
     hostname: "*"
-    rateLimit:
-      global:
-        rules:
-        - cidrMatch:
-            cidr: 192.168.0.0/16
-            maskLen: 16
-            distinct: true
-          limit:
-            requests: 5
-            unit: second
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - cidrMatch:
+              cidr: 192.168.0.0/16
+              maskLen: 16
+              distinct: true
+            limit:
+              requests: 5
+              unit: second
     pathMatch:
       exact: "distinct"
     destination:

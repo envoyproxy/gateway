@@ -339,8 +339,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
-	for _, ir := range xdsIR {
-		for _, tcp := range ir.TCP {
+	for _, x := range xdsIR {
+		for _, tcp := range x.TCP {
 			for _, r := range tcp.Routes {
 				if strings.HasPrefix(r.Destination.Name, prefix) {
 					r.LoadBalancer = lb
@@ -353,7 +353,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			}
 		}
 
-		for _, udp := range ir.UDP {
+		for _, udp := range x.UDP {
 			if udp.Route != nil {
 				route := udp.Route
 
@@ -364,27 +364,30 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			}
 		}
 
-		for _, http := range ir.HTTP {
+		for _, http := range x.HTTP {
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
-					r.RateLimit = rl
-					r.LoadBalancer = lb
-					r.ProxyProtocol = pp
-					r.HealthCheck = hc
-					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-					r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-					r.CircuitBreaker = cb
-					r.FaultInjection = fi
-					r.TCPKeepalive = ka
-					r.Retry = rt
+					r.Traffic = &ir.TrafficFeatures{
+						RateLimit:      rl,
+						LoadBalancer:   lb,
+						ProxyProtocol:  pp,
+						HealthCheck:    hc,
+						CircuitBreaker: cb,
+						FaultInjection: fi,
+						TCPKeepalive:   ka,
+						Retry:          rt,
+					}
 
-					// some timeout setting originate from the route
+					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+
+					// Some timeout setting originate from the route.
 					if policy.Spec.Timeout != nil {
 						if to, err = t.buildTimeout(policy, r); err != nil {
 							return errors.Wrap(err, "Timeout")
 						}
-						r.Timeout = to
+						r.Traffic.Timeout = to
 					}
 
 					if policy.Spec.UseClientProtocol != nil {
@@ -449,7 +452,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	// set by a policy attaching to the route
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
-	ir := xdsIR[irKey]
+	x := xdsIR[irKey]
 
 	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
 
@@ -459,7 +462,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	for _, tcp := range ir.TCP {
+	for _, tcp := range x.TCP {
 		gatewayName := tcp.Name[0:strings.LastIndex(tcp.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
@@ -485,7 +488,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	for _, udp := range ir.UDP {
+	for _, udp := range x.UDP {
 		gatewayName := udp.Name[0:strings.LastIndex(udp.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
@@ -508,7 +511,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	for _, http := range ir.HTTP {
+	for _, http := range x.HTTP {
 		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
@@ -519,52 +522,29 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			// TODO: zhaohuabing group the features into a struct and check if all of them are set
-			if r.RateLimit != nil || r.LoadBalancer != nil ||
-				r.ProxyProtocol != nil || r.HealthCheck != nil ||
-				r.CircuitBreaker != nil || r.FaultInjection != nil ||
-				r.TCPKeepalive != nil || r.Retry != nil ||
-				r.Timeout != nil {
+			if r.Traffic != nil {
 				continue
 			}
 
-			// Apply if not already set
-			if r.RateLimit == nil {
-				r.RateLimit = rl
-			}
-			if r.LoadBalancer == nil {
-				r.LoadBalancer = lb
-			}
-			if r.ProxyProtocol == nil {
-				r.ProxyProtocol = pp
-			}
-			if r.HealthCheck == nil {
-				r.HealthCheck = hc
-				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-				r.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+			r.Traffic = &ir.TrafficFeatures{
+				RateLimit:      rl,
+				LoadBalancer:   lb,
+				ProxyProtocol:  pp,
+				HealthCheck:    hc,
+				CircuitBreaker: cb,
+				FaultInjection: fi,
+				TCPKeepalive:   ka,
+				Retry:          rt,
 			}
 
-			if r.CircuitBreaker == nil {
-				r.CircuitBreaker = cb
-			}
-			if r.FaultInjection == nil {
-				r.FaultInjection = fi
-			}
-			if r.TCPKeepalive == nil {
-				r.TCPKeepalive = ka
-			}
-			if r.Retry == nil {
-				r.Retry = rt
-			}
+			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 			if policy.Spec.Timeout != nil {
 				if ct, err = t.buildTimeout(policy, r); err != nil {
 					return errors.Wrap(err, "Timeout")
 				}
-
-				if r.Timeout == nil {
-					r.Timeout = ct
-				}
+				r.Traffic.Timeout = ct
 			}
 
 			if policy.Spec.UseClientProtocol != nil {
@@ -1076,13 +1056,17 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 
 	// http request timeout is translated during the gateway-api route resource translation
 	// merge route timeout setting with backendtrafficpolicy timeout settings
-	if r != nil && r.Timeout != nil && r.Timeout.HTTP != nil && r.Timeout.HTTP.RequestTimeout != nil {
+	if r != nil &&
+		r.Traffic != nil &&
+		r.Traffic.Timeout != nil &&
+		r.Traffic.Timeout.HTTP != nil &&
+		r.Traffic.Timeout.HTTP.RequestTimeout != nil {
 		if hto == nil {
 			hto = &ir.HTTPTimeout{
-				RequestTimeout: r.Timeout.HTTP.RequestTimeout,
+				RequestTimeout: r.Traffic.Timeout.HTTP.RequestTimeout,
 			}
 		} else {
-			hto.RequestTimeout = r.Timeout.HTTP.RequestTimeout
+			hto.RequestTimeout = r.Traffic.Timeout.HTTP.RequestTimeout
 		}
 	}
 

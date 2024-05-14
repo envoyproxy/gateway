@@ -32,23 +32,39 @@ func Test_buildHashPolicy(t *testing.T) {
 			want:      nil,
 		},
 		{
-			name:      "Nil ConsistentHash in LoadBalancer",
-			httpRoute: &ir.HTTPRoute{LoadBalancer: &ir.LoadBalancer{}},
-			want:      nil,
+			name: "Nil ConsistentHash in LoadBalancer",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{},
+				},
+			},
+			want: nil,
 		},
 		{
-			name:      "ConsistentHash with nil SourceIP and Header",
-			httpRoute: &ir.HTTPRoute{LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}}},
-			want:      nil,
+			name: "ConsistentHash with nil SourceIP and Header",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}},
+				},
+			},
+			want: nil,
 		},
 		{
-			name:      "ConsistentHash with SourceIP set to false",
-			httpRoute: &ir.HTTPRoute{LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: ptr.To(false)}}},
-			want:      nil,
+			name: "ConsistentHash with SourceIP set to false",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: ptr.To(false)}},
+				},
+			},
+			want: nil,
 		},
 		{
-			name:      "ConsistentHash with SourceIP set to true",
-			httpRoute: &ir.HTTPRoute{LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: ptr.To(true)}}},
+			name: "ConsistentHash with SourceIP set to true",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: ptr.To(true)}},
+				},
+			},
 			want: []*routev3.RouteAction_HashPolicy{
 				{
 					PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
@@ -60,8 +76,12 @@ func Test_buildHashPolicy(t *testing.T) {
 			},
 		},
 		{
-			name:      "ConsistentHash with Header",
-			httpRoute: &ir.HTTPRoute{LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Header: &ir.Header{Name: "name"}}}},
+			name: "ConsistentHash with Header",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Header: &ir.Header{Name: "name"}}},
+				},
+			},
 			want: []*routev3.RouteAction_HashPolicy{
 				{
 					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{

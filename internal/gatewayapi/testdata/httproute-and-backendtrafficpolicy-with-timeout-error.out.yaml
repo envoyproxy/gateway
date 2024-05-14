@@ -163,6 +163,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout:
-          http:
-            requestTimeout: 1s
+        traffic:
+          timeout:
+            http:
+              requestTimeout: 1s
