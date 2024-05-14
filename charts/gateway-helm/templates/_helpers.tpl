@@ -78,6 +78,8 @@ imagePullSecrets:
 {{- else if .Values.global.images.envoyGateway.imagePullSecrets -}}
 imagePullSecrets:
 {{ toYaml .Values.global.images.envoyGateway.imagePullSecrets }}
+{{- else -}}
+imagePullSecrets: []
 {{- end }}
 {{- end }}
 

@@ -412,7 +412,7 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      
+      imagePullSecrets: []
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway
@@ -526,7 +526,7 @@ spec:
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         name: envoy-gateway-certgen
-      
+      imagePullSecrets: []
       restartPolicy: Never
       securityContext:
         runAsGroup: 65534
