@@ -307,9 +307,10 @@ func isStatusEqual(objA, objB interface{}) bool {
 //	SecurityPolicy
 //	BackendTLSPolicy
 //	EnvoyExtensionPolicy
+//	Unstructured (for Extension Policies)
 func kindOf(obj interface{}) string {
 	var kind string
-	switch obj.(type) {
+	switch o := obj.(type) {
 	case *gwapiv1.GatewayClass:
 		kind = gatewayapi.KindGatewayClass
 	case *gwapiv1.Gateway:
@@ -336,6 +337,8 @@ func kindOf(obj interface{}) string {
 		kind = gatewayapi.KindEnvoyExtensionPolicy
 	case *gwapiv1a3.BackendTLSPolicy:
 		kind = gatewayapi.KindBackendTLSPolicy
+	case *unstructured.Unstructured:
+		kind = o.GetKind()
 	default:
 		kind = "Unknown"
 	}
