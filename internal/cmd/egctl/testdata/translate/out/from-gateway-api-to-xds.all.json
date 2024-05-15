@@ -942,7 +942,7 @@
                       }
                     }
                   ],
-                  "name": "default/eg/udp/backend"
+                  "name": "default/eg/udp"
                 }
               }
             }

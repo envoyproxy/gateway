@@ -560,7 +560,7 @@ xds:
                         '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
                         cluster: udproute/default/backend/rule/-1
                 statPrefix: service
-            name: default/eg/udp/backend
+            name: default/eg/udp
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:

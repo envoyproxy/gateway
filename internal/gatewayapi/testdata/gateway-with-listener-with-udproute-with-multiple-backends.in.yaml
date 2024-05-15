@@ -26,8 +26,8 @@ udpRoutes:
       rules:
         - backendRefs:
             - name: service-1
-              port: 8080
+              port: 8162
               weight: 50
             - name: service-2
-              port: 8080
+              port: 8162
               weight: 50

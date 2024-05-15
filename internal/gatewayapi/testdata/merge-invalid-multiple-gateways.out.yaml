@@ -145,3 +145,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    udp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/udp
+      port: 10080
