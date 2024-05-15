@@ -70,13 +70,10 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		var routeAction *routev3.RouteAction
-		if httpRoute.BackendWeights.Invalid != 0 {
-			// If there are invalid backends then a weighted cluster is required for the route
-			routeAction = buildXdsWeightedRouteAction(httpRoute)
-		} else {
-			routeAction = buildXdsRouteAction(httpRoute)
-		}
+		backendWeights := httpRoute.Destination.ToBackendWeights()
+		routeAction := buildXdsRouteAction(backendWeights)
+		routeAction.IdleTimeout = idleTimeout(httpRoute)
+
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -225,27 +222,31 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
-	return &routev3.RouteAction{
-		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: httpRoute.Destination.Name,
-		},
-		IdleTimeout: idleTimeout(httpRoute),
+func buildXdsRouteAction(backendWeights *ir.BackendWeights) *routev3.RouteAction {
+	// only use weighted cluster when there are invalid weights
+	if backendWeights.Invalid == 0 {
+		return &routev3.RouteAction{
+			ClusterSpecifier: &routev3.RouteAction_Cluster{
+				Cluster: backendWeights.Name,
+			},
+		}
 	}
+
+	return buildXdsWeightedRouteAction(backendWeights)
 }
 
-func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
+func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights) *routev3.RouteAction {
 	clusters := []*routev3.WeightedCluster_ClusterWeight{
 		{
 			Name:   "invalid-backend-cluster",
-			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
 		},
 	}
 
-	if httpRoute.BackendWeights.Valid > 0 {
+	if backendWeights.Valid > 0 {
 		validCluster := &routev3.WeightedCluster_ClusterWeight{
-			Name:   httpRoute.Destination.Name,
-			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
+			Name:   backendWeights.Name,
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Valid},
 		}
 		clusters = append(clusters, validCluster)
 	}
@@ -258,7 +259,6 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 				Clusters: clusters,
 			},
 		},
-		IdleTimeout: idleTimeout(httpRoute),
 	}
 }
 
