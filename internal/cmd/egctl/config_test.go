@@ -403,6 +403,7 @@ rateLimit:
     type: Redis
     redis:
       url: redis.redis-system.svc.cluster.local:6379
+  disableHeaders: true
 `,
 				},
 			},
@@ -436,8 +437,8 @@ gateway:
 			}
 
 			actual, err := checkEnableGlobalRateLimit(fakeCli)
-			require.Equal(t, tc.expect, actual)
 			require.NoError(t, err)
+			require.Equal(t, tc.expect, actual)
 		})
 	}
 }

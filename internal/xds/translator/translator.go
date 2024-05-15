@@ -59,6 +59,9 @@ type GlobalRateLimitSettings struct {
 	// rate limit service.
 	ServiceURL string
 
+	// DisableHeaders emits X-RateLimit headers when false.
+	DisableHeaders bool
+
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
 	// If not set, timeout is 20000000(20ms).
 	Timeout time.Duration

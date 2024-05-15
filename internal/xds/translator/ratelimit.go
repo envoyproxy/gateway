@@ -41,6 +41,7 @@ const (
 )
 
 const (
+	xRateLimitHeadersDisabled = 0
 	// Use `draft RFC Version 03 <https://tools.ietf.org/id/draft-polli-ratelimit-headers-03.html>` by default,
 	// where 3 headers will be added:
 	// * ``X-RateLimit-Limit`` - indicates the request-quota associated to the
@@ -111,11 +112,16 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 			},
 			TransportApiVersion: corev3.ApiVersion_V3,
 		},
-		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRfcVersion),
 	}
 	if t.GlobalRateLimit.Timeout > 0 {
 		rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
 	}
+
+	headers := xRateLimitHeadersRfcVersion
+	if t.GlobalRateLimit.DisableHeaders {
+		headers = xRateLimitHeadersDisabled
+	}
+	rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(headers)
 
 	if t.GlobalRateLimit.FailClosed {
 		rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailClosed
