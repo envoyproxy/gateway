@@ -344,7 +344,7 @@ type RateLimit struct {
 	// X-RateLimit headers should be emitted
 	// If DisableHeaders is false, X-RateLimit headers
 	// will be emitted.
-	// If not set, FailClosed is False.
+	// If not set, DisableHeaders is False.
 	DisableHeaders bool `json:"disableHeaders"`
 
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
