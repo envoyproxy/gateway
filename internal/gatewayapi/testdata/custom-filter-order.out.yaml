@@ -239,6 +239,8 @@ xdsIR:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - weight: 1
+        directResponse:
+          statusCode: 500
         hostname: www.example.com
         isHTTP2: false
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com

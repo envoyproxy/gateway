@@ -225,7 +225,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
-			if ruleRoute.Destination == nil && ruleRoute.Redirect == nil {
+			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
+			if noValidBackends && ruleRoute.Redirect == nil {
 				ruleRoute.DirectResponse = &ir.DirectResponse{
 					StatusCode: 500,
 				}
@@ -1136,6 +1137,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	if !t.validateBackendRef(backendRefContext, parentRef, route, resources, backendNamespace, routeType) {
+		// return with empty endpoint means the backend is invalid
 		return &ir.DestinationSetting{Weight: &weight}
 	}
 

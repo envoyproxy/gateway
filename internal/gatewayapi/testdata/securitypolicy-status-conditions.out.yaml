@@ -420,6 +420,8 @@ xdsIR:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - weight: 1
+        directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
