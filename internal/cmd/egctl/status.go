@@ -34,7 +34,7 @@ var (
 
 	supportedXPolicyTypes = []string{
 		gatewayapi.KindBackendTLSPolicy, gatewayapi.KindBackendTrafficPolicy, gatewayapi.KindClientTrafficPolicy,
-		gatewayapi.KindSecurityPolicy, gatewayapi.KindEnvoyPatchPolicy,
+		gatewayapi.KindSecurityPolicy, gatewayapi.KindEnvoyPatchPolicy, gatewayapi.KindEnvoyExtensionPolicy,
 	}
 
 	supportedAllTypes = []string{
@@ -237,6 +237,14 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		}
 		resourcesList = &epp
 		resourceKind = gatewayapi.KindEnvoyPatchPolicy
+
+	case "eep", "envoyextensionpolicy":
+		eep := egv1a1.EnvoyExtensionPolicyList{}
+		if err := cli.List(ctx, &eep, client.InNamespace(namespace)); err != nil {
+			return err
+		}
+		resourcesList = &eep
+		resourceKind = gatewayapi.KindEnvoyExtensionPolicy
 
 	case "sp", "securitypolicy":
 		sp := egv1a1.SecurityPolicyList{}

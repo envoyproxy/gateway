@@ -46,11 +46,6 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: Only one TCP/TLS listener is allowed in a given port
-        reason: ProtocolConflict
-        status: "True"
-        type: Conflicted
-      - lastTransitionTime: null
         message: Listener must have TLS set when protocol is TLS.
         reason: Invalid
         status: "False"
@@ -134,4 +129,3 @@ xdsIR:
             protocol: TCP
             weight: 1
         name: tcproute/default/tcproute-1
-        tls: {}

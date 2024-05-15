@@ -182,10 +182,7 @@ xdsIR:
         mergeSlashes: true
       port: 10443
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -222,6 +219,6 @@ xdsIR:
             weight: 1
         name: tlsroute/default/tlsroute-1
         tls:
-          passthrough:
+          inspector:
             snis:
             - foo.bar.com

@@ -29,7 +29,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// Infra IR proxy ports must be unique.
 	foundPorts := make(map[string][]*protocolPort)
 	t.validateConflictedLayer7Listeners(gateways)
-	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
+	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
 	if t.MergeGateways {
 		t.validateConflictedMergedListeners(gateways)
@@ -124,6 +124,13 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Port:    uint32(containerPort),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
+			case gwapiv1.UDPProtocolType:
+				irListener := &ir.UDPListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+				}
+				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
