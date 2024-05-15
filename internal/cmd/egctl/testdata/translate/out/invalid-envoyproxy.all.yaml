@@ -38,6 +38,27 @@ gatewayClass:
       reason: InvalidParameters
       status: "False"
       type: Accepted
+    supportedFeatures:
+    - GRPCRoute
+    - GatewayPort8080
+    - HTTPRouteBackendProtocolH2C
+    - HTTPRouteBackendProtocolWebSocket
+    - HTTPRouteBackendTimeout
+    - HTTPRouteDestinationPortMatching
+    - HTTPRouteHostRewrite
+    - HTTPRouteMethodMatching
+    - HTTPRouteParentRefPort
+    - HTTPRoutePathRedirect
+    - HTTPRoutePathRewrite
+    - HTTPRoutePortRedirect
+    - HTTPRouteQueryParamMatching
+    - HTTPRouteRequestMirror
+    - HTTPRouteRequestMultipleMirrors
+    - HTTPRouteRequestTimeout
+    - HTTPRouteResponseHeaderModification
+    - HTTPRouteSchemeRedirect
+    - ReferenceGrant
+    - TLSRoute
 gateways:
 - metadata:
     creationTimestamp: null
