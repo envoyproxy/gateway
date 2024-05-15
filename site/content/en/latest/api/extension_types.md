@@ -234,7 +234,11 @@ _Appears in:_
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`Backend`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` | _[BackendSpec](#backendspec)_ |  true  | spec defines the desired state of Backend. |
+| `spec` | _[BackendSpec](#backendspec)_ |  true  | Spec defines the desired state of Backend. |
+
+
+
+
 
 
 #### BackendEndpoint

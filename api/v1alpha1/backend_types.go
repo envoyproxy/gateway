@@ -42,10 +42,10 @@ type Backend struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// spec defines the desired state of Backend.
+	// Spec defines the desired state of Backend.
 	Spec BackendSpec `json:"spec"`
 
-	// status defines the current status of Backend.
+	// Status defines the current status of Backend.
 	Status BackendStatus `json:"status,omitempty"`
 }
 
@@ -136,6 +136,36 @@ type BackendSpec struct {
 	AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
 }
 
+// BackendConditionType is a type of condition for a backend. This type should be
+// used with a Backend resource Status.Conditions field.
+type BackendConditionType string
+
+// BackendConditionReason is a reason for a backend condition.
+type BackendConditionReason string
+
+const (
+	// BackendConditionAccepted indicates whether the backend has been accepted or
+	// rejected by a targeted resource, and why.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Accepted"
+	//
+	// Possible reasons for this condition to be False are:
+	//
+	// * "Invalid"
+	//
+	BackendConditionAccepted BackendConditionType = "Accepted"
+
+	// BackendReasonAccepted is used with the "Accepted" condition when the backend
+	// has been accepted by the targeted resource.
+	BackendReasonAccepted BackendConditionReason = "Accepted"
+
+	// BackendReasonInvalid is used with the "Accepted" condition when the backend
+	// is syntactically or semantically invalid.
+	BackendReasonInvalid BackendConditionReason = "Invalid"
+)
+
 // BackendStatus defines the state of Backend
 // +notImplementedHide
 type BackendStatus struct {
@@ -148,9 +178,10 @@ type BackendStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// BackendList contains a list of Backend resources.
+//
 // +kubebuilder:object:root=true
 // +notImplementedHide
-// BackendList contains a list of Backend resources.
 type BackendList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

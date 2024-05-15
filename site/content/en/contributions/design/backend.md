@@ -1,5 +1,5 @@
 ---
-title: "Backend "
+title: "Backend"
 ---
 
 ## Overview
@@ -32,14 +32,14 @@ Several projects currently support backends that are not registered in the infra
 The `Backend` resource is an implementation-specific Gateway-API [BackendObjectReference Extension][]. 
 
 ### Example
-Here is an example highlighting how a user can configure a route that forwards traffic to both a Service and a local
-unix domain socket.
+Here is an example highlighting how a user can configure a route that forwards traffic to both a K8s Service and a Backend 
+that has both unix domain socket and ipv4 endpoints. A [BackendTLSPolicy][] is attached to the backend resource, enabling TLS.
 
 ```yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend-svc
+  name: backend
 spec:
   ports:
     - name: http
@@ -148,7 +148,7 @@ spec:
 [internal listeners]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/internal_listener
 [unix domain sockets]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#envoy-v3-api-msg-config-core-v3-pipe
 [Resource Backends]: https://kubernetes.io/docs/concepts/services-networking/ingress/#resource-backend
-[Services and FQDN endpoints]: https://gateway.envoyproxy.io/v1.0.1/tasks/traffic/routing-outside-kubernetes/
+[Services and FQDN endpoints]: ./../../latest/tasks/traffic/routing-outside-kubernetes.md
 [Service Entry]: https://istio.io/latest/docs/reference/config/networking/service-entry/
 [Upstream]: https://docs.solo.io/gloo-edge/1.7.23/reference/api/github.com/solo-io/gloo/projects/gloo/api/v1/upstream.proto.sk/
 [External Services]: https://developer.hashicorp.com/consul/tutorials/developer-mesh/terminating-gateways-connect-external-services

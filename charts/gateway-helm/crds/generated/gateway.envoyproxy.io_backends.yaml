@@ -50,7 +50,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of Backend.
+            description: Spec defines the desired state of Backend.
             properties:
               appProtocols:
                 description: AppProtocols defines the application protocols to be
@@ -138,7 +138,7 @@ spec:
                   rule: self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))
             type: object
           status:
-            description: status defines the current status of Backend.
+            description: Status defines the current status of Backend.
             properties:
               conditions:
                 description: Conditions describe the current conditions of the Backend.
