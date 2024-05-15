@@ -347,10 +347,6 @@ func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
-func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
-}
-
 func irListenerPortName(proto ir.ProtocolType, port int32) string {
 	return strings.ToLower(fmt.Sprintf("%s-%d", proto, port))
 }
@@ -367,6 +363,10 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 
 func irTCPRouteName(route RouteContext) string {
 	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+}
+
+func irUDPRouteName(route RouteContext) string {
+	return irTCPRouteName(route)
 }
 
 func irRouteDestinationName(route RouteContext, ruleIdx int) string {

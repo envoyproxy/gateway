@@ -929,21 +929,18 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			irKey := t.getIRKey(listener.gateway)
 
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the UDP Listener while parsing the UDPRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.UDPListener{
-				Name:    irUDPListenerName(listener, udpRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				Destination: &ir.RouteDestination{
-					Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
-					Settings: destSettings,
-				},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.UDP = append(gwXdsIR.UDP, irListener)
-
+			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.UDPRoute{
+					Name: irUDPRouteName(udpRoute),
+					Destination: &ir.RouteDestination{
+						Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
+						Settings: destSettings,
+					},
+				}
+				irListener.Route = irRoute
+			}
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".

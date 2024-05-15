@@ -1332,6 +1332,15 @@ type UDPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// Route associated with UDP traffic to the listener.
+	Route *UDPRoute `json:"route,omitempty" yaml:"route,omitempty"`
+}
+
+// UDPRoute holds the route information associated with the UDP Route.
+// +k8s:deepcopy-gen=true
+type UDPRoute struct {
+	// Name of the UDPRoute.
+	Name string `json:"name" yaml:"name"`
 	// Destination associated with UDP traffic to the service.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
@@ -1352,8 +1361,25 @@ func (h UDPListener) Validate() error {
 	if h.Port == 0 {
 		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
-	if h.Destination != nil {
-		if err := h.Destination.Validate(); err != nil {
+
+	if h.Route != nil {
+		if err := h.Route.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
+}
+
+func (u UDPRoute) Validate() error {
+	var errs error
+
+	if u.Name == "" {
+		errs = errors.Join(errs, ErrRouteNameEmpty)
+	}
+
+	if u.Destination != nil {
+		if err := u.Destination.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
