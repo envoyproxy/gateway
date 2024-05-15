@@ -6,7 +6,7 @@ title: "Control Plane Observability: Metrics"
 This document aims to cover all aspects of envoy gateway control plane metrics observability.
 
 {{% alert title="Note" color="secondary" %}}
-**Data plane** observability (while important) is outside of scope for this document. For dataplane observability, refer to [here](../metrics).
+**Data plane** observability (while important) is outside of scope for this document. For data plane observability, refer to [here](./proxy-metrics).
 {{% /alert %}}
 
 ## Current State
@@ -100,7 +100,7 @@ New APIs will be added to Envoy Gateway config, which are used to manage Control
 
 ### EnvoyGatewayTelemetry
 
-``` go
+```go
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.
 // Control plane will focus on metrics observability telemetry and tracing telemetry later.
 type EnvoyGatewayTelemetry struct {
@@ -113,7 +113,7 @@ type EnvoyGatewayTelemetry struct {
 
 > Prometheus will be exposed on 0.0.0.0:19001, which is not supported to be configured yet.
 
-``` go
+```go
 // EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
 type EnvoyGatewayMetrics struct {
 	// Sinks defines the metric sinks where metrics are sent to.
@@ -162,7 +162,7 @@ type EnvoyGatewayPrometheusProvider struct {
 
 + The following is an example to disable prometheus metric.
 
-``` yaml
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:
@@ -180,7 +180,7 @@ telemetry:
 
 + The following is an example to send metric via Open Telemetry sink to OTEL gRPC Collector.
 
-``` yaml
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:
@@ -202,7 +202,7 @@ telemetry:
 
 + The following is an example to disable prometheus metric and send metric via Open Telemetry sink to OTEL HTTP Collector at the same time.
 
-``` yaml
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:

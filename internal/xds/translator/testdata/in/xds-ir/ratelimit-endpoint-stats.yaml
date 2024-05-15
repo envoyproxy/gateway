@@ -12,15 +12,16 @@ http:
     routes:
       - name: "first-route"
         hostname: "*"
-        rateLimit:
-          global:
-            rules:
-              - headerMatches:
-                  - name: "x-user-id"
-                    exact: "one"
-                limit:
-                  requests: 5
-                  unit: second
+        traffic:
+          rateLimit:
+            global:
+              rules:
+                - headerMatches:
+                    - name: "x-user-id"
+                      exact: "one"
+                  limit:
+                    requests: 5
+                    unit: second
         pathMatch:
           exact: "foo/bar"
         destination:
@@ -31,15 +32,16 @@ http:
                   port: 50000
       - name: "second-route"
         hostname: "*"
-        rateLimit:
-          global:
-            rules:
-              - headerMatches:
-                  - name: "x-user-id"
-                    distinct: true
-                limit:
-                  requests: 5
-                  unit: second
+        traffic:
+          rateLimit:
+            global:
+              rules:
+                - headerMatches:
+                    - name: "x-user-id"
+                      distinct: true
+                  limit:
+                    requests: 5
+                    unit: second
         pathMatch:
           exact: "example"
         destination:
@@ -50,12 +52,13 @@ http:
                   port: 50000
       - name: "third-route"
         hostname: "*"
-        rateLimit:
-          global:
-            rules:
-              - limit:
-                  requests: 5
-                  unit: second
+        traffic:
+          rateLimit:
+            global:
+              rules:
+                - limit:
+                    requests: 5
+                    unit: second
         pathMatch:
           exact: "test"
         destination:

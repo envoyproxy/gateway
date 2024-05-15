@@ -422,6 +422,14 @@ spec:
                         required:
                         - name
                         type: object
+                      tableSize:
+                        default: 65537
+                        description: The table size for consistent hashing, must be
+                          prime number limited to 5000011.
+                        format: int64
+                        maximum: 5000011
+                        minimum: 2
+                        type: integer
                       type:
                         description: ConsistentHashType defines the type of input
                           to hash on. Valid Type values are "SourceIP" or "Header".

@@ -187,27 +187,27 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		for _, backendRef := range rule.BackendRefs {
 			backendRef := backendRef
-			ds, backendWeight := t.processDestination(backendRef, parentRef, httpRoute, resources)
+			ds := t.processDestination(backendRef, parentRef, httpRoute, resources)
 			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
+			}
+			if ds == nil {
+				continue
 			}
 
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
-				if route.DirectResponse == nil && route.Redirect == nil {
-					if ds != nil && len(ds.Endpoints) > 0 {
-						if route.Destination == nil {
-							route.Destination = &ir.RouteDestination{
-								Name: irRouteDestinationName(httpRoute, ruleIdx),
-							}
-						}
-						route.Destination.Settings = append(route.Destination.Settings, ds)
-						route.BackendWeights.Valid += backendWeight
-					} else {
-						route.BackendWeights.Invalid += backendWeight
+				if route.DirectResponse != nil || route.Redirect != nil {
+					continue
+				}
+
+				if route.Destination == nil {
+					route.Destination = &ir.RouteDestination{
+						Name: irRouteDestinationName(httpRoute, ruleIdx),
 					}
 				}
+				route.Destination.Settings = append(route.Destination.Settings, ds)
 			}
 		}
 
@@ -225,7 +225,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
-			if ruleRoute.Destination == nil && ruleRoute.Redirect == nil {
+			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
+			if noValidBackends && ruleRoute.Redirect == nil {
 				ruleRoute.DirectResponse = &ir.DirectResponse{
 					StatusCode: 500,
 				}
@@ -248,8 +249,8 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		var rto *ir.Timeout
 
 		// Timeout is translated from multiple resources and may already be partially set
-		if irRoute.Timeout != nil {
-			rto = irRoute.Timeout.DeepCopy()
+		if irRoute.Traffic != nil && irRoute.Traffic.Timeout != nil {
+			rto = irRoute.Traffic.Timeout.DeepCopy()
 		} else {
 			rto = &ir.Timeout{}
 		}
@@ -272,7 +273,9 @@ func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			setRequestTimeout(rto, metav1.Duration{Duration: d})
 		}
 
-		irRoute.Timeout = rto
+		irRoute.Traffic = &ir.TrafficFeatures{
+			Timeout: rto,
+		}
 	}
 }
 
@@ -491,30 +494,31 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 		for _, backendRef := range rule.BackendRefs {
 			backendRef := backendRef
-			ds, backendWeight := t.processDestination(backendRef, parentRef, grpcRoute, resources)
+			ds := t.processDestination(backendRef, parentRef, grpcRoute, resources)
+			if ds == nil {
+				continue
+			}
+
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
-				if route.DirectResponse == nil && route.Redirect == nil {
-					if ds != nil && len(ds.Endpoints) > 0 {
-						if route.Destination == nil {
-							route.Destination = &ir.RouteDestination{
-								Name: irRouteDestinationName(grpcRoute, ruleIdx),
-							}
-						}
-						route.Destination.Settings = append(route.Destination.Settings, ds)
-						route.BackendWeights.Valid += backendWeight
+				if route.DirectResponse != nil || route.Redirect != nil {
+					continue
+				}
 
-					} else {
-						route.BackendWeights.Invalid += backendWeight
+				if route.Destination == nil {
+					route.Destination = &ir.RouteDestination{
+						Name: irRouteDestinationName(grpcRoute, ruleIdx),
 					}
 				}
+				route.Destination.Settings = append(route.Destination.Settings, ds)
 			}
 		}
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
-			if ruleRoute.Destination == nil && ruleRoute.Redirect == nil {
+			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
+			if noValidBackends && ruleRoute.Redirect == nil {
 				ruleRoute.DirectResponse = &ir.DirectResponse{
 					StatusCode: 500,
 				}
@@ -681,13 +685,13 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
-					Timeout:               routeRoute.Timeout,
-					Retry:                 routeRoute.Retry,
 					IsHTTP2:               routeRoute.IsHTTP2,
 				}
-				// Don't bother copying over the weights unless the route has invalid backends.
-				if routeRoute.BackendWeights.Invalid > 0 {
-					hostRoute.BackendWeights = routeRoute.BackendWeights
+				if routeRoute.Traffic != nil {
+					hostRoute.Traffic = &ir.TrafficFeatures{
+						Timeout: routeRoute.Traffic.Timeout,
+						Retry:   routeRoute.Traffic.Retry,
+					}
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
@@ -746,7 +750,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
-				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+				ds := t.processDestination(backendRef, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
 				}
@@ -884,27 +888,16 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			)
 			continue
 		}
-		if len(udpRoute.Spec.Rules[0].BackendRefs) != 1 {
-			routeStatus := GetRouteStatus(udpRoute)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				udpRoute.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				"InvalidBackend",
-				"One and only one backend is supported",
-			)
-			continue
+
+		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
+			ds := t.processDestination(backendRef, parentRef, udpRoute, resources)
+			if ds == nil {
+				continue
+			}
+
+			destSettings = append(destSettings, ds)
 		}
 
-		backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
-		ds, _ := t.processDestination(backendRef, parentRef, udpRoute, resources)
-		// Skip further processing if route destination is not valid
-		if ds == nil || len(ds.Endpoints) == 0 {
-			continue
-		}
-
-		destSettings = append(destSettings, ds)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(udpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(udpRoute)
@@ -936,21 +929,18 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			irKey := t.getIRKey(listener.gateway)
 
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the UDP Listener while parsing the UDPRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.UDPListener{
-				Name:    irUDPListenerName(listener, udpRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				Destination: &ir.RouteDestination{
-					Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
-					Settings: destSettings,
-				},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.UDP = append(gwXdsIR.UDP, irListener)
-
+			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.UDPRoute{
+					Name: irUDPRouteName(udpRoute),
+					Destination: &ir.RouteDestination{
+						Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
+						Settings: destSettings,
+					},
+				}
+				irListener.Route = irRoute
+			}
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1013,7 +1003,6 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 
 func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tcpRoute.ParentRefs {
-
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -1032,26 +1021,17 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			)
 			continue
 		}
-		if len(tcpRoute.Spec.Rules[0].BackendRefs) != 1 {
-			routeStatus := GetRouteStatus(tcpRoute)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				tcpRoute.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				"InvalidBackend",
-				"One and only one backend is supported",
-			)
-			continue
+
+		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
+			backendRef := backendRef
+			ds := t.processDestination(backendRef, parentRef, tcpRoute, resources)
+			if ds == nil {
+				continue
+			}
+
+			destSettings = append(destSettings, ds)
 		}
 
-		backendRef := tcpRoute.Spec.Rules[0].BackendRefs[0]
-		ds, _ := t.processDestination(backendRef, parentRef, tcpRoute, resources)
-		// Skip further processing if route destination is not valid
-		if ds == nil || len(ds.Endpoints) == 0 {
-			continue
-		}
-		destSettings = append(destSettings, ds)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(tcpRoute, gwapiv1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(tcpRoute)
@@ -1141,10 +1121,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
 func (t *Translator) processDestination(backendRefContext BackendRefContext,
-	parentRef *RouteParentContext,
-	route RouteContext,
-	resources *Resources,
-) (ds *ir.DestinationSetting, backendWeight uint32) {
+	parentRef *RouteParentContext, route RouteContext, resources *Resources,
+) (ds *ir.DestinationSetting) {
 	routeType := GetRouteType(route)
 	weight := uint32(1)
 	backendRef := GetBackendRef(backendRefContext)
@@ -1154,12 +1132,13 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	if !t.validateBackendRef(backendRefContext, parentRef, route, resources, backendNamespace, routeType) {
-		return nil, weight
+		// return with empty endpoint means the backend is invalid
+		return &ir.DestinationSetting{Weight: &weight}
 	}
 
 	// Skip processing backends with 0 weight
 	if weight == 0 {
-		return nil, weight
+		return nil
 	}
 
 	var (
@@ -1252,7 +1231,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		AddressType: addrType,
 		TLS:         backendTLS,
 	}
-	return ds, weight
+	return ds
 }
 
 func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
