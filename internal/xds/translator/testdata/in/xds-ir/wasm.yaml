@@ -41,10 +41,7 @@ http:
         url: https://www.test.com/wasm-filter-3.wasm
       name: envoyextensionpolicy/default/policy-for-http-route/0
       wasmName: wasm-filter-3
-  - backendWeights:
-      invalid: 0
-      valid: 0
-    destination:
+  - destination:
       name: httproute/default/httproute-2/rule/0
       settings:
       - addressType: IP
