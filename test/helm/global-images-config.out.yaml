@@ -37,9 +37,9 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: private-hub/envoyproxy/ratelimit-fips:test
+            image: private-hub/envoyproxy/ratelimit:test
         shutdownManager:
-          image: private-hub/envoyproxy/gateway-fips:abcdef12
+          image: private-hub/envoyproxy/gateway:abcdef12
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -374,7 +374,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway-fips:abcdef12
+        image: private-hub/envoyproxy/gateway:abcdef12
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -525,7 +525,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway-fips:abcdef12
+        image: private-hub/envoyproxy/gateway:abcdef12
         imagePullPolicy: Always
         name: envoy-gateway-certgen
       imagePullSecrets:
