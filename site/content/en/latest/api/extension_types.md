@@ -195,13 +195,48 @@ _Appears in:_
 
 Authorization defines the authorization configuration.
 
+
+Note: if neither `Rules` nor `DefaultAction` is specified, the default action is to deny all requests.
+
 _Appears in:_
 - [SecurityPolicySpec](#securitypolicyspec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[Rule](#rule) array_ |  false  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
-| `defaultAction` | _[RuleActionType](#ruleactiontype)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
+| `rules` | _[AuthorizationRule](#authorizationrule) array_ |  false  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
+| `defaultAction` | _[AuthorizationAction](#authorizationaction)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
+
+
+#### AuthorizationAction
+
+_Underlying type:_ _string_
+
+AuthorizationAction defines the action to be taken if a rule matches.
+
+_Appears in:_
+- [Authorization](#authorization)
+- [AuthorizationRule](#authorizationrule)
+
+| Value | Description |
+| ----- | ----------- |
+| `Allow` | AuthorizationActionAllow is the action to allow the request.<br /> | 
+| `Deny` | AuthorizationActionDeny is the action to deny the request.<br /> | 
+
+
+#### AuthorizationRule
+
+
+
+AuthorizationRule defines the single authorization rule.
+
+_Appears in:_
+- [Authorization](#authorization)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  false  | Name is a user-friendly name for the rule. It's just for display purposes. |
+| `action` | _[AuthorizationAction](#authorizationaction)_ |  true  | Action defines the action to be taken if the rule matches. |
+| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
 
 
 #### BackOffPolicy
@@ -823,6 +858,7 @@ _Appears in:_
 | `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> | 
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
+| `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
 
@@ -1269,7 +1305,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_authn<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_authn<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 
 
@@ -2399,11 +2435,11 @@ _Appears in:_
 Principal specifies the client identity of a request.
 
 _Appears in:_
-- [Rule](#rule)
+- [AuthorizationRule](#authorizationrule)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientCIDR` | _string array_ |  true  | ClientCIDR is the IP CIDR range of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.<br />You can use the `EnableProxyProtocol` and `ClientIPDetection` options in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `clientCIDRs` | _string array_ |  true  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.<br />You can use the `EnableProxyProtocol` and `ClientIPDetection` options in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 
 
 #### ProcessingModeOptions
@@ -3035,37 +3071,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried.<br />The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
-
-
-#### Rule
-
-
-
-Rule defines the single authorization rule.
-
-_Appears in:_
-- [Authorization](#authorization)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
-| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
-
-
-#### RuleActionType
-
-_Underlying type:_ _string_
-
-RuleActionType specifies the types of authorization rule action.
-
-_Appears in:_
-- [Authorization](#authorization)
-- [Rule](#rule)
-
-| Value | Description |
-| ----- | ----------- |
-| `Allow` | Allow is the action to allow the request.<br /> | 
-| `Deny` | Deny is the action to deny the request.<br /> | 
 
 
 #### SecurityPolicy

@@ -225,8 +225,8 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		if rule.CIDRMatch != nil {
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-			maskLen := &wrapperspb.UInt32Value{Value: uint32(rule.CIDRMatch.MaskLen)}
-			if rule.CIDRMatch.IPv6 {
+			maskLen := &wrapperspb.UInt32Value{Value: rule.CIDRMatch.MaskLen}
+			if rule.CIDRMatch.IsIPv6 {
 				mra.V6PrefixMaskLen = maskLen
 			} else {
 				mra.V4PrefixMaskLen = maskLen

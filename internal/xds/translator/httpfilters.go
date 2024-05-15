@@ -17,7 +17,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"k8s.io/utils/ptr"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 
@@ -94,6 +94,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// Set a rational order for all the filters.
 	// When the fault filter is configured to be at the first, the computation of
 	// the remaining filters is skipped when rejected early
+	// TODO (zhaohuabing): remove duplicate filter type constants and replace them with the type constants in the api package
 	switch {
 	case isFilterType(filter, wellknown.Fault):
 		order = 1
@@ -111,12 +112,14 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 7 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, wasmFilter):
 		order = 100 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, localRateLimitFilter):
+	case isFilterType(filter, string(egv1a1.EnvoyFilterRBAC)):
 		order = 201
-	case isFilterType(filter, wellknown.HTTPRateLimit):
+	case isFilterType(filter, localRateLimitFilter):
 		order = 202
-	case isFilterType(filter, wellknown.Router):
+	case isFilterType(filter, wellknown.HTTPRateLimit):
 		order = 203
+	case isFilterType(filter, wellknown.Router):
+		order = 204
 	}
 
 	return &OrderedHTTPFilter{
@@ -144,7 +147,7 @@ func (o OrderedHTTPFilters) Swap(i, j int) {
 // For example, the cors filter should be put at the first to avoid unnecessary
 // processing of other filters for unauthorized cross-region access.
 // The router filter must be the last one since it's a terminal filter.
-func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []v1alpha1.FilterPosition) []*hcmv3.HttpFilter {
+func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPosition) []*hcmv3.HttpFilter {
 	// Sort the filters in the default order.
 	orderedFilters := make(OrderedHTTPFilters, len(filters))
 	for i := 0; i < len(filters); i++ {

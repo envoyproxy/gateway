@@ -70,7 +70,8 @@ spec:
                       For example, if there are two rules: the first rule allows the request
                       and the second rule denies it, when a request matches both rules, it will be allowed.
                     items:
-                      description: Rule defines the single authorization rule.
+                      description: AuthorizationRule defines the single authorization
+                        rule.
                       properties:
                         action:
                           description: Action defines the action to be taken if the
@@ -79,13 +80,17 @@ spec:
                           - Allow
                           - Deny
                           type: string
+                        name:
+                          description: Name is a user-friendly name for the rule.
+                            It's just for display purposes.
+                          type: string
                         principal:
                           description: Principal specifies the client identity of
                             a request.
                           properties:
-                            clientCIDR:
+                            clientCIDRs:
                               description: |-
-                                ClientCIDR is the IP CIDR range of the client.
+                                ClientCIDRs are the IP CIDR ranges of the client.
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 
 

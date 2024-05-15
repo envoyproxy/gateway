@@ -6,7 +6,8 @@
 package v1alpha1
 
 // Authorization defines the authorization configuration.
-// +notImplementedHide
+//
+// Note: if neither `Rules` nor `DefaultAction` is specified, the default action is to deny all requests.
 type Authorization struct {
 	// Rules defines a list of authorization rules.
 	// These rules are evaluated in order, the first matching rule will be applied,
@@ -16,50 +17,45 @@ type Authorization struct {
 	// and the second rule denies it, when a request matches both rules, it will be allowed.
 	//
 	// +optional
-	Rules []Rule `json:"rules,omitempty"`
+	Rules []AuthorizationRule `json:"rules,omitempty"`
 
 	// DefaultAction defines the default action to be taken if no rules match.
 	// If not specified, the default action is Deny.
 	// +optional
-	DefaultAction *RuleActionType `json:"defaultAction"`
+	DefaultAction *AuthorizationAction `json:"defaultAction"`
 }
 
-// Rule defines the single authorization rule.
-// +notImplementedHide
-type Rule struct {
+// AuthorizationRule defines the single authorization rule.
+type AuthorizationRule struct {
+	// Name is a user-friendly name for the rule. It's just for display purposes.
+	// +optional
+	Name *string `json:"name"`
+
 	// Action defines the action to be taken if the rule matches.
-	Action RuleActionType `json:"action"`
+	Action AuthorizationAction `json:"action"`
 
 	// Principal specifies the client identity of a request.
 	Principal Principal `json:"principal"`
-
-	// Permissions contains allowed HTTP methods.
-	// If empty, all methods are matching.
-	//
-	// +optional
-	// Permissions []string `json:"permissions,omitempty"`
 }
 
 // Principal specifies the client identity of a request.
-// +notImplementedHide
 type Principal struct {
-	// ClientCIDR is the IP CIDR range of the client.
+	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	//
 	// By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.
 	// You can use the `EnableProxyProtocol` and `ClientIPDetection` options in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
-	ClientCIDR []string `json:"clientCIDR,omitempty"`
+	ClientCIDRs []string `json:"clientCIDRs,omitempty"`
 }
 
-// RuleActionType specifies the types of authorization rule action.
+// AuthorizationAction defines the action to be taken if a rule matches.
 // +kubebuilder:validation:Enum=Allow;Deny
-// +notImplementedHide
-type RuleActionType string
+type AuthorizationAction string
 
 const (
-	// Allow is the action to allow the request.
-	Allow RuleActionType = "Allow"
-	// Deny is the action to deny the request.
-	Deny RuleActionType = "Deny"
+	// AuthorizationActionAllow is the action to allow the request.
+	AuthorizationActionAllow AuthorizationAction = "Allow"
+	// AuthorizationActionDeny is the action to deny the request.
+	AuthorizationActionDeny AuthorizationAction = "Deny"
 )

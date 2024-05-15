@@ -253,6 +253,9 @@ spec:
                   - envoy.filters.http.wasm
 
 
+                  - envoy.filters.http.rbac
+
+
                   - envoy.filters.http.local_ratelimit
 
 
@@ -279,6 +282,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                     before:
                       description: |-
@@ -295,6 +299,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                     name:
                       description: Name of the filter.
@@ -309,6 +314,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                   required:
                   - name
