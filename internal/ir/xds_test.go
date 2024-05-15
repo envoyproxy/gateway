@@ -144,26 +144,32 @@ var (
 
 	// UDPListener
 	happyUDPListener = UDPListener{
-		Name:        "happy",
-		Address:     "0.0.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		Route:   &happyUDPRoute,
 	}
 	invalidNameUDPListener = UDPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		Address: "0.0.0.0",
+		Port:    80,
+		Route:   &happyUDPRoute,
 	}
 	invalidAddrUDPListener = UDPListener{
-		Name:        "invalid-addr",
-		Address:     "1.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		Name:    "invalid-addr",
+		Address: "1.0.0",
+		Port:    80,
+		Route:   &happyUDPRoute,
 	}
 	invalidPortUDPListenerT = UDPListener{
-		Name:        "invalid-port",
-		Address:     "0.0.0.0",
-		Port:        0,
+		Name:    "invalid-port",
+		Address: "0.0.0.0",
+		Port:    0,
+		Route:   &happyUDPRoute,
+	}
+
+	// UDPRoute
+	happyUDPRoute = UDPRoute{
+		Name:        "happy",
 		Destination: &happyRouteDestination,
 	}
 
@@ -182,9 +188,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("invalid-backend"),
 		},
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-		},
 	}
 	weightedInvalidBackendsHTTPRoute = HTTPRoute{
 		Name:     "weighted-invalid-backends",
@@ -193,10 +196,6 @@ var (
 			Exact: ptr.To("invalid-backends"),
 		},
 		Destination: &happyRouteDestination,
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-			Valid:   1,
-		},
 	}
 
 	redirectHTTPRoute = HTTPRoute{

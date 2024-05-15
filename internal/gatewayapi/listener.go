@@ -124,6 +124,13 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Port:    uint32(containerPort),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
+			case gwapiv1.UDPProtocolType:
+				irListener := &ir.UDPListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+				}
+				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
