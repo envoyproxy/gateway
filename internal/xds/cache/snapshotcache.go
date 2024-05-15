@@ -73,17 +73,26 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 		version,
 		resources,
 	)
+
+	xdsSnapshotCreationTotal.Increment()
 	if err != nil {
+		xdsSnapshotCreationFailed.Increment()
 		return err
+	} else {
+		xdsSnapshotCreationSuccess.Increment()
 	}
 
 	s.lastSnapshot[irKey] = snapshot
 
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
-		err := s.SetSnapshot(context.TODO(), node, snapshot)
-		if err != nil {
+		xdsSnapshotUpdateTotal.With(nodeLabel.Value(node)).Increment()
+
+		if err = s.SetSnapshot(context.TODO(), node, snapshot); err != nil {
+			xdsSnapshotUpdateFailed.With(nodeLabel.Value(node)).Increment()
 			return err
+		} else {
+			xdsSnapshotUpdateSuccess.With(nodeLabel.Value(node)).Increment()
 		}
 	}
 
