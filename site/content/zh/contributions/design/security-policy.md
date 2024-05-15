@@ -22,7 +22,7 @@ title: "SecurityPolicy"
 
 以下示例重点介绍了用户如何配置此 API。
 
-```
+```yaml
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
