@@ -66,14 +66,14 @@ func TestBackend(t *testing.T) {
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "example.com",
-								Port:    443,
+								Hostname: "example.com",
+								Port:     443,
 							},
 						},
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "example2.com",
-								Port:    443,
+								Hostname: "example2.com",
+								Port:     443,
 							},
 						},
 					},
@@ -89,8 +89,8 @@ func TestBackend(t *testing.T) {
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "example.com",
-								Port:    443,
+								Hostname: "example.com",
+								Port:     443,
 							},
 						},
 					},
@@ -116,8 +116,8 @@ func TestBackend(t *testing.T) {
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "example.com",
-								Port:    443,
+								Hostname: "example.com",
+								Port:     443,
 							},
 							Unix: &egv1a1.UnixSocket{
 								Path: "/path/to/service.sock",
@@ -136,8 +136,8 @@ func TestBackend(t *testing.T) {
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "example.com",
-								Port:    443,
+								Hostname: "example.com",
+								Port:     443,
 							},
 						},
 						{
@@ -159,36 +159,36 @@ func TestBackend(t *testing.T) {
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "host name",
-								Port:    443,
+								Hostname: "host name",
+								Port:     443,
 							},
 						},
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "host_name",
-								Port:    443,
+								Hostname: "host_name",
+								Port:     443,
 							},
 						},
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "hostname:443",
-								Port:    443,
+								Hostname: "hostname:443",
+								Port:     443,
 							},
 						},
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
-								Address: "host.*.name",
-								Port:    443,
+								Hostname: "host.*.name",
+								Port:     443,
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.endpoints[0].fqdn.address: Invalid value: \"host name\": spec.endpoints[0].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.endpoints[1].fqdn.address: Invalid value: \"host_name\": spec.endpoints[1].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.endpoints[2].fqdn.address: Invalid value: \"hostname:443\": spec.endpoints[2].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.endpoints[3].fqdn.address: Invalid value: \"host.*.name\": spec.endpoints[3].fqdn.address in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[0].fqdn.hostname: Invalid value: \"host name\": spec.endpoints[0].fqdn.hostname in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[1].fqdn.hostname: Invalid value: \"host_name\": spec.endpoints[1].fqdn.hostname in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[2].fqdn.hostname: Invalid value: \"hostname:443\": spec.endpoints[2].fqdn.hostname in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
+				"spec.endpoints[3].fqdn.hostname: Invalid value: \"host.*.name\": spec.endpoints[3].fqdn.hostname in body should match '^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
 			},
 		},
 		{

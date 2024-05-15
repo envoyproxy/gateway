@@ -1443,7 +1443,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Address defines the FQDN address of the backend endpoint. |
+| `hostname` | _string_ |  true  | Hostname defines the FQDN hostname of the backend endpoint. |
 | `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 

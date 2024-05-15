@@ -96,12 +96,12 @@ type IPv4Endpoint struct {
 //
 // +notImplementedHide
 type FQDNEndpoint struct {
-	// Address defines the FQDN address of the backend endpoint.
+	// Hostname defines the FQDN hostname of the backend endpoint.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-	Address string `json:"address"`
+	Hostname string `json:"hostname"`
 
 	// Port defines the port of the backend endpoint.
 	//

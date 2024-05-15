@@ -75,8 +75,8 @@ spec:
                     fqdn:
                       description: FQDN defines a FQDN endpoint
                       properties:
-                        address:
-                          description: Address defines the FQDN address of the backend
+                        hostname:
+                          description: Hostname defines the FQDN hostname of the backend
                             endpoint.
                           maxLength: 253
                           minLength: 1
@@ -89,7 +89,7 @@ spec:
                           minimum: 0
                           type: integer
                       required:
-                      - address
+                      - hostname
                       - port
                       type: object
                     ipv4:
