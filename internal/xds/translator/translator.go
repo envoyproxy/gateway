@@ -544,7 +544,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 				continue
 			}
 
-			// 1:1 between IR UDPListener and xDS Cluster
+			// 1:1 between IR UDPRoute and xDS Cluster
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
 				name:         route.Destination.Name,
 				settings:     route.Destination.Settings,
