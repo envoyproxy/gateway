@@ -379,6 +379,7 @@ type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
+	Name    string `json:"name" yaml:"name"`
 	Valid   uint32 `json:"valid" yaml:"valid"`
 	Invalid uint32 `json:"invalid" yaml:"invalid"`
 }
@@ -456,8 +457,6 @@ type HTTPRoute struct {
 	HeaderMatches []*StringMatch `json:"headerMatches,omitempty" yaml:"headerMatches,omitempty"`
 	// QueryParamMatches define the match conditions on the query parameters.
 	QueryParamMatches []*StringMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
-	// DestinationWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
-	BackendWeights BackendWeights `json:"backendWeights" yaml:"backendWeights"`
 	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
 	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.
@@ -476,6 +475,24 @@ type HTTPRoute struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
+	// Wasm extensions
+	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+
+	// Traffic holds the features associated with BackendTrafficPolicy
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	// Security holds the features associated with SecurityPolicy
+	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// UseClientProtocol enables using the same protocol upstream that was used downstream
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+}
+
+// TrafficFeatures holds the information associated with the Backend Traffic Policy.
+// +k8s:deepcopy-gen=true
+type TrafficFeatures struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -487,8 +504,6 @@ type HTTPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Request and connection timeout settings
@@ -497,15 +512,23 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
-	// External Processing extensions
-	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
-	// Wasm extensions
-	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+}
 
-	// Security holds the features associated with SecurityPolicy
-	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
-	// UseClientProtocol enables using the same protocol upstream that was used downstream
-	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+func (b *TrafficFeatures) Validate() error {
+	var errs error
+
+	if b.LoadBalancer != nil {
+		if err := b.LoadBalancer.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if b.HealthCheck != nil {
+		if err := b.HealthCheck.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
 // SecurityFeatures holds the information associated with the Security Policy.
@@ -521,19 +544,6 @@ type SecurityFeatures struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
-}
-
-// Empty returns true if all the features are not set.
-func (s *SecurityFeatures) Empty() bool {
-	if s == nil {
-		return true
-	}
-
-	return s.CORS == nil &&
-		s.JWT == nil &&
-		s.OIDC == nil &&
-		s.BasicAuth == nil &&
-		s.ExtAuth == nil
 }
 
 func (s *SecurityFeatures) Printable() *SecurityFeatures {
@@ -872,18 +882,13 @@ func (h HTTPRoute) Validate() error {
 			occurred.Insert(header)
 		}
 	}
-	if h.LoadBalancer != nil {
-		if err := h.LoadBalancer.Validate(); err != nil {
+	if h.Traffic != nil {
+		if err := h.Traffic.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 	if h.Security != nil {
 		if err := h.Security.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	if h.HealthCheck != nil {
-		if err := h.HealthCheck.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -912,7 +917,7 @@ type RouteDestination struct {
 }
 
 // Validate the fields within the RouteDestination structure
-func (r RouteDestination) Validate() error {
+func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
@@ -926,14 +931,35 @@ func (r RouteDestination) Validate() error {
 	return errs
 }
 
+func (r *RouteDestination) ToBackendWeights() *BackendWeights {
+	w := &BackendWeights{
+		Name: r.Name,
+	}
+
+	for _, s := range r.Settings {
+		if s.Weight == nil {
+			continue
+		}
+
+		if len(s.Endpoints) > 0 {
+			w.Valid += *s.Weight
+		} else {
+			w.Invalid += *s.Weight
+		}
+	}
+
+	return w
+}
+
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
-	// Weight associated with this destination.
-	// Note: Weight is not used in TCP/UDP route.
+	// Weight associated with this destination,
+	// invalid endpoints are represents with a
+	// non-zero weight with an empty endpoints list
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
+	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
@@ -942,7 +968,7 @@ type DestinationSetting struct {
 }
 
 // Validate the fields within the RouteDestination structure
-func (d DestinationSetting) Validate() error {
+func (d *DestinationSetting) Validate() error {
 	var errs error
 	for _, ep := range d.Endpoints {
 		if err := ep.Validate(); err != nil {
@@ -1215,7 +1241,7 @@ type TCPRoute struct {
 type TLS struct {
 	// TLS information required for TLS Passthrough, If provided, incoming
 	// connections' server names are inspected and routed to backends accordingly.
-	Passthrough *TLSInspectorConfig `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
+	TLSInspectorConfig *TLSInspectorConfig `json:"inspector,omitempty" yaml:"inspector,omitempty"`
 	// TLS information required for TLS Termination
 	Terminate *TLSConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
 }
@@ -1246,8 +1272,8 @@ func (t TCPRoute) Validate() error {
 		errs = errors.Join(errs, ErrRouteNameEmpty)
 	}
 
-	if t.TLS != nil && t.TLS.Passthrough != nil {
-		if err := t.TLS.Passthrough.Validate(); err != nil {
+	if t.TLS != nil && t.TLS.TLSInspectorConfig != nil {
+		if err := t.TLS.TLSInspectorConfig.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1280,13 +1306,12 @@ func (t TCPRoute) Validate() error {
 }
 
 // TLSInspectorConfig holds the configuration required for inspecting TLS
-// passthrough connections.
+// connections.
 // +k8s:deepcopy-gen=true
 type TLSInspectorConfig struct {
 	// Server names that are compared against the server names of a new connection.
 	// Wildcard hosts are supported in the prefix form. Partial wildcards are not
 	// supported, and values like *w.example.com are invalid.
-	// SNIs are used only in case of TLS Passthrough.
 	SNIs []string `json:"snis,omitempty" yaml:"snis,omitempty"`
 }
 
@@ -1577,7 +1602,13 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP *bool `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	SourceIP *bool   `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Header   *Header `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// Header consistent hash type settings
+type Header struct {
+	Name string `json:"name" yaml:"name"`
 }
 
 type ProxyProtocolVersion string

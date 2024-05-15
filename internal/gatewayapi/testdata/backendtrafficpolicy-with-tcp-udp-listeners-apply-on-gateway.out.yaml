@@ -291,7 +291,6 @@ xdsIR:
             maxConnectionDuration: 17s
           tcp:
             connectTimeout: 15s
-        tls: {}
     udp:
     - address: 0.0.0.0
       destination:

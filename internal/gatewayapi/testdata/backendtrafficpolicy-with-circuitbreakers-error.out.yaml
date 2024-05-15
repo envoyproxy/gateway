@@ -179,7 +179,6 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -219,7 +218,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -258,7 +256,6 @@ httpRoutes:
       matches:
       - path:
           value: /foo
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -324,10 +321,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -354,10 +348,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -373,10 +364,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

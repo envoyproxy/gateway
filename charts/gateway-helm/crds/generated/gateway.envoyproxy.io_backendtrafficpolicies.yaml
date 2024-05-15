@@ -412,15 +412,38 @@ spec:
                       ConsistentHash defines the configuration when the load balancer type is
                       set to ConsistentHash
                     properties:
+                      header:
+                        description: Header configures the header hash policy when
+                          the consistent hash type is set to Header.
+                        properties:
+                          name:
+                            description: Name of the header to hash.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      tableSize:
+                        default: 65537
+                        description: The table size for consistent hashing, must be
+                          prime number limited to 5000011.
+                        format: int64
+                        maximum: 5000011
+                        minimum: 2
+                        type: integer
                       type:
                         description: ConsistentHashType defines the type of input
-                          to hash on.
+                          to hash on. Valid Type values are "SourceIP" or "Header".
                         enum:
                         - SourceIP
+                        - Header
                         type: string
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: If consistent hash type is header, the header field
+                        must be set.
+                      rule: 'self.type == ''Header'' ? has(self.header) : !has(self.header)'
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -444,7 +467,7 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin",
+                      "RoundRobin".
                     enum:
                     - ConsistentHash
                     - LeastRequest

@@ -30,7 +30,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// Infra IR proxy ports must be unique.
 	foundPorts := make(map[string][]*protocolPort)
 	t.validateConflictedLayer7Listeners(gateways)
-	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
+	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
 	if t.MergeGateways {
 		t.validateConflictedMergedListeners(gateways)

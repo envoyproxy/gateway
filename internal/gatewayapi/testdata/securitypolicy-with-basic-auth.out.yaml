@@ -60,14 +60,12 @@ httpRoutes:
       matches:
       - path:
           value: /foo1
-      sessionPersistence: null
     - backendRefs:
       - name: service-2
         port: 8080
       matches:
       - path:
           value: /foo2
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -106,7 +104,6 @@ httpRoutes:
       matches:
       - path:
           value: /bar
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -225,10 +222,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -248,10 +242,7 @@ xdsIR:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -271,10 +262,7 @@ xdsIR:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

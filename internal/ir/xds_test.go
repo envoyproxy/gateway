@@ -119,7 +119,7 @@ var (
 	// TCPRoute
 	happyTCPRouteTLSPassthrough = TCPRoute{
 		Name:        "happy-tls-passthrough",
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destination: &happyRouteDestination,
 	}
 	happyTCPRouteTLSTermination = TCPRoute{
@@ -138,7 +138,7 @@ var (
 
 	invalidSNITCPRoute = TCPRoute{
 		Name:        "invalid-sni",
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{}}},
 		Destination: &happyRouteDestination,
 	}
 
@@ -182,9 +182,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("invalid-backend"),
 		},
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-		},
 	}
 	weightedInvalidBackendsHTTPRoute = HTTPRoute{
 		Name:     "weighted-invalid-backends",
@@ -193,10 +190,6 @@ var (
 			Exact: ptr.To("invalid-backends"),
 		},
 		Destination: &happyRouteDestination,
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-			Valid:   1,
-		},
 	}
 
 	redirectHTTPRoute = HTTPRoute{
@@ -1243,7 +1236,7 @@ func TestValidateLoadBalancer(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "consistent hash",
+			name: "consistent hash with source IP hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
 					SourceIP: ptr.To(true),
@@ -1251,7 +1244,17 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: nil,
 		},
-
+		{
+			name: "consistent hash with header hash policy",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					Header: &Header{
+						Name: "name",
+					},
+				},
+			},
+			want: nil,
+		},
 		{
 			name: "least request and random set",
 			input: LoadBalancer{

@@ -171,6 +171,21 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
+#### Authorization
+
+
+
+Authorization defines the authorization configuration.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `rules` | _[Rule](#rule) array_ |  false  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
+| `defaultAction` | _[RuleActionType](#ruleactiontype)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
+
+
 #### BackOffPolicy
 
 
@@ -379,7 +394,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
-| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
+| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
 #### ClientTLSSettings
@@ -555,14 +570,15 @@ _Appears in:_
 
 
 ConsistentHash defines the configuration related to the consistent hash
-load balancer policy
+load balancer policy.
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | ConsistentHashType defines the type of input to hash on. Valid Type values are "SourceIP" or "Header". |
+| `header` | _[Header](#header)_ |  false  | Header configures the header hash policy when the consistent hash type is set to Header. |
 
 
 #### ConsistentHashType
@@ -577,6 +593,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
+| `Header` | HeaderConsistentHashType hashes based on a request header.<br /> | 
 
 
 #### CustomHeaderExtensionSettings
@@ -1161,6 +1178,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_authn<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 
 
@@ -1624,6 +1642,21 @@ _Appears in:_
 | `url` | _string_ |  true  | URL is the URL containing the wasm code. |
 
 
+#### Header
+
+
+
+Header defines the header hashing configuration for consistent hash based
+load balancing.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  true  | Name of the header to hash. |
+
+
 
 
 #### HeaderMatchType
@@ -2018,7 +2051,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin", |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
 
@@ -2233,6 +2266,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout is the timeout per retry attempt. |
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
+
+
+#### Principal
+
+
+
+Principal specifies the client identity of a request.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCIDR` | _string array_ |  true  | ClientCIDR is the IP CIDR range of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.<br />You can use the `EnableProxyProtocol` and `ClientIPDetection` options in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 
 
 #### ProcessingModeOptions
@@ -2864,6 +2911,37 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried.<br />The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
+
+
+#### Rule
+
+
+
+Rule defines the single authorization rule.
+
+_Appears in:_
+- [Authorization](#authorization)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
+| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
+
+
+#### RuleActionType
+
+_Underlying type:_ _string_
+
+RuleActionType specifies the types of authorization rule action.
+
+_Appears in:_
+- [Authorization](#authorization)
+- [Rule](#rule)
+
+| Value | Description |
+| ----- | ----------- |
+| `Allow` | Allow is the action to allow the request.<br /> | 
+| `Deny` | Deny is the action to deny the request.<br /> | 
 
 
 #### SecurityPolicy

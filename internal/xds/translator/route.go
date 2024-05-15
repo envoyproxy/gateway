@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
-
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
@@ -20,6 +18,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 )
 
 const (
@@ -71,13 +70,10 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		var routeAction *routev3.RouteAction
-		if httpRoute.BackendWeights.Invalid != 0 {
-			// If there are invalid backends then a weighted cluster is required for the route
-			routeAction = buildXdsWeightedRouteAction(httpRoute)
-		} else {
-			routeAction = buildXdsRouteAction(httpRoute)
-		}
+		backendWeights := httpRoute.Destination.ToBackendWeights()
+		routeAction := buildXdsRouteAction(backendWeights)
+		routeAction.IdleTimeout = idleTimeout(httpRoute)
+
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -99,13 +95,18 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil && httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil &&
-		httpRoute.Timeout.HTTP.RequestTimeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.HTTP.RequestTimeout.Duration)
+	if router.GetRoute() != nil &&
+		httpRoute.Traffic != nil &&
+		httpRoute.Traffic.Timeout != nil &&
+		httpRoute.Traffic.Timeout.HTTP != nil &&
+		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
+		router.GetRoute().Timeout = durationpb.New(httpRoute.Traffic.Timeout.HTTP.RequestTimeout.Duration)
 	}
 
 	// Retries
-	if router.GetRoute() != nil && httpRoute.Retry != nil {
+	if router.GetRoute() != nil &&
+		httpRoute.Traffic != nil &&
+		httpRoute.Traffic.Retry != nil {
 		if rp, err := buildRetryPolicy(httpRoute); err == nil {
 			router.GetRoute().RetryPolicy = rp
 		} else {
@@ -221,27 +222,31 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
-	return &routev3.RouteAction{
-		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: httpRoute.Destination.Name,
-		},
-		IdleTimeout: idleTimeout(httpRoute),
+func buildXdsRouteAction(backendWeights *ir.BackendWeights) *routev3.RouteAction {
+	// only use weighted cluster when there are invalid weights
+	if backendWeights.Invalid == 0 {
+		return &routev3.RouteAction{
+			ClusterSpecifier: &routev3.RouteAction_Cluster{
+				Cluster: backendWeights.Name,
+			},
+		}
 	}
+
+	return buildXdsWeightedRouteAction(backendWeights)
 }
 
-func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
+func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights) *routev3.RouteAction {
 	clusters := []*routev3.WeightedCluster_ClusterWeight{
 		{
 			Name:   "invalid-backend-cluster",
-			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
 		},
 	}
 
-	if httpRoute.BackendWeights.Valid > 0 {
+	if backendWeights.Valid > 0 {
 		validCluster := &routev3.WeightedCluster_ClusterWeight{
-			Name:   httpRoute.Destination.Name,
-			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
+			Name:   backendWeights.Name,
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Valid},
 		}
 		clusters = append(clusters, validCluster)
 	}
@@ -254,27 +259,28 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 				Clusters: clusters,
 			},
 		},
-		IdleTimeout: idleTimeout(httpRoute),
 	}
 }
 
 func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
-	if httpRoute.Timeout != nil && httpRoute.Timeout.HTTP != nil {
-		if httpRoute.Timeout.HTTP.RequestTimeout != nil {
-			timeout := time.Hour // Default to 1 hour
+	if httpRoute.Traffic != nil &&
+		httpRoute.Traffic.Timeout != nil &&
+		httpRoute.Traffic.Timeout.HTTP != nil &&
+		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
+		rt := httpRoute.Traffic.Timeout.HTTP.RequestTimeout
+		timeout := time.Hour // Default to 1 hour
 
-			// Ensure is not less than the request timeout
-			if timeout < httpRoute.Timeout.HTTP.RequestTimeout.Duration {
-				timeout = httpRoute.Timeout.HTTP.RequestTimeout.Duration
-			}
-
-			// Disable idle timeout when request timeout is disabled
-			if httpRoute.Timeout.HTTP.RequestTimeout.Duration == 0 {
-				timeout = 0
-			}
-
-			return durationpb.New(timeout)
+		// Ensure is not less than the request timeout
+		if timeout < rt.Duration {
+			timeout = rt.Duration
 		}
+
+		// Disable idle timeout when request timeout is disabled
+		if rt.Duration == 0 {
+			timeout = 0
+		}
+
+		return durationpb.New(timeout)
 	}
 	return nil
 }
@@ -436,11 +442,29 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 
 func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy {
 	// Return early
-	if httpRoute == nil || httpRoute.LoadBalancer == nil || httpRoute.LoadBalancer.ConsistentHash == nil {
+	if httpRoute == nil ||
+		httpRoute.Traffic == nil ||
+		httpRoute.Traffic.LoadBalancer == nil ||
+		httpRoute.Traffic.LoadBalancer.ConsistentHash == nil {
 		return nil
 	}
 
-	if httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil && *httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+	ch := httpRoute.Traffic.LoadBalancer.ConsistentHash
+
+	switch {
+	case ch.Header != nil:
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+				Header: &routev3.RouteAction_HashPolicy_Header{
+					HeaderName: ch.Header.Name,
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case ch.SourceIP != nil:
+		if !*ch.SourceIP {
+			return nil
+		}
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
 				ConnectionProperties: &routev3.RouteAction_HashPolicy_ConnectionProperties{
@@ -449,74 +473,70 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
-	if route.Retry != nil {
-		rr := route.Retry
-		rp := &routev3.RetryPolicy{
-			RetryOn:              retryDefaultRetryOn,
-			RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},
-			NumRetries:           &wrapperspb.UInt32Value{Value: retryDefaultNumRetries},
-			RetryHostPredicate: []*routev3.RetryPolicy_RetryHostPredicate{
-				{
-					Name: "envoy.retry_host_predicates.previous_hosts",
-					ConfigType: &routev3.RetryPolicy_RetryHostPredicate_TypedConfig{
-						TypedConfig: protocov.ToAny(&previoushost.PreviousHostsPredicate{}),
-					},
+	rr := route.Traffic.Retry
+	rp := &routev3.RetryPolicy{
+		RetryOn:              retryDefaultRetryOn,
+		RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},
+		NumRetries:           &wrapperspb.UInt32Value{Value: retryDefaultNumRetries},
+		RetryHostPredicate: []*routev3.RetryPolicy_RetryHostPredicate{
+			{
+				Name: "envoy.retry_host_predicates.previous_hosts",
+				ConfigType: &routev3.RetryPolicy_RetryHostPredicate_TypedConfig{
+					TypedConfig: protocov.ToAny(&previoushost.PreviousHostsPredicate{}),
 				},
 			},
-			HostSelectionRetryMaxAttempts: 5,
-		}
-
-		if rr.NumRetries != nil {
-			rp.NumRetries = &wrapperspb.UInt32Value{Value: *rr.NumRetries}
-		}
-
-		if rr.RetryOn != nil {
-			if rr.RetryOn.Triggers != nil && len(rr.RetryOn.Triggers) > 0 {
-				if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
-					rp.RetryOn = ro
-				} else {
-					return nil, err
-				}
-			}
-
-			if rr.RetryOn.HTTPStatusCodes != nil && len(rr.RetryOn.HTTPStatusCodes) > 0 {
-				rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
-			}
-		}
-
-		if rr.PerRetry != nil {
-			if rr.PerRetry.Timeout != nil {
-				rp.PerTryTimeout = durationpb.New(rr.PerRetry.Timeout.Duration)
-			}
-
-			if rr.PerRetry.BackOff != nil {
-				bbo := false
-				rbo := &routev3.RetryPolicy_RetryBackOff{}
-				if rr.PerRetry.BackOff.BaseInterval != nil {
-					rbo.BaseInterval = durationpb.New(rr.PerRetry.BackOff.BaseInterval.Duration)
-					bbo = true
-				}
-
-				if rr.PerRetry.BackOff.MaxInterval != nil {
-					rbo.MaxInterval = durationpb.New(rr.PerRetry.BackOff.MaxInterval.Duration)
-					bbo = true
-				}
-
-				if bbo {
-					rp.RetryBackOff = rbo
-				}
-			}
-		}
-		return rp, nil
+		},
+		HostSelectionRetryMaxAttempts: 5,
 	}
 
-	return nil, nil
+	if rr.NumRetries != nil {
+		rp.NumRetries = &wrapperspb.UInt32Value{Value: *rr.NumRetries}
+	}
+
+	if rr.RetryOn != nil {
+		if rr.RetryOn.Triggers != nil && len(rr.RetryOn.Triggers) > 0 {
+			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
+				rp.RetryOn = ro
+			} else {
+				return nil, err
+			}
+		}
+
+		if rr.RetryOn.HTTPStatusCodes != nil && len(rr.RetryOn.HTTPStatusCodes) > 0 {
+			rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
+		}
+	}
+
+	if rr.PerRetry != nil {
+		if rr.PerRetry.Timeout != nil {
+			rp.PerTryTimeout = durationpb.New(rr.PerRetry.Timeout.Duration)
+		}
+
+		if rr.PerRetry.BackOff != nil {
+			bbo := false
+			rbo := &routev3.RetryPolicy_RetryBackOff{}
+			if rr.PerRetry.BackOff.BaseInterval != nil {
+				rbo.BaseInterval = durationpb.New(rr.PerRetry.BackOff.BaseInterval.Duration)
+				bbo = true
+			}
+
+			if rr.PerRetry.BackOff.MaxInterval != nil {
+				rbo.MaxInterval = durationpb.New(rr.PerRetry.BackOff.MaxInterval.Duration)
+				bbo = true
+			}
+
+			if bbo {
+				rp.RetryBackOff = rbo
+			}
+		}
+	}
+	return rp, nil
 }
 
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {

@@ -136,4 +136,3 @@ xdsIR:
             protocol: TCP
             weight: 1
         name: tcproute/default/tcproute-1
-        tls: {}

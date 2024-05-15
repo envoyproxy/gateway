@@ -1,6 +1,12 @@
 ---
-title: "Observability: Metrics"
+title: "Data Plane Observability: Metrics"
 ---
+
+This document aims to cover all aspects of envoy gateway data plane metrics observability.
+
+{{% alert title="Note" color="secondary" %}}
+**Control plane** observability (while important) is outside of scope for this document. For control plane observability, refer to [here](./eg-metrics).
+{{% /alert %}}
 
 ## Overview
 

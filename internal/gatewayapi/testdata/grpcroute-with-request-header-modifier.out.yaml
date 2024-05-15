@@ -61,7 +61,6 @@ grpcRoutes:
           - name: my-header
             value: foo
         type: RequestHeaderModifier
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -116,9 +115,6 @@ xdsIR:
         - append: true
           name: my-header
           value: foo
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:

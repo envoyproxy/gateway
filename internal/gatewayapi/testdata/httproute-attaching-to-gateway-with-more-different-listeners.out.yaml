@@ -268,7 +268,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -367,10 +366,7 @@ xdsIR:
         mergeSlashes: true
       port: 10081
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -396,10 +392,7 @@ xdsIR:
         mergeSlashes: true
       port: 10082
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -425,10 +418,7 @@ xdsIR:
         mergeSlashes: true
       port: 10083
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -454,10 +444,7 @@ xdsIR:
         mergeSlashes: true
       port: 10084
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -483,10 +470,7 @@ xdsIR:
         mergeSlashes: true
       port: 10085
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -512,10 +496,7 @@ xdsIR:
         mergeSlashes: true
       port: 10086
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -541,10 +522,7 @@ xdsIR:
         mergeSlashes: true
       port: 10087
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -570,10 +548,7 @@ xdsIR:
         mergeSlashes: true
       port: 10088
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

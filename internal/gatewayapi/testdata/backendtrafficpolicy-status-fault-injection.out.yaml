@@ -197,7 +197,6 @@ grpcRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -237,7 +236,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -276,7 +274,6 @@ httpRoutes:
       matches:
       - path:
           value: /route2
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -342,10 +339,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -354,16 +348,17 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
-        faultInjection:
-          abort:
-            grpcStatus: 14
-            percentage: 100
-          delay:
-            fixedDelay: 5.4s
-            percentage: 80
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+        traffic:
+          faultInjection:
+            abort:
+              grpcStatus: 14
+              percentage: 100
+            delay:
+              fixedDelay: 5.4s
+              percentage: 80
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -379,10 +374,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -391,10 +383,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        faultInjection:
-          abort:
-            httpStatus: 14
-            percentage: 0.01
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
@@ -402,10 +390,12 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route2
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+        traffic:
+          faultInjection:
+            abort:
+              httpStatus: 14
+              percentage: 0.01
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -414,13 +404,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        faultInjection:
-          abort:
-            httpStatus: 500
-            percentage: 100
-          delay:
-            fixedDelay: 5.4s
-            percentage: 80
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -428,3 +411,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          faultInjection:
+            abort:
+              httpStatus: 500
+              percentage: 100
+            delay:
+              fixedDelay: 5.4s
+              percentage: 80

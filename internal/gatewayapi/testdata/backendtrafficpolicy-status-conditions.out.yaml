@@ -376,7 +376,6 @@ grpcRoutes:
         - name: magic
           type: Exact
           value: foo
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -412,7 +411,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -447,7 +445,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      sessionPersistence: null
   status:
     parents:
     - conditions:
@@ -548,9 +545,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
         hostname: '*'
@@ -560,6 +558,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic: {}
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -575,9 +574,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
         headerMatches:
@@ -587,6 +587,7 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
+        traffic: {}
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-2/tcp

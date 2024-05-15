@@ -19,6 +19,19 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
+        - name: tls-hostname
+          hostname: "foo.bar.com"
+          protocol: TLS
+          port: 90
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-secret-1
+            mode: Terminate
+          allowedRoutes:
+            namespaces:
+              from: All
 tcpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TCPRoute
@@ -29,9 +42,24 @@ tcpRoutes:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
+          sectionName: tls
       rules:
         - backendRefs:
             - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: tls-hostname
+      rules:
+        - backendRefs:
+            - name: service-2
               port: 8080
 
 secrets:
