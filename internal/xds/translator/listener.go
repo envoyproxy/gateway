@@ -261,7 +261,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
 		Tracing:                   hcmTracing,
-		PreserveExternalRequestId: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveExternalRequestID,
+		PreserveExternalRequestId: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
 	}
 
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {

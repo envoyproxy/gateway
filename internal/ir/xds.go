@@ -423,10 +423,10 @@ type HeaderSettings struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
 	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
 
-	// PreserveExternalRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
+	// PreserveXRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// It defaults to false.
-	PreserveExternalRequestID bool `json:"preserveExternalRequestID,omitempty" yaml:"preserveExternalRequestID,omitempty"`
+	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections

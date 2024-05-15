@@ -2315,8 +2315,8 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(WithUnderscoresAction)
 		**out = **in
 	}
-	if in.PreserveExternalRequestID != nil {
-		in, out := &in.PreserveExternalRequestID, &out.PreserveExternalRequestID
+	if in.PreserveXRequestID != nil {
+		in, out := &in.PreserveXRequestID, &out.PreserveXRequestID
 		*out = new(bool)
 		**out = **in
 	}
