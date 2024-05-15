@@ -20,4 +20,3 @@ http:
       http:
         requestReceivedTimeout: "5s"
         idleTimeout: "10s"
-

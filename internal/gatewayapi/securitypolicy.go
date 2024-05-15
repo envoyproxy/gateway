@@ -465,7 +465,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		for _, r := range h.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
-			if !r.Security.Empty() {
+			if r.Security != nil {
 				continue
 			}
 

@@ -476,6 +476,24 @@ type HTTPRoute struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
+	// Wasm extensions
+	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+
+	// Traffic holds the features associated with BackendTrafficPolicy
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	// Security holds the features associated with SecurityPolicy
+	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// UseClientProtocol enables using the same protocol upstream that was used downstream
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+}
+
+// TrafficFeatures holds the information associated with the Backend Traffic Policy.
+// +k8s:deepcopy-gen=true
+type TrafficFeatures struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -487,8 +505,6 @@ type HTTPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Request and connection timeout settings
@@ -497,15 +513,23 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
-	// External Processing extensions
-	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
-	// Wasm extensions
-	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+}
 
-	// Security holds the features associated with SecurityPolicy
-	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
-	// UseClientProtocol enables using the same protocol upstream that was used downstream
-	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+func (b *TrafficFeatures) Validate() error {
+	var errs error
+
+	if b.LoadBalancer != nil {
+		if err := b.LoadBalancer.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if b.HealthCheck != nil {
+		if err := b.HealthCheck.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
 // SecurityFeatures holds the information associated with the Security Policy.
@@ -521,19 +545,6 @@ type SecurityFeatures struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
-}
-
-// Empty returns true if all the features are not set.
-func (s *SecurityFeatures) Empty() bool {
-	if s == nil {
-		return true
-	}
-
-	return s.CORS == nil &&
-		s.JWT == nil &&
-		s.OIDC == nil &&
-		s.BasicAuth == nil &&
-		s.ExtAuth == nil
 }
 
 func (s *SecurityFeatures) Printable() *SecurityFeatures {
@@ -872,18 +883,13 @@ func (h HTTPRoute) Validate() error {
 			occurred.Insert(header)
 		}
 	}
-	if h.LoadBalancer != nil {
-		if err := h.LoadBalancer.Validate(); err != nil {
+	if h.Traffic != nil {
+		if err := h.Traffic.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 	if h.Security != nil {
 		if err := h.Security.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	if h.HealthCheck != nil {
-		if err := h.HealthCheck.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
