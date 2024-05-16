@@ -20,21 +20,18 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-	"sigs.k8s.io/gateway-api/pkg/features"
 	"sigs.k8s.io/yaml"
+
+	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 )
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 
 	opts := conformance.DefaultOptions(t)
-	opts.SkipTests = []string{
-		tests.GatewayStaticAddresses.ShortName,
-		tests.GatewayHTTPListenerIsolation.ShortName,          // https://github.com/kubernetes-sigs/gateway-api/issues/3049
-		tests.HTTPRouteBackendRequestHeaderModifier.ShortName, // https://github.com/envoyproxy/gateway/issues/3338
-	}
-	opts.SupportedFeatures = features.AllFeatures
-	opts.ExemptFeatures = features.MeshCoreFeatures
+	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
+	opts.SupportedFeatures = internalconf.EnvoyGatewaySuite.SupportedFeatures
+	opts.ExemptFeatures = internalconf.EnvoyGatewaySuite.ExemptFeatures
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,

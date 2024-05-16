@@ -14,6 +14,8 @@ API group.
 
 
 ### Resource Types
+- [Backend](#backend)
+- [BackendList](#backendlist)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
@@ -171,6 +173,22 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
+#### AppProtocolType
+
+_Underlying type:_ _string_
+
+AppProtocolType defines various backend applications protocols supported by Envoy Gateway
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `gateway.envoyproxy.io/h2c` | AppProtocolTypeH2C defines the HTTP/2 application protocol.<br /> | 
+| `gateway.envoyproxy.io/ws` | AppProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> | 
+| `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.<br /> | 
+
+
 #### Authorization
 
 
@@ -201,6 +219,61 @@ _Appears in:_
 | `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
 
 
+#### Backend
+
+
+
+Backend allows the user to configure the endpoints of a backend and
+the behavior of the connection from Envoy Proxy to the backend.
+
+_Appears in:_
+- [BackendList](#backendlist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`Backend`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[BackendSpec](#backendspec)_ |  true  | Spec defines the desired state of Backend. |
+
+
+
+
+
+
+#### BackendEndpoint
+
+
+
+BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket
+corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
+| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IPv4 defines an IPv4 endpoint |
+| `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
+
+
+#### BackendList
+
+
+
+BackendList contains a list of Backend resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`BackendList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[Backend](#backend) array_ |  true  |  |
+
+
 #### BackendRef
 
 
@@ -221,6 +294,23 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+
+
+#### BackendSpec
+
+
+
+BackendSpec describes the desired state of BackendSpec.
+
+_Appears in:_
+- [Backend](#backend)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | Endpoints defines the endpoints to be used when connecting to the backend. |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
+
+
 
 
 #### BackendTLSConfig
@@ -428,6 +518,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `tcp` | _[TCPClientTimeout](#tcpclienttimeout)_ |  false  | Timeout settings for TCP. |
 | `http` | _[HTTPClientTimeout](#httpclienttimeout)_ |  false  | Timeout settings for HTTP. |
 
 
@@ -1280,6 +1371,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
+| `enableBackend` | _boolean_ |  true  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
 
 
 #### ExtensionHooks
@@ -1342,6 +1434,22 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that<br />contains a TLS certificate and private keys. These certificates are used to<br />establish a TLS handshake to the extension server.<br /><br />CertificateRef can only reference a Kubernetes Secret at this time. |
+
+
+#### FQDNEndpoint
+
+
+
+FQDNEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+
+_Appears in:_
+- [BackendEndpoint](#backendendpoint)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `hostname` | _string_ |  true  | Hostname defines the FQDN hostname of the backend endpoint. |
+| `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
 #### FaultInjection
@@ -1705,6 +1813,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
+
+
+#### IPv4Endpoint
+
+
+
+IPv4Endpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+
+_Appears in:_
+- [BackendEndpoint](#backendendpoint)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `address` | _string_ |  true  | Address defines the IPv4 address of the backend endpoint. |
+| `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
 #### ImageWasmCodeSource
@@ -3140,6 +3264,20 @@ _Appears in:_
 | `receive` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  | Receive defines the expected response payload. |
 
 
+#### TCPClientTimeout
+
+
+
+TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
+
+_Appears in:_
+- [ClientTimeout](#clienttimeout)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `idleTimeout` | _[Duration](#duration)_ |  false  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
+
+
 #### TCPKeepalive
 
 
@@ -3281,6 +3419,21 @@ _Appears in:_
 | `internal` | The gRPC status code in the response headers is “internal”.<br /> | 
 | `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> | 
 | `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
+
+
+#### UnixSocket
+
+
+
+UnixSocket describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
+
+_Appears in:_
+- [BackendEndpoint](#backendendpoint)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `path` | _string_ |  true  | Path defines the unix domain socket path of the backend endpoint. |
 
 
 #### Wasm
