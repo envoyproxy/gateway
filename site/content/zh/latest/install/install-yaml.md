@@ -12,7 +12,7 @@ weight = -99
 
 Envoy Gateway 设计为在 Kubernetes 中运行以进行生产。最重要的要求是：
 
-* Kubernetes 1.25 或更新
+* Kubernetest 1.25+ 版本
 * `kubectl` 命令行工具
 
 {{% alert title="兼容性矩阵" color="warning" %}}
