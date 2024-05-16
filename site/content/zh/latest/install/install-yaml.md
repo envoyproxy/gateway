@@ -10,7 +10,6 @@ weight = -99
 
 ## 开始之前 {#before-you-begin}
 
-Envoy Gateway is designed to run in Kubernetes for production. The most essential requirements are:
 Envoy Gateway 设计为在 Kubernetes 中运行以进行生产。最重要的要求是：
 
 * Kubernetes 1.25 或更新
