@@ -4,7 +4,8 @@ metadata:
   name: envoy-gateway-config
   namespace: '{{ .Release.Namespace }}'
   labels:
-  {{- include "eg.labels" . | nindent 4 }}
+    {{- include "eg.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
 data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
