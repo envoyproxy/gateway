@@ -64,7 +64,7 @@ consideration when debugging.
 Some of the quick ways of using the helm install command for envoy gateway installation are below.
 
 {{% alert title="Helm Chart Values" color="primary" %}}
-If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../api).
+If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](./api).
 {{% /alert %}}
 
 ### Increase the replicas
