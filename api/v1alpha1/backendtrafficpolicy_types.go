@@ -105,14 +105,14 @@ type BackendTrafficPolicySpec struct {
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 
-	// PerConnectionBufferLimitBytes Soft limit on size of the cluster’s connections read and write buffers.
+	// ConnectionBufferLimitBytes Soft limit on size of the cluster’s connections read and write buffers.
 	// If unspecified, an implementation defined default is applied (32768 bytes).
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note: that when the suffix is not provided, the value is interpreted as bytes.
 	//
 	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="PerConnectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
-	PerConnectionBufferLimitBytes *resource.Quantity `json:"perConnectionBufferLimitBytes,omitempty"`
+	ConnectionBufferLimitBytes *resource.Quantity `json:"connectionBufferLimitBytes,omitempty"`
 }
 
 // +kubebuilder:object:root=true

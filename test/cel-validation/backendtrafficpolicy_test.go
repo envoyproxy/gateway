@@ -922,7 +922,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid perConnectionBufferLimitBytes format",
+			desc: "valid connectionBufferLimitBytes format",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
@@ -932,12 +932,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
-					PerConnectionBufferLimitBytes: ptr.To(resource.MustParse("1Mi")),
+					ConnectionBufferLimitBytes: ptr.To(resource.MustParse("1Mi")),
 				}
 			},
 		},
 		{
-			desc: "invalid perConnectionBufferLimitBytes format",
+			desc: "invalid connectionBufferLimitBytes format",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
@@ -947,11 +947,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Name:  gwapiv1a2.ObjectName("eg"),
 						},
 					},
-					PerConnectionBufferLimitBytes: ptr.To(resource.MustParse("1m")),
+					ConnectionBufferLimitBytes: ptr.To(resource.MustParse("1m")),
 				}
 			},
 			wantErrors: []string{
-				"spec.perConnectionBufferLimitBytes: Invalid value: \"\": PerConnectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
+				"spec.connectionBufferLimitBytes: Invalid value: \"\": connectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
 			},
 		},
 	}
