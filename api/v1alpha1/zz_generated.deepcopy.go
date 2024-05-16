@@ -4312,7 +4312,7 @@ func (in *TCPClientTimeout) DeepCopyInto(out *TCPClientTimeout) {
 	*out = *in
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 }
