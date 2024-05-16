@@ -110,7 +110,7 @@ type BackendTrafficPolicySpec struct {
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note: that when the suffix is not provided, the value is interpreted as bytes.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="PerConnectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="ConnectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
 	ConnectionBufferLimitBytes *resource.Quantity `json:"connectionBufferLimitBytes,omitempty"`
 }

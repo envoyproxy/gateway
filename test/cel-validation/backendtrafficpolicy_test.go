@@ -951,7 +951,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.connectionBufferLimitBytes: Invalid value: \"\": connectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
+				"spec.connectionBufferLimitBytes: Invalid value: \"\": ConnectionBufferLimitBytes must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
 			},
 		},
 	}
