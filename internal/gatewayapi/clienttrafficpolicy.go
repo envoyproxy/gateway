@@ -324,14 +324,6 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 		}
 	}
 
-	var tcpIR *ir.TCPListener
-	for _, tcp := range xds.TCP {
-		if tcp.Name == irListenerName {
-			tcpIR = tcp
-			break
-		}
-	}
-
 	// IR must exist since we're past validation
 	if httpIR != nil {
 		// Get a list of all other non-TLS listeners on this Gateway that share a port with
@@ -359,12 +351,6 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 			}
 		}
 	}
-	if tcpIR != nil {
-		// No port overlap exists in TCP listeners, TLS listeners have their own filter chains.
-		// Just return.
-		return nil
-	}
-
 	return nil
 }
 
