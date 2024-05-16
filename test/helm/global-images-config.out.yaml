@@ -35,8 +35,11 @@ data:
         default: info
     provider:
       kubernetes:
+        rateLimitDeployment:
+          container:
+            image: private-hub/envoyproxy/ratelimit:test
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:latest
+          image: private-hub/envoyproxy/gateway:abcdef12
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -371,8 +374,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: IfNotPresent
+        image: private-hub/envoyproxy/gateway:abcdef12
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
@@ -409,6 +412,9 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+      imagePullSecrets:
+      - name: secret1
+      - name: secret2
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway
@@ -519,9 +525,12 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: IfNotPresent
+        image: private-hub/envoyproxy/gateway:abcdef12
+        imagePullPolicy: Always
         name: envoy-gateway-certgen
+      imagePullSecrets:
+      - name: secret1
+      - name: secret2
       restartPolicy: Never
       securityContext:
         runAsGroup: 65534
