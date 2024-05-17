@@ -44,6 +44,9 @@ jobs:
 
   coverage-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read   #  for actions/checkout  
+      id-token: write  #  for fetching OIDC token
     steps:
     - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b  # v4.1.5
     - uses: ./tools/github-actions/setup-deps
@@ -52,12 +55,16 @@ jobs:
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@4fe8c5f003fae66aa5ebb77cfd3e7bfbbda0b6b0  # v3.1.5
+      uses: codecov/codecov-action@6d798873df2b1b8e5846dba6fb86631229fbcb17  # v4.4.0
       with:
-        fail_ci_if_error: false
+        fail_ci_if_error: true
         files: ./coverage.xml
         name: codecov-envoy-gateway
         verbose: true
+        # only use oidc for push events or PRs from the same repo, since PRs from forks cannot fetch an OIDC token
+        # Codecov supports Token-less Uploads for PRs from forks:
+        # https://docs.codecov.com/docs/codecov-uploader#supporting-token-less-uploads-for-forks-of-open-source-repos-using-codecov
+        use_oidc: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
 
   build:
     runs-on: ubuntu-latest
