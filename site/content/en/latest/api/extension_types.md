@@ -235,6 +235,7 @@ _Appears in:_
 | `kind` | _string_ | |`Backend`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[BackendSpec](#backendspec)_ |  true  | Spec defines the desired state of Backend. |
+| `status` | _[BackendStatus](#backendstatus)_ |  true  | Status defines the current status of Backend. |
 
 
 
@@ -311,6 +312,18 @@ _Appears in:_
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 
 
+#### BackendStatus
+
+
+
+BackendStatus defines the state of Backend
+
+_Appears in:_
+- [Backend](#backend)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#condition-v1-meta) array_ |  false  | Conditions describe the current conditions of the Backend. |
 
 
 #### BackendTLSConfig
@@ -349,6 +362,7 @@ _Appears in:_
 | `kind` | _string_ | |`BackendTrafficPolicy`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ |  true  | spec defines the desired state of BackendTrafficPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | status defines the current status of BackendTrafficPolicy. |
 
 
 #### BackendTrafficPolicyList
@@ -538,6 +552,7 @@ _Appears in:_
 | `kind` | _string_ | |`ClientTrafficPolicy`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[ClientTrafficPolicySpec](#clienttrafficpolicyspec)_ |  true  | Spec defines the desired state of ClientTrafficPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of ClientTrafficPolicy. |
 
 
 #### ClientTrafficPolicyList
@@ -768,6 +783,7 @@ _Appears in:_
 | `kind` | _string_ | |`EnvoyExtensionPolicy`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)_ |  true  | Spec defines the desired state of EnvoyExtensionPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of EnvoyExtensionPolicy. |
 
 
 #### EnvoyExtensionPolicyList
@@ -1152,6 +1168,7 @@ _Appears in:_
 | `kind` | _string_ | |`EnvoyPatchPolicy`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyPatchPolicySpec](#envoypatchpolicyspec)_ |  true  | Spec defines the desired state of EnvoyPatchPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of EnvoyPatchPolicy. |
 
 
 #### EnvoyPatchPolicyList
@@ -1215,6 +1232,7 @@ EnvoyProxy is the schema for the envoyproxies API.
 | `kind` | _string_ | |`EnvoyProxy`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyProxySpec](#envoyproxyspec)_ |  true  | EnvoyProxySpec defines the desired state of EnvoyProxy. |
+| `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  true  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
 
 
 #### EnvoyProxyKubernetesProvider
@@ -1272,6 +1290,16 @@ _Appears in:_
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_authn<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 
+
+#### EnvoyProxyStatus
+
+
+
+EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
+until https://github.com/envoyproxy/gateway/issues/1007 is fixed.
+
+_Appears in:_
+- [EnvoyProxy](#envoyproxy)
 
 
 
@@ -3084,6 +3112,7 @@ _Appears in:_
 | `kind` | _string_ | |`SecurityPolicy`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[SecurityPolicySpec](#securitypolicyspec)_ |  true  | Spec defines the desired state of SecurityPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of SecurityPolicy. |
 
 
 #### SecurityPolicyList
