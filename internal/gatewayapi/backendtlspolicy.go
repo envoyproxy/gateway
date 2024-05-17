@@ -24,12 +24,15 @@ func (t *Translator) processBackendTLSPolicy(
 	parent gwapiv1a2.ParentReference,
 	resources *Resources,
 ) *ir.TLSUpstreamConfig {
-	tlsBundle, err := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, backendRef, backendNamespace)
-	if err == nil && tlsBundle == nil {
+	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	if policy == nil {
 		return nil
 	}
 
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	tlsBundle, err := getBackendTLSBundle(policy, resources.ConfigMaps)
+	if err == nil && tlsBundle == nil {
+		return nil
+	}
 
 	ancestorRefs := []gwapiv1a2.ParentReference{
 		parent,
@@ -109,7 +112,7 @@ func (t *Translator) processBackendTLSPolicy(
 	return tlsBundle
 }
 
-func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
+func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
 	// TODO: support multiple targetRefs
 	policyTarget := policy.Spec.TargetRefs[0]
 
@@ -127,20 +130,14 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a3.BackendTLSPolicy {
 	target := getTargetBackendReference(backendRef, backendNamespace)
 	for _, policy := range policies {
-		if backendTLSTargetMatched(*policy, target) {
+		if backendTLSTargetMatched(*policy, target, backendNamespace) {
 			return policy
 		}
 	}
 	return nil
 }
 
-func getBackendTLSBundle(policies []*gwapiv1a3.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) (*ir.TLSUpstreamConfig, error) {
-	backendTLSPolicy := getBackendTLSPolicy(policies, backendRef, backendNamespace)
-
-	if backendTLSPolicy == nil {
-		return nil, nil
-	}
-
+func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, configmaps []*corev1.ConfigMap) (*ir.TLSUpstreamConfig, error) {
 	tlsBundle := &ir.TLSUpstreamConfig{
 		SNI:                 string(backendTLSPolicy.Spec.Validation.Hostname),
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
