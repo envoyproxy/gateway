@@ -33,9 +33,9 @@ The Helm chart for Envoy Gateway
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
 | createNamespace | bool | `false` |  |
-| deployment.envoyGateway.image.repository | string | `"docker.io/envoyproxy/gateway"` |  |
-| deployment.envoyGateway.image.tag | string | `"latest"` |  |
-| deployment.envoyGateway.imagePullPolicy | string | `"IfNotPresent"` |  |
+| deployment.envoyGateway.image.repository | string | `""` |  |
+| deployment.envoyGateway.image.tag | string | `""` |  |
+| deployment.envoyGateway.imagePullPolicy | string | `""` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
@@ -55,5 +55,9 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].port | int | `19001` |  |
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
+| global.images.envoyGateway.image | string | `nil` |  |
+| global.images.envoyGateway.imagePullSecrets | list | `[]` |  |
+| global.images.envoyGateway.pullPolicy | string | `nil` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 
