@@ -17,6 +17,7 @@ nodes:
 EOM
 )
 
+# https://kind.sigs.k8s.io/docs/user/quick-start/#multi-node-clusters
 if [[ -n "${NUM_WORKERS}" ]]; then
 for _ in $(seq 1 "${NUM_WORKERS}"); do
   KIND_CFG+=$(printf "\n%s" "- role: worker")
