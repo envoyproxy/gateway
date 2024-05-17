@@ -64,7 +64,7 @@ jobs:
         # only use oidc for push events or PRs from the same repo, since PRs from forks cannot fetch an OIDC token
         # Codecov supports Token-less Uploads for PRs from forks:
         # https://docs.codecov.com/docs/codecov-uploader#supporting-token-less-uploads-for-forks-of-open-source-repos-using-codecov
-        use_oidc: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+        use_oidc: ${{ github.event_name == 'push' }}
 
   build:
     runs-on: ubuntu-latest
