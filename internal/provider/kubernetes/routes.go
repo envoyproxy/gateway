@@ -43,6 +43,12 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 				continue
 			}
 		}
+
+		if _, ok := resourceMap.allAssociatedTLSRoutes[utils.NamespacedName(&tlsRoute).String()]; ok {
+			r.log.Info("current TLSRoute has been processed already", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
+			continue
+		}
+
 		r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 
 		for _, rule := range tlsRoute.Spec.Rules {
@@ -82,6 +88,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		}
 
 		resourceMap.allAssociatedNamespaces[tlsRoute.Namespace] = struct{}{}
+		resourceMap.allAssociatedTLSRoutes[utils.NamespacedName(&tlsRoute).String()] = struct{}{}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		tlsRoute.Status = gwapiv1a2.TLSRouteStatus{}
@@ -115,6 +122,12 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				continue
 			}
 		}
+
+		if _, ok := resourceMap.allAssociatedGRPCRoutes[utils.NamespacedName(&grpcRoute).String()]; ok {
+			r.log.Info("current GRPCRoute has been processed already", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
+			continue
+		}
+
 		r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
 
 		for _, rule := range grpcRoute.Spec.Rules {
@@ -193,6 +206,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		}
 
 		resourceMap.allAssociatedNamespaces[grpcRoute.Namespace] = struct{}{}
+		resourceMap.allAssociatedGRPCRoutes[utils.NamespacedName(&grpcRoute).String()] = struct{}{}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		grpcRoute.Status = gwapiv1.GRPCRouteStatus{}
@@ -235,6 +249,12 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				continue
 			}
 		}
+
+		if _, ok := resourceMap.allAssociatedHTTPRoutes[utils.NamespacedName(&httpRoute).String()]; ok {
+			r.log.Info("current HTTPRoute has been processed already", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
+			continue
+		}
+
 		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
 		for _, rule := range httpRoute.Spec.Rules {
@@ -367,6 +387,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		}
 
 		resourceMap.allAssociatedNamespaces[httpRoute.Namespace] = struct{}{}
+		resourceMap.allAssociatedHTTPRoutes[utils.NamespacedName(&httpRoute).String()] = struct{}{}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		httpRoute.Status = gwapiv1.HTTPRouteStatus{}
@@ -399,6 +420,12 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 				continue
 			}
 		}
+
+		if _, ok := resourceMap.allAssociatedTCPRoutes[utils.NamespacedName(&tcpRoute).String()]; ok {
+			r.log.Info("current TCPRoute has been processed already", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
+			continue
+		}
+
 		r.log.Info("processing TCPRoute", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
 
 		for _, rule := range tcpRoute.Spec.Rules {
@@ -438,6 +465,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		}
 
 		resourceMap.allAssociatedNamespaces[tcpRoute.Namespace] = struct{}{}
+		resourceMap.allAssociatedTCPRoutes[utils.NamespacedName(&tcpRoute).String()] = struct{}{}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		tcpRoute.Status = gwapiv1a2.TCPRouteStatus{}
@@ -470,6 +498,12 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 				continue
 			}
 		}
+
+		if _, ok := resourceMap.allAssociatedUDPRoutes[utils.NamespacedName(&udpRoute).String()]; ok {
+			r.log.Info("current UDPRoute has been processed already", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
+			continue
+		}
+
 		r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
 
 		for _, rule := range udpRoute.Spec.Rules {
@@ -509,6 +543,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		}
 
 		resourceMap.allAssociatedNamespaces[udpRoute.Namespace] = struct{}{}
+		resourceMap.allAssociatedUDPRoutes[utils.NamespacedName(&udpRoute).String()] = struct{}{}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		udpRoute.Status = gwapiv1a2.UDPRouteStatus{}
