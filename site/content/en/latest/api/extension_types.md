@@ -653,7 +653,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `value` | _integer_ |  true  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration.<br />Default: unlimited. |
-| `closeDelay` | _[Duration](#duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected<br />once the limit value is reached.<br />Default: none. |
+| `closeDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected<br />once the limit value is reached.<br />Default: none. |
 
 
 #### ConsistentHash
@@ -1321,7 +1321,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  true  | BackendRefs defines the configuration of the external processing service |
-| `messageTimeout` | _[Duration](#duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
+| `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 
@@ -1689,8 +1689,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `requestReceivedTimeout` | _[Duration](#duration)_ |  false  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request<br />initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
-| `idleTimeout` | _[Duration](#duration)_ |  false  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
+| `requestReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request<br />initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
+| `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 
 
 #### HTTPExtAuthService
@@ -1732,8 +1732,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `connectionIdleTimeout` | _[Duration](#duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
-| `maxConnectionDuration` | _[Duration](#duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+| `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
+| `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
 
 
 #### HTTPWasmCodeSource
@@ -2144,9 +2144,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `leaseDuration` | _[Duration](#duration)_ |  true  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.<br />It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds. |
-| `renewDeadline` | _[Duration](#duration)_ |  true  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position. The default setting is 10 seconds. |
-| `retryPeriod` | _[Duration](#duration)_ |  true  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
+| `leaseDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.<br />It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds. |
+| `renewDeadline` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position. The default setting is 10 seconds. |
+| `retryPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
 | `disable` | _boolean_ |  true  | Disable provides the option to turn off leader election, which is enabled by default. |
 
 
@@ -3275,7 +3275,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `idleTimeout` | _[Duration](#duration)_ |  false  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
+| `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
 
 
 #### TCPKeepalive
@@ -3291,8 +3291,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `probes` | _integer_ |  false  | The total number of unacknowledged probes to send before deciding<br />the connection is dead.<br />Defaults to 9. |
-| `idleTime` | _[Duration](#duration)_ |  false  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
-| `interval` | _[Duration](#duration)_ |  false  | The duration between keep-alive probes.<br />Defaults to `75s`. |
+| `idleTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The duration between keep-alive probes.<br />Defaults to `75s`. |
 
 
 #### TCPTimeout
@@ -3306,7 +3306,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `connectTimeout` | _[Duration](#duration)_ |  false  | The timeout for network connection establishment, including TCP and TLS handshakes.<br />Default: 10 seconds. |
+| `connectTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The timeout for network connection establishment, including TCP and TLS handshakes.<br />Default: 10 seconds. |
 
 
 #### TLSSettings
