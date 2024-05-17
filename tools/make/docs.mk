@@ -57,7 +57,9 @@ docs-api-gen: $(tools/crd-ref-docs)
 docs-api-headings:
 	@$(LOG_TARGET)
 	tools/hack/docs-headings.sh site/content/en/latest/api/extension_types.md
+	tools/hack/docs-headings.sh site/content/zh/latest/api/extension_types.md
 	tools/hack/docs-headings.sh site/content/en/latest/install/api.md
+	tools/hack/docs-headings.sh site/content/zh/latest/install/api.md
 
 .PHONY: docs-release-prepare
 docs-release-prepare:
