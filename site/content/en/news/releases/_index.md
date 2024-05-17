@@ -1,7 +1,7 @@
 +++
-title = "Release Announcement"
-description = "Envoy Gateway Release Announcement"
-linktitle = "Announcement"
+title = "Release Announcements"
+description = "Envoy Gateway Release Announcements"
+linktitle = "Releases"
 
 [[cascade]]
 type = "docs"
