@@ -539,13 +539,6 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	return extensionOptions
 }
 
-// buildClusterName returns a cluster name for the given `host` and `port`.
-// The format is: <type>|<host>|<port>, where type is "accesslog" for access logs.
-// It's easy to distinguish when debugging.
-func buildClusterName(prefix string, host string, port uint32) string {
-	return fmt.Sprintf("%s|%s|%d", prefix, host, port)
-}
-
 // buildProxyProtocolSocket builds the ProxyProtocol transport socket.
 func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket) *corev3.TransportSocket {
 	if proxyProtocol == nil {
