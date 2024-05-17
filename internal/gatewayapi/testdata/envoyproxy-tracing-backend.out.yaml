@@ -138,7 +138,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     tracing:
-      destinationSettings:
+      destinations:
       - addressType: IP
         endpoints:
         - host: 8.7.6.5

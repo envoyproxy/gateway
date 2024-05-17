@@ -311,12 +311,12 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 
 	return &ir.Tracing{
-		ServiceName:         serviceName,
-		Host:                host,
-		Port:                port,
-		SamplingRate:        samplingRate,
-		CustomTags:          tracing.CustomTags,
-		DestinationSettings: ds,
+		ServiceName:  serviceName,
+		Host:         host,
+		Port:         port,
+		SamplingRate: samplingRate,
+		CustomTags:   tracing.CustomTags,
+		Destinations: ds,
 	}, nil
 }
 

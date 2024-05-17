@@ -127,8 +127,8 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	clusterName := buildClusterName("tracing", tracing.Host, tracing.Port)
 
 	var dests []*ir.DestinationSetting
-	if len(tracing.DestinationSettings) > 0 {
-		dests = tracing.DestinationSettings
+	if len(tracing.Destinations) > 0 {
+		dests = tracing.Destinations
 	} else {
 		dests = []*ir.DestinationSetting{
 			{

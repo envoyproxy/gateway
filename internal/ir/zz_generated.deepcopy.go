@@ -2382,8 +2382,8 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
-	if in.DestinationSettings != nil {
-		in, out := &in.DestinationSettings, &out.DestinationSettings
+	if in.Destinations != nil {
+		in, out := &in.Destinations, &out.Destinations
 		*out = make([]*DestinationSetting, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
