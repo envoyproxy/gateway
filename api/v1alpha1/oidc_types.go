@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -50,6 +51,35 @@ type OIDC struct {
 	// The path to log a user out, clearing their credential cookies.
 	// If not specified, uses a default logout path "/logout"
 	LogoutPath *string `json:"logoutPath,omitempty"`
+
+	// ForwardBearerToken indicates whether the Envoy should forward the access
+	// token as a bearer token in the "Authorization" header to the backend.
+	// If not specified, defaults to false.
+	// +optional
+	ForwardBearerToken *bool `json:"forwardBearerToken,omitempty"`
+
+	// The default lifetime of the ID token and access token.
+	// Please note that Envoy will always use the expiry time from the response
+	// of the authorization server if it is provided. This field is only used when
+	// the expiry time is not provided by the authorization.
+	// If not specified, defaults to 0. In this case, the expiry must be set by
+	// the authorization server or the OAuth flow will fail.
+	// +optional
+	DefaultTokenExpireTime *metav1.Duration `json:"defaultTokenExpireTime,omitempty"`
+
+	// RefreshToken indicates whether the Envoy should use the refresh token to
+	// get the id token and access token when they expire.
+	// If not specified, defaults to false.
+	// +optional
+	RefreshToken *bool `json:"refreshToken,omitempty"`
+
+	// The default lifetime of the refresh token.
+	// This field is only used when the exp (expiration time) claim is omitted in
+	// the refresh token or the refresh token is not JWT.
+	// If not specified, defaults to 604800s (one week).
+	// Note: this field is only used when RefreshToken is set to true.
+	// +optional
+	DefaultRefreshTokenExpireTime *metav1.Duration `json:"defaultRefreshTokenExpireTime,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
