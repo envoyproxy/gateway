@@ -9,4 +9,7 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
-    {{- toYaml .Values.config.envoyGateway | nindent 4 }}
+    {{- $baseEnvoyGatewayConfig := include "eg.default-envoy-gateway-config" . | fromYaml }}
+    {{- $userEnvoyGatewayConfig := .Values.config.envoyGateway }}
+    {{- $mergedEnvoyGatewayConfig := merge $userEnvoyGatewayConfig $baseEnvoyGatewayConfig }}
+    {{- toYaml $mergedEnvoyGatewayConfig | nindent 4 }}
