@@ -125,7 +125,7 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 }
 
 func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a3.BackendTLSPolicy {
-	target := GetTargetBackendReference(backendRef, backendNamespace)
+	target := getTargetBackendReference(backendRef, backendNamespace)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(*policy, target) {
 			return policy
