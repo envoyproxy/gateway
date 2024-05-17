@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -215,7 +216,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
-	for _, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+	for idx, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
 		for _, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
@@ -249,20 +250,27 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 				// TODO: remove support for Host/Port in v1.2
 				al := &ir.OpenTelemetryAccessLog{
-					Port:      uint32(sink.OpenTelemetry.Port),
 					Resources: sink.OpenTelemetry.Resources,
 				}
 
-				if sink.OpenTelemetry.Host != nil {
-					al.Host = *sink.OpenTelemetry.Host
+				ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
+				if err != nil {
+					return nil, err
+				}
+				al.Destination = ir.RouteDestination{
+					Name:     fmt.Sprintf("accesslog-%d", idx), // TODO: rename this, so that we can share backend with tracing?
+					Settings: ds,
 				}
 
-				if len(sink.OpenTelemetry.BackendRefs) > 0 {
-					ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
-					if err != nil {
-						return nil, err
+				if len(ds) == 0 {
+					// fallback to host and port
+					var host string
+					var port uint32
+					if sink.OpenTelemetry.Host != nil {
+						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
-					al.Destinations = ds
+					al.Destination.Settings = destinationSettingFromHostAndPort(host, port)
+					al.Authority = host
 				}
 
 				switch accessLog.Format.Type {
@@ -288,16 +296,23 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
-	// TODO: remove support for Host/Port in v1.2
-	var host string
-	var port uint32
-	if tracing.Provider.Host != nil {
-		host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
-	}
-
 	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources)
 	if err != nil {
 		return nil, err
+	}
+
+	var authority string
+
+	// fallback to host and port
+	// TODO: remove support for Host/Port in v1.2
+	if len(ds) == 0 {
+		var host string
+		var port uint32
+		if tracing.Provider.Host != nil {
+			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
+		}
+		ds = destinationSettingFromHostAndPort(host, port)
+		authority = host
 	}
 
 	samplingRate := 100.0
@@ -311,12 +326,14 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 
 	return &ir.Tracing{
+		Authority:    authority,
 		ServiceName:  serviceName,
-		Host:         host,
-		Port:         port,
 		SamplingRate: samplingRate,
 		CustomTags:   tracing.CustomTags,
-		Destinations: ds,
+		Destination: ir.RouteDestination{
+			Name:     "tracing", // TODO: rename this, so that we can share backend with accesslog?
+			Settings: ds,
+		},
 	}, nil
 }
 
@@ -363,4 +380,14 @@ func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespa
 		return nil, nil
 	}
 	return result, nil
+}
+
+func destinationSettingFromHostAndPort(host string, port uint32) []*ir.DestinationSetting {
+	return []*ir.DestinationSetting{
+		{
+			Weight:    ptr.To[uint32](1),
+			Protocol:  ir.GRPC,
+			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port)},
+		},
+	}
 }

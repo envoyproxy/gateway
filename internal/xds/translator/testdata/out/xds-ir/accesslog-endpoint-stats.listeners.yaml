@@ -50,8 +50,7 @@
       commonConfig:
         grpcService:
           envoyGrpc:
-            authority: otel-collector.default.svc.cluster.local
-            clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+            clusterName: accesslog-0
         logName: otel_envoy_accesslog
         transportApiVersion: V3
       resourceAttributes:
@@ -108,8 +107,7 @@
             commonConfig:
               grpcService:
                 envoyGrpc:
-                  authority: otel-collector.default.svc.cluster.local
-                  clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+                  clusterName: accesslog-0
               logName: otel_envoy_accesslog
               transportApiVersion: V3
             resourceAttributes:

@@ -16,7 +16,6 @@ import (
 	tracingtype "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -33,8 +32,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		GrpcService: &corev3.GrpcService{
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 				EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
-					ClusterName: buildClusterName("tracing", tracing.Host, tracing.Port),
-					Authority:   tracing.Host,
+					ClusterName: tracing.Destination.Name,
+					Authority:   tracing.Authority,
 				},
 			},
 		},
@@ -124,24 +123,9 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		return nil
 	}
 
-	clusterName := buildClusterName("tracing", tracing.Host, tracing.Port)
-
-	var dests []*ir.DestinationSetting
-	if len(tracing.Destinations) > 0 {
-		dests = tracing.Destinations
-	} else {
-		dests = []*ir.DestinationSetting{
-			{
-				Weight:    ptr.To[uint32](1),
-				Protocol:  ir.GRPC,
-				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Host, tracing.Port)},
-			},
-		}
-	}
-
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         clusterName,
-		settings:     dests,
+		name:         tracing.Destination.Name,
+		settings:     tracing.Destination.Settings,
 		tSocket:      nil,
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,

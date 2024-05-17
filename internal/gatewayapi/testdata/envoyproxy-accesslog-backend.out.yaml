@@ -136,14 +136,14 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
-      - destinations:
-        - addressType: IP
-          endpoints:
-          - host: 8.7.6.5
-            port: 4317
-          protocol: GRPC
-        host: ""
-        port: 0
+      - destination:
+          name: accesslog-0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.7.6.5
+              port: 4317
+            protocol: GRPC
         resources:
           k8s.cluster.name: cluster-1
         text: |

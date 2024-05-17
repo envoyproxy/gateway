@@ -138,13 +138,13 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     tracing:
-      destinations:
-      - addressType: IP
-        endpoints:
-        - host: 8.7.6.5
-          port: 4317
-        protocol: GRPC
-      host: ""
-      port: 0
+      destination:
+        name: tracing
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 8.7.6.5
+            port: 4317
+          protocol: GRPC
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway
