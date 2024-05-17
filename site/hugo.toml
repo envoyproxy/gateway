@@ -243,17 +243,13 @@ enable = true
     weight = -98
     url = "/contributions"
   [[menu.main]]
-    name = "Blog"
-    weight = -99
-    url = "/blog"
-  [[menu.main]]
     name = "About"
     weight = -100
     url = "/about"
   [[menu.main]]
-    name = "Announcements"
+    name = "News"
     weight = -101
-    url = "/announcements"
+    url = "/news"
   [[menu.main]]
     name = "Documentation"
     weight = -102

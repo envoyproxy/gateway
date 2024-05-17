@@ -1,5 +1,6 @@
 ---
 title: "KubeCon North America 2022"
+description: "Envoy Gateway Update"
 date: 2022-10-28
 ---
 

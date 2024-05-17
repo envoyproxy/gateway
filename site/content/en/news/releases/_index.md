@@ -1,7 +1,7 @@
 +++
-title = "Release Announcement"
-description = "Envoy Gateway Release Announcement"
-linktitle = "Announcement"
+title = "Release Announcements"
+description = "Envoy Gateway Release Announcements"
+linktitle = "Releases"
 
 [[cascade]]
 type = "docs"
@@ -51,5 +51,5 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 |  0.6.0  | 2023/10/22  | 2023/11/02  |   +10 days  |  2024/05/02 |
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
-[release guide]: ../contributions/releasing
+[release guide]: ../../contributions/releasing
 [release schedule]: https://github.com/envoyproxy/envoy/blob/main/RELEASES.md#major-release-schedule
