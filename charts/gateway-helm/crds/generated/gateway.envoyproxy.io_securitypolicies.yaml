@@ -692,6 +692,7 @@ spec:
                     description: |-
                       ForwardBearerToken indicates whether the Envoy should forward the access
                       token as a bearer token in the "Authorization" header to the backend.
+                      If not specified, defaults to false.
                     type: boolean
                   logoutPath:
                     description: |-
@@ -730,8 +731,10 @@ spec:
                     type: string
                   refreshToken:
                     description: |-
-                      RefreshToken indicates whether the Envoy should use the refresh token to
-                      get the id token and access token when they expire.
+                      RefreshToken indicates whether the Envoy should automatically refresh the
+                      id token and access token when they expire.
+                      When set to true, the Envoy will use the refresh token to get a new id token
+                      and access token when they expire.
                       If not specified, defaults to false.
                     type: boolean
                   resources:

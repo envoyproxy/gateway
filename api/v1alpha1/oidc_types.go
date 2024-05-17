@@ -56,6 +56,7 @@ type OIDC struct {
 	// token as a bearer token in the "Authorization" header to the backend.
 	// If not specified, defaults to false.
 	// +optional
+	// +notImplementedHide
 	ForwardBearerToken *bool `json:"forwardBearerToken,omitempty"`
 
 	// The default lifetime of the ID token and access token.
@@ -65,12 +66,16 @@ type OIDC struct {
 	// If not specified, defaults to 0. In this case, the expiry must be set by
 	// the authorization server or the OAuth flow will fail.
 	// +optional
+	// +notImplementedHide
 	DefaultTokenExpireTime *metav1.Duration `json:"defaultTokenExpireTime,omitempty"`
 
-	// RefreshToken indicates whether the Envoy should use the refresh token to
-	// get the id token and access token when they expire.
+	// RefreshToken indicates whether the Envoy should automatically refresh the
+	// id token and access token when they expire.
+	// When set to true, the Envoy will use the refresh token to get a new id token
+	// and access token when they expire.
 	// If not specified, defaults to false.
 	// +optional
+	// +notImplementedHide
 	RefreshToken *bool `json:"refreshToken,omitempty"`
 
 	// The default lifetime of the refresh token.
@@ -79,6 +84,7 @@ type OIDC struct {
 	// If not specified, defaults to 604800s (one week).
 	// Note: this field is only used when RefreshToken is set to true.
 	// +optional
+	// +notImplementedHide
 	DefaultRefreshTokenExpireTime *metav1.Duration `json:"defaultRefreshTokenExpireTime,omitempty"`
 }
 

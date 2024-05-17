@@ -2264,10 +2264,6 @@ _Appears in:_
 | `resources` | _string array_ |  false  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
 | `logoutPath` | _string_ |  true  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
-| `forwardBearerToken` | _boolean_ |  true  | ForwardBearerToken indicates whether the Envoy should forward the access<br />token as a bearer token in the "Authorization" header to the backend. |
-| `defaultTokenExpireTime` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | The default lifetime of the ID token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the expiry must be set by<br />the authorization server or the OAuth flow will fail. |
-| `refreshToken` | _boolean_ |  false  | RefreshToken indicates whether the Envoy should use the refresh token to<br />get the id token and access token when they expire.<br />If not specified, defaults to false. |
-| `defaultRefreshTokenExpireTime` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | The default lifetime of the refresh token.<br />This field is only used when the exp (expiration time) claim is omitted in<br />the refresh token or the refresh token is not JWT.<br />If not specified, defaults to 604800s (one week).<br />Note: this field is only used when RefreshToken is set to true. |
 
 
 #### OIDCProvider
