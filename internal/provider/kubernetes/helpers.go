@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -24,6 +25,25 @@ import (
 const (
 	gatewayClassFinalizer = gwapiv1.GatewayClassFinalizerGatewaysExist
 )
+
+type NamespacedNameAndGroupKind struct {
+	types.NamespacedName
+	schema.GroupKind
+}
+
+// NamespacedNameAndType creates and returns object's NamespacedNameAndType.
+func GetNamespacedNameAndType(obj client.Object) NamespacedNameAndGroupKind {
+	return NamespacedNameAndGroupKind{
+		NamespacedName: types.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      obj.GetName(),
+		},
+		GroupKind: schema.GroupKind{
+			Group: obj.GetObjectKind().GroupVersionKind().GroupKind().Group,
+			Kind:  obj.GetObjectKind().GroupVersionKind().GroupKind().Kind,
+		},
+	}
+}
 
 type ObjectKindNamespacedName struct {
 	kind      string

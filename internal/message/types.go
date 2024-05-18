@@ -7,9 +7,7 @@ package message
 
 import (
 	"github.com/telepresenceio/watchable"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -17,25 +15,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
-
-type NamespacedNameAndType struct {
-	types.NamespacedName
-	schema.GroupKind
-}
-
-// NamespacedNameAndType creates and returns object's NamespacedNameAndType.
-func GetNamespacedNameAndType(obj client.Object) NamespacedNameAndType {
-	return NamespacedNameAndType{
-		NamespacedName: types.NamespacedName{
-			Namespace: obj.GetNamespace(),
-			Name:      obj.GetName(),
-		},
-		GroupKind: schema.GroupKind{
-			Group: obj.GetObjectKind().GroupVersionKind().GroupKind().Group,
-			Kind:  obj.GetObjectKind().GroupVersionKind().GroupKind().Kind,
-		},
-	}
-}
 
 // ProviderResources message
 type ProviderResources struct {

@@ -17,7 +17,6 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/message"
 )
 
 // processTLSRoutes finds TLSRoutes corresponding to a gatewayNamespaceName, further checks for
@@ -185,7 +184,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the GRPCRoute
 					// Check if it's a Kind managed by an extension and add to resourceTree
-					key := message.NamespacedNameAndType{
+					key := NamespacedNameAndGroupKind{
 						NamespacedName: types.NamespacedName{
 							Namespace: grpcRoute.Namespace,
 							Name:      string(filter.ExtensionRef.Name),
@@ -236,7 +235,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	}
 	for i := range extensionRefFilters {
 		filter := extensionRefFilters[i]
-		resourceMap.extensionRefFilters[message.GetNamespacedNameAndType(&filter)] = filter
+		resourceMap.extensionRefFilters[GetNamespacedNameAndType(&filter)] = filter
 	}
 
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
@@ -374,7 +373,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				} else if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the HTTPRoute
 					// Check if it's a Kind managed by an extension and add to resourceTree
-					key := message.NamespacedNameAndType{
+					key := NamespacedNameAndGroupKind{
 						NamespacedName: types.NamespacedName{
 							Namespace: httpRoute.Namespace,
 							Name:      string(filter.ExtensionRef.Name),

@@ -26,7 +26,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -392,7 +391,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
 				if tc.extensionFilters != nil {
 					for _, filter := range tc.extensionFilters {
-						key := message.NamespacedNameAndType{
+						key := NamespacedNameAndGroupKind{
 							NamespacedName: types.NamespacedName{
 								Namespace: tc.routes[0].Namespace,
 								Name:      filter.GetName(),
