@@ -80,6 +80,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCode: 200,
+					Headers:    nil,
 				},
 				Namespace: ns,
 			}
@@ -105,6 +106,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCode: 200,
+					Headers:    nil,
 				},
 				Namespace: ns,
 			}
@@ -131,6 +133,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCode: 200,
+					Headers:    nil,
 				},
 				Namespace: ns,
 			}
