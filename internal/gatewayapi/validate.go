@@ -98,7 +98,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	case KindHTTPRoute:
 		filters := GetFilters(backendRef).([]gwapiv1.HTTPRouteFilter)
 		for _, filter := range filters {
-			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier || filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier {
+			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier && filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier {
 				t.setRouteStatusCondition(route, parentRef, "UnsupportedRefValue", "Specific filter is not supported within BackendRef")
 				return false
 			}
@@ -106,7 +106,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	case KindGRPCRoute:
 		filters := GetFilters(backendRef).([]gwapiv1.GRPCRouteFilter)
 		for _, filter := range filters {
-			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier || filter.Type != gwapiv1.GRPCRouteFilterResponseHeaderModifier {
+			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier && filter.Type != gwapiv1.GRPCRouteFilterResponseHeaderModifier {
 				t.setRouteStatusCondition(route, parentRef, "UnsupportedRefValue", "Specific filter is not supported within BackendRef")
 				return false
 			}
