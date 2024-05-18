@@ -7,6 +7,11 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: Sanitize
+      certDetailsToAdd:
+      - Subject
   tls:
     alpnProtocols:
     - h2
@@ -23,9 +28,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: Sanitize
-      set: ["subject"]
   routes:
   - name: "first-route"
     hostname: "*"
@@ -43,6 +45,10 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: AppendForward
+      certDetailsToAdd: []
   tls:
     alpnProtocols:
     - h2
@@ -59,9 +65,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: AppendForward
-      set: []
   routes:
   - name: "second-route"
     hostname: "*"
@@ -79,6 +82,11 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: AppendForward
+      certDetailsToAdd:
+      - Subject
   tls:
     alpnProtocols:
     - h2
@@ -95,9 +103,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: AppendForward
-      set: ["subject"]
   routes:
   - name: "third-route"
     hostname: "*"
@@ -115,6 +120,13 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: SanitizeSet
+      certDetailsToAdd:
+      - Subject
+      - Dns
+      - Uri
   tls:
     alpnProtocols:
     - h2
@@ -131,9 +143,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: SanitizeSet
-      set: ["subject", "dns", "uri"]
   routes:
   - name: "fourth-route"
     hostname: "*"
@@ -151,6 +160,15 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: SanitizeSet
+      certDetailsToAdd:
+      - Subject
+      - Dns
+      - Chain
+      - Cert
+      - Uri
   tls:
     alpnProtocols:
     - h2
@@ -167,9 +185,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: SanitizeSet
-      set: ["subject", "dns", "chain", "cert", "uri"]
   routes:
   - name: "fifth-route"
     hostname: "*"

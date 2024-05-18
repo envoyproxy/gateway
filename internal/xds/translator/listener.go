@@ -261,11 +261,11 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
 		Tracing:                  hcmTracing,
-		ForwardClientCertDetails: buildForwardClientCertDetailsAction(irListener.Headers.ForwardClientCert),
+		ForwardClientCertDetails: buildForwardClientCertDetailsAction(irListener.Headers),
 	}
 
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
-		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers.ForwardClientCert)
+		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers)
 	}
 
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
@@ -791,35 +791,42 @@ func buildHeadersWithUnderscoresAction(in *ir.HeaderSettings) corev3.HttpProtoco
 	return corev3.HttpProtocolOptions_REJECT_REQUEST
 }
 
-func buildForwardClientCertDetailsAction(in *ir.ForwardClientCert) hcmv3.HttpConnectionManager_ForwardClientCertDetails {
+func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnectionManager_ForwardClientCertDetails {
 	if in != nil {
-		switch in.Mode {
-		case ir.ForwardModeSanitize:
-			return hcmv3.HttpConnectionManager_SANITIZE
-		case ir.ForwardModeForwardOnly:
-			return hcmv3.HttpConnectionManager_FORWARD_ONLY
-		case ir.ForwardModeAppendForward:
-			return hcmv3.HttpConnectionManager_APPEND_FORWARD
-		case ir.ForwardModeSanitizeSet:
-			return hcmv3.HttpConnectionManager_SANITIZE_SET
-		case ir.ForwardModeAlwaysForwardOnly:
-			return hcmv3.HttpConnectionManager_ALWAYS_FORWARD_ONLY
+		if in.ForwardClientCert != nil {
+			switch in.ForwardClientCert.Mode {
+			case ir.ForwardModeSanitize:
+				return hcmv3.HttpConnectionManager_SANITIZE
+			case ir.ForwardModeForwardOnly:
+				return hcmv3.HttpConnectionManager_FORWARD_ONLY
+			case ir.ForwardModeAppendForward:
+				return hcmv3.HttpConnectionManager_APPEND_FORWARD
+			case ir.ForwardModeSanitizeSet:
+				return hcmv3.HttpConnectionManager_SANITIZE_SET
+			case ir.ForwardModeAlwaysForwardOnly:
+				return hcmv3.HttpConnectionManager_ALWAYS_FORWARD_ONLY
+			}
 		}
+
 	}
 	return hcmv3.HttpConnectionManager_SANITIZE
 }
 
-func buildSetCurrentClientCertDetails(in *ir.ForwardClientCert) *hcmv3.HttpConnectionManager_SetCurrentClientCertDetails {
+func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnectionManager_SetCurrentClientCertDetails {
 	if in == nil {
 		return nil
 	}
 
-	if len(in.CertDetailsToAdd) == 0 {
+	if in.ForwardClientCert == nil {
+		return nil
+	}
+
+	if len(in.ForwardClientCert.CertDetailsToAdd) == 0 {
 		return nil
 	}
 
 	clientCertDetails := &hcmv3.HttpConnectionManager_SetCurrentClientCertDetails{}
-	for _, data := range in.CertDetailsToAdd {
+	for _, data := range in.ForwardClientCert.CertDetailsToAdd {
 		switch data {
 		case ir.ClientCertDataCert:
 			clientCertDetails.Cert = true

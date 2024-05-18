@@ -477,17 +477,18 @@ _Appears in:_
 _Underlying type:_ _string_
 
 Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+By default, x-forwarded-client-cert (XFCC) will always include By and Hash data
 
 _Appears in:_
 - [ForwardClientCert](#forwardclientcert)
 
 | Value | Description |
 | ----- | ----------- |
-| `subject` | Whether to forward the subject of the client cert.<br /> | 
-| `cert` | Whether to forward the entire client cert in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.<br /> | 
-| `chain` | Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.<br /> | 
-| `dns` | Whether to forward the DNS type Subject Alternative Names of the client cert.<br /> | 
-| `uri` | Whether to forward the URI type Subject Alternative Name of the client cert.<br /> | 
+| `Subject` | Whether to forward the subject of the client cert.<br /> | 
+| `Cert` | Whether to forward the entire client cert in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.<br /> | 
+| `Chain` | Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.<br /> | 
+| `Dns` | Whether to forward the DNS type Subject Alternative Names of the client cert.<br /> | 
+| `Uri` | Whether to forward the URI type Subject Alternative Name of the client cert.<br /> | 
 
 
 #### ClientIPDetectionSettings
@@ -613,7 +614,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `optional` | _boolean_ |  false  | Optional set to true accepts connections even when a client doesn't present a certificate.<br />Defaults to false, which rejects connections without a valid client certificate. |
-| `forwardClientCert` | _[ForwardClientCert](#forwardclientcert)_ |  false  | Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
 | `caCertificateRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  false  | CACertificateRefs contains one or more references to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the client.<br /><br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br /><br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the certificate<br />to be attached. |
 
 
@@ -1555,12 +1555,12 @@ _Appears in:_
 Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 
 _Appears in:_
-- [ClientValidationContext](#clientvalidationcontext)
+- [HeaderSettings](#headersettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `mode` | _[ForwardMode](#forwardmode)_ |  false  | Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
-| `set` | _[ClientCertData](#clientcertdata) array_ |  false  | Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header |
+| `certDetailsToAdd` | _[ClientCertData](#clientcertdata) array_ |  false  | Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header |
 
 
 #### ForwardMode
@@ -1848,6 +1848,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
+| `forwardClientCert` | _[ForwardClientCert](#forwardclientcert)_ |  false  | Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
 
 

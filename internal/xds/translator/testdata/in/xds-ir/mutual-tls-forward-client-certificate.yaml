@@ -7,6 +7,9 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: Sanitize
   tls:
     alpnProtocols:
     - h2
@@ -23,8 +26,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: Sanitize
   routes:
   - name: "first-route"
     hostname: "*"
@@ -42,6 +43,9 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: ForwardOnly
   tls:
     alpnProtocols:
     - h2
@@ -58,8 +62,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: ForwardOnly
   routes:
   - name: "second-route"
     hostname: "*"
@@ -77,6 +79,9 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: AppendForward
   tls:
     alpnProtocols:
     - h2
@@ -93,8 +98,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: AppendForward
   routes:
   - name: "third-route"
     hostname: "*"
@@ -112,6 +115,9 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: SanitizeSet
   tls:
     alpnProtocols:
     - h2
@@ -128,8 +134,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: SanitizeSet
   routes:
   - name: "fourth-route"
     hostname: "*"
@@ -147,6 +151,9 @@ http:
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
+  headers:
+    forwardClientCert:
+      mode: AlwaysForwardOnly
   tls:
     alpnProtocols:
     - h2
@@ -163,8 +170,6 @@ http:
     caCertificate:
       name: ca-cert
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-    forwardClientCert:
-      mode: AlwaysForwardOnly
   routes:
   - name: "fifth-route"
     hostname: "*"
