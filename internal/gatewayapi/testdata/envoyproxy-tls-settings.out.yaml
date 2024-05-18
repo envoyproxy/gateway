@@ -172,7 +172,6 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 443
-            filters: {}
             protocol: HTTP
             tls:
               alpnProtocols:

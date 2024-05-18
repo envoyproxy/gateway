@@ -346,7 +346,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -382,7 +381,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -404,7 +402,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io

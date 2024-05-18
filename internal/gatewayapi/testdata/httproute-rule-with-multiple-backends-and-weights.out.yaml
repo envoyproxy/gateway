@@ -123,21 +123,18 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 2
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 3
         hostname: '*'

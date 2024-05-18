@@ -300,7 +300,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: example.com
@@ -321,7 +320,6 @@ xdsIR:
             endpoints:
             - host: 8.8.8.8
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: example.com
@@ -338,7 +336,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         headerMatches:
@@ -359,7 +356,6 @@ xdsIR:
             endpoints:
             - host: 8.8.8.8
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: example.net
@@ -376,7 +372,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: '*.com'
@@ -393,7 +388,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: '*.net'
@@ -410,7 +404,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters: {}
             protocol: HTTP
             weight: 1
         hostname: '*'

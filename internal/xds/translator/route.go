@@ -621,7 +621,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 	for _, setting := range settings {
 		filters := setting.Filters
-		if filters != nil && (len(filters.AddRequestHeaders) > 0 || len(filters.RemoveRequestHeaders) > 0 || len(filters.AddResponseHeaders) > 0 || len(filters.RemoveResponseHeaders) > 0) {
+		if filters != nil {
 			return true
 		}
 	}

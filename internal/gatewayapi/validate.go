@@ -28,6 +28,9 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 ) bool {
 	backendRef := GetBackendRef(backendRefContext)
 
+	if !t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind) {
+		return false
+	}
 	if !t.validateBackendRefGroup(backendRef, parentRef, route) {
 		return false
 	}
@@ -88,6 +91,42 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 		return false
 	}
 	return true
+}
+
+func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, parentRef *RouteParentContext, route RouteContext, routeKind gwapiv1.Kind) bool {
+	switch routeKind {
+	case KindHTTPRoute:
+		filters := GetFilters(backendRef).([]gwapiv1.HTTPRouteFilter)
+		for _, filter := range filters {
+			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier || filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier {
+				t.setRouteStatusCondition(route, parentRef, "UnsupportedRefValue", "Specific filter is not supported within BackendRef")
+				return false
+			}
+		}
+	case KindGRPCRoute:
+		filters := GetFilters(backendRef).([]gwapiv1.GRPCRouteFilter)
+		for _, filter := range filters {
+			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier || filter.Type != gwapiv1.GRPCRouteFilterResponseHeaderModifier {
+				t.setRouteStatusCondition(route, parentRef, "UnsupportedRefValue", "Specific filter is not supported within BackendRef")
+				return false
+			}
+		}
+	default:
+		return true
+	}
+	return true
+}
+
+func (t *Translator) setRouteStatusCondition(route RouteContext, parentRef *RouteParentContext, reason gwapiv1.RouteConditionReason, message string) {
+	routeStatus := GetRouteStatus(route)
+	status.SetRouteStatusCondition(routeStatus,
+		parentRef.routeParentStatusIdx,
+		route.GetGeneration(),
+		gwapiv1.RouteConditionResolvedRefs,
+		metav1.ConditionFalse,
+		reason,
+		message,
+	)
 }
 
 func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
