@@ -253,6 +253,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					Resources: sink.OpenTelemetry.Resources,
 				}
 
+				// TODO: how to get authority from the backendRefs?
 				ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
 				if err != nil {
 					return nil, err
@@ -296,6 +297,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
+	// TODO: how to get authority from the backendRefs?
 	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources)
 	if err != nil {
 		return nil, err
