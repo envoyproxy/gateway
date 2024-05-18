@@ -391,7 +391,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
 				if tc.extensionFilters != nil {
 					for _, filter := range tc.extensionFilters {
-						key := NamespacedNameAndGroupKind{
+						key := utils.NamespacedNameAndGroupKind{
 							NamespacedName: types.NamespacedName{
 								Namespace: tc.routes[0].Namespace,
 								Name:      filter.GetName(),

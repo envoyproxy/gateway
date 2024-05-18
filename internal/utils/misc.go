@@ -11,9 +11,29 @@ import (
 	"hash/fnv"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type NamespacedNameAndGroupKind struct {
+	types.NamespacedName
+	schema.GroupKind
+}
+
+// NamespacedNameAndType creates and returns object's NamespacedNameAndType.
+func GetNamespacedNameAndGroupKind(obj client.Object) NamespacedNameAndGroupKind {
+	return NamespacedNameAndGroupKind{
+		NamespacedName: types.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      obj.GetName(),
+		},
+		GroupKind: schema.GroupKind{
+			Group: obj.GetObjectKind().GroupVersionKind().GroupKind().Group,
+			Kind:  obj.GetObjectKind().GroupVersionKind().GroupKind().Kind,
+		},
+	}
+}
 
 // NamespacedName creates and returns object's NamespacedName.
 func NamespacedName(obj client.Object) types.NamespacedName {
