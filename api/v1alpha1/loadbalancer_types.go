@@ -66,6 +66,15 @@ type ConsistentHash struct {
 	//
 	// +optional
 	Header *Header `json:"header,omitempty"`
+
+	// The table size for consistent hashing, must be prime number limited to 5000011.
+	//
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:Maximum=5000011
+	// +kubebuilder:default=65537
+	// +optional
+	// +notImplementedHide
+	TableSize *uint64 `json:"tableSize,omitempty"`
 }
 
 // Header defines the header hashing configuration for consistent hash based

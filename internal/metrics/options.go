@@ -5,7 +5,7 @@
 
 package metrics
 
-// Options encode changes to the options passed to a Metric at creation time.
+// MetricOption encode changes to the options passed to a Metric at creation time.
 type MetricOption func(*MetricOptions)
 
 type MetricOptions struct {

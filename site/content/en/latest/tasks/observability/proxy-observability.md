@@ -59,7 +59,7 @@ export ENVOY_POD_NAME=$(kubectl get pod -n envoy-gateway-system --selector=gatew
 kubectl port-forward pod/$ENVOY_POD_NAME -n envoy-gateway-system 19001:19001
 
 # check metrics 
-curl localhost:19001/stats/prometheus  | grep "default/backend/rule/0/match/0-www"
+curl localhost:19001/stats/prometheus  | grep "default/backend/rule/0"
 ```
 
 You can disable metrics by setting the `telemetry.metrics.prometheus.disable` to `true` in the `EnvoyProxy` CRD.
@@ -82,7 +82,7 @@ export OTEL_POD_NAME=$(kubectl get pod -n monitoring --selector=app.kubernetes.i
 kubectl port-forward pod/$OTEL_POD_NAME -n monitoring 19001:19001
 
 # check metrics 
-curl localhost:19001/metrics  | grep "default/backend/rule/0/match/0-www"
+curl localhost:19001/metrics  | grep "default/backend/rule/0"
 ```
 
 ## Logs

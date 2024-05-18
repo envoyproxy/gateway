@@ -1,5 +1,6 @@
 ---
 title: "KubeCon Europe 2023"
+description: "Envoy Gateway Update"
 date: 2023-05-01
 ---
 

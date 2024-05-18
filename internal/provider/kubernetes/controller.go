@@ -116,6 +116,16 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 type resourceMappings struct {
 	// Map for storing namespaces for Route, Service and Gateway objects.
 	allAssociatedNamespaces map[string]struct{}
+	// Map for storing TLSRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedTLSRoutes map[string]struct{}
+	// Map for storing HTTPRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedHTTPRoutes map[string]struct{}
+	// Map for storing GRPCRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedGRPCRoutes map[string]struct{}
+	// Map for storing TCPRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedTCPRoutes map[string]struct{}
+	// Map for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedUDPRoutes map[string]struct{}
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
 	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
 	// extensionRefFilters is a map of filters managed by an extension.
@@ -127,6 +137,11 @@ type resourceMappings struct {
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
 		allAssociatedNamespaces:  map[string]struct{}{},
+		allAssociatedTLSRoutes:   map[string]struct{}{},
+		allAssociatedHTTPRoutes:  map[string]struct{}{},
+		allAssociatedGRPCRoutes:  map[string]struct{}{},
+		allAssociatedTCPRoutes:   map[string]struct{}{},
+		allAssociatedUDPRoutes:   map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
 		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
 	}
@@ -441,7 +456,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 
 			if backendNamespace != policy.Namespace {
 				from := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindHTTPRoute,
+					kind:      gatewayapi.KindSecurityPolicy,
 					namespace: policy.Namespace,
 					name:      policy.Name,
 				}

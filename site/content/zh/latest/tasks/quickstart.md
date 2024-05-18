@@ -1,5 +1,5 @@
 ---
-title: "快速开始"
+title: "快速入门"
 weight: 1
 description: 只需几个简单的步骤即可开始使用 Envoy Gateway。
 ---

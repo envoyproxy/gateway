@@ -1,0 +1,10 @@
+global:
+  images:
+    envoyGateway:
+      image: "private-hub/envoyproxy/gateway:abcdef12"
+      pullPolicy: Always
+      imagePullSecrets:
+        - name: "secret1"
+        - name: "secret2"
+    ratelimit:
+      image: "private-hub/envoyproxy/ratelimit:test"

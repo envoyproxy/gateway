@@ -148,9 +148,6 @@ xdsIR:
         - append: false
           name: set-header-4
           value: some-value
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:

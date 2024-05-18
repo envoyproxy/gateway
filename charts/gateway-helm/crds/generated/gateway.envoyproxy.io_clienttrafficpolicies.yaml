@@ -56,7 +56,7 @@ spec:
                   customHeader:
                     description: |-
                       CustomHeader provides configuration for determining the client IP address for a request based on
-                      a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+                      a trusted custom HTTP header. This uses the custom_header original IP detection extension.
                       Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
                       for more details.
                     properties:
@@ -377,6 +377,17 @@ spec:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                  tcp:
+                    description: Timeout settings for TCP.
+                    properties:
+                      idleTimeout:
+                        description: |-
+                          IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
+                          bytes sent or received on either the upstream or downstream connection.
+                          Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object

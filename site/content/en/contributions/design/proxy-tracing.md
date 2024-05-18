@@ -1,5 +1,5 @@
 ---
-title: "Observability: Tracing"
+title: "Data Plane Observability: Tracing"
 ---
 
 ## Overview

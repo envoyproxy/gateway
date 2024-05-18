@@ -10,3 +10,6 @@
     loadBalancingWeight: 1
     locality:
       region: first-route-dest/backend/0
+  - loadBalancingWeight: 1
+    locality:
+      region: first-route-dest/backend/1
