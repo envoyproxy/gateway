@@ -16,14 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type NamespacedNameAndGroupKind struct {
+type NamespacedNameWithGroupKind struct {
 	types.NamespacedName
 	schema.GroupKind
 }
 
-// NamespacedNameAndType creates and returns object's NamespacedNameAndType.
-func GetNamespacedNameAndGroupKind(obj client.Object) NamespacedNameAndGroupKind {
-	return NamespacedNameAndGroupKind{
+// GetNamespacedNameWithGroupKind creates and returns object's NamespacedNameWithGroupKind.
+func GetNamespacedNameWithGroupKind(obj client.Object) NamespacedNameWithGroupKind {
+	return NamespacedNameWithGroupKind{
 		NamespacedName: types.NamespacedName{
 			Namespace: obj.GetNamespace(),
 			Name:      obj.GetName(),
