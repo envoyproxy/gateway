@@ -235,7 +235,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	}
 	for i := range extensionRefFilters {
 		filter := extensionRefFilters[i]
-		resourceMap.extensionRefFilters[GetNamespacedNameAndType(&filter)] = filter
+		resourceMap.extensionRefFilters[GetNamespacedNameAndGroupKind(&filter)] = filter
 	}
 
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{

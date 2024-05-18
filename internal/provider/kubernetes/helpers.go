@@ -32,7 +32,7 @@ type NamespacedNameAndGroupKind struct {
 }
 
 // NamespacedNameAndType creates and returns object's NamespacedNameAndType.
-func GetNamespacedNameAndType(obj client.Object) NamespacedNameAndGroupKind {
+func GetNamespacedNameAndGroupKind(obj client.Object) NamespacedNameAndGroupKind {
 	return NamespacedNameAndGroupKind{
 		NamespacedName: types.NamespacedName{
 			Namespace: obj.GetNamespace(),
