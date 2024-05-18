@@ -556,13 +556,12 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 
 		var certDetailsToAdd []ir.ClientCertData
 		if httpIR.Headers.ForwardClientCert.Mode == ir.ForwardModeAppendForward || httpIR.Headers.ForwardClientCert.Mode == ir.ForwardModeSanitizeSet {
-			for _, data := range httpIR.Headers.ForwardClientCert.CertDetailsToAdd {
+			for _, data := range headerSettings.ForwardClientCert.CertDetailsToAdd {
 				certDetailsToAdd = append(certDetailsToAdd, ir.ClientCertData(data))
 			}
 
 			httpIR.Headers.ForwardClientCert.CertDetailsToAdd = certDetailsToAdd
 		}
-		
 	}
 
 }

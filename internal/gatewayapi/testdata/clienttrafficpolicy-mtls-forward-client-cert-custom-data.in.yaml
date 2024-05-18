@@ -9,13 +9,13 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: Sanitize
+        certDetailsToAdd:
+        - Cert
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: Sanitize
-          set:
-          - cert
         caCertificateRefs:
         - name: tls-secret-1
           namespace: envoy-gateway
@@ -29,13 +29,13 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: ForwardOnly
+        certDetailsToAdd:
+        - Cert
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: ForwardOnly
-          set:
-          - cert
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap
@@ -50,13 +50,13 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: AppendForward
+        certDetailsToAdd:
+        - Cert
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: AppendForward
-          set:
-          - cert
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap
@@ -71,15 +71,15 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-4
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: SanitizeSet
+        certDetailsToAdd:
+        - Cert
+        - Uri
+        - Chain
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: SanitizeSet
-          set:
-          - cert
-          - uri
-          - chain
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap
@@ -94,17 +94,17 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-5
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: SanitizeSet
+        certDetailsToAdd:
+        - Cert
+        - Uri
+        - Chain
+        - Subject
+        - Dns
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: SanitizeSet
-          set:
-          - cert
-          - uri
-          - chain
-          - subject
-          - dns
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap

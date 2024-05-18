@@ -9,11 +9,11 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: Sanitize
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: Sanitize
         caCertificateRefs:
         - name: tls-secret-1
           namespace: envoy-gateway
@@ -27,11 +27,11 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: ForwardOnly
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: ForwardOnly
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap
@@ -46,11 +46,11 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: AppendForward
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: AppendForward
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap
@@ -65,11 +65,11 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-4
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: SanitizeSet
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: SanitizeSet
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap
@@ -84,11 +84,11 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-5
-      namespace: envoy-gateway
+    headers:
+      forwardClientCert:
+        mode: AlwaysForwardOnly
     tls:
       clientValidation:
-        forwardClientCert:
-          mode: AlwaysForwardOnly
         caCertificateRefs:
         - kind: ConfigMap
           name: ca-configmap
