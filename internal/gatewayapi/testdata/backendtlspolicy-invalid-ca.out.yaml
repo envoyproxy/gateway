@@ -4,7 +4,7 @@ backendTLSPolicies:
   metadata:
     creationTimestamp: null
     name: policy-btls
-    namespace: policies
+    namespace: backends
   spec:
     targetRefs:
     - group: ""

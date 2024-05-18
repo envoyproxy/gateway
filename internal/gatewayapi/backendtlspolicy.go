@@ -48,40 +48,6 @@ func (t *Translator) processBackendTLSPolicy(
 		return nil
 	}
 
-	// Check if the reference from BackendTLSPolicy to BackendRef is permitted by
-	// any ReferenceGrant
-	backendRefKind := KindService
-	if backendRef.Kind != nil {
-		backendRefKind = string(*backendRef.Kind)
-	}
-	if policy.Namespace != backendNamespace {
-		if !t.validateCrossNamespaceRef(
-			crossNamespaceFrom{
-				group:     gwapiv1.GroupName,
-				kind:      KindBackendTLSPolicy,
-				namespace: policy.Namespace,
-			},
-			crossNamespaceTo{
-				group:     "",
-				kind:      backendRefKind,
-				namespace: backendNamespace,
-				name:      string(backendRef.Name),
-			},
-			resources.ReferenceGrants,
-		) {
-			err = fmt.Errorf("target ref to %s %s/%s not permitted by any ReferenceGrant",
-				backendRefKind, backendNamespace, backendRef.Name)
-
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				status.Error2ConditionMsg(err),
-			)
-			return nil
-		}
-	}
-
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 	// apply defaults as per envoyproxy
 	if resources.EnvoyProxy != nil {
@@ -118,6 +84,7 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 
 	if target.Group == policyTarget.Group &&
 		target.Kind == policyTarget.Kind &&
+		backendNamespace == policy.Namespace &&
 		target.Name == policyTarget.Name {
 		if policyTarget.SectionName != nil && *policyTarget.SectionName != *target.SectionName {
 			return false
