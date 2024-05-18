@@ -50,7 +50,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/protected1",
 					Headers: map[string]string{
-						"client-ip": "192.168.1.1", // in the denied list
+						"X-Forwarded-For": "192.168.1.1", // in the denied list
 					},
 				},
 				Response: http.Response{
@@ -75,7 +75,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/protected1",
 					Headers: map[string]string{
-						"client-ip": "192.168.2.1", // in the allowed list
+						"X-Forwarded-For": "192.168.2.1", // in the allowed list
 					},
 				},
 				Response: http.Response{
@@ -100,7 +100,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/protected1",
 					Headers: map[string]string{
-						"client-ip": "192.168.3.1", // not in the denied list
+						"X-Forwarded-For": "192.168.3.1", // not in the denied list
 					},
 				},
 				Response: http.Response{
@@ -126,7 +126,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/protected2",
 					Headers: map[string]string{
-						"client-ip": "10.0.1.1", // in the allowed list
+						"X-Forwarded-For": "10.0.1.1", // in the allowed list
 					},
 				},
 				Response: http.Response{
@@ -151,7 +151,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/protected2",
 					Headers: map[string]string{
-						"client-ip": "192.168.3.1", // not in the allowed list
+						"X-Forwarded-For": "192.168.3.1", // not in the allowed list
 					},
 				},
 				Response: http.Response{

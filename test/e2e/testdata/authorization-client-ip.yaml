@@ -90,8 +90,8 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   clientIPDetection:
-    customHeader:
-      name: client-ip
+    xForwardedFor:
+      numTrustedHops: 1
   targetRef:
     group: gateway.networking.k8s.io
     kind: Gateway
