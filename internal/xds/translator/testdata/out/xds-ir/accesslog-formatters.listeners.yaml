@@ -78,6 +78,7 @@
       commonConfig:
         grpcService:
           envoyGrpc:
+            authority: otel-collector.default.svc.cluster.local
             clusterName: accesslog-0
         logName: otel_envoy_accesslog
         transportApiVersion: V3
@@ -159,6 +160,7 @@
             commonConfig:
               grpcService:
                 envoyGrpc:
+                  authority: otel-collector.default.svc.cluster.local
                   clusterName: accesslog-0
               logName: otel_envoy_accesslog
               transportApiVersion: V3

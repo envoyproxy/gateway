@@ -19,9 +19,9 @@ accesslog:
       "response_code": "%RESPONSE_CODE%"
     resources:
       "cluster_name": "cluster1"
+    authority: "otel-collector.default.svc.cluster.local"
     destination:
       name: "accesslog-0"
-      authority: "otel-collector.default.svc.cluster.local"
       settings:
       - endpoints:
         - host: "otel-collector.default.svc.cluster.local"

@@ -17,9 +17,9 @@ tracing:
       requestHeader:
         name: "X-Request-Id"
         defaultValue: "-"
+  authority: "otel-collector.default.svc.cluster.local"
   destination:
     name: "tracing-0"
-    authority: "otel-collector.default.svc.cluster.local"
     settings:
       - endpoints:
           - host: "otel-collector.default.svc.cluster.local"
