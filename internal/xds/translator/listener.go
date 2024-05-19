@@ -807,7 +807,6 @@ func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnec
 				return hcmv3.HttpConnectionManager_ALWAYS_FORWARD_ONLY
 			}
 		}
-
 	}
 	return hcmv3.HttpConnectionManager_SANITIZE
 }

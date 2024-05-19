@@ -563,7 +563,6 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 			httpIR.Headers.ForwardClientCert.CertDetailsToAdd = certDetailsToAdd
 		}
 	}
-
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {
