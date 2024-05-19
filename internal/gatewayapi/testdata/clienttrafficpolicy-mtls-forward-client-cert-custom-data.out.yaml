@@ -8,9 +8,9 @@ clientTrafficPolicies:
   spec:
     headers:
       forwardClientCert:
-        mode: Sanitize
         certDetailsToAdd:
         - Cert
+        mode: Sanitize
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -45,9 +45,9 @@ clientTrafficPolicies:
   spec:
     headers:
       forwardClientCert:
-        mode: ForwardOnly
         certDetailsToAdd:
         - Cert
+        mode: ForwardOnly
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -82,9 +82,9 @@ clientTrafficPolicies:
   spec:
     headers:
       forwardClientCert:
-        mode: AppendForward
         certDetailsToAdd:
         - Cert
+        mode: AppendForward
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -119,11 +119,11 @@ clientTrafficPolicies:
   spec:
     headers:
       forwardClientCert:
-        mode: SanitizeSet
         certDetailsToAdd:
         - Cert
         - Uri
         - Chain
+        mode: SanitizeSet
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -158,13 +158,13 @@ clientTrafficPolicies:
   spec:
     headers:
       forwardClientCert:
-        mode: SanitizeSet
         certDetailsToAdd:
         - Cert
         - Uri
         - Chain
         - Subject
         - Dns
+        mode: SanitizeSet
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -618,9 +618,9 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         forwardClientCert:
-          mode: AppendForward
           certDetailsToAdd:
           - Cert
+          mode: AppendForward
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
@@ -649,11 +649,11 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         forwardClientCert:
-          mode: SanitizeSet
           certDetailsToAdd:
           - Cert
           - Uri
           - Chain
+          mode: SanitizeSet
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
@@ -682,13 +682,13 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         forwardClientCert:
-          mode: SanitizeSet
           certDetailsToAdd:
           - Cert
           - Uri
           - Chain
           - Subject
           - Dns
+          mode: SanitizeSet
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
