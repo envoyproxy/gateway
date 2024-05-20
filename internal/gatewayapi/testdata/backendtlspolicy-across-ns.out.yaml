@@ -17,6 +17,8 @@ backendTLSPolicies:
         kind: ConfigMap
         name: ca-cmap
       hostname: example.com
+  status:
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
