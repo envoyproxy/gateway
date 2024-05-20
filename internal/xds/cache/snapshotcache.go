@@ -19,6 +19,7 @@ import (
 	"math"
 	"strconv"
 	"sync"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -51,13 +52,17 @@ type snapshotMap map[string]*cachev3.Snapshot
 
 type nodeInfoMap map[int64]*corev3.Node
 
+type streamDurationMap map[int64]time.Time
+
 type snapshotCache struct {
 	cachev3.SnapshotCache
-	streamIDNodeInfo nodeInfoMap
-	snapshotVersion  int64
-	lastSnapshot     snapshotMap
-	log              *zap.SugaredLogger
-	mu               sync.Mutex
+	streamIDNodeInfo    nodeInfoMap
+	streamDuration      streamDurationMap
+	deltaStreamDuration streamDurationMap
+	snapshotVersion     int64
+	lastSnapshot        snapshotMap
+	log                 *zap.SugaredLogger
+	mu                  sync.Mutex
 }
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
@@ -73,17 +78,26 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 		version,
 		resources,
 	)
+
+	xdsSnapshotCreationTotal.Increment()
 	if err != nil {
+		xdsSnapshotCreationFailed.Increment()
 		return err
+	} else {
+		xdsSnapshotCreationSuccess.Increment()
 	}
 
 	s.lastSnapshot[irKey] = snapshot
 
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
-		err := s.SetSnapshot(context.TODO(), node, snapshot)
-		if err != nil {
+		xdsSnapshotUpdateTotal.With(nodeIDLabel.Value(node)).Increment()
+
+		if err = s.SetSnapshot(context.TODO(), node, snapshot); err != nil {
+			xdsSnapshotUpdateFailed.With(nodeIDLabel.Value(node)).Increment()
 			return err
+		} else {
+			xdsSnapshotUpdateSuccess.With(nodeIDLabel.Value(node)).Increment()
 		}
 	}
 
@@ -110,10 +124,12 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 	// Set up the nasty wrapper hack.
 	wrappedLogger := logger.Sugar()
 	return &snapshotCache{
-		SnapshotCache:    cachev3.NewSnapshotCache(ads, &Hash, wrappedLogger),
-		log:              wrappedLogger,
-		lastSnapshot:     make(snapshotMap),
-		streamIDNodeInfo: make(nodeInfoMap),
+		SnapshotCache:       cachev3.NewSnapshotCache(ads, &Hash, wrappedLogger),
+		log:                 wrappedLogger,
+		lastSnapshot:        make(snapshotMap),
+		streamIDNodeInfo:    make(nodeInfoMap),
+		streamDuration:      make(streamDurationMap),
+		deltaStreamDuration: make(streamDurationMap),
 	}
 }
 
@@ -137,16 +153,26 @@ func (s *snapshotCache) OnStreamOpen(_ context.Context, streamID int64, _ string
 	defer s.mu.Unlock()
 
 	s.streamIDNodeInfo[streamID] = nil
+	s.streamDuration[streamID] = time.Now()
 
 	return nil
 }
 
-func (s *snapshotCache) OnStreamClosed(streamID int64, _ *corev3.Node) {
+func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
 	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if startTime, ok := s.streamDuration[streamID]; ok {
+		streamDuration := time.Since(startTime)
+		xdsStreamDurationSeconds.With(
+			streamIDLabel.Value(strconv.FormatInt(streamID, 10)),
+			nodeIDLabel.Value(node.Id),
+		).Record(streamDuration.Seconds())
+	}
+
 	delete(s.streamIDNodeInfo, streamID)
+	delete(s.streamDuration, streamID)
 }
 
 func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.DiscoveryRequest) error {
@@ -229,16 +255,26 @@ func (s *snapshotCache) OnDeltaStreamOpen(_ context.Context, streamID int64, _ s
 
 	// Ensure that we're adding the streamID to the Node ID list.
 	s.streamIDNodeInfo[streamID] = nil
+	s.deltaStreamDuration[streamID] = time.Now()
 
 	return nil
 }
 
-func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, _ *corev3.Node) {
+func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
 	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if startTime, ok := s.deltaStreamDuration[streamID]; ok {
+		deltaStreamDuration := time.Since(startTime)
+		xdsDeltaStreamDurationSeconds.With(
+			streamIDLabel.Value(strconv.FormatInt(streamID, 10)),
+			nodeIDLabel.Value(node.Id),
+		).Record(deltaStreamDuration.Seconds())
+	}
+
 	delete(s.streamIDNodeInfo, streamID)
+	delete(s.deltaStreamDuration, streamID)
 }
 
 func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.DeltaDiscoveryRequest) error {
