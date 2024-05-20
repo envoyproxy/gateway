@@ -864,7 +864,8 @@ func irConfigName(policy *egv1a1.SecurityPolicy) string {
 
 func (t *Translator) buildAuthorization(authorization *egv1a1.Authorization) (*ir.Authorization, error) {
 	var (
-		irAuth        = &ir.Authorization{}
+		irAuth = &ir.Authorization{}
+		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
 	)
 

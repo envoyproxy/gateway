@@ -78,9 +78,14 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 						"X-Forwarded-For": "192.168.2.1", // in the allowed list
 					},
 				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    "/protected1",
+						Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
+					},
+				},
 				Response: http.Response{
 					StatusCode: 200,
-					Headers:    nil,
 				},
 				Namespace: ns,
 			}
@@ -104,9 +109,14 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 						"X-Forwarded-For": "192.168.3.1", // not in the denied list
 					},
 				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    "/protected1",
+						Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
+					},
+				},
 				Response: http.Response{
 					StatusCode: 200,
-					Headers:    nil,
 				},
 				Namespace: ns,
 			}
@@ -131,9 +141,14 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 						"X-Forwarded-For": "10.0.1.1", // in the allowed list
 					},
 				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    "/protected2",
+						Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
+					},
+				},
 				Response: http.Response{
 					StatusCode: 200,
-					Headers:    nil,
 				},
 				Namespace: ns,
 			}

@@ -70,7 +70,7 @@ spec:
                       For example, if there are two rules: the first rule allows the request
                       and the second rule denies it, when a request matches both rules, it will be allowed.
                     items:
-                      description: AuthorizationRule defines the single authorization
+                      description: AuthorizationRule defines a single authorization
                         rule.
                       properties:
                         action:
@@ -94,8 +94,9 @@ spec:
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 
 
-                                By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.
-                                You can use the `EnableProxyProtocol` and `ClientIPDetection` options in
+                                The client IP is inferred from the x-forwarder-for header, a custom header,
+                                or the proxy protocol.
+                                You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
                               items:
                                 type: string

@@ -227,7 +227,7 @@ _Appears in:_
 
 
 
-AuthorizationRule defines the single authorization rule.
+AuthorizationRule defines a single authorization rule.
 
 _Appears in:_
 - [Authorization](#authorization)
@@ -2433,13 +2433,16 @@ _Appears in:_
 
 
 Principal specifies the client identity of a request.
+A client identity can be a client IP, a JWT claim, username from the Authorization header,
+or any other identity that can be extracted from a custom header.
+Currently, only the client IP is supported.
 
 _Appears in:_
 - [AuthorizationRule](#authorizationrule)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientCIDRs` | _string array_ |  true  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.<br />You can use the `EnableProxyProtocol` and `ClientIPDetection` options in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `clientCIDRs` | _string array_ |  true  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />The client IP is inferred from the x-forwarder-for header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 
 
 #### ProcessingModeOptions

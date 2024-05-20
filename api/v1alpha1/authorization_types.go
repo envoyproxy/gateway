@@ -25,7 +25,7 @@ type Authorization struct {
 	DefaultAction *AuthorizationAction `json:"defaultAction"`
 }
 
-// AuthorizationRule defines the single authorization rule.
+// AuthorizationRule defines a single authorization rule.
 type AuthorizationRule struct {
 	// Name is a user-friendly name for the rule. It's just for display purposes.
 	// +optional
@@ -39,12 +39,16 @@ type AuthorizationRule struct {
 }
 
 // Principal specifies the client identity of a request.
+// A client identity can be a client IP, a JWT claim, username from the Authorization header,
+// or any other identity that can be extracted from a custom header.
+// Currently, only the client IP is supported.
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	//
-	// By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.
-	// You can use the `EnableProxyProtocol` and `ClientIPDetection` options in
+	// The client IP is inferred from the x-forwarder-for header, a custom header,
+	// or the proxy protocol.
+	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
 	ClientCIDRs []string `json:"clientCIDRs,omitempty"`
 }
