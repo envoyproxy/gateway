@@ -530,9 +530,9 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: Sanitize
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       isHTTP2: false
@@ -554,9 +554,9 @@ xdsIR:
         requireClientCertificate: true
     - address: 0.0.0.0
       headers:
+        withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: Sanitize
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       isHTTP2: false
@@ -572,9 +572,9 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: ForwardOnly
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       isHTTP2: false
@@ -601,9 +601,9 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: AppendForward
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       isHTTP2: false
@@ -630,9 +630,9 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: SanitizeSet
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       isHTTP2: false
@@ -659,9 +659,9 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: AlwaysForwardOnly
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       isHTTP2: false
