@@ -549,6 +549,21 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
 		PreserveXRequestID:    ptr.Deref(headerSettings.PreserveXRequestID, false),
 	}
+
+	if headerSettings.XForwardedClientCert != nil {
+		httpIR.Headers.XForwardedClientCert = &ir.XForwardedClientCert{
+			Mode: ir.ForwardMode(ptr.Deref(headerSettings.XForwardedClientCert.Mode, egv1a1.ForwardModeSanitize)),
+		}
+
+		var certDetailsToAdd []ir.ClientCertData
+		if httpIR.Headers.XForwardedClientCert.Mode == ir.ForwardModeAppendForward || httpIR.Headers.XForwardedClientCert.Mode == ir.ForwardModeSanitizeSet {
+			for _, data := range headerSettings.XForwardedClientCert.CertDetailsToAdd {
+				certDetailsToAdd = append(certDetailsToAdd, ir.ClientCertData(data))
+			}
+
+			httpIR.Headers.XForwardedClientCert.CertDetailsToAdd = certDetailsToAdd
+		}
+	}
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {

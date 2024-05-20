@@ -162,6 +162,39 @@ spec:
                     - RejectRequest
                     - DropHeader
                     type: string
+                  xForwardedClientCert:
+                    description: |-
+                      Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+                      When enabled, Hash and By is always set
+                    properties:
+                      certDetailsToAdd:
+                        description: Specifies the fields in the client certificate
+                          to be forwarded on the x-forwarded-client-cert (XFCC) HTTP
+                          header
+                        items:
+                          description: |-
+                            Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+                            By default, x-forwarded-client-cert (XFCC) will always include By and Hash data
+                          enum:
+                          - Subject
+                          - Cert
+                          - Chain
+                          - Dns
+                          - Uri
+                          type: string
+                        maxItems: 5
+                        type: array
+                      mode:
+                        description: Envoy Proxy mode how to handle the x-forwarded-client-cert
+                          (XFCC) HTTP header.
+                        enum:
+                        - Sanitize
+                        - ForwardOnly
+                        - AppendForward
+                        - SanitizeSet
+                        - AlwaysForwardOnly
+                        type: string
+                    type: object
                 type: object
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
