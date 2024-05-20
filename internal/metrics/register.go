@@ -96,8 +96,8 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 
 		// we do not explicitly set default values for ExporterInterval and ExporterTimeout
 		// instead, let the upstream repository set default values for it
-		if config.ExporterInterval != nil && len(*config.ExporterInterval) != 0 {
-			interval, err := time.ParseDuration(string(*config.ExporterInterval))
+		if config.OpenTelemetry.ExporterInterval != nil && len(*config.OpenTelemetry.ExporterInterval) != 0 {
+			interval, err := time.ParseDuration(string(*config.OpenTelemetry.ExporterInterval))
 			if err != nil {
 				metricsLogger.Error(err, "failed to parse exporter interval time format")
 				return newOpts, err
@@ -105,8 +105,8 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 
 			sink.exporterInterval = interval
 		}
-		if config.ExporterTimeout != nil && len(*config.ExporterTimeout) != 0 {
-			timeout, err := time.ParseDuration(string(*config.ExporterTimeout))
+		if config.OpenTelemetry.ExporterTimeout != nil && len(*config.OpenTelemetry.ExporterTimeout) != 0 {
+			timeout, err := time.ParseDuration(string(*config.OpenTelemetry.ExporterTimeout))
 			if err != nil {
 				metricsLogger.Error(err, "failed to parse exporter timeout time format")
 				return newOpts, err
