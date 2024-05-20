@@ -269,6 +269,13 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
+
+	// UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
+	// When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
+	//
+	// +optional
+	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.

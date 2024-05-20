@@ -112,6 +112,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: header,
 			},
+			IgnoreCase: true,
 		})
 	}
 
@@ -177,6 +178,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: header,
 			},
+			IgnoreCase: true,
 		})
 	}
 

@@ -8,6 +8,7 @@ clientTrafficPolicies:
     headers:
       enableEnvoyHeaders: true
       withUnderscoresAction: Allow
+      preserveXRequestID: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
