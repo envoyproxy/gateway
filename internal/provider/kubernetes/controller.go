@@ -127,9 +127,9 @@ type resourceMappings struct {
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
 	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
 	// extensionRefFilters is a map of filters managed by an extension.
-	// The key is the namespaced name of the filter and the value is the
+	// The key is the namespaced name, group and kind of the filter and the value is the
 	// unstructured form of the resource.
-	extensionRefFilters map[types.NamespacedName]unstructured.Unstructured
+	extensionRefFilters map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured
 }
 
 func newResourceMapping() *resourceMappings {
@@ -141,7 +141,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedTCPRoutes:   map[string]struct{}{},
 		allAssociatedUDPRoutes:   map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
-		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
+		extensionRefFilters:      map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
 	}
 }
 

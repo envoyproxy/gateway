@@ -122,6 +122,102 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "httproute with extension filter multiple types same name",
+			routes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group("gateway.example.io"),
+											Kind:  gwapiv1.Kind("Bar"),
+											Name:  gwapiv1.ObjectName("test"),
+										},
+									},
+									{
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group("gateway.example.io"),
+											Kind:  gwapiv1.Kind("Foo"),
+											Name:  gwapiv1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			extensionFilters: []*unstructured.Unstructured{
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "gateway.example.io/v1alpha1",
+						"kind":       "Bar",
+						"metadata": map[string]interface{}{
+							"name":      "test",
+							"namespace": httpRouteNS,
+						},
+					},
+				},
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "gateway.example.io/v1alpha1",
+						"kind":       "Foo",
+						"metadata": map[string]interface{}{
+							"name":      "test",
+							"namespace": httpRouteNS,
+						},
+					},
+				},
+			},
+			extensionAPIGroups: []schema.GroupVersionKind{
+				{
+					Group:   "gateway.example.io",
+					Version: "v1alpha1",
+					Kind:    "Bar",
+				},
+				{
+					Group:   "gateway.example.io",
+					Version: "v1alpha1",
+					Kind:    "Foo",
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "httproute with one filter_from_extension",
 			routes: []*gwapiv1.HTTPRoute{
 				{
@@ -295,10 +391,16 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
 				if tc.extensionFilters != nil {
-					for i, filter := range tc.extensionFilters {
-						key := types.NamespacedName{
-							Namespace: tc.routes[i].Namespace,
-							Name:      filter.GetName(),
+					for _, filter := range tc.extensionFilters {
+						key := utils.NamespacedNameWithGroupKind{
+							NamespacedName: types.NamespacedName{
+								Namespace: tc.routes[0].Namespace,
+								Name:      filter.GetName(),
+							},
+							GroupKind: schema.GroupKind{
+								Group: filter.GroupVersionKind().Group,
+								Kind:  filter.GroupVersionKind().Kind,
+							},
 						}
 						require.Equal(t, *filter, resourceMap.extensionRefFilters[key])
 					}

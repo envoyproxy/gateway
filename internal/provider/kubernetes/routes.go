@@ -183,10 +183,17 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the GRPCRoute
 					// Check if it's a Kind managed by an extension and add to resourceTree
-					key := types.NamespacedName{
-						Namespace: grpcRoute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
+					key := utils.NamespacedNameWithGroupKind{
+						NamespacedName: types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						},
+						GroupKind: schema.GroupKind{
+							Group: string(filter.ExtensionRef.Group),
+							Kind:  string(filter.ExtensionRef.Kind),
+						},
 					}
+
 					extRefFilter, ok := resourceMap.extensionRefFilters[key]
 					if !ok {
 						r.log.Error(
@@ -226,7 +233,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	}
 	for i := range extensionRefFilters {
 		filter := extensionRefFilters[i]
-		resourceMap.extensionRefFilters[utils.NamespacedName(&filter)] = filter
+		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = filter
 	}
 
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
@@ -364,9 +371,15 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				} else if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the HTTPRoute
 					// Check if it's a Kind managed by an extension and add to resourceTree
-					key := types.NamespacedName{
-						Namespace: httpRoute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
+					key := utils.NamespacedNameWithGroupKind{
+						NamespacedName: types.NamespacedName{
+							Namespace: httpRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						},
+						GroupKind: schema.GroupKind{
+							Group: string(filter.ExtensionRef.Group),
+							Kind:  string(filter.ExtensionRef.Kind),
+						},
 					}
 					extRefFilter, ok := resourceMap.extensionRefFilters[key]
 					if !ok {
