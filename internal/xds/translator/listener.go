@@ -260,8 +260,9 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
-		Tracing:                  hcmTracing,
-		ForwardClientCertDetails: buildForwardClientCertDetailsAction(irListener.Headers),
+		Tracing:                   hcmTracing,
+		ForwardClientCertDetails:  buildForwardClientCertDetailsAction(irListener.Headers),
+		PreserveExternalRequestId: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
 	}
 
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {

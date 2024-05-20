@@ -27,7 +27,9 @@
                 allowedUpstreamHeaders:
                   patterns:
                   - exact: header1
+                    ignoreCase: true
                   - exact: header2
+                    ignoreCase: true
               pathPrefix: /auth
               serverUri:
                 cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
@@ -86,7 +88,9 @@
                 allowedUpstreamHeaders:
                   patterns:
                   - exact: header1
+                    ignoreCase: true
                   - exact: header2
+                    ignoreCase: true
               pathPrefix: /auth
               serverUri:
                 cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend

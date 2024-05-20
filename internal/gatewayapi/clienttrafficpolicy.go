@@ -547,6 +547,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	httpIR.Headers = &ir.HeaderSettings{
 		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
 		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
+		PreserveXRequestID:    ptr.Deref(headerSettings.PreserveXRequestID, false),
 	}
 
 	if headerSettings.XForwardedClientCert != nil {
