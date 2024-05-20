@@ -44,7 +44,7 @@ tcp:
   port: 10082
   tcpKeepalive: {}
   tls:
-    passthrough:
+    inspector:
       snis:
       - bar.com
   destination:

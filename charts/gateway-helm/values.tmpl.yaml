@@ -1,9 +1,32 @@
+# The global settings for the Envoy Gateway Helm chart.
+# These values will be used if the values are not overridden in the other sections.
+global:
+  images:
+    envoyGateway:
+      # This is the full image name including the hub, repo, and tag.
+      image: ${GatewayImage}
+      # Specify image pull policy if default behavior isn't desired.
+      # Default behavior: latest images will be Always else IfNotPresent.
+      pullPolicy: ${GatewayImagePullPolicy}
+      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      imagePullSecrets: []
+    ratelimit:
+      # This is the full image name including the hub, repo, and tag.
+      image: "docker.io/envoyproxy/ratelimit:master"
+      # TODO: zhaohuabing add support for imagePullSecrets for ratelimit
+      # Specify image pull policy if default behavior isn't desired.
+      # Default behavior: latest images will be Always else IfNotPresent.
+      # pullPolicy: IfNotPresent
+      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      # imagePullSecrets: []
+    # statsd: TODO: zhaohuabing add custom image support for statsd image
+
 deployment:
   envoyGateway:
     image:
-      repository: ${ImageRepository}
-      tag: '${ImageTag}'
-    imagePullPolicy: Always
+      repository: ""
+      tag: ""
+    imagePullPolicy: ""
     imagePullSecrets: []
     resources:
       limits:
@@ -25,7 +48,7 @@ deployment:
   replicas: 1
   pod:
     affinity: {}
-    annotations: 
+    annotations:
       prometheus.io/scrape: 'true'
       prometheus.io/port: '19001'
     labels: {}
@@ -48,7 +71,7 @@ certgen:
   job:
     annotations: {}
     resources: {}
-    ttlSecondsAfterFinished: 0
+    ttlSecondsAfterFinished: 30
   rbac:
     annotations: {}
     labels: {}

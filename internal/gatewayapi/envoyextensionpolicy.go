@@ -6,22 +6,21 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -29,7 +28,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *Resources,
-	xdsIR XdsIRMap) []*egv1a1.EnvoyExtensionPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.EnvoyExtensionPolicy {
 	var res []*egv1a1.EnvoyExtensionPolicy
 
 	// Sort based on timestamp
@@ -196,16 +196,12 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 }
 
 func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := policy.Spec.TargetRef.Namespace
-	// If empty, default to namespace of policy
-	if targetNs == nil {
-		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-	}
+	targetNs := policy.Namespace
 
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(policy.Spec.TargetRef.Name),
-		Namespace: string(*targetNs),
+		Namespace: targetNs,
 	}
 	gateway, ok := gateways[key]
 
@@ -215,9 +211,9 @@ func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gatewa
 	}
 
 	// Ensure Policy and target are in the same namespace
-	if policy.Namespace != string(*targetNs) {
+	if policy.Namespace != targetNs {
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyExtensionPolicy can only target a resource in the same namespace.",
-			policy.Namespace, *targetNs)
+			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
 			Reason:  gwv1a2.PolicyReasonInvalid,
@@ -243,17 +239,13 @@ func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gatewa
 }
 
 func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
-	targetNs := policy.Spec.TargetRef.Namespace
-	// If empty, default to namespace of policy
-	if targetNs == nil {
-		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-	}
+	targetNs := policy.Namespace
 
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(policy.Spec.TargetRef.Kind),
 		Name:      string(policy.Spec.TargetRef.Name),
-		Namespace: string(*targetNs),
+		Namespace: targetNs,
 	}
 
 	route, ok := routes[key]
@@ -263,9 +255,9 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes m
 	}
 
 	// Ensure Policy and target are in the same namespace
-	if policy.Namespace != string(*targetNs) {
+	if policy.Namespace != targetNs {
 		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyExtensionPolicy can only target a resource in the same namespace.",
-			policy.Namespace, *targetNs)
+			policy.Namespace, targetNs)
 
 		return route.RouteContext, &status.PolicyResolveError{
 			Reason:  gwv1a2.PolicyReasonInvalid,
@@ -292,7 +284,21 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes m
 }
 
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyExtensionPolicy, route RouteContext,
-	xdsIR XdsIRMap, resources *Resources) error {
+	xdsIR XdsIRMap, resources *Resources,
+) error {
+	var (
+		extProcs  []ir.ExtProc
+		wasms     []ir.Wasm
+		err, errs error
+	)
+
+	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	if wasms, err = t.buildWasms(policy); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -300,17 +306,14 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
-					if extProcs, err := t.buildExtProcs(policy, resources); err == nil {
-						r.ExtProcs = extProcs
-					} else {
-						return err
-					}
+					r.ExtProcs = extProcs
+					r.Wasms = wasms
 				}
 			}
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources) ([]ir.ExtProc, error) {
@@ -320,34 +323,37 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 		return nil, nil
 	}
 
-	if len(policy.Spec.ExtProc) > 0 {
-		for idx, ep := range policy.Spec.ExtProc {
-			name := irConfigNameForEEP(policy, idx)
-			extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources)
-			if err != nil {
-				return nil, err
-			}
-			extProcIRList = append(extProcIRList, *extProcIR)
+	for idx, ep := range policy.Spec.ExtProc {
+		name := irConfigNameForEEP(policy, idx)
+		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources)
+		if err != nil {
+			return nil, err
 		}
+		extProcIRList = append(extProcIRList, *extProcIR)
 	}
 	return extProcIRList, nil
 }
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.EnvoyExtensionPolicy,
-	gateway *GatewayContext, xdsIR XdsIRMap, resources *Resources) error {
+	gateway *GatewayContext, xdsIR XdsIRMap, resources *Resources,
+) error {
+	var (
+		extProcs  []ir.ExtProc
+		wasms     []ir.Wasm
+		err, errs error
+	)
 
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
 
-	policyTarget := irStringKey(
-		string(ptr.Deref(policy.Spec.TargetRef.Namespace, gwv1a2.Namespace(policy.Namespace))),
-		string(policy.Spec.TargetRef.Name),
-	)
+	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
 
-	extProcs, err := t.buildExtProcs(policy, resources)
-	if err != nil {
-		return err
+	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	if wasms, err = t.buildWasms(policy); err != nil {
+		errs = errors.Join(errs, err)
 	}
 
 	for _, http := range ir.HTTP {
@@ -360,13 +366,21 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
 			// if already set - there's a route level policy, so skip
+			if r.ExtProcs != nil ||
+				r.Wasms != nil {
+				continue
+			}
+
 			if r.ExtProcs == nil {
 				r.ExtProcs = extProcs
+			}
+			if r.Wasms == nil {
+				r.Wasms = wasms
 			}
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) buildExtProc(
@@ -374,48 +388,79 @@ func (t *Translator) buildExtProc(
 	policyNamespacedName types.NamespacedName,
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
-	resources *Resources) (*ir.ExtProc, error) {
+	resources *Resources,
+) (*ir.ExtProc, error) {
 	var (
-		backendRef *gwapiv1.BackendObjectReference
-		ds         *ir.DestinationSetting
-		authority  string
-		err        error
+		ds        *ir.DestinationSetting
+		authority string
+		err       error
 	)
 
-	backendRef = &extProc.BackendRef.BackendObjectReference
+	var dsl []*ir.DestinationSetting
+	for i := range extProc.BackendRefs {
+		if err = t.validateExtServiceBackendReference(
+			&extProc.BackendRefs[i].BackendObjectReference,
+			policyNamespacedName.Namespace,
+			resources); err != nil {
+			return nil, err
+		}
 
-	if err = t.validateExtServiceBackendReference(
-		backendRef,
-		policyNamespacedName.Namespace,
-		resources); err != nil {
-		return nil, err
+		ds, err = t.processExtServiceDestination(
+			&extProc.BackendRefs[i].BackendObjectReference,
+			policyNamespacedName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			ir.GRPC,
+			resources)
+		if err != nil {
+			return nil, err
+		}
+
+		dsl = append(dsl, ds)
+	}
+
+	rd := ir.RouteDestination{
+		Name:     irIndexedExtServiceDestinationName(policyNamespacedName, egv1a1.KindEnvoyExtensionPolicy, extProcIdx),
+		Settings: dsl,
 	}
 
 	authority = fmt.Sprintf(
 		"%s.%s:%d",
-		backendRef.Name,
-		NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace),
-		*backendRef.Port)
-
-	if ds, err = t.processExtServiceDestination(
-		backendRef,
-		policyNamespacedName,
-		egv1a1.KindEnvoyExtensionPolicy,
-		ir.GRPC,
-		resources); err != nil {
-		return nil, err
-	}
-
-	rd := ir.RouteDestination{
-		Name: irIndexedExtServiceDestinationName(policyNamespacedName, egv1a1.KindEnvoyExtensionPolicy,
-			string(backendRef.Name), extProcIdx),
-		Settings: []*ir.DestinationSetting{ds},
-	}
+		extProc.BackendRefs[0].Name,
+		NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace),
+		*extProc.BackendRefs[0].Port)
 
 	extProcIR := &ir.ExtProc{
 		Name:        name,
 		Destination: rd,
 		Authority:   authority,
+	}
+
+	if extProc.MessageTimeout != nil {
+		d, err := time.ParseDuration(string(*extProc.MessageTimeout))
+		if err != nil {
+			return nil, fmt.Errorf("invalid ExtProc MessageTimeout value %v", extProc.MessageTimeout)
+		}
+		extProcIR.MessageTimeout = ptr.To(metav1.Duration{Duration: d})
+	}
+
+	if extProc.FailOpen != nil {
+		extProcIR.FailOpen = extProc.FailOpen
+	}
+
+	if extProc.ProcessingMode != nil {
+		if extProc.ProcessingMode.Request != nil {
+			extProcIR.RequestHeaderProcessing = true
+			if extProc.ProcessingMode.Request.Body != nil {
+				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
+			}
+		}
+
+		if extProc.ProcessingMode.Response != nil {
+			extProcIR.ResponseHeaderProcessing = true
+			if extProc.ProcessingMode.Response.Body != nil {
+				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
+			}
+		}
 	}
 
 	return extProcIR, err
@@ -427,4 +472,57 @@ func irConfigNameForEEP(policy *egv1a1.EnvoyExtensionPolicy, idx int) string {
 		strings.ToLower(egv1a1.KindEnvoyExtensionPolicy),
 		utils.NamespacedName(policy).String(),
 		idx)
+}
+
+func (t *Translator) buildWasms(policy *egv1a1.EnvoyExtensionPolicy) ([]ir.Wasm, error) {
+	var wasmIRList []ir.Wasm
+
+	if policy == nil {
+		return nil, nil
+	}
+
+	for idx, wasm := range policy.Spec.Wasm {
+		name := irConfigNameForEEP(policy, idx)
+		wasmIR, err := t.buildWasm(name, wasm)
+		if err != nil {
+			return nil, err
+		}
+		wasmIRList = append(wasmIRList, *wasmIR)
+	}
+	return wasmIRList, nil
+}
+
+func (t *Translator) buildWasm(name string, wasm egv1a1.Wasm) (*ir.Wasm, error) {
+	var (
+		failOpen     = false
+		httpWasmCode *ir.HTTPWasmCode
+	)
+
+	if wasm.FailOpen != nil {
+		failOpen = *wasm.FailOpen
+	}
+
+	switch wasm.Code.Type {
+	case egv1a1.HTTPWasmCodeSourceType:
+		httpWasmCode = &ir.HTTPWasmCode{
+			URL:    wasm.Code.HTTP.URL,
+			SHA256: wasm.Code.SHA256,
+		}
+	case egv1a1.ImageWasmCodeSourceType:
+		return nil, fmt.Errorf("OCI image Wasm code source is not supported yet")
+	default:
+		// should never happen because of kubebuilder validation, just a sanity check
+		return nil, fmt.Errorf("unsupported Wasm code source type %q", wasm.Code.Type)
+	}
+
+	wasmIR := &ir.Wasm{
+		Name:         name,
+		RootID:       wasm.RootID,
+		WasmName:     wasm.Name,
+		Config:       wasm.Config,
+		FailOpen:     failOpen,
+		HTTPWasmCode: httpWasmCode,
+	}
+
+	return wasmIR, nil
 }

@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
@@ -41,7 +40,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: default
       sectionName: http
     timeout:
       http:
@@ -73,7 +71,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
     timeout:
       http:
         requestReceivedTimeout: 5s
@@ -406,14 +403,14 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: default/gateway-1/http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: default/gateway-2/http
         ports:
         - containerPort: 10081
-          name: default/gateway-2/http
+          name: http-81
           protocol: HTTP
           servicePort: 81
       metadata:
@@ -445,7 +442,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -485,7 +481,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -516,25 +511,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -550,10 +527,27 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        tcpKeepalive:
-          idleTime: 1200
-          interval: 60
-          probes: 3
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
+        traffic:
+          tcpKeepalive:
+            idleTime: 1200
+            interval: 60
+            probes: 3
       timeout:
         http:
           requestReceivedTimeout: 5s
@@ -567,25 +561,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -601,10 +577,27 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        tcpKeepalive:
-          idleTime: 1200
-          interval: 60
-          probes: 3
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
+        traffic:
+          tcpKeepalive:
+            idleTime: 1200
+            interval: 60
+            probes: 3
       timeout:
         http:
           requestReceivedTimeout: 5s
@@ -618,25 +611,7 @@ xdsIR:
         mergeSlashes: true
       port: 10081
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        cors:
-          allowHeaders:
-          - x-header-5
-          - x-header-6
-          allowMethods:
-          - GET
-          - POST
-          allowOrigins:
-          - distinct: false
-            name: ""
-            safeRegex: .*
-          exposeHeaders:
-          - x-header-7
-          - x-header-8
-          maxAge: 33m20s
-        destination:
+      - destination:
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
@@ -652,6 +627,22 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: .*
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
     - address: 0.0.0.0
       hostnames:
       - foo.example.com
@@ -662,10 +653,7 @@ xdsIR:
         mergeSlashes: true
       port: 10081
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-4/rule/0
           settings:
           - addressType: IP

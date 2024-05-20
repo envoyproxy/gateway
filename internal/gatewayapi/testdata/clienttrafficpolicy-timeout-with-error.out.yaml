@@ -10,7 +10,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway
-      namespace: envoy-gateway
     timeout:
       http:
         requestReceivedTimeout: 5sec
@@ -77,7 +76,7 @@ infraIR:
         name: envoy-gateway/gateway/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

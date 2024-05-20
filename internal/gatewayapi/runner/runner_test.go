@@ -59,7 +59,6 @@ func TestRunner(t *testing.T) {
 		// Ensure ir is empty
 		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*ir.Xds{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
 	}, time.Second*1, time.Millisecond*20)
-
 }
 
 func TestGetIRKeysToDelete(t *testing.T) {
@@ -75,7 +74,8 @@ func TestGetIRKeysToDelete(t *testing.T) {
 			newKeys: []string{},
 			delKeys: []string{},
 		},
-		{name: "no new keys",
+		{
+			name:    "no new keys",
 			curKeys: []string{"one", "two"},
 			newKeys: []string{},
 			delKeys: []string{"one", "two"},
@@ -162,7 +162,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 
 	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
 	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
-	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1a2.GRPCRouteStatus{})
+	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1.GRPCRouteStatus{})
 	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
 	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
@@ -248,7 +248,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 
 	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
 	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
-	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1a2.GRPCRouteStatus{})
+	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1.GRPCRouteStatus{})
 	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
 	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})

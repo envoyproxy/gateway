@@ -28,7 +28,7 @@ You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gat
 Envoy Gateway is typically deployed to Kubernetes from the command line. If you don't have Kubernetes, you should use `kind` to create one.
 
 {{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](/latest/contributions/develop) to learn more.
+Refer to the [Developer Guide](../../contributions/develop) to learn more.
 {{% /alert %}}
 
 Install the Gateway API CRDs and Envoy Gateway:
@@ -61,7 +61,11 @@ consideration when debugging.
 
 ## Helm chart customizations
 
-Some of the quick ways of using the helm install command for envoy gateway installation are below. 
+Some of the quick ways of using the helm install command for envoy gateway installation are below.
+
+{{% alert title="Helm Chart Values" color="primary" %}}
+If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](./api).
+{{% /alert %}}
 
 ### Increase the replicas
 
@@ -114,10 +118,6 @@ You can use the below command to install the envoy gateway using values.yaml fil
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
-{{% alert title="Helm Chart Values" color="primary" %}}
-If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](../api).
-{{% /alert %}}
-
 ## Open Ports
 
 These are the ports used by Envoy Gateway and the managed Envoy Proxy.
@@ -140,5 +140,5 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 | Heath Check  | 0.0.0.0     | 19001   |
 
 {{% alert title="Next Steps" color="warning" %}}
-Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../user).
+Envoy Gateway should now be successfully installed and running.  To experience more abilities of Envoy Gateway, refer to [Tasks](../tasks).
 {{% /alert %}}

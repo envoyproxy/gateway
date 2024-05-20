@@ -166,6 +166,9 @@ type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
+	// EnableBackend enables Envoy Gateway to
+	// reconcile and implement the Backend resources.
+	EnableBackend bool `json:"enableBackend"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -213,6 +216,10 @@ type EnvoyGatewayKubernetesProvider struct {
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
 	// +optional
 	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
+
+	// ShutdownManager defines the configuration for the shutdown manager.
+	// +optional
+	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
 }
 
 const (
@@ -354,6 +361,9 @@ type RateLimit struct {
 type RateLimitTelemetry struct {
 	// Metrics defines metrics configuration for RateLimit.
 	Metrics *RateLimitMetrics `json:"metrics,omitempty"`
+
+	// Tracing defines traces configuration for RateLimit.
+	Tracing *RateLimitTracing `json:"tracing,omitempty"`
 }
 
 type RateLimitMetrics struct {
@@ -364,6 +374,34 @@ type RateLimitMetrics struct {
 type RateLimitMetricsPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
+}
+
+type RateLimitTracing struct {
+	// SamplingRate controls the rate at which traffic will be
+	// selected for tracing if no prior sampling decision has been made.
+	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+	// +optional
+	SamplingRate *uint32 `json:"samplingRate,omitempty"`
+
+	// Provider defines the rateLimit tracing provider.
+	// Only OpenTelemetry is supported currently.
+	Provider *RateLimitTracingProvider `json:"provider,omitempty"`
+}
+
+type RateLimitTracingProviderType string
+
+const (
+	RateLimitTracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+)
+
+// RateLimitTracingProvider defines the tracing provider configuration of RateLimit
+type RateLimitTracingProvider struct {
+	// Type defines the tracing provider type.
+	// Since to RateLimit Exporter currently using OpenTelemetry, only OpenTelemetry is supported
+	Type *RateLimitTracingProviderType `json:"type,omitempty"`
+
+	// URL is the endpoint of the trace collector that supports the OTLP protocol
+	URL string `json:"url"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with
@@ -475,7 +513,6 @@ type ExtensionTLS struct {
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.
 type EnvoyGatewayAdmin struct {
-
 	// Address defines the address of Envoy Gateway Admin Server.
 	//
 	// +optional
@@ -503,6 +540,12 @@ type EnvoyGatewayAdminAddress struct {
 	// +optional
 	// +kubebuilder:default="127.0.0.1"
 	Host string `json:"host,omitempty"`
+}
+
+// ShutdownManager defines the configuration for the shutdown manager.
+type ShutdownManager struct {
+	// Image specifies the ShutdownManager container image to be used, instead of the default image.
+	Image *string `json:"image,omitempty"`
 }
 
 func init() {

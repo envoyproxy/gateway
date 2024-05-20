@@ -95,7 +95,7 @@ infraIR:
         name: default/gateway-1/https
         ports:
         - containerPort: 10443
-          name: https
+          name: https-443
           protocol: HTTPS
           servicePort: 443
       metadata:
@@ -124,10 +124,7 @@ xdsIR:
         mergeSlashes: true
       port: 10443
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
