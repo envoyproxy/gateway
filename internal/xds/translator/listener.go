@@ -30,6 +30,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -796,15 +797,15 @@ func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnec
 	if in != nil {
 		if in.XForwardedClientCert != nil {
 			switch in.XForwardedClientCert.Mode {
-			case ir.ForwardModeSanitize:
+			case egv1a1.XFCCForwardModeSanitize:
 				return hcmv3.HttpConnectionManager_SANITIZE
-			case ir.ForwardModeForwardOnly:
+			case egv1a1.XFCCForwardModeForwardOnly:
 				return hcmv3.HttpConnectionManager_FORWARD_ONLY
-			case ir.ForwardModeAppendForward:
+			case egv1a1.XFCCForwardModeAppendForward:
 				return hcmv3.HttpConnectionManager_APPEND_FORWARD
-			case ir.ForwardModeSanitizeSet:
+			case egv1a1.XFCCForwardModeSanitizeSet:
 				return hcmv3.HttpConnectionManager_SANITIZE_SET
-			case ir.ForwardModeAlwaysForwardOnly:
+			case egv1a1.XFCCForwardModeAlwaysForwardOnly:
 				return hcmv3.HttpConnectionManager_ALWAYS_FORWARD_ONLY
 			}
 		}
@@ -828,15 +829,15 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	clientCertDetails := &hcmv3.HttpConnectionManager_SetCurrentClientCertDetails{}
 	for _, data := range in.XForwardedClientCert.CertDetailsToAdd {
 		switch data {
-		case ir.ClientCertDataCert:
+		case egv1a1.XFCCCertDataCert:
 			clientCertDetails.Cert = true
-		case ir.ClientCertDataChain:
+		case egv1a1.XFCCCertDataChain:
 			clientCertDetails.Chain = true
-		case ir.ClientCertDataDNS:
+		case egv1a1.XFCCCertDataDNS:
 			clientCertDetails.Dns = true
-		case ir.ClientCertDataSubject:
+		case egv1a1.XFCCCertDataSubject:
 			clientCertDetails.Subject = &wrapperspb.BoolValue{Value: true}
-		case ir.ClientCertDataURI:
+		case egv1a1.XFCCCertDataURI:
 			clientCertDetails.Uri = true
 		}
 	}

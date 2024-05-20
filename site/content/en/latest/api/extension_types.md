@@ -472,25 +472,6 @@ _Appears in:_
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path. |
 
 
-#### ClientCertData
-
-_Underlying type:_ _string_
-
-Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-By default, x-forwarded-client-cert (XFCC) will always include By and Hash data
-
-_Appears in:_
-- [XForwardedClientCert](#xforwardedclientcert)
-
-| Value | Description |
-| ----- | ----------- |
-| `Subject` | Whether to forward the subject of the client cert.<br /> | 
-| `Cert` | Whether to forward the entire client cert in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.<br /> | 
-| `Chain` | Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.<br /> | 
-| `Dns` | Whether to forward the DNS type Subject Alternative Names of the client cert.<br /> | 
-| `Uri` | Whether to forward the URI type Subject Alternative Name of the client cert.<br /> | 
-
-
 #### ClientIPDetectionSettings
 
 
@@ -1549,24 +1530,6 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
-#### ForwardMode
-
-_Underlying type:_ _string_
-
-Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-
-_Appears in:_
-- [XForwardedClientCert](#xforwardedclientcert)
-
-| Value | Description |
-| ----- | ----------- |
-| `Sanitize` | Do not send the XFCC header to the next hop. This is the default value.<br /> | 
-| `ForwardOnly` | When the client connection is mTLS (Mutual TLS), forward the XFCC header<br />in the request.<br /> | 
-| `AppendForward` | When the client connection is mTLS, append the client certificate<br />information to the request’s XFCC header and forward it.<br /> | 
-| `SanitizeSet` | When the client connection is mTLS, reset the XFCC header with the client<br />certificate information and send it to the next hop.<br /> | 
-| `AlwaysForwardOnly` | Always forward the XFCC header in the request, regardless of whether the<br />client connection is mTLS.<br /> | 
-
-
 #### GRPCExtAuthService
 
 
@@ -1834,7 +1797,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
-| `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  | Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.<br />When enabled, Hash and By is always set |
+| `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  | XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.<br /><br />x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate<br />information of part or all of the clients or proxies that a request has flowed through,<br />on its way from the client to the server.<br /><br />Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.<br /><br />If not set, the default behavior is sanitizing the XFCC header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
 | `preserveXRequestID` | _boolean_ |  false  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />It defaults to false. |
 
@@ -3580,19 +3543,55 @@ _Appears in:_
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
 
 
+#### XFCCCertData
+
+_Underlying type:_ _string_
+
+XFCCCertData specifies the fields in the client certificate to be forwarded in the XFCC header.
+
+_Appears in:_
+- [XForwardedClientCert](#xforwardedclientcert)
+
+| Value | Description |
+| ----- | ----------- |
+| `Subject` | XFCCCertDataSubject is the Subject field of the current client certificate.<br /> | 
+| `Cert` | XFCCCertDataCert is the entire client certificate in URL encoded PEM format.<br /> | 
+| `Chain` | XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.<br /> | 
+| `DNS` | XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.<br /> | 
+| `URI` | XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.<br /> | 
+
+
+#### XFCCForwardMode
+
+_Underlying type:_ _string_
+
+XFCCForwardMode defines how XFCC header is handled by Envoy Proxy.
+
+_Appears in:_
+- [XForwardedClientCert](#xforwardedclientcert)
+
+| Value | Description |
+| ----- | ----------- |
+| `Sanitize` | XFCCForwardModeSanitize removes the XFCC header from the request. This is the default mode.<br /> | 
+| `ForwardOnly` | XFCCForwardModeForwardOnly forwards the XFCC header in the request if the client connection is mTLS.<br /> | 
+| `AppendForward` | XFCCForwardModeAppendForward appends the client certificate information to the request’s XFCC header and forward it if the client connection is mTLS.<br /> | 
+| `SanitizeSet` | XFCCForwardModeSanitizeSet resets the XFCC header with the client certificate information and forward it if the client connection is mTLS.<br />The existing certificate information in the XFCC header is removed.<br /> | 
+| `AlwaysForwardOnly` | XFCCForwardModeAlwaysForwardOnly always forwards the XFCC header in the request, regardless of whether the client connection is mTLS.<br /> | 
+
+
 #### XForwardedClientCert
 
 
 
-Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
 
 _Appears in:_
 - [HeaderSettings](#headersettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `mode` | _[ForwardMode](#forwardmode)_ |  false  | Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
-| `certDetailsToAdd` | _[ClientCertData](#clientcertdata) array_ |  false  | Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header |
+| `mode` | _[XFCCForwardMode](#xfccforwardmode)_ |  false  | Mode defines how XFCC header is handled by Envoy Proxy.<br />If not set, the default mode is `Sanitize`. |
+| `certDetailsToAdd` | _[XFCCCertData](#xfcccertdata) array_ |  false  | CertDetailsToAdd specifies the fields in the client certificate to be forwarded in the XFCC header.<br /><br />Hash(the SHA 256 digest of the current client certificate) and By(the Subject Alternative Name)<br />are always included if the client certificate is forwarded.<br /><br />This field is only applicable when the mode is set to `AppendForward` or<br />`SanitizeSet` and the client connection is mTLS. |
 
 
 #### XForwardedForSettings

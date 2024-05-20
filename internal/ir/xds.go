@@ -377,34 +377,10 @@ const (
 // +k8s:deepcopy-gen=true
 type XForwardedClientCert struct {
 	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-	Mode ForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Mode egv1a1.XFCCForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
 	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-	CertDetailsToAdd []ClientCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
+	CertDetailsToAdd []egv1a1.XFCCCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
 }
-
-// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-// +k8s:deepcopy-gen=true
-type ForwardMode egv1a1.ForwardMode
-
-const (
-	ForwardModeSanitize          = ForwardMode(egv1a1.ForwardModeSanitize)
-	ForwardModeForwardOnly       = ForwardMode(egv1a1.ForwardModeForwardOnly)
-	ForwardModeAppendForward     = ForwardMode(egv1a1.ForwardModeAppendForward)
-	ForwardModeSanitizeSet       = ForwardMode(egv1a1.ForwardModeSanitizeSet)
-	ForwardModeAlwaysForwardOnly = ForwardMode(egv1a1.ForwardModeAlwaysForwardOnly)
-)
-
-// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-// +k8s:deepcopy-gen=true
-type ClientCertData egv1a1.ClientCertData
-
-const (
-	ClientCertDataSubject = ClientCertData(egv1a1.ClientCertDataSubject)
-	ClientCertDataCert    = ClientCertData(egv1a1.ClientCertDataCert)
-	ClientCertDataChain   = ClientCertData(egv1a1.ClientCertDataChain)
-	ClientCertDataDNS     = ClientCertData(egv1a1.ClientCertDataDNS)
-	ClientCertDataURI     = ClientCertData(egv1a1.ClientCertDataURI)
-)
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true

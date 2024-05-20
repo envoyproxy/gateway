@@ -43,6 +43,9 @@ clientTrafficPolicies:
   spec:
     headers:
       xForwardedClientCert:
+        certDetailsToAdd:
+        - URI
+        - DNS
         mode: ForwardOnly
     targetRef:
       group: gateway.networking.k8s.io

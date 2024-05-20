@@ -121,7 +121,7 @@ clientTrafficPolicies:
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
-        - Uri
+        - URI
         - Chain
         mode: SanitizeSet
     targetRef:
@@ -160,10 +160,10 @@ clientTrafficPolicies:
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
-        - Uri
+        - URI
         - Chain
         - Subject
-        - Dns
+        - DNS
         mode: SanitizeSet
     targetRef:
       group: gateway.networking.k8s.io
@@ -652,7 +652,7 @@ xdsIR:
         xForwardedClientCert:
           certDetailsToAdd:
           - Cert
-          - Uri
+          - URI
           - Chain
           mode: SanitizeSet
       hostnames:
@@ -685,10 +685,10 @@ xdsIR:
         xForwardedClientCert:
           certDetailsToAdd:
           - Cert
-          - Uri
+          - URI
           - Chain
           - Subject
-          - Dns
+          - DNS
           mode: SanitizeSet
       hostnames:
       - '*'
