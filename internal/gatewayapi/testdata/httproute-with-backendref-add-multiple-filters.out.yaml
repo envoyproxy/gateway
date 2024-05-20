@@ -53,17 +53,35 @@ httpRoutes:
     rules:
     - backendRefs:
       - filters:
-        - requestRedirect:
-            hostname: redirected.com
-            scheme: https
-            statusCode: 301
-          type: RequestRedirect
+        - requestHeaderModifier:
+            add:
+            - name: add-header-1
+              value: some-value
+            - name: add-header-2
+              value: some-value
+          type: RequestHeaderModifier
         name: service-1
         port: 8080
+        weight: 8
+      - name: service-2
+        port: 8080
+        weight: 2
       matches:
       - path:
-          type: Exact
-          value: /exact
+          value: /
+    - backendRefs:
+      - filters:
+        - requestHeaderModifier:
+            set:
+            - name: add-header-3
+              value: some-value
+          type: RequestHeaderModifier
+        name: service-3
+        port: 8080
+        weight: 1
+      matches:
+      - path:
+          value: /foo
   status:
     parents:
     - conditions:
@@ -73,10 +91,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Specific filter is not supported within BackendRef, only RequestHeaderModifier
-          and ResponseHeaderModifier are supported
-        reason: UnsupportedRefValue
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -115,15 +132,53 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters:
+              addRequestHeaders:
+              - append: false
+                name: add-header-3
+                value: some-value
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        name: httproute/default/httproute-1/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
-          - weight: 1
-        directResponse:
-          statusCode: 500
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters:
+              addRequestHeaders:
+              - append: true
+                name: add-header-1
+                value: some-value
+              - append: true
+                name: add-header-2
+                value: some-value
+            protocol: HTTP
+            weight: 8
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 2
         hostname: '*'
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
-          exact: /exact
           name: ""
+          prefix: /
