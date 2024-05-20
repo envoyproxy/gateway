@@ -7,7 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         certDetailsToAdd:
         - Cert
         mode: Sanitize
@@ -44,7 +44,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         certDetailsToAdd:
         - Cert
         mode: ForwardOnly
@@ -81,7 +81,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         certDetailsToAdd:
         - Cert
         mode: AppendForward
@@ -118,7 +118,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         certDetailsToAdd:
         - Cert
         - Uri
@@ -157,7 +157,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         certDetailsToAdd:
         - Cert
         - Uri
@@ -546,7 +546,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: Sanitize
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -570,7 +570,7 @@ xdsIR:
         requireClientCertificate: true
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: Sanitize
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -588,7 +588,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: ForwardOnly
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -617,7 +617,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           certDetailsToAdd:
           - Cert
           mode: AppendForward
@@ -648,7 +648,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           certDetailsToAdd:
           - Cert
           - Uri
@@ -681,7 +681,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           certDetailsToAdd:
           - Cert
           - Uri

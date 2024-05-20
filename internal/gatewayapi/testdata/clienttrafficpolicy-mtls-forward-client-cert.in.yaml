@@ -10,7 +10,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-1
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: Sanitize
     tls:
       clientValidation:
@@ -28,7 +28,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-2
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: ForwardOnly
     tls:
       clientValidation:
@@ -47,7 +47,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-3
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: AppendForward
     tls:
       clientValidation:
@@ -66,7 +66,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-4
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: SanitizeSet
     tls:
       clientValidation:
@@ -85,7 +85,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-5
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: AlwaysForwardOnly
     tls:
       clientValidation:

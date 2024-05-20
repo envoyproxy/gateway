@@ -793,8 +793,8 @@ func buildHeadersWithUnderscoresAction(in *ir.HeaderSettings) corev3.HttpProtoco
 
 func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnectionManager_ForwardClientCertDetails {
 	if in != nil {
-		if in.ForwardClientCert != nil {
-			switch in.ForwardClientCert.Mode {
+		if in.XForwardedClientCert != nil {
+			switch in.XForwardedClientCert.Mode {
 			case ir.ForwardModeSanitize:
 				return hcmv3.HttpConnectionManager_SANITIZE
 			case ir.ForwardModeForwardOnly:
@@ -816,16 +816,16 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 		return nil
 	}
 
-	if in.ForwardClientCert == nil {
+	if in.XForwardedClientCert == nil {
 		return nil
 	}
 
-	if len(in.ForwardClientCert.CertDetailsToAdd) == 0 {
+	if len(in.XForwardedClientCert.CertDetailsToAdd) == 0 {
 		return nil
 	}
 
 	clientCertDetails := &hcmv3.HttpConnectionManager_SetCurrentClientCertDetails{}
-	for _, data := range in.ForwardClientCert.CertDetailsToAdd {
+	for _, data := range in.XForwardedClientCert.CertDetailsToAdd {
 		switch data {
 		case ir.ClientCertDataCert:
 			clientCertDetails.Cert = true

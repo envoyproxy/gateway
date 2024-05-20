@@ -480,7 +480,7 @@ Specifies the fields in the client certificate to be forwarded on the x-forwarde
 By default, x-forwarded-client-cert (XFCC) will always include By and Hash data
 
 _Appears in:_
-- [ForwardClientCert](#forwardclientcert)
+- [XForwardedClientCert](#xforwardedclientcert)
 
 | Value | Description |
 | ----- | ----------- |
@@ -1548,21 +1548,6 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
-#### ForwardClientCert
-
-
-
-Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-
-_Appears in:_
-- [HeaderSettings](#headersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `mode` | _[ForwardMode](#forwardmode)_ |  false  | Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
-| `certDetailsToAdd` | _[ClientCertData](#clientcertdata) array_ |  false  | Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header |
-
-
 #### ForwardMode
 
 _Underlying type:_ _string_
@@ -1570,7 +1555,7 @@ _Underlying type:_ _string_
 Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 
 _Appears in:_
-- [ForwardClientCert](#forwardclientcert)
+- [XForwardedClientCert](#xforwardedclientcert)
 
 | Value | Description |
 | ----- | ----------- |
@@ -1848,7 +1833,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
-| `forwardClientCert` | _[ForwardClientCert](#forwardclientcert)_ |  false  | Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
+| `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  | Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.<br />When enabled, Hash and By is always set |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
 
 
@@ -3591,6 +3576,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `pre` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
+
+
+#### XForwardedClientCert
+
+
+
+Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `mode` | _[ForwardMode](#forwardmode)_ |  false  | Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
+| `certDetailsToAdd` | _[ClientCertData](#clientcertdata) array_ |  false  | Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header |
 
 
 #### XForwardedForSettings

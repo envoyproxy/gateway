@@ -375,7 +375,7 @@ const (
 
 // Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 // +k8s:deepcopy-gen=true
-type ForwardClientCert struct {
+type XForwardedClientCert struct {
 	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	Mode ForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
 	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
@@ -454,7 +454,7 @@ type HeaderSettings struct {
 
 	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
-	ForwardClientCert *ForwardClientCert `json:"forwardClientCert,omitempty" yaml:"forwardClientCert,omitempty"`
+	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty" yaml:"xForwardedClientCert,omitempty"`
 
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.

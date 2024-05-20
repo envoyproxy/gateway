@@ -8,7 +8,7 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   headers:
-    forwardClientCert:
+    xForwardedClientCert:
       mode: Sanitize
       certDetailsToAdd:
       - Subject
@@ -46,7 +46,7 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   headers:
-    forwardClientCert:
+    xForwardedClientCert:
       mode: AppendForward
       certDetailsToAdd: []
   tls:
@@ -83,7 +83,7 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   headers:
-    forwardClientCert:
+    xForwardedClientCert:
       mode: AppendForward
       certDetailsToAdd:
       - Subject
@@ -121,7 +121,7 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   headers:
-    forwardClientCert:
+    xForwardedClientCert:
       mode: SanitizeSet
       certDetailsToAdd:
       - Subject
@@ -161,7 +161,7 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   headers:
-    forwardClientCert:
+    xForwardedClientCert:
       mode: SanitizeSet
       certDetailsToAdd:
       - Subject

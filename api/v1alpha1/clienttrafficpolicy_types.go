@@ -105,8 +105,9 @@ type HeaderSettings struct {
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 
 	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// When enabled, Hash and By is always set
 	// +optional
-	ForwardClientCert *ForwardClientCert `json:"forwardClientCert,omitempty"`
+	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty"`
 
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.
@@ -132,7 +133,7 @@ const (
 )
 
 // Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-type ForwardClientCert struct {
+type XForwardedClientCert struct {
 	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	// +optional
 	Mode *ForwardMode `json:"mode,omitempty"`

@@ -7,7 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: Sanitize
     targetRef:
       group: gateway.networking.k8s.io
@@ -42,7 +42,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: ForwardOnly
     targetRef:
       group: gateway.networking.k8s.io
@@ -77,7 +77,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: AppendForward
     targetRef:
       group: gateway.networking.k8s.io
@@ -112,7 +112,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: SanitizeSet
     targetRef:
       group: gateway.networking.k8s.io
@@ -147,7 +147,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: AlwaysForwardOnly
     targetRef:
       group: gateway.networking.k8s.io
@@ -530,7 +530,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: Sanitize
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -554,7 +554,7 @@ xdsIR:
         requireClientCertificate: true
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: Sanitize
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -572,7 +572,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: ForwardOnly
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -601,7 +601,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: AppendForward
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -630,7 +630,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: SanitizeSet
         withUnderscoresAction: RejectRequest
       hostnames:
@@ -659,7 +659,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        forwardClientCert:
+        xForwardedClientCert:
           mode: AlwaysForwardOnly
         withUnderscoresAction: RejectRequest
       hostnames:

@@ -10,7 +10,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-1
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: Sanitize
         certDetailsToAdd:
         - Cert
@@ -30,7 +30,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-2
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: ForwardOnly
         certDetailsToAdd:
         - Cert
@@ -51,7 +51,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-3
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: AppendForward
         certDetailsToAdd:
         - Cert
@@ -72,7 +72,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-4
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: SanitizeSet
         certDetailsToAdd:
         - Cert
@@ -95,7 +95,7 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-5
     headers:
-      forwardClientCert:
+      xForwardedClientCert:
         mode: SanitizeSet
         certDetailsToAdd:
         - Cert
