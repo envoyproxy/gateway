@@ -1239,14 +1239,13 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
+	filters := GetFilters(backendRefContext)
 	switch routeType {
 	case KindHTTPRoute:
-		filters := GetFilters(backendRefContext)
 		if len(filters.([]gwapiv1.HTTPRouteFilter)) > 0 {
 			return filters.([]gwapiv1.HTTPRouteFilter)
 		}
 	case KindGRPCRoute:
-		filters := GetFilters(backendRefContext)
 		if len(filters.([]gwapiv1.GRPCRouteFilter)) > 0 {
 			return filters.([]gwapiv1.GRPCRouteFilter)
 		}
