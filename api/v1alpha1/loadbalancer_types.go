@@ -73,7 +73,6 @@ type ConsistentHash struct {
 	// +kubebuilder:validation:Maximum=5000011
 	// +kubebuilder:default=65537
 	// +optional
-	// +notImplementedHide
 	TableSize *uint64 `json:"tableSize,omitempty"`
 }
 

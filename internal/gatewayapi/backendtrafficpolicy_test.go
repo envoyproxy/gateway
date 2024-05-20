@@ -108,3 +108,39 @@ func TestMakeIrTriggerSet(t *testing.T) {
 		})
 	}
 }
+
+func TestIsPrimeNumber(t *testing.T) {
+	cases := []struct {
+		n       uint64
+		isPrime bool
+	}{
+		{n: 0, isPrime: false},
+		{n: 1, isPrime: false},
+		{n: 2, isPrime: true},
+		{n: 3, isPrime: true},
+		{n: 4, isPrime: false},
+		{n: 5, isPrime: true},
+		{n: 6, isPrime: false},
+		{n: 7, isPrime: true},
+		{n: 8, isPrime: false},
+		{n: 9, isPrime: false},
+		{n: 10, isPrime: false},
+		{n: 11, isPrime: true},
+		{n: 12, isPrime: false},
+		{n: 13, isPrime: true},
+		{n: 14, isPrime: false},
+		{n: 15, isPrime: false},
+		{n: 16, isPrime: false},
+		{n: 17, isPrime: true},
+		{n: 18, isPrime: false},
+		{n: 19, isPrime: true},
+		{n: 20, isPrime: false},
+		{n: 5000011, isPrime: true},
+	}
+
+	for _, tc := range cases {
+		if got := isPrimeNumber(tc.n); got != tc.isPrime {
+			t.Errorf("isPrimeNumber(%d) = %v, want %v", tc.n, got, tc.isPrime)
+		}
+	}
+}
