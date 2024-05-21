@@ -472,6 +472,25 @@ _Appears in:_
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path. |
 
 
+#### ClientCertData
+
+_Underlying type:_ _string_
+
+Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+By default, x-forwarded-client-cert (XFCC) will always include By and Hash data
+
+_Appears in:_
+- [XForwardedClientCert](#xforwardedclientcert)
+
+| Value | Description |
+| ----- | ----------- |
+| `Subject` | Whether to forward the subject of the client cert.<br /> | 
+| `Cert` | Whether to forward the entire client cert in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.<br /> | 
+| `Chain` | Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.<br />This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.<br /> | 
+| `Dns` | Whether to forward the DNS type Subject Alternative Names of the client cert.<br /> | 
+| `Uri` | Whether to forward the URI type Subject Alternative Name of the client cert.<br /> | 
+
+
 #### ClientIPDetectionSettings
 
 
@@ -1233,6 +1252,7 @@ _Appears in:_
 | `envoyDaemonSet` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  | EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.<br />Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  | EnvoyService defines the desired state of the Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
 | `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.<br />Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
+| `useListenerPortAsContainerPort` | _boolean_ |  false  | UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.<br />When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.<br />This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability. |
 
 
 #### EnvoyProxyProvider
@@ -1529,6 +1549,24 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
+#### ForwardMode
+
+_Underlying type:_ _string_
+
+Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+
+_Appears in:_
+- [XForwardedClientCert](#xforwardedclientcert)
+
+| Value | Description |
+| ----- | ----------- |
+| `Sanitize` | Do not send the XFCC header to the next hop. This is the default value.<br /> | 
+| `ForwardOnly` | When the client connection is mTLS (Mutual TLS), forward the XFCC header<br />in the request.<br /> | 
+| `AppendForward` | When the client connection is mTLS, append the client certificate<br />information to the request’s XFCC header and forward it.<br /> | 
+| `SanitizeSet` | When the client connection is mTLS, reset the XFCC header with the client<br />certificate information and send it to the next hop.<br /> | 
+| `AlwaysForwardOnly` | Always forward the XFCC header in the request, regardless of whether the<br />client connection is mTLS.<br /> | 
+
+
 #### GRPCExtAuthService
 
 
@@ -1796,7 +1834,9 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
+| `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  | Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.<br />When enabled, Hash and By is always set |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
+| `preserveXRequestID` | _boolean_ |  false  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />It defaults to false. |
 
 
 #### HealthCheck
@@ -3538,6 +3578,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `pre` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
+
+
+#### XForwardedClientCert
+
+
+
+Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `mode` | _[ForwardMode](#forwardmode)_ |  false  | Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header. |
+| `certDetailsToAdd` | _[ClientCertData](#clientcertdata) array_ |  false  | Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header |
 
 
 #### XForwardedForSettings

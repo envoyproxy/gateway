@@ -15,13 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/utils/ptr"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestEnvoyExtensionPolicyTarget(t *testing.T) {
