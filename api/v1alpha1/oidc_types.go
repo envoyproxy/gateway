@@ -89,7 +89,7 @@ type OIDC struct {
 	// the refresh token or the refresh token is not JWT.
 	//
 	// If not specified, defaults to 604800s (one week).
-	// Note: this field is only used when RefreshToken is set to true.
+	// Note: this field is only applicable when the "refreshToken" field is set to true.
 	// +optional
 	// +notImplementedHide
 	DefaultRefreshTokenExpireTime *metav1.Duration `json:"defaultRefreshTokenExpireTime,omitempty"`
