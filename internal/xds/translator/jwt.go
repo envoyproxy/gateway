@@ -65,7 +65,6 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		return err
 	}
 
-	// Ensure the authn filter is the first and the terminal filter is the last in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{jwtFilter}, mgr.HttpFilters...)
 
 	return nil

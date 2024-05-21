@@ -64,7 +64,6 @@ func (*rbac) patchHCM(
 		return err
 	}
 
-	// Ensure the RBAC filter is the first one in the filter chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rbacFilter}, mgr.HttpFilters...)
 
 	return nil

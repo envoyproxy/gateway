@@ -69,7 +69,6 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 	}
 
 	rateLimitFilter := t.buildRateLimitFilter(irListener)
-	// Make sure the router filter is the terminal filter in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
 
