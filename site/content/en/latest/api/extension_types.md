@@ -351,6 +351,20 @@ _Appears in:_
 | `spec` | _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ |  true  | spec defines the desired state of BackendTrafficPolicy. |
 
 
+#### BackendTrafficPolicyConnection
+
+
+
+BackendTrafficPolicyConnection allows users to configure connection-level settings of backend
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+
+
 #### BackendTrafficPolicyList
 
 
@@ -389,6 +403,7 @@ _Appears in:_
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
+| `connection` | _[BackendTrafficPolicyConnection](#backendtrafficpolicyconnection)_ |  false  | Connection includes backend connection settings. |
 
 
 #### BasicAuth
