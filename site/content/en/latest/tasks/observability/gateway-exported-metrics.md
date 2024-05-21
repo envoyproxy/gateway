@@ -24,7 +24,7 @@ Envoy Gateway collects the following metrics in Watching Components:
 | `watchable_subscribed_total`            | Total number of subscribed watchable.                  |
 | `watchable_subscribed_errors_total`     | Total number of subscribed watchable errors.           |
 
-Each metrics includes the `runner` label to identify the corresponding components,
+Each metric includes the `runner` label to identify the corresponding components,
 the relationship between label values and components is as follows:
 
 | Value              | Components                      |
