@@ -113,14 +113,16 @@ type Cookie struct {
 }
 
 // ConsistentHashType defines the type of input to hash on.
-// +kubebuilder:validation:Enum=SourceIP;Header
+// +kubebuilder:validation:Enum=SourceIP;Header;Cookie
 type ConsistentHashType string
 
 const (
 	// SourceIPConsistentHashType hashes based on the source IP address.
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
-	// HeaderConsistentHas`hType hashes based on a request header.
+	// HeaderConsistentHashType hashes based on a request header.
 	HeaderConsistentHashType ConsistentHashType = "Header"
+	// CookieConsistentHashType hashes based on a cookie.
+	CookieConsistentHashType ConsistentHashType = "Cookie"
 )
 
 // SlowStart defines the configuration related to the slow start load balancer policy.

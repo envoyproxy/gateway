@@ -765,7 +765,8 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
-| `Header` | HeaderConsistentHas`hType hashes based on a request header.<br /> | 
+| `Header` | HeaderConsistentHashType hashes based on a request header.<br /> | 
+| `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
 
 
 #### Cookie
