@@ -52,7 +52,7 @@ Envoy Gateway collects the following metrics in Status Updater:
 | `status_update_noop_total`       | Number of status updates that are no-ops by object kind. This is a subset of successful status updates. |
 | `status_update_duration_seconds` | How long a status update takes to finish.                                                               |
 
-Each metrics includes `kind` label to identify the corresponding resources.
+Each metric includes `kind` label to identify the corresponding resources.
 
 ## xDS Server
 
@@ -71,7 +71,7 @@ Envoy Gateway collects the following metrics in xDS Server:
 | `xds_stream_duration_seconds`       | How long a xds stream takes to finish.                        |
 | `xds_delta_stream_duration_seconds` | How long a xds delta stream takes to finish.                  |
 
-For xDS snapshot cache update and xDS stream connection status, each metrics includes `nodeID` label to identify the connection peer.
-For xDS stream connection status, each metrics also includes `streamID` label to identify the connection stream.
+For xDS snapshot cache update and xDS stream connection status, each metric includes `nodeID` label to identify the connection peer.
+For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream.
 
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format
