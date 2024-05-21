@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"net"
 	"sort"
 	"strings"
@@ -810,7 +811,7 @@ func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTraff
 	if policy.Spec.LoadBalancer.ConsistentHash.TableSize != nil {
 		tableSize := policy.Spec.LoadBalancer.ConsistentHash.TableSize
 
-		if *tableSize > MaxConsistentHashTableSize || !isPrimeNumber(*tableSize) {
+		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) {
 			return nil, fmt.Errorf("invalid TableSize value %d", *tableSize)
 		}
 
@@ -1250,18 +1251,4 @@ func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
-}
-
-// isPrimeNumber judges whether the number is a prime number
-func isPrimeNumber(n uint64) bool {
-	if n <= 1 {
-		return false
-	}
-
-	for i := uint64(2); i*i <= n; i++ {
-		if n%i == 0 {
-			return false
-		}
-	}
-	return true
 }
