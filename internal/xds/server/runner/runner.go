@@ -16,8 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"google.golang.org/grpc/keepalive"
-
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
@@ -28,6 +26,7 @@ import (
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"

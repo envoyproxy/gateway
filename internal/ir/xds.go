@@ -373,6 +373,39 @@ const (
 	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
 )
 
+// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +k8s:deepcopy-gen=true
+type XForwardedClientCert struct {
+	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	Mode ForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
+	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+	CertDetailsToAdd []ClientCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
+}
+
+// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +k8s:deepcopy-gen=true
+type ForwardMode egv1a1.ForwardMode
+
+const (
+	ForwardModeSanitize          = ForwardMode(egv1a1.ForwardModeSanitize)
+	ForwardModeForwardOnly       = ForwardMode(egv1a1.ForwardModeForwardOnly)
+	ForwardModeAppendForward     = ForwardMode(egv1a1.ForwardModeAppendForward)
+	ForwardModeSanitizeSet       = ForwardMode(egv1a1.ForwardModeSanitizeSet)
+	ForwardModeAlwaysForwardOnly = ForwardMode(egv1a1.ForwardModeAlwaysForwardOnly)
+)
+
+// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+// +k8s:deepcopy-gen=true
+type ClientCertData egv1a1.ClientCertData
+
+const (
+	ClientCertDataSubject = ClientCertData(egv1a1.ClientCertDataSubject)
+	ClientCertDataCert    = ClientCertData(egv1a1.ClientCertDataCert)
+	ClientCertDataChain   = ClientCertData(egv1a1.ClientCertDataChain)
+	ClientCertDataDNS     = ClientCertData(egv1a1.ClientCertDataDNS)
+	ClientCertDataURI     = ClientCertData(egv1a1.ClientCertDataURI)
+)
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
@@ -419,10 +452,19 @@ type HeaderSettings struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
 
+	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
+	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty" yaml:"xForwardedClientCert,omitempty"`
+
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
 	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
+
+	// PreserveXRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
+	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
+	// It defaults to false.
+	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -964,7 +1006,8 @@ type DestinationSetting struct {
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 
-	TLS *TLSUpstreamConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	TLS     *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
+	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -2086,4 +2129,17 @@ type HTTPWasmCode struct {
 
 	// SHA256 checksum that will be used to verify the wasm code.
 	SHA256 string `json:"sha256"`
+}
+
+// DestinationFilters contains HTTP filters that will be used with the DestinationSetting.
+// +k8s:deepcopy-gen=true
+type DestinationFilters struct {
+	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
+	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
+	// RemoveRequestHeaders defines a list of headers to be removed from requests.
+	RemoveRequestHeaders []string `json:"removeRequestHeaders,omitempty" yaml:"removeRequestHeaders,omitempty"`
+	// AddResponseHeaders defines header/value sets to be added to the headers of response.
+	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
+	// RemoveResponseHeaders defines a list of headers to be removed from response.
+	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 }
