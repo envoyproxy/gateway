@@ -679,27 +679,71 @@ func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
 		servicePort   int32
 		containerPort int32
+		envoyProxy    *egv1a1.EnvoyProxy
 	}{
 		{
 			servicePort:   99,
 			containerPort: 10099,
+			envoyProxy:    nil,
 		},
 		{
 			servicePort:   1023,
 			containerPort: 11023,
+			envoyProxy:    nil,
 		},
 		{
 			servicePort:   1024,
 			containerPort: 1024,
+			envoyProxy:    nil,
 		},
 		{
 			servicePort:   8080,
 			containerPort: 8080,
+			envoyProxy:    nil,
+		},
+		{
+			servicePort:   99,
+			containerPort: 10099,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+					},
+				},
+			},
+		},
+		{
+			servicePort:   99,
+			containerPort: 10099,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							UseListenerPortAsContainerPort: ptr.To(false),
+						},
+					},
+				},
+			},
+		},
+		{
+			servicePort:   99,
+			containerPort: 99,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							UseListenerPortAsContainerPort: ptr.To(true),
+						},
+					},
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
-		got := servicePortToContainerPort(tc.servicePort)
+		got := servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
 		assert.Equal(t, tc.containerPort, got)
 	}
 }
