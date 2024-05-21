@@ -92,9 +92,11 @@ xdsIR:
       - path: /dev/stdout
     udp:
     - address: 0.0.0.0
-      destination:
-        name: udproute/default/udproute-1/rule/-1
-        settings:
-        - weight: 1
-      name: envoy-gateway/gateway-1/udp/udproute-1
+      name: envoy-gateway/gateway-1/udp
       port: 10162
+      route:
+        destination:
+          name: udproute/default/udproute-1/rule/-1
+          settings:
+          - weight: 1
+        name: udproute/default/udproute-1

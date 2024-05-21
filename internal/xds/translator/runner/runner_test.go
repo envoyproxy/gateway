@@ -13,7 +13,6 @@ import (
 
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"

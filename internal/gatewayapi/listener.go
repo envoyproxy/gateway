@@ -97,7 +97,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			}
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := servicePortToContainerPort(servicePort.port)
+			containerPort := servicePortToContainerPort(int32(listener.Port), resources.EnvoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
@@ -126,12 +126,19 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Port:    uint32(containerPort),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
+			case gwapiv1.UDPProtocolType:
+				irListener := &ir.UDPListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+				}
+				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
 			// (TCP or UDP).
 			if !containsPort(foundPorts[irKey], servicePort) {
-				t.processInfraIRListener(listener, infraIR, irKey, servicePort)
+				t.processInfraIRListener(listener, infraIR, irKey, servicePort, containerPort)
 				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
 		}
@@ -165,7 +172,7 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 	status.RemoveGatewayListenersNotValidCondition(gwCtx.Gateway)
 }
 
-func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR InfraIRMap, irKey string, servicePort *protocolPort) {
+func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
 	var proto ir.ProtocolType
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType:
@@ -184,7 +191,7 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR I
 		Name:          irListenerPortName(proto, servicePort.port),
 		Protocol:      proto,
 		ServicePort:   servicePort.port,
-		ContainerPort: servicePortToContainerPort(servicePort.port),
+		ContainerPort: containerPort,
 	}
 
 	proxyListener := &ir.ProxyListener{

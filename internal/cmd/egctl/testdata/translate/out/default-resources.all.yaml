@@ -158,6 +158,27 @@ gatewayClass:
       reason: Accepted
       status: "True"
       type: Accepted
+    supportedFeatures:
+    - GRPCRoute
+    - GatewayPort8080
+    - HTTPRouteBackendProtocolH2C
+    - HTTPRouteBackendProtocolWebSocket
+    - HTTPRouteBackendTimeout
+    - HTTPRouteDestinationPortMatching
+    - HTTPRouteHostRewrite
+    - HTTPRouteMethodMatching
+    - HTTPRouteParentRefPort
+    - HTTPRoutePathRedirect
+    - HTTPRoutePathRewrite
+    - HTTPRoutePortRedirect
+    - HTTPRouteQueryParamMatching
+    - HTTPRouteRequestMirror
+    - HTTPRouteRequestMultipleMirrors
+    - HTTPRouteRequestTimeout
+    - HTTPRouteResponseHeaderModification
+    - HTTPRouteSchemeRedirect
+    - ReferenceGrant
+    - TLSRoute
 gateways:
 - metadata:
     creationTimestamp: null
@@ -1041,7 +1062,7 @@ xds:
                         '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
                         cluster: udproute/default/backend/rule/-1
                 statPrefix: service
-            name: default/eg/udp/backend
+            name: default/eg/udp
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:

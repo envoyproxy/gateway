@@ -57,6 +57,23 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 	}
 }
 
+// NeedToSwitchPorts returns true if the EnvoyProxy needs to switch ports.
+func (e *EnvoyProxy) NeedToSwitchPorts() bool {
+	if e.Spec.Provider == nil {
+		return true
+	}
+
+	if e.Spec.Provider.Kubernetes == nil {
+		return true
+	}
+
+	if e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort == nil {
+		return true
+	}
+
+	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
+}
+
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
 // a default EnvoyProxyKubernetesProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Kubernetes", a nil EnvoyProxyKubernetesProvider is returned.

@@ -929,21 +929,18 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			irKey := t.getIRKey(listener.gateway)
 
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the UDP Listener while parsing the UDPRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.UDPListener{
-				Name:    irUDPListenerName(listener, udpRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				Destination: &ir.RouteDestination{
-					Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
-					Settings: destSettings,
-				},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.UDP = append(gwXdsIR.UDP, irListener)
-
+			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.UDPRoute{
+					Name: irUDPRouteName(udpRoute),
+					Destination: &ir.RouteDestination{
+						Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
+						Settings: destSettings,
+					},
+				}
+				irListener.Route = irRoute
+			}
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1195,6 +1192,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				Port:        parentRef.Port,
 			},
 			resources)
+		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
@@ -1252,6 +1250,58 @@ func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.Backend
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
+	}
+}
+
+func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
+	filters := GetFilters(backendRefContext)
+	switch routeType {
+	case KindHTTPRoute:
+		if len(filters.([]gwapiv1.HTTPRouteFilter)) > 0 {
+			return filters.([]gwapiv1.HTTPRouteFilter)
+		}
+	case KindGRPCRoute:
+		if len(filters.([]gwapiv1.GRPCRouteFilter)) > 0 {
+			return filters.([]gwapiv1.GRPCRouteFilter)
+		}
+	}
+
+	return nil
+}
+
+func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *Resources) *ir.DestinationFilters {
+	backendFilters := getBackendFilters(routeType, backendRefContext)
+	if backendFilters == nil {
+		return nil
+	}
+
+	var httpFiltersContext *HTTPFiltersContext
+	var destFilters ir.DestinationFilters
+
+	switch filters := backendFilters.(type) {
+	case []gwapiv1.HTTPRouteFilter:
+		httpFiltersContext = t.ProcessHTTPFilters(parentRef, route, filters, 0, resources)
+
+	case []gwapiv1.GRPCRouteFilter:
+		httpFiltersContext = t.ProcessGRPCFilters(parentRef, route, filters, resources)
+	}
+	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
+
+	return &destFilters
+}
+
+func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFiltersContext, destFilters *ir.DestinationFilters) {
+	if len(httpFiltersContext.AddRequestHeaders) > 0 {
+		destFilters.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
+	}
+	if len(httpFiltersContext.RemoveRequestHeaders) > 0 {
+		destFilters.RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
+	}
+	if len(httpFiltersContext.AddResponseHeaders) > 0 {
+		destFilters.AddResponseHeaders = httpFiltersContext.AddResponseHeaders
+	}
+	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
+		destFilters.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
 	}
 }
 

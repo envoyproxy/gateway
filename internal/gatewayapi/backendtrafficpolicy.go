@@ -354,9 +354,13 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 
 		for _, udp := range x.UDP {
-			if strings.HasPrefix(udp.Destination.Name, prefix) {
-				udp.LoadBalancer = lb
-				udp.Timeout = to
+			if udp.Route != nil {
+				route := udp.Route
+
+				if strings.HasPrefix(route.Destination.Name, prefix) {
+					route.LoadBalancer = lb
+					route.Timeout = to
+				}
 			}
 		}
 
@@ -490,14 +494,20 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			continue
 		}
 
-		// policy(targeting xRoute) has already set it, so we skip it.
-		if udp.LoadBalancer != nil || udp.Timeout != nil {
+		if udp.Route == nil {
 			continue
 		}
 
-		udp.LoadBalancer = lb
-		if udp.Timeout == nil {
-			udp.Timeout = ct
+		route := udp.Route
+
+		// policy(targeting xRoute) has already set it, so we skip it.
+		if route.LoadBalancer != nil || route.Timeout != nil {
+			continue
+		}
+
+		route.LoadBalancer = lb
+		if route.Timeout == nil {
+			route.Timeout = ct
 		}
 	}
 

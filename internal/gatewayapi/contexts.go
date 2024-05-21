@@ -369,5 +369,9 @@ func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
 }
 
 func GetFilters(b BackendRefContext) any {
-	return reflect.ValueOf(b).FieldByName("Filters").Interface()
+	filters := reflect.ValueOf(b).FieldByName("Filters")
+	if !filters.IsValid() {
+		return nil
+	}
+	return filters.Interface()
 }

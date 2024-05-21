@@ -18,10 +18,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 var httpFilters []httpFilter
