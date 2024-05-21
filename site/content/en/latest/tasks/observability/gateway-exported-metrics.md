@@ -2,7 +2,7 @@
 title: "Gateway Exported Metrics"
 ---
 
-The Envoy Gateway provides a collection of self-monitoring metrics. 
+The Envoy Gateway provides a collection of self-monitoring metrics in [Prometheus format][prom-format]. 
 
 These metrics allow monitoring of the behavior of Envoy Gateway itself (as distinct from that of the EnvoyProxy it managed).
 
@@ -73,3 +73,5 @@ Envoy Gateway collects the following metrics in xDS Server:
 
 For xDS snapshot cache update and xDS stream connection status, each metrics includes `nodeID` label to identify the connection peer.
 For xDS stream connection status, each metrics also includes `streamID` label to identify the connection stream.
+
+[prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format
