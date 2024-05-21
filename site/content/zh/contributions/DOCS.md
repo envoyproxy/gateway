@@ -3,12 +3,6 @@ title: "参与 Envoy Gateway 文档工作"
 description: "本节讲述 Envoy Gateway 文档的开发工作。"
 ---
 
-{{% alert title="注意" color="warning" %}}
-我们已将 Envoy Gateway 文档从 **Sphinx** 迁移到 **Hugo**。
-{{% /alert %}}
-
-阅读博客：[欢迎来到新网站！（英文）](/news/blogs/new-website/new-website)
-
 Envoy Gateway 的文档位于 `site/content/en` 目录中（中文内容位于 `site/content/zh` 目录中）。
 任何单独的文档都可以使用 [Markdown] 编写。
 
