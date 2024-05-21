@@ -53,13 +53,13 @@ type OIDC struct {
 	// If not specified, uses a default logout path "/logout"
 	LogoutPath *string `json:"logoutPath,omitempty"`
 
-	// ForwardBearerToken indicates whether the Envoy should forward the access
-	// token as a bearer token in the "Authorization" header to the backend.
+	// ForwardAccessTokenAsBearerToken indicates whether the Envoy should forward
+	// the access token as a bearer token in the "Authorization" header to the backend.
 	//
 	// If not specified, defaults to false.
 	// +optional
 	// +notImplementedHide
-	ForwardBearerToken *bool `json:"forwardBearerToken,omitempty"`
+	ForwardAccessTokenAsBearerToken *bool `json:"forwardAccessTokenAsBearerToken,omitempty"`
 
 	// The default lifetime of the ID token and access token.
 	// Please note that Envoy will always use the expiry time from the response
