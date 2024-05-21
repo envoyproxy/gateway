@@ -104,8 +104,15 @@ type HeaderSettings struct {
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 
-	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-	// When enabled, Hash and By is always set
+	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+	//
+	// x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate
+	// information of part or all of the clients or proxies that a request has flowed through,
+	// on its way from the client to the server.
+	//
+	// Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.
+	//
+	// If not set, the default behavior is sanitizing the XFCC header.
 	// +optional
 	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty"`
 
@@ -139,57 +146,63 @@ const (
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
 )
 
-// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +kubebuilder:validation:XValidation:rule="(has(self.certDetailsToAdd) && self.certDetailsToAdd.size() > 0) ? (self.mode == 'AppendForward' || self.mode == 'SanitizeSet') : true",message="certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet"
 type XForwardedClientCert struct {
-	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// Mode defines how XFCC header is handled by Envoy Proxy.
+	// If not set, the default mode is `Sanitize`.
 	// +optional
-	Mode *ForwardMode `json:"mode,omitempty"`
+	Mode *XFCCForwardMode `json:"mode,omitempty"`
 
-	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+	// CertDetailsToAdd specifies the fields in the client certificate to be forwarded in the XFCC header.
+	//
+	// Hash(the SHA 256 digest of the current client certificate) and By(the Subject Alternative Name)
+	// are always included if the client certificate is forwarded.
+	//
+	// This field is only applicable when the mode is set to `AppendForward` or
+	// `SanitizeSet` and the client connection is mTLS.
 	// +kubebuilder:validation:MaxItems=5
 	// +optional
-	CertDetailsToAdd []ClientCertData `json:"certDetailsToAdd,omitempty"`
+	CertDetailsToAdd []XFCCCertData `json:"certDetailsToAdd,omitempty"`
 }
 
-// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// XFCCForwardMode defines how XFCC header is handled by Envoy Proxy.
 // +kubebuilder:validation:Enum=Sanitize;ForwardOnly;AppendForward;SanitizeSet;AlwaysForwardOnly
-type ForwardMode string
+type XFCCForwardMode string
 
 const (
-	// Do not send the XFCC header to the next hop. This is the default value.
-	ForwardModeSanitize ForwardMode = "Sanitize"
-	// When the client connection is mTLS (Mutual TLS), forward the XFCC header
-	// in the request.
-	ForwardModeForwardOnly ForwardMode = "ForwardOnly"
-	// When the client connection is mTLS, append the client certificate
-	// information to the request’s XFCC header and forward it.
-	ForwardModeAppendForward ForwardMode = "AppendForward"
-	// When the client connection is mTLS, reset the XFCC header with the client
-	// certificate information and send it to the next hop.
-	ForwardModeSanitizeSet ForwardMode = "SanitizeSet"
-	// Always forward the XFCC header in the request, regardless of whether the
-	// client connection is mTLS.
-	ForwardModeAlwaysForwardOnly ForwardMode = "AlwaysForwardOnly"
+	// XFCCForwardModeSanitize removes the XFCC header from the request. This is the default mode.
+	XFCCForwardModeSanitize XFCCForwardMode = "Sanitize"
+
+	// XFCCForwardModeForwardOnly forwards the XFCC header in the request if the client connection is mTLS.
+	XFCCForwardModeForwardOnly XFCCForwardMode = "ForwardOnly"
+
+	// XFCCForwardModeAppendForward appends the client certificate information to the request’s XFCC header and forward it if the client connection is mTLS.
+	XFCCForwardModeAppendForward XFCCForwardMode = "AppendForward"
+
+	// XFCCForwardModeSanitizeSet resets the XFCC header with the client certificate information and forward it if the client connection is mTLS.
+	// The existing certificate information in the XFCC header is removed.
+	XFCCForwardModeSanitizeSet XFCCForwardMode = "SanitizeSet"
+
+	// XFCCForwardModeAlwaysForwardOnly always forwards the XFCC header in the request, regardless of whether the client connection is mTLS.
+	XFCCForwardModeAlwaysForwardOnly XFCCForwardMode = "AlwaysForwardOnly"
 )
 
-// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-// By default, x-forwarded-client-cert (XFCC) will always include By and Hash data
-// +kubebuilder:validation:Enum=Subject;Cert;Chain;Dns;Uri
-type ClientCertData string
+// XFCCCertData specifies the fields in the client certificate to be forwarded in the XFCC header.
+// +kubebuilder:validation:Enum=Subject;Cert;Chain;DNS;URI
+type XFCCCertData string
 
 const (
-	// Whether to forward the subject of the client cert.
-	ClientCertDataSubject ClientCertData = "Subject"
-	// Whether to forward the entire client cert in URL encoded PEM format.
-	// This will appear in the XFCC header comma separated from other values with the value Cert=”PEM”.
-	ClientCertDataCert ClientCertData = "Cert"
-	// Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM format.
-	// This will appear in the XFCC header comma separated from other values with the value Chain=”PEM”.
-	ClientCertDataChain ClientCertData = "Chain"
-	// Whether to forward the DNS type Subject Alternative Names of the client cert.
-	ClientCertDataDNS ClientCertData = "Dns"
-	// Whether to forward the URI type Subject Alternative Name of the client cert.
-	ClientCertDataURI ClientCertData = "Uri"
+	// XFCCCertDataSubject is the Subject field of the current client certificate.
+	XFCCCertDataSubject XFCCCertData = "Subject"
+	// XFCCCertDataCert is the entire client certificate in URL encoded PEM format.
+	XFCCCertDataCert XFCCCertData = "Cert"
+	// XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.
+	XFCCCertDataChain XFCCCertData = "Chain"
+	// XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.
+	XFCCCertDataDNS XFCCCertData = "DNS"
+	// XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.
+	XFCCCertDataURI XFCCCertData = "URI"
 )
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.

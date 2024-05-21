@@ -552,16 +552,12 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 
 	if headerSettings.XForwardedClientCert != nil {
 		httpIR.Headers.XForwardedClientCert = &ir.XForwardedClientCert{
-			Mode: ir.ForwardMode(ptr.Deref(headerSettings.XForwardedClientCert.Mode, egv1a1.ForwardModeSanitize)),
+			Mode: ptr.Deref(headerSettings.XForwardedClientCert.Mode, egv1a1.XFCCForwardModeSanitize),
 		}
 
-		var certDetailsToAdd []ir.ClientCertData
-		if httpIR.Headers.XForwardedClientCert.Mode == ir.ForwardModeAppendForward || httpIR.Headers.XForwardedClientCert.Mode == ir.ForwardModeSanitizeSet {
-			for _, data := range headerSettings.XForwardedClientCert.CertDetailsToAdd {
-				certDetailsToAdd = append(certDetailsToAdd, ir.ClientCertData(data))
-			}
-
-			httpIR.Headers.XForwardedClientCert.CertDetailsToAdd = certDetailsToAdd
+		if httpIR.Headers.XForwardedClientCert.Mode == egv1a1.XFCCForwardModeAppendForward ||
+			httpIR.Headers.XForwardedClientCert.Mode == egv1a1.XFCCForwardModeSanitizeSet {
+			httpIR.Headers.XForwardedClientCert.CertDetailsToAdd = headerSettings.XForwardedClientCert.CertDetailsToAdd
 		}
 	}
 }

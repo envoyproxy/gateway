@@ -4615,12 +4615,12 @@ func (in *XForwardedClientCert) DeepCopyInto(out *XForwardedClientCert) {
 	*out = *in
 	if in.Mode != nil {
 		in, out := &in.Mode, &out.Mode
-		*out = new(ForwardMode)
+		*out = new(XFCCForwardMode)
 		**out = **in
 	}
 	if in.CertDetailsToAdd != nil {
 		in, out := &in.CertDetailsToAdd, &out.CertDetailsToAdd
-		*out = make([]ClientCertData, len(*in))
+		*out = make([]XFCCCertData, len(*in))
 		copy(*out, *in)
 	}
 }
