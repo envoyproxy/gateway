@@ -100,22 +100,14 @@ infraIR:
                 type: LoadBalancer
             type: Kubernetes
           telemetry:
-            accessLog:
-              settings:
-              - format:
-                  text: |
-                    [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-                  type: Text
-                sinks:
-                - file:
-                    path: /dev/stdout
-                  type: File
-                - openTelemetry:
-                    host: otel-collector.monitoring.svc.cluster.local
-                    port: 4317
-                    resources:
-                      k8s.cluster.name: cluster-1
-                  type: OpenTelemetry
+            tracing:
+              provider:
+                backendRefs:
+                - name: otel-collector
+                  namespace: monitoring
+                  port: 4317
+                type: OpenTelemetry
+              samplingRate: 100
         status: {}
       listeners:
       - address: null
@@ -133,24 +125,8 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      openTelemetry:
-      - authority: otel-collector.monitoring.svc.cluster.local
-        destination:
-          name: accesslog-0
-          settings:
-          - endpoints:
-            - host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
-            protocol: GRPC
-            weight: 1
-        resources:
-          k8s.cluster.name: cluster-1
-        text: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
       text:
-      - format: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-        path: /dev/stdout
+      - path: /dev/stdout
     http:
     - address: 0.0.0.0
       hostnames:
@@ -161,3 +137,14 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    tracing:
+      destination:
+        name: tracing
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 8.7.6.5
+            port: 4317
+          protocol: GRPC
+      samplingRate: 100
+      serviceName: gateway-1.envoy-gateway
