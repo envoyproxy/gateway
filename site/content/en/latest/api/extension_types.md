@@ -1034,8 +1034,8 @@ _Appears in:_
 | `host` | _string_ |  true  | Host define the sink service hostname. |
 | `protocol` | _string_ |  true  | Protocol define the sink service protocol. |
 | `port` | _integer_ |  false  | Port defines the port the sink service is exposed on. |
-| `exporterInterval` | _[Duration](#duration)_ |  true  | ExporterInterval configures the intervening time between exports for a<br />Sink. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_INTERVAL environment variable.<br />If ExporterInterval is less than or equal to zero, 60 seconds<br />is used as the default. |
-| `exporterTimeout` | _[Duration](#duration)_ |  true  | ExporterTimeout configures the time a Sink waits for an export to<br />complete before canceling it. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_TIMEOUT environment variable.<br />If ExporterTimeout is less than or equal to zero, 30 seconds<br />is used as the default. |
+| `exportInterval` | _[Duration](#duration)_ |  true  | ExportInterval configures the intervening time between exports for a<br />Sink. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_INTERVAL environment variable.<br />If ExportInterval is less than or equal to zero, 60 seconds<br />is used as the default. |
+| `exportTimeout` | _[Duration](#duration)_ |  true  | ExportTimeout configures the time a Sink waits for an export to<br />complete before canceling it. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_TIMEOUT environment variable.<br />If ExportTimeout is less than or equal to zero, 30 seconds<br />is used as the default. |
 
 
 #### EnvoyGatewayPrometheusProvider
