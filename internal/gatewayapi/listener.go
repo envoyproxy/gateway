@@ -168,8 +168,6 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 			fmt.Sprintf("Invalid metrics backendRefs: %v", err))
 		return
 	}
-
-	status.RemoveGatewayListenersNotValidCondition(gwCtx.Gateway)
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {

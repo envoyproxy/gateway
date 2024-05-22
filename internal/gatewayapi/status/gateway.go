@@ -22,21 +22,6 @@ func UpdateGatewayListenersNotValidCondition(gw *gwapiv1.Gateway, reason gwapiv1
 	return gw
 }
 
-func RemoveGatewayListenersNotValidCondition(gw *gwapiv1.Gateway) {
-	if len(gw.Status.Conditions) == 0 {
-		return
-	}
-
-	conditions := make([]metav1.Condition, 0, len(gw.Status.Conditions))
-	for _, cond := range gw.Status.Conditions {
-		if cond.Type == string(gwapiv1.GatewayReasonListenersNotValid) {
-			continue
-		}
-		conditions = append(conditions, cond)
-	}
-	gw.Status.Conditions = conditions
-}
-
 // UpdateGatewayStatusAcceptedCondition updates the status condition for the provided Gateway based on the accepted state.
 func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) *gwapiv1.Gateway {
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayAcceptedCondition(gw, accepted))
