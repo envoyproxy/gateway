@@ -333,6 +333,31 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"spec.http2.InitialConnectionWindowSize: Invalid value: \"\": initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
 			},
 		},
+		{
+			desc: "invalid xffc setting",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						XForwardedClientCert: &egv1a1.XForwardedClientCert{
+							Mode: ptr.To(egv1a1.XFCCForwardModeSanitize),
+							CertDetailsToAdd: []egv1a1.XFCCCertData{
+								egv1a1.XFCCCertDataChain,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				" spec.headers.xForwardedClientCert: Invalid value: \"object\": certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet",
+			},
+		},
 	}
 
 	for _, tc := range cases {

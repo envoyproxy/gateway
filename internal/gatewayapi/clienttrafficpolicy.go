@@ -547,6 +547,18 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	httpIR.Headers = &ir.HeaderSettings{
 		EnableEnvoyHeaders:    ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
 		WithUnderscoresAction: ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
+		PreserveXRequestID:    ptr.Deref(headerSettings.PreserveXRequestID, false),
+	}
+
+	if headerSettings.XForwardedClientCert != nil {
+		httpIR.Headers.XForwardedClientCert = &ir.XForwardedClientCert{
+			Mode: ptr.Deref(headerSettings.XForwardedClientCert.Mode, egv1a1.XFCCForwardModeSanitize),
+		}
+
+		if httpIR.Headers.XForwardedClientCert.Mode == egv1a1.XFCCForwardModeAppendForward ||
+			httpIR.Headers.XForwardedClientCert.Mode == egv1a1.XFCCForwardModeSanitizeSet {
+			httpIR.Headers.XForwardedClientCert.CertDetailsToAdd = headerSettings.XForwardedClientCert.CertDetailsToAdd
+		}
 	}
 }
 

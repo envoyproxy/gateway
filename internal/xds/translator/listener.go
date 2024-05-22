@@ -30,6 +30,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -260,7 +261,13 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
-		Tracing: hcmTracing,
+		Tracing:                   hcmTracing,
+		ForwardClientCertDetails:  buildForwardClientCertDetailsAction(irListener.Headers),
+		PreserveExternalRequestId: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
+	}
+
+	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
+		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers)
 	}
 
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
@@ -784,4 +791,56 @@ func buildHeadersWithUnderscoresAction(in *ir.HeaderSettings) corev3.HttpProtoco
 		}
 	}
 	return corev3.HttpProtocolOptions_REJECT_REQUEST
+}
+
+func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnectionManager_ForwardClientCertDetails {
+	if in != nil {
+		if in.XForwardedClientCert != nil {
+			switch in.XForwardedClientCert.Mode {
+			case egv1a1.XFCCForwardModeSanitize:
+				return hcmv3.HttpConnectionManager_SANITIZE
+			case egv1a1.XFCCForwardModeForwardOnly:
+				return hcmv3.HttpConnectionManager_FORWARD_ONLY
+			case egv1a1.XFCCForwardModeAppendForward:
+				return hcmv3.HttpConnectionManager_APPEND_FORWARD
+			case egv1a1.XFCCForwardModeSanitizeSet:
+				return hcmv3.HttpConnectionManager_SANITIZE_SET
+			case egv1a1.XFCCForwardModeAlwaysForwardOnly:
+				return hcmv3.HttpConnectionManager_ALWAYS_FORWARD_ONLY
+			}
+		}
+	}
+	return hcmv3.HttpConnectionManager_SANITIZE
+}
+
+func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnectionManager_SetCurrentClientCertDetails {
+	if in == nil {
+		return nil
+	}
+
+	if in.XForwardedClientCert == nil {
+		return nil
+	}
+
+	if len(in.XForwardedClientCert.CertDetailsToAdd) == 0 {
+		return nil
+	}
+
+	clientCertDetails := &hcmv3.HttpConnectionManager_SetCurrentClientCertDetails{}
+	for _, data := range in.XForwardedClientCert.CertDetailsToAdd {
+		switch data {
+		case egv1a1.XFCCCertDataCert:
+			clientCertDetails.Cert = true
+		case egv1a1.XFCCCertDataChain:
+			clientCertDetails.Chain = true
+		case egv1a1.XFCCCertDataDNS:
+			clientCertDetails.Dns = true
+		case egv1a1.XFCCCertDataSubject:
+			clientCertDetails.Subject = &wrapperspb.BoolValue{Value: true}
+		case egv1a1.XFCCCertDataURI:
+			clientCertDetails.Uri = true
+		}
+	}
+
+	return clientCertDetails
 }
