@@ -59,6 +59,10 @@ type Wasm struct {
 }
 
 // WasmCodeSource defines the source of the wasm code.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If type is HTTP, http field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Image' ? has(self.image) : !has(self.image)",message="If type is Image, image field needs to be set."
 type WasmCodeSource struct {
 	// Type is the type of the source of the wasm code.
 	// Valid WasmCodeSourceType values are "HTTP" or "Image".
@@ -83,6 +87,8 @@ type WasmCodeSource struct {
 	//
 	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	SHA256 string `json:"sha256"`
+
+	//TODO zhaohuabing make SHA256 optional
 }
 
 // WasmCodeSourceType specifies the types of sources for the wasm code.
@@ -108,8 +114,12 @@ type ImageWasmCodeSource struct {
 	// URL is the URL of the OCI image.
 	URL string `json:"url"`
 
+	//TODO zhaohuabing verify the image URL
+
 	// PullSecretRef is a reference to the secret containing the credentials to pull the image.
-	PullSecretRef gwapiv1b1.SecretObjectReference `json:"pullSecret"`
+	// Only support Kubernetes Secret resource from the same namespace.
+	// +optional
+	PullSecretRef *gwapiv1b1.SecretObjectReference `json:"pullSecretRef,omitempty"`
 
 	// PullPolicy is the policy to use when pulling the image.
 	// If not specified, the default policy is IfNotPresent for images whose tag is not latest,
@@ -128,3 +138,4 @@ const (
 	// PullPolicyAlways will always pull the image.
 	PullPolicyAlways PullPolicy = "Always"
 )*/
+

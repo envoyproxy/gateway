@@ -2202,11 +2202,12 @@ type Wasm struct {
 	// during the initialization or the execution of the Wasm extension.
 	FailOpen bool `json:"failOpen"`
 
-	// HTTPWasmCode is the HTTP Wasm code source.
-	HTTPWasmCode *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+	// Code is the HTTP Wasm code source.
+	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
 }
 
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.
+// +k8s:deepcopy-gen=true
 type HTTPWasmCode struct {
 	// URL is the URL of the Wasm code.
 	URL string `json:"url"`

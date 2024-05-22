@@ -22,6 +22,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/wasm"
+)
+
+const (
+	wasmCacheDir = "/var/lib/eg/wasm"
 )
 
 type Config struct {
@@ -34,10 +39,15 @@ type Config struct {
 
 type Runner struct {
 	Config
+	wasmCache wasm.Cache
 }
 
 func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
+	return &Runner{
+		Config: *cfg,
+		//TODO zhaohuabing options
+		wasmCache: wasm.NewHTTPServerWithFileCache(wasmCacheDir, cfg.Logger),
+	}
 }
 
 func (r *Runner) Name() string {
@@ -47,6 +57,7 @@ func (r *Runner) Name() string {
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	go r.wasmCache.Start(ctx)
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
 	return
@@ -88,6 +99,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
 					Namespace:               r.Namespace,
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:               r.wasmCache,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator

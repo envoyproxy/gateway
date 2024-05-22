@@ -9,10 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	perr "github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -23,14 +27,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *Resources,
-	xdsIR XdsIRMap,
-) []*egv1a1.EnvoyExtensionPolicy {
+	xdsIR XdsIRMap) []*egv1a1.EnvoyExtensionPolicy {
 	var res []*egv1a1.EnvoyExtensionPolicy
 
 	// Sort based on timestamp
@@ -284,9 +288,11 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes m
 	return route.RouteContext, nil
 }
 
-func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyExtensionPolicy, route RouteContext,
-	xdsIR XdsIRMap, resources *Resources,
-) error {
+func (t *Translator) translateEnvoyExtensionPolicyForRoute(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	route RouteContext,
+	xdsIR XdsIRMap,
+	resources *Resources) error {
 	var (
 		extProcs  []ir.ExtProc
 		wasms     []ir.Wasm
@@ -297,7 +303,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 		err = perr.WithMessage(err, "ExtProcs")
 		errs = errors.Join(errs, err)
 	}
-	if wasms, err = t.buildWasms(policy); err != nil {
+
+	if wasms, err = t.buildWasms(policy, resources); err != nil {
 		err = perr.WithMessage(err, "WASMs")
 		errs = errors.Join(errs, err)
 	}
@@ -337,7 +344,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		err = perr.WithMessage(err, "ExtProcs")
 		errs = errors.Join(errs, err)
 	}
-	if wasms, err = t.buildWasms(policy); err != nil {
+
+	if wasms, err = t.buildWasms(policy, resources); err != nil {
 		err = perr.WithMessage(err, "WASMs")
 		errs = errors.Join(errs, err)
 	}
@@ -489,6 +497,7 @@ func (t *Translator) buildExtProc(
 	return extProcIR, err
 }
 
+// TODO: zhaohuabing differenciate extproc and wasm
 func irConfigNameForEEP(policy *egv1a1.EnvoyExtensionPolicy, idx int) string {
 	return fmt.Sprintf(
 		"%s/%s/%d",
@@ -497,7 +506,9 @@ func irConfigNameForEEP(policy *egv1a1.EnvoyExtensionPolicy, idx int) string {
 		idx)
 }
 
-func (t *Translator) buildWasms(policy *egv1a1.EnvoyExtensionPolicy) ([]ir.Wasm, error) {
+func (t *Translator) buildWasms(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	resources *Resources) ([]ir.Wasm, error) {
 	var wasmIRList []ir.Wasm
 
 	if policy == nil {
@@ -505,8 +516,8 @@ func (t *Translator) buildWasms(policy *egv1a1.EnvoyExtensionPolicy) ([]ir.Wasm,
 	}
 
 	for idx, wasm := range policy.Spec.Wasm {
-		name := irConfigNameForEEP(policy, idx)
-		wasmIR, err := t.buildWasm(name, wasm)
+		name := irConfigNameForWasm(policy, idx)
+		wasmIR, err := t.buildWasm(name, wasm, policy, idx, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -515,37 +526,113 @@ func (t *Translator) buildWasms(policy *egv1a1.EnvoyExtensionPolicy) ([]ir.Wasm,
 	return wasmIRList, nil
 }
 
-func (t *Translator) buildWasm(name string, wasm egv1a1.Wasm) (*ir.Wasm, error) {
+func (t *Translator) buildWasm(
+	name string,
+	config egv1a1.Wasm,
+	policy *egv1a1.EnvoyExtensionPolicy,
+	idx int,
+	resources *Resources) (*ir.Wasm, error) {
 	var (
-		failOpen     = false
-		httpWasmCode *ir.HTTPWasmCode
+		failOpen = false
+		code     *ir.HTTPWasmCode
 	)
 
-	if wasm.FailOpen != nil {
-		failOpen = *wasm.FailOpen
+	if config.FailOpen != nil {
+		failOpen = *config.FailOpen
 	}
 
-	switch wasm.Code.Type {
+	switch config.Code.Type {
 	case egv1a1.HTTPWasmCodeSourceType:
-		httpWasmCode = &ir.HTTPWasmCode{
-			URL:    wasm.Code.HTTP.URL,
-			SHA256: wasm.Code.SHA256,
+		if config.Code.HTTP == nil {
+			return nil, fmt.Errorf("missing HTTP field in Wasm code source")
 		}
+
+		var (
+			http         = config.Code.HTTP
+			egServingURL string // the wasm module download URL from the EG HTTP server
+			err          error
+		)
+
+		if egServingURL, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+			Checksum:        config.Code.SHA256,
+			ResourceName:    irConfigNameForWasm(policy, idx),
+			ResourceVersion: policy.ResourceVersion,
+		}); err != nil {
+			return nil, err
+		}
+
+		code = &ir.HTTPWasmCode{
+			URL:    egServingURL,
+			SHA256: config.Code.SHA256,
+		}
+
 	case egv1a1.ImageWasmCodeSourceType:
-		return nil, fmt.Errorf("OCI image Wasm code source is not supported yet")
+		var (
+			image        = config.Code.Image
+			secret       *v1.Secret
+			pullSecret   []byte
+			egServingURL string // the wasm module download URL from the EG HTTP server
+			err          error
+		)
+
+		if image == nil {
+			return nil, fmt.Errorf("missing Image field in Wasm code source")
+		}
+		from := crossNamespaceFrom{
+			group:     egv1a1.GroupName,
+			kind:      KindEnvoyExtensionPolicy,
+			namespace: policy.Namespace,
+		}
+
+		if secret, err = t.validateSecretRef(
+			false, from, *image.PullSecretRef, resources); err != nil {
+			return nil, err
+		}
+
+		if data, ok := secret.Data[v1.DockerConfigJsonKey]; ok {
+			pullSecret = data
+		} else {
+			return nil, fmt.Errorf("missing %s key in secret %s/%s", v1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+		}
+
+		// Wasm Cache requires the URL to be in the format "scheme://<URL>"
+		imageURL := image.URL
+		if !strings.HasPrefix(image.URL, "oci://") {
+			imageURL = fmt.Sprintf("oci://%s", image.URL)
+		}
+		if egServingURL, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
+			Checksum:        config.Code.SHA256,
+			PullSecret:      pullSecret,
+			ResourceName:    irConfigNameForWasm(policy, idx),
+			ResourceVersion: policy.ResourceVersion,
+		}); err != nil {
+			return nil, err
+		}
+
+		code = &ir.HTTPWasmCode{
+			URL:    egServingURL,
+			SHA256: config.Code.SHA256,
+		}
 	default:
 		// should never happen because of kubebuilder validation, just a sanity check
-		return nil, fmt.Errorf("unsupported Wasm code source type %q", wasm.Code.Type)
+		return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
 	}
 
 	wasmIR := &ir.Wasm{
-		Name:         name,
-		RootID:       wasm.RootID,
-		WasmName:     wasm.Name,
-		Config:       wasm.Config,
-		FailOpen:     failOpen,
-		HTTPWasmCode: httpWasmCode,
+		Name:     name,
+		RootID:   config.RootID,
+		WasmName: config.Name,
+		Config:   config.Config,
+		FailOpen: failOpen,
+		Code:     code,
 	}
 
 	return wasmIR, nil
+}
+
+func irConfigNameForWasm(policy client.Object, index int) string {
+	return fmt.Sprintf(
+		"%s/wasm/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }

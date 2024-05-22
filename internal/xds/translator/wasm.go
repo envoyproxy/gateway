@@ -111,7 +111,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 	)
 
 	// We only support HTTP Wasm code source for now
-	if uc, err = url2Cluster(wasm.HTTPWasmCode.URL); err != nil {
+	if uc, err = url2Cluster(wasm.Code.URL); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +134,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						Specifier: &corev3.AsyncDataSource_Remote{
 							Remote: &corev3.RemoteDataSource{
 								HttpUri: &corev3.HttpUri{
-									Uri: wasm.HTTPWasmCode.URL,
+									Uri: wasm.Code.URL,
 									HttpUpstreamType: &corev3.HttpUri_Cluster{
 										Cluster: uc.name,
 									},
@@ -142,7 +142,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 										Seconds: defaultExtServiceRequestTimeout,
 									},
 								},
-								Sha256: wasm.HTTPWasmCode.SHA256,
+								Sha256: wasm.Code.SHA256,
 							},
 						},
 					},
@@ -184,7 +184,7 @@ func (*wasm) patchResources(tCtx *types.ResourceVersionTable,
 		}
 
 		for _, w := range route.Wasms {
-			if err = addClusterFromURL(w.HTTPWasmCode.URL, tCtx); err != nil {
+			if err = addClusterFromURL(w.Code.URL, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

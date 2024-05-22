@@ -283,9 +283,10 @@ spec:
 
                             Note that the image must be accessible from the Envoy Gateway.
                           properties:
-                            pullSecret:
-                              description: PullSecretRef is a reference to the secret
-                                containing the credentials to pull the image.
+                            pullSecretRef:
+                              description: |-
+                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
+                                Only support Kubernetes Secret resource from the same namespace.
                               properties:
                                 group:
                                   default: ""
@@ -332,7 +333,6 @@ spec:
                               description: URL is the URL of the OCI image.
                               type: string
                           required:
-                          - pullSecret
                           - url
                           type: object
                         sha256:
@@ -359,6 +359,11 @@ spec:
                       - sha256
                       - type
                       type: object
+                      x-kubernetes-validations:
+                      - message: If type is HTTP, http field needs to be set.
+                        rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
+                      - message: If type is Image, image field needs to be set.
+                        rule: 'self.type == ''Image'' ? has(self.image) : !has(self.image)'
                     config:
                       description: |-
                         Config is the configuration for the Wasm extension.

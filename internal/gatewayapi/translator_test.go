@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -32,6 +33,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
@@ -85,6 +87,7 @@ func TestTranslate(t *testing.T) {
 				BackendEnabled:          backendEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				WasmCache:               &mockWasmCache{},
 			}
 
 			// Add common test fixtures
@@ -812,3 +815,15 @@ func TestServicePortToContainerPort(t *testing.T) {
 		assert.Equal(t, tc.containerPort, got)
 	}
 }
+
+var _ wasm.Cache = &mockWasmCache{}
+
+type mockWasmCache struct{}
+
+func (m *mockWasmCache) Start(_ context.Context) {}
+
+func (m *mockWasmCache) Get(_ string, _ wasm.GetOptions) (string, error) {
+	return fmt.Sprintf("https://envoy-gateway/%s", "wasm/b63633341dd86515c51f8ea6e01c848e.wasm"), nil
+}
+
+func (m *mockWasmCache) Cleanup() {}

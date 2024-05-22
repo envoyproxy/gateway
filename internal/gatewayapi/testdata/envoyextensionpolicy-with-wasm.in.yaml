@@ -1,3 +1,11 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: my-pull-secret
+  data:
+    .dockerconfigjson: VGhpc0lzTm90QVJlYWxEb2NrZXJDb25maWdKc29u
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -77,9 +85,11 @@ envoyextensionpolicies:
         parameter2: value3
     - name: wasm-filter-2
       code:
-        type: HTTP
-        http:
-          url: https://www.example.com/wasm-filter-2.wasm
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-2:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret
         sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
       config:
         parameter1: value1

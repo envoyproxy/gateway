@@ -16,6 +16,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 const (
@@ -105,6 +106,9 @@ type Translator struct {
 
 	// Namespace is the namespace that Envoy Gateway runs in.
 	Namespace string
+
+	// WasmCache is the cache for Wasm modules.
+	WasmCache wasm.Cache
 }
 
 type TranslateResult struct {

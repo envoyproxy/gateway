@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -880,10 +881,10 @@ func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwap
 		nn.String()))
 }
 
-func irConfigName(policy *egv1a1.SecurityPolicy) string {
+func irConfigName(policy client.Object) string {
 	return fmt.Sprintf(
 		"%s/%s",
-		strings.ToLower(KindSecurityPolicy),
+		strings.ToLower(policy.GetObjectKind().GroupVersionKind().Kind),
 		utils.NamespacedName(policy).String())
 }
 

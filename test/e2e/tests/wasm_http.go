@@ -29,7 +29,7 @@ func init() {
 var WasmTest = suite.ConformanceTest{
 	ShortName:   "Wasm",
 	Description: "Test Wasm extension that adds response headers",
-	Manifests:   []string{"testdata/wasm.yaml"},
+	Manifests:   []string{"testdata/wasm-http.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with http wasm source", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
