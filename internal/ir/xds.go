@@ -1224,8 +1224,12 @@ type TCPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// TLS holds information for configuring TLS on a listener.
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// EnableProxyProtocol enables the listener to interpret proxy protocol header
+	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
