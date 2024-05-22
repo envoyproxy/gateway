@@ -25,6 +25,10 @@ The default installation of Envoy Gateway installs a default [EnvoyGateway][] co
 using a `ConfigMap`. In this section, we will update this resource to enable various ways to retrieve metrics
 from Envoy Gateway.
 
+{{% alert title="Exported Metrics" color="warning" %}}
+Refer to the [Gateway Exported Metrics List](./gateway-exported-metrics) to learn more about Envoy Gateway's Metrics.
+{{% /alert %}}
+
 ### Retrieve Prometheus Metrics from Envoy Gateway
 
 By default, prometheus metric is enabled. You can directly retrieve metrics from Envoy Gateway:
