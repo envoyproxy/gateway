@@ -9901,6 +9901,11 @@ spec:
                               Annotations that should be appended to the service.
                               By default, no annotations are appended.
                             type: object
+                          disable:
+                            description: |-
+                              Disable disables service if set to true.
+                              By default, the service is enabled.
+                            type: boolean
                           externalTrafficPolicy:
                             default: Local
                             description: |-
