@@ -172,6 +172,17 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			Resources:  oidc.Resources,
 		},
 	}
+
+	if oidc.CookieNameOverrides != nil &&
+		oidc.CookieNameOverrides.BearerToken != nil {
+		oauth2.Config.Credentials.CookieNames.BearerToken = *oidc.CookieNameOverrides.BearerToken
+	}
+
+	if oidc.CookieNameOverrides != nil &&
+		oidc.CookieNameOverrides.IDToken != nil {
+		oauth2.Config.Credentials.CookieNames.IdToken = *oidc.CookieNameOverrides.IDToken
+	}
+
 	return oauth2, nil
 }
 

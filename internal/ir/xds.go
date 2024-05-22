@@ -676,6 +676,9 @@ type OIDC struct {
 	// These cookies are set by the oauth filter, including: BearerToken,
 	// OauthHMAC, OauthExpires, IdToken, and RefreshToken.
 	CookieSuffix string `json:"cookieSuffix,omitempty"`
+
+	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.
+	CookieNameOverrides *egv1a1.OIDCCookieNames `json:"cookieNameOverrides,omitempty"`
 }
 
 type OIDCProvider struct {
