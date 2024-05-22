@@ -110,6 +110,16 @@ provider:
         {{- else }}
         image: "docker.io/envoyproxy/ratelimit:master"
         {{- end }}
+      {{- with .Values.global.images.ratelimit.imagePullSecrets }}
+      patch:
+        type: StrategicMerge
+        value:
+          spec:
+            template:
+              spec:
+                imagePullSecrets:
+                  {{- toYaml . | nindent 18 }}
+      {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}
 {{- end }}
