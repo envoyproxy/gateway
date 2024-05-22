@@ -1467,7 +1467,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	return endpoints
 }
 
-func GetTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, namespace string) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	ref := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 			Group: func() gwapiv1a2.Group {

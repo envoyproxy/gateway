@@ -18,19 +18,7 @@ backendTLSPolicies:
         name: ca-cmap
       hostname: example.com
   status:
-    ancestors:
-    - ancestorRef:
-        name: gateway-btls
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Target ref to Service backends/http-backend not permitted by any
-          ReferenceGrant
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
