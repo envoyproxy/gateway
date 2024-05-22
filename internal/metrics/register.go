@@ -103,7 +103,7 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 				return newOpts, err
 			}
 
-			sink.exporterInterval = interval
+			sink.exportInterval = interval
 		}
 		if config.OpenTelemetry.ExportTimeout != nil && len(*config.OpenTelemetry.ExportTimeout) != 0 {
 			timeout, err := time.ParseDuration(string(*config.OpenTelemetry.ExportTimeout))
@@ -112,7 +112,7 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 				return newOpts, err
 			}
 
-			sink.exporterTimeout = timeout
+			sink.exportTimeout = timeout
 		}
 
 		newOpts.pushOptions.sinks = append(newOpts.pushOptions.sinks, sink)
@@ -185,11 +185,11 @@ func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) e
 			periodOpts := []metric.PeriodicReaderOption{}
 			// If we do not set the interval or timeout for the exporter,
 			// we let the upstream set the default value for it.
-			if sink.exporterInterval != 0 {
-				periodOpts = append(periodOpts, metric.WithInterval(sink.exporterInterval))
+			if sink.exportInterval != 0 {
+				periodOpts = append(periodOpts, metric.WithInterval(sink.exportInterval))
 			}
-			if sink.exporterTimeout != 0 {
-				periodOpts = append(periodOpts, metric.WithTimeout(sink.exporterTimeout))
+			if sink.exportTimeout != 0 {
+				periodOpts = append(periodOpts, metric.WithTimeout(sink.exportTimeout))
 			}
 
 			otelreader := metric.NewPeriodicReader(httpexporter, periodOpts...)
@@ -218,11 +218,11 @@ func registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) e
 			periodOpts := []metric.PeriodicReaderOption{}
 			// If we do not set the interval or timeout for the exporter,
 			// we let the upstream set the default value for it.
-			if sink.exporterInterval != 0 {
-				periodOpts = append(periodOpts, metric.WithInterval(sink.exporterInterval))
+			if sink.exportInterval != 0 {
+				periodOpts = append(periodOpts, metric.WithInterval(sink.exportInterval))
 			}
-			if sink.exporterTimeout != 0 {
-				periodOpts = append(periodOpts, metric.WithTimeout(sink.exporterTimeout))
+			if sink.exportTimeout != 0 {
+				periodOpts = append(periodOpts, metric.WithTimeout(sink.exportTimeout))
 			}
 
 			otelreader := metric.NewPeriodicReader(httpexporter, periodOpts...)
@@ -247,9 +247,9 @@ type registerOptions struct {
 }
 
 type metricsSink struct {
-	protocol         string
-	host             string
-	port             int32
-	exporterTimeout  time.Duration
-	exporterInterval time.Duration
+	protocol       string
+	host           string
+	port           int32
+	exportTimeout  time.Duration
+	exportInterval time.Duration
 }
