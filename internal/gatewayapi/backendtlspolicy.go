@@ -121,8 +121,7 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 				ancestorRefs,
 				t.GatewayControllerName,
 				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf("client auth tls secret is not located in the same namespace as envoyproxy/. Secret namespace: %s does not match envoy proxy namespace: %s", ns, ep.Namespace)),
-			)
+				status.Error2ConditionMsg(fmt.Errorf("client authentication TLS secret is not located in the same namespace as Envoyproxy. Secret namespace: %s does not match Envoyproxy namespace: %s", ns, ep.Namespace)))
 			return tlsBundle
 		}
 		secret := resources.GetSecret(ns, string(ep.Spec.BackendTLS.ClientCertificateRef.Name))
