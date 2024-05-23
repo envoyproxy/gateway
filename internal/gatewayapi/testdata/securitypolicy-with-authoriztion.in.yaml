@@ -77,7 +77,6 @@ securityPolicies:
   metadata:
     namespace: envoy-gateway
     name: policy-for-gateway  # This policy should attach httproute-2
-    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -96,7 +95,6 @@ securityPolicies:
   metadata:
     namespace: default
     name: policy-for-http-route-1   # This policy should attach httproute-1
-    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -122,7 +120,6 @@ securityPolicies:
   metadata:
     namespace: default
     name: policy-for-http-route-3   # This policy should attach httproute-3
-    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
     targetRef:
       group: gateway.networking.k8s.io

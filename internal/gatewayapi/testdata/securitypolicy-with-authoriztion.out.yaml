@@ -177,7 +177,6 @@ securityPolicies:
     creationTimestamp: null
     name: policy-for-http-route-1
     namespace: default
-    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
     authorization:
       defaultAction: Allow
@@ -219,7 +218,6 @@ securityPolicies:
     creationTimestamp: null
     name: policy-for-http-route-3
     namespace: default
-    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
     authorization:
       defaultAction: null
@@ -248,7 +246,6 @@ securityPolicies:
     creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
-    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
     authorization:
       defaultAction: Deny

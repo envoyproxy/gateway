@@ -879,7 +879,7 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 		principal := ir.Principal{}
 
 		for _, cidr := range rule.Principal.ClientCIDRs {
-			cidrMatch, err := parseCIDR(cidr)
+			cidrMatch, err := parseCIDR(string(cidr))
 			if err != nil {
 				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
 			}

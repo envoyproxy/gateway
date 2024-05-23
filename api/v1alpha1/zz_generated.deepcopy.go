@@ -3363,7 +3363,7 @@ func (in *Principal) DeepCopyInto(out *Principal) {
 	*out = *in
 	if in.ClientCIDRs != nil {
 		in, out := &in.ClientCIDRs, &out.ClientCIDRs
-		*out = make([]string, len(*in))
+		*out = make([]CIDR, len(*in))
 		copy(*out, *in)
 	}
 }

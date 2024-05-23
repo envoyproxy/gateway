@@ -455,6 +455,18 @@ _Appears in:_
 | `Replace` | Replace replaces the default bootstrap with the provided one.<br /> | 
 
 
+#### CIDR
+
+_Underlying type:_ _string_
+
+CIDR defines a CIDR Address range.
+A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+
+_Appears in:_
+- [Principal](#principal)
+
+
+
 #### CORS
 
 
@@ -2444,7 +2456,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientCIDRs` | _string array_ |  true  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />The client IP is inferred from the x-forwarder-for header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  true  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />The client IP is inferred from the x-forwarder-for header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 
 
 #### ProcessingModeOptions

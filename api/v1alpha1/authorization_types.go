@@ -50,7 +50,7 @@ type Principal struct {
 	// or the proxy protocol.
 	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
-	ClientCIDRs []string `json:"clientCIDRs,omitempty"`
+	ClientCIDRs []CIDR `json:"clientCIDRs,omitempty"`
 }
 
 // AuthorizationAction defines the action to be taken if a rule matches.
