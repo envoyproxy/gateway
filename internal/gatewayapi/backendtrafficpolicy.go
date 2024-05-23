@@ -321,7 +321,6 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			errs = errors.Join(errs, err)
 		}
 	}
-
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
 	}
@@ -334,15 +333,20 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	// Apply IR to all relevant routes
-	prefix := irRoutePrefix(route)
-
 	if policy.Spec.Timeout != nil {
 		if to, err = t.buildTimeout(policy, nil); err != nil {
 			err = perr.WithMessage(err, "Timeout")
 			errs = errors.Join(errs, err)
 		}
 	}
+
+	// Early return if got any errors
+	if errs != nil {
+		return errs
+	}
+
+	// Apply IR to all relevant routes
+	prefix := irRoutePrefix(route)
 
 	for _, x := range xdsIR {
 		for _, tcp := range x.TCP {
@@ -402,7 +406,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
-	return errs
+	return nil
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, gateway *GatewayContext, xdsIR XdsIRMap) error {
@@ -453,6 +457,17 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
+	if policy.Spec.Timeout != nil {
+		if ct, err = t.buildTimeout(policy, nil); err != nil {
+			err = perr.WithMessage(err, "Timeout")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	// Early return if got any errors
+	if errs != nil {
+		return errs
+	}
 
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -462,13 +477,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	x := xdsIR[irKey]
 
 	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
-
-	if policy.Spec.Timeout != nil {
-		if ct, err = t.buildTimeout(policy, nil); err != nil {
-			err = perr.WithMessage(err, "Timeout")
-			errs = errors.Join(errs, err)
-		}
-	}
 
 	for _, tcp := range x.TCP {
 		gatewayName := tcp.Name[0:strings.LastIndex(tcp.Name, "/")]
@@ -562,7 +570,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	return errs
+	return nil
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {

@@ -386,8 +386,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	var (
 		keepalive           *ir.TCPKeepalive
 		connection          *ir.Connection
-		enableProxyProtocol bool
 		tlsConfig           *ir.TLSConfig
+		enableProxyProtocol bool
 		err, errs           error
 	)
 
@@ -395,7 +395,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// Translate TCPKeepalive
 	keepalive, err = buildKeepAlive(policy.Spec.TCPKeepalive)
 	if err != nil {
-		return err
+		err = perr.WithMessage(err, "TCP KeepAlive")
+		errs = errors.Join(errs, err)
 	}
 
 	// Translate Connection
@@ -462,6 +463,11 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 			errs = errors.Join(errs, err)
 		}
 
+		// Early return if got any errors
+		if errs != nil {
+			return errs
+		}
+
 		httpIR.TCPKeepalive = keepalive
 		httpIR.Connection = connection
 		httpIR.EnableProxyProtocol = enableProxyProtocol
@@ -472,7 +478,13 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, tcpIR.TLS, resources)
 		if err != nil {
-			return err
+			err = perr.WithMessage(err, "TLS")
+			errs = errors.Join(errs, err)
+		}
+
+		// Early return if got any errors
+		if errs != nil {
+			return errs
 		}
 
 		tcpIR.TCPKeepalive = keepalive
@@ -481,7 +493,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		tcpIR.TLS = tlsConfig
 	}
 
-	return errs
+	return nil
 }
 
 func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error) {

@@ -302,10 +302,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 		errs = errors.Join(errs, err)
 	}
 
+	// Early return if got any errors
+	if errs != nil {
+		return errs
+	}
+
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
-	for _, ir := range xdsIR {
-		for _, http := range ir.HTTP {
+	for _, x := range xdsIR {
+		for _, http := range x.HTTP {
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
@@ -316,25 +321,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 		}
 	}
 
-	return errs
-}
-
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources) ([]ir.ExtProc, error) {
-	var extProcIRList []ir.ExtProc
-
-	if policy == nil {
-		return nil, nil
-	}
-
-	for idx, ep := range policy.Spec.ExtProc {
-		name := irConfigNameForEEP(policy, idx)
-		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources)
-		if err != nil {
-			return nil, err
-		}
-		extProcIRList = append(extProcIRList, *extProcIR)
-	}
-	return extProcIRList, nil
+	return nil
 }
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.EnvoyExtensionPolicy,
@@ -346,12 +333,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		err, errs error
 	)
 
-	irKey := t.getIRKey(gateway.Gateway)
-	// Should exist since we've validated this
-	ir := xdsIR[irKey]
-
-	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
-
 	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
 		err = perr.WithMessage(err, "ExtProcs")
 		errs = errors.Join(errs, err)
@@ -361,7 +342,18 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		errs = errors.Join(errs, err)
 	}
 
-	for _, http := range ir.HTTP {
+	// Early return if got any errors
+	if errs != nil {
+		return errs
+	}
+
+	irKey := t.getIRKey(gateway.Gateway)
+	// Should exist since we've validated this
+	x := xdsIR[irKey]
+
+	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
+
+	for _, http := range x.HTTP {
 		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
@@ -385,7 +377,25 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		}
 	}
 
-	return errs
+	return nil
+}
+
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources) ([]ir.ExtProc, error) {
+	var extProcIRList []ir.ExtProc
+
+	if policy == nil {
+		return nil, nil
+	}
+
+	for idx, ep := range policy.Spec.ExtProc {
+		name := irConfigNameForEEP(policy, idx)
+		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources)
+		if err != nil {
+			return nil, err
+		}
+		extProcIRList = append(extProcIRList, *extProcIR)
+	}
+	return extProcIRList, nil
 }
 
 func (t *Translator) buildExtProc(
