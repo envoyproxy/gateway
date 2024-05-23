@@ -387,6 +387,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		connection          *ir.Connection
 		enableProxyProtocol bool
 		tlsConfig           *ir.TLSConfig
+		timeout             *ir.ClientTimeout
 		err                 error
 	)
 
@@ -406,6 +407,12 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// Translate Proxy Protocol
 	enableProxyProtocol = buildProxyProtocol(policy.Spec.EnableProxyProtocol)
 
+	// Translate Client Timeout Settings
+	timeout, err = buildClientTimeout(policy.Spec.Timeout)
+	if err != nil {
+		return err
+	}
+
 	// IR must exist since we're past validation
 	if httpIR != nil {
 		// Translate Client IP Detection
@@ -416,11 +423,6 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
-
-		// Translate Client Timeout Settings
-		if err := translateClientTimeout(policy.Spec.Timeout, httpIR); err != nil {
-			return err
-		}
 
 		// Translate HTTP1 Settings
 		if err := translateHTTP1Settings(policy.Spec.HTTP1, httpIR); err != nil {
@@ -459,6 +461,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		httpIR.TCPKeepalive = keepalive
 		httpIR.Connection = connection
 		httpIR.EnableProxyProtocol = enableProxyProtocol
+		httpIR.Timeout = timeout
 		httpIR.TLS = tlsConfig
 	}
 
@@ -473,6 +476,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		tcpIR.Connection = connection
 		tcpIR.EnableProxyProtocol = enableProxyProtocol
 		tcpIR.TLS = tlsConfig
+		tcpIR.Timeout = timeout
 	}
 
 	return nil
@@ -521,19 +525,34 @@ func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPLis
 	}
 }
 
-func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTPListener) error {
+func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout, error) {
+	// Return early if not set
 	if clientTimeout == nil {
-		return nil
+		return nil, nil
 	}
 
 	irClientTimeout := &ir.ClientTimeout{}
+
+	if clientTimeout.TCP != nil {
+		irTCPTimeout := &ir.TCPClientTimeout{}
+		if clientTimeout.TCP.IdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.IdleTimeout))
+			if err != nil {
+				return nil, err
+			}
+			irTCPTimeout.IdleTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+		irClientTimeout.TCP = irTCPTimeout
+	}
 
 	if clientTimeout.HTTP != nil {
 		irHTTPTimeout := &ir.HTTPClientTimeout{}
 		if clientTimeout.HTTP.RequestReceivedTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestReceivedTimeout))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			irHTTPTimeout.RequestReceivedTimeout = &metav1.Duration{
 				Duration: d,
@@ -543,7 +562,7 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 		if clientTimeout.HTTP.IdleTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.HTTP.IdleTimeout))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			irHTTPTimeout.IdleTimeout = &metav1.Duration{
 				Duration: d,
@@ -552,9 +571,7 @@ func translateClientTimeout(clientTimeout *egv1a1.ClientTimeout, httpIR *ir.HTTP
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
-	httpIR.Timeout = irClientTimeout
-
-	return nil
+	return irClientTimeout, nil
 }
 
 func buildProxyProtocol(enableProxyProtocol *bool) bool {

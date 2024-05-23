@@ -520,7 +520,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 					}
 				}
 			}
-			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Connection); err != nil {
+			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
