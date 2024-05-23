@@ -137,7 +137,6 @@ var UpstreamTLSSettingsTest = suite.ConformanceTest{
 				ClientCertificateRef: nil,
 				TLSSettings:          v1alpha1.TLSSettings{},
 			})
-
 			if err != nil {
 				t.Error(err)
 			}
