@@ -29,7 +29,7 @@ type Authorization struct {
 type AuthorizationRule struct {
 	// Name is a user-friendly name for the rule. It's just for display purposes.
 	// +optional
-	Name *string `json:"name"`
+	Name *string `json:"name,omitempty"`
 
 	// Action defines the action to be taken if the rule matches.
 	Action AuthorizationAction `json:"action"`
