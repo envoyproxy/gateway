@@ -136,7 +136,7 @@ envoyproxy:
         group: ""
         kind: Secret
         namespace: envoy-gateway-system
-        name: client-auth
+        name: client-auth-not-found
       ciphers:
         - ECDHE-RSA-AES128-GCM-SHA256
         - ECDHE-ECDSA-AES256-GCM-SHA384
