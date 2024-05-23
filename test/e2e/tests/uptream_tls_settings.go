@@ -133,7 +133,6 @@ var UpstreamTLSSettingsTest = suite.ConformanceTest{
 			}
 
 			// Cleanup upstream tls settings.
-			config.ClientCertificateRef = &gwapiv1.SecretObjectReference{}
 			config.TLSSettings = v1alpha1.TLSSettings{}
 			err = UpdateProxyConfig(suite.Client, proxyNN, config)
 			if err != nil {
