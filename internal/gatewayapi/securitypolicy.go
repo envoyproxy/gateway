@@ -373,7 +373,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.Authorization != nil {
-		if authorization, err = t.buildAuthorization(policy.Spec.Authorization); err != nil {
+		if authorization, err = t.buildAuthorization(policy); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -453,7 +453,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.Authorization != nil {
-		if authorization, err = t.buildAuthorization(policy.Spec.Authorization); err != nil {
+		if authorization, err = t.buildAuthorization(policy); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -862,9 +862,10 @@ func irConfigName(policy *egv1a1.SecurityPolicy) string {
 		utils.NamespacedName(policy).String())
 }
 
-func (t *Translator) buildAuthorization(authorization *egv1a1.Authorization) (*ir.Authorization, error) {
+func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {
 	var (
-		irAuth = &ir.Authorization{}
+		authorization = policy.Spec.Authorization
+		irAuth        = &ir.Authorization{}
 		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
 	)
@@ -874,7 +875,7 @@ func (t *Translator) buildAuthorization(authorization *egv1a1.Authorization) (*i
 	}
 	irAuth.DefaultAction = defaultAction
 
-	for _, rule := range authorization.Rules {
+	for i, rule := range authorization.Rules {
 		principal := ir.Principal{}
 
 		for _, cidr := range rule.Principal.ClientCIDRs {
@@ -885,11 +886,26 @@ func (t *Translator) buildAuthorization(authorization *egv1a1.Authorization) (*i
 
 			principal.ClientCIDRs = append(principal.ClientCIDRs, cidrMatch)
 		}
+
+		var name string
+		if rule.Name != nil && *rule.Name != "" {
+			name = *rule.Name
+		} else {
+			name = defaultAuthorizationRuleName(policy, i)
+		}
 		irAuth.Rules = append(irAuth.Rules, &ir.AuthorizationRule{
+			Name:      name,
 			Action:    rule.Action,
 			Principal: principal,
 		})
 	}
 
 	return irAuth, nil
+}
+
+func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/authorization/rule/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }

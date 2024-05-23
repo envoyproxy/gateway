@@ -40,7 +40,7 @@
                 matchers:
                 - onMatch:
                     action:
-                      name: action
+                      name: deny-location-1
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
@@ -56,14 +56,14 @@
                             prefixLen: 24
                           - addressPrefix: 192.168.2.0
                             prefixLen: 24
-                          statPrefix: source_ip
+                          statPrefix: client_ip
                       input:
-                        name: source_ip
+                        name: client_ip
                         typedConfig:
                           '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
                 - onMatch:
                     action:
-                      name: action
+                      name: deny-location-2
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
@@ -79,9 +79,9 @@
                             prefixLen: 24
                           - addressPrefix: 10.75.2.0
                             prefixLen: 24
-                          statPrefix: source_ip
+                          statPrefix: client_ip
                       input:
-                        name: source_ip
+                        name: client_ip
                         typedConfig:
                           '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
               onNoMatch:
@@ -106,7 +106,7 @@
                 matchers:
                 - onMatch:
                     action:
-                      name: action
+                      name: securitypolicy/envoy-gateway/policy-for-gateway/authorization/rule/0
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         name: ALLOW
@@ -121,9 +121,9 @@
                             prefixLen: 24
                           - addressPrefix: 10.0.2.0
                             prefixLen: 24
-                          statPrefix: source_ip
+                          statPrefix: client_ip
                       input:
-                        name: source_ip
+                        name: client_ip
                         typedConfig:
                           '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
               onNoMatch:

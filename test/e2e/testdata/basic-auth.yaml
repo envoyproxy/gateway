@@ -59,6 +59,7 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-basic-auth-1
+    namespace: gateway-conformance-infra
   basicAuth:
     users:
       name: "basic-auth-users-secret-1"

@@ -81,8 +81,8 @@ spec:
         - 10.0.1.0/24
         - 10.0.2.0/24
 ---
-# This is a client traffic policy that enables client IP detection using a custom header.
-# So, the client IP can be detected from the custom header `client-ip` and used for authorization.
+# This is a client traffic policy that enables client IP detection using the XFF header.
+# So, the client IP can be detected from the XFF header and used for authorization.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:

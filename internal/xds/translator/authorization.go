@@ -154,7 +154,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	for _, rule := range authorization.Rules {
 		// Build the IPMatcher based on the client CIDRs.
 		ipRangeMatcher := &ipmatcherv3.Ip{
-			StatPrefix: "source_ip",
+			StatPrefix: "client_ip",
 		}
 
 		for _, cidr := range rule.Principal.ClientCIDRs {
@@ -186,7 +186,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
 					SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
 						Input: &cncfv3.TypedExtensionConfig{
-							Name:        "source_ip",
+							Name:        "client_ip",
 							TypedConfig: sourceIPInput,
 						},
 						Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
@@ -201,7 +201,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			OnMatch: &matcherv3.Matcher_OnMatch{
 				OnMatch: &matcherv3.Matcher_OnMatch_Action{
 					Action: &cncfv3.TypedExtensionConfig{
-						Name:        "action",
+						Name:        rule.Name,
 						TypedConfig: ruleAction,
 					},
 				},
@@ -223,6 +223,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 						Matchers: matcherList,
 					},
 				},
+				// If no matcher matches, the default action will be used.
 				OnNoMatch: &matcherv3.Matcher_OnMatch{
 					OnMatch: &matcherv3.Matcher_OnMatch_Action{
 						Action: &cncfv3.TypedExtensionConfig{
@@ -242,6 +243,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		routeCfgProto.Rbac.Matcher.MatcherType = nil
 	}
 
+	// We need to validate the RBACPerRoute message before converting it to an Any.
 	if err = routeCfgProto.ValidateAll(); err != nil {
 		return err
 	}

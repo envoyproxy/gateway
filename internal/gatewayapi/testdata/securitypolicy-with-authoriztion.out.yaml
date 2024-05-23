@@ -254,7 +254,6 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: null
         principal:
           clientCIDRs:
           - 10.0.1.0/24
@@ -339,6 +338,7 @@ xdsIR:
             defaultAction: Allow
             rules:
             - action: Deny
+              name: deny-location-1
               principal:
                 clientCIDRs:
                 - cidr: 192.168.1.0/24
@@ -352,6 +352,7 @@ xdsIR:
                   isIPv6: false
                   maskLen: 24
             - action: Deny
+              name: deny-location-2
               principal:
                 clientCIDRs:
                 - cidr: 10.75.1.0/24
@@ -385,6 +386,7 @@ xdsIR:
             defaultAction: Deny
             rules:
             - action: Allow
+              name: securitypolicy/envoy-gateway/policy-for-gateway/authorization/rule/0
               principal:
                 clientCIDRs:
                 - cidr: 10.0.1.0/24
