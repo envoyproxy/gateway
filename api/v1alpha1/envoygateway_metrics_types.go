@@ -45,13 +45,13 @@ type EnvoyGatewayOpenTelemetrySink struct {
 	// OTEL_METRIC_EXPORT_INTERVAL environment variable.
 	// If ExportInterval is less than or equal to zero, 60 seconds
 	// is used as the default.
-	ExportInterval *gatewayv1.Duration `json:"exportInterval"`
+	ExportInterval *gatewayv1.Duration `json:"exportInterval,omitempty"`
 	// ExportTimeout configures the time a Sink waits for an export to
 	// complete before canceling it. This option overrides any value set for the
 	// OTEL_METRIC_EXPORT_TIMEOUT environment variable.
 	// If ExportTimeout is less than or equal to zero, 30 seconds
 	// is used as the default.
-	ExportTimeout *gatewayv1.Duration `json:"exportTimeout"`
+	ExportTimeout *gatewayv1.Duration `json:"exportTimeout,omitempty"`
 }
 
 // EnvoyGatewayPrometheusProvider will expose prometheus endpoint in pull mode.
