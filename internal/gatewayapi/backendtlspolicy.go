@@ -8,7 +8,6 @@ package gatewayapi
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -29,7 +28,7 @@ func (t *Translator) processBackendTLSPolicy(
 		return nil
 	}
 
-	tlsBundle, err := getBackendTLSBundle(policy, resources.ConfigMaps)
+	tlsBundle, err := getBackendTLSBundle(policy, resources)
 	if err == nil && tlsBundle == nil {
 		return nil
 	}
@@ -104,7 +103,7 @@ func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwap
 	return nil
 }
 
-func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, configmaps []*corev1.ConfigMap) (*ir.TLSUpstreamConfig, error) {
+func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources *Resources) (*ir.TLSUpstreamConfig, error) {
 	tlsBundle := &ir.TLSUpstreamConfig{
 		SNI:                 string(backendTLSPolicy.Spec.Validation.Hostname),
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
@@ -113,23 +112,36 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, configmap
 		return tlsBundle, nil
 	}
 
-	caRefMap := make(map[string]string)
-
-	for _, caRef := range backendTLSPolicy.Spec.Validation.CACertificateRefs {
-		caRefMap[string(caRef.Name)] = string(caRef.Kind)
-	}
-
 	ca := ""
+	for _, caRef := range backendTLSPolicy.Spec.Validation.CACertificateRefs {
+		kind := string(caRef.Kind)
 
-	for _, cmap := range configmaps {
-		if kind, ok := caRefMap[cmap.Name]; ok && kind == cmap.Kind {
-			if crt, dataOk := cmap.Data["ca.crt"]; dataOk {
-				if ca != "" {
-					ca += "\n"
+		switch kind {
+		case KindConfigMap:
+			for _, cmap := range resources.ConfigMaps {
+				if cmap.Name == string(caRef.Name) {
+					if crt, dataOk := cmap.Data["ca.crt"]; dataOk {
+						if ca != "" {
+							ca += "\n"
+						}
+						ca += crt
+					} else {
+						return nil, fmt.Errorf("no ca found in configmap %s", cmap.Name)
+					}
 				}
-				ca += crt
-			} else {
-				return nil, fmt.Errorf("no ca found in configmap %s", cmap.Name)
+			}
+		case KindSecret:
+			for _, secret := range resources.Secrets {
+				if secret.Name == string(caRef.Name) {
+					if crt, dataOk := secret.Data["ca.crt"]; dataOk {
+						if ca != "" {
+							ca += "\n"
+						}
+						ca += string(crt)
+					} else {
+						return nil, fmt.Errorf("no ca found in secret %s", secret.Name)
+					}
+				}
 			}
 		}
 	}

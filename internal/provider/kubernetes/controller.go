@@ -897,7 +897,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	}
 
 	// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree.
-	r.processBackendTLSPolicyConfigMapRefs(ctx, resourceTree, resourceMap)
+	r.processBackendTLSPolicyRefs(ctx, resourceTree, resourceMap)
 	return nil
 }
 
@@ -1575,27 +1575,49 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	return serviceImportFound
 }
 
-func (r *gatewayAPIReconciler) processBackendTLSPolicyConfigMapRefs(ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
+	ctx context.Context,
+	resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings,
+) {
 	for _, policy := range resourceTree.BackendTLSPolicies {
 		tls := policy.Spec.Validation
 
 		if tls.CACertificateRefs != nil {
 			for _, caCertRef := range tls.CACertificateRefs {
-				if string(caCertRef.Kind) == gatewayapi.KindConfigMap {
+				// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
+				if string(caCertRef.Kind) == gatewayapi.KindConfigMap ||
+					string(caCertRef.Kind) == gatewayapi.KindSecret {
+
+					var err error
 					caRefNew := gwapiv1b1.SecretObjectReference{
 						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
 						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
 						Name:      caCertRef.Name,
 						Namespace: gatewayapi.NamespacePtr(policy.Namespace),
 					}
-					if err := r.processConfigMapRef(
-						ctx,
-						resourceMap,
-						resourceTree,
-						gatewayapi.KindBackendTLSPolicy,
-						policy.Namespace,
-						policy.Name,
-						caRefNew); err != nil {
+					switch string(caCertRef.Kind) {
+					case gatewayapi.KindConfigMap:
+						err = r.processConfigMapRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindBackendTLSPolicy,
+							policy.Namespace,
+							policy.Name,
+							caRefNew)
+
+					case gatewayapi.KindSecret:
+						err = r.processSecretRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindBackendTLSPolicy,
+							policy.Namespace,
+							policy.Name,
+							caRefNew)
+					}
+					if err != nil {
 						// we don't return an error here, because we want to continue
 						// reconciling the rest of the ClientTrafficPolicies despite that this
 						// reference is invalid.
