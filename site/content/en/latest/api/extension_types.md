@@ -14,6 +14,8 @@ API group.
 
 
 ### Resource Types
+- [Backend](#backend)
+- [BackendList](#backendlist)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
@@ -171,6 +173,37 @@ _Appears in:_
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 
 
+#### AppProtocolType
+
+_Underlying type:_ _string_
+
+AppProtocolType defines various backend applications protocols supported by Envoy Gateway
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `gateway.envoyproxy.io/h2c` | AppProtocolTypeH2C defines the HTTP/2 application protocol.<br /> | 
+| `gateway.envoyproxy.io/ws` | AppProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> | 
+| `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.<br /> | 
+
+
+#### Authorization
+
+
+
+Authorization defines the authorization configuration.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `rules` | _[Rule](#rule) array_ |  false  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br /><br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
+| `defaultAction` | _[RuleActionType](#ruleactiontype)_ |  false  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
+
+
 #### BackOffPolicy
 
 
@@ -184,6 +217,61 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `baseInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  true  | BaseInterval is the base interval between retries. |
 | `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
+
+
+#### Backend
+
+
+
+Backend allows the user to configure the endpoints of a backend and
+the behavior of the connection from Envoy Proxy to the backend.
+
+_Appears in:_
+- [BackendList](#backendlist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`Backend`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[BackendSpec](#backendspec)_ |  true  | Spec defines the desired state of Backend. |
+
+
+
+
+
+
+#### BackendEndpoint
+
+
+
+BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket
+corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
+| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IPv4 defines an IPv4 endpoint |
+| `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
+
+
+#### BackendList
+
+
+
+BackendList contains a list of Backend resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`BackendList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[Backend](#backend) array_ |  true  |  |
 
 
 #### BackendRef
@@ -206,6 +294,23 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+
+
+#### BackendSpec
+
+
+
+BackendSpec describes the desired state of BackendSpec.
+
+_Appears in:_
+- [Backend](#backend)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | Endpoints defines the endpoints to be used when connecting to the backend. |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
+
+
 
 
 #### BackendTLSConfig
@@ -246,6 +351,20 @@ _Appears in:_
 | `spec` | _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ |  true  | spec defines the desired state of BackendTrafficPolicy. |
 
 
+#### BackendTrafficPolicyConnection
+
+
+
+BackendTrafficPolicyConnection allows users to configure connection-level settings of backend
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+
+
 #### BackendTrafficPolicyList
 
 
@@ -284,6 +403,7 @@ _Appears in:_
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
+| `connection` | _[BackendTrafficPolicyConnection](#backendtrafficpolicyconnection)_ |  false  | Connection includes backend connection settings. |
 
 
 #### BasicAuth
@@ -379,7 +499,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
-| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
+| `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
 #### ClientTLSSettings
@@ -413,6 +533,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `tcp` | _[TCPClientTimeout](#tcpclienttimeout)_ |  false  | Timeout settings for TCP. |
 | `http` | _[HTTPClientTimeout](#httpclienttimeout)_ |  false  | Timeout settings for HTTP. |
 
 
@@ -1127,6 +1248,7 @@ _Appears in:_
 | `envoyDaemonSet` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  | EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.<br />Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  | EnvoyService defines the desired state of the Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
 | `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.<br />Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
+| `useListenerPortAsContainerPort` | _boolean_ |  false  | UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.<br />When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.<br />This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability. |
 
 
 #### EnvoyProxyProvider
@@ -1265,6 +1387,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
+| `enableBackend` | _boolean_ |  true  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
 
 
 #### ExtensionHooks
@@ -1327,6 +1450,22 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that<br />contains a TLS certificate and private keys. These certificates are used to<br />establish a TLS handshake to the extension server.<br /><br />CertificateRef can only reference a Kubernetes Secret at this time. |
+
+
+#### FQDNEndpoint
+
+
+
+FQDNEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+
+_Appears in:_
+- [BackendEndpoint](#backendendpoint)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `hostname` | _string_ |  true  | Hostname defines the FQDN hostname of the backend endpoint. |
+| `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
 #### FaultInjection
@@ -1673,7 +1812,9 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
+| `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  | XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.<br /><br />x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate<br />information of part or all of the clients or proxies that a request has flowed through,<br />on its way from the client to the server.<br /><br />Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.<br /><br />If not set, the default behavior is sanitizing the XFCC header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
+| `preserveXRequestID` | _boolean_ |  false  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />It defaults to false. |
 
 
 #### HealthCheck
@@ -1690,6 +1831,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
+
+
+#### IPv4Endpoint
+
+
+
+IPv4Endpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
+
+_Appears in:_
+- [BackendEndpoint](#backendendpoint)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `address` | _string_ |  true  | Address defines the IPv4 address of the backend endpoint. |
+| `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
 #### ImageWasmCodeSource
@@ -2251,6 +2408,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ |  false  | Timeout is the timeout per retry attempt. |
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
+
+
+#### Principal
+
+
+
+Principal specifies the client identity of a request.
+
+_Appears in:_
+- [Rule](#rule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `clientCIDR` | _string array_ |  true  | ClientCIDR is the IP CIDR range of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.<br />You can use the `EnableProxyProtocol` and `ClientIPDetection` options in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 
 
 #### ProcessingModeOptions
@@ -2884,6 +3055,37 @@ _Appears in:_
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried.<br />The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
 
 
+#### Rule
+
+
+
+Rule defines the single authorization rule.
+
+_Appears in:_
+- [Authorization](#authorization)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `action` | _[RuleActionType](#ruleactiontype)_ |  true  | Action defines the action to be taken if the rule matches. |
+| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
+
+
+#### RuleActionType
+
+_Underlying type:_ _string_
+
+RuleActionType specifies the types of authorization rule action.
+
+_Appears in:_
+- [Authorization](#authorization)
+- [Rule](#rule)
+
+| Value | Description |
+| ----- | ----------- |
+| `Allow` | Allow is the action to allow the request.<br /> | 
+| `Deny` | Deny is the action to deny the request.<br /> | 
+
+
 #### SecurityPolicy
 
 
@@ -3080,6 +3282,20 @@ _Appears in:_
 | `receive` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  | Receive defines the expected response payload. |
 
 
+#### TCPClientTimeout
+
+
+
+TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
+
+_Appears in:_
+- [ClientTimeout](#clienttimeout)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `idleTimeout` | _[Duration](#duration)_ |  false  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
+
+
 #### TCPKeepalive
 
 
@@ -3223,6 +3439,21 @@ _Appears in:_
 | `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
 
 
+#### UnixSocket
+
+
+
+UnixSocket describes TCP/UDP unix domain socket address, corresponding to Envoy's Pipe
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
+
+_Appears in:_
+- [BackendEndpoint](#backendendpoint)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `path` | _string_ |  true  | Path defines the unix domain socket path of the backend endpoint. |
+
+
 #### Wasm
 
 
@@ -3325,6 +3556,57 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `pre` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |
+
+
+#### XFCCCertData
+
+_Underlying type:_ _string_
+
+XFCCCertData specifies the fields in the client certificate to be forwarded in the XFCC header.
+
+_Appears in:_
+- [XForwardedClientCert](#xforwardedclientcert)
+
+| Value | Description |
+| ----- | ----------- |
+| `Subject` | XFCCCertDataSubject is the Subject field of the current client certificate.<br /> | 
+| `Cert` | XFCCCertDataCert is the entire client certificate in URL encoded PEM format.<br /> | 
+| `Chain` | XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.<br /> | 
+| `DNS` | XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.<br /> | 
+| `URI` | XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.<br /> | 
+
+
+#### XFCCForwardMode
+
+_Underlying type:_ _string_
+
+XFCCForwardMode defines how XFCC header is handled by Envoy Proxy.
+
+_Appears in:_
+- [XForwardedClientCert](#xforwardedclientcert)
+
+| Value | Description |
+| ----- | ----------- |
+| `Sanitize` | XFCCForwardModeSanitize removes the XFCC header from the request. This is the default mode.<br /> | 
+| `ForwardOnly` | XFCCForwardModeForwardOnly forwards the XFCC header in the request if the client connection is mTLS.<br /> | 
+| `AppendForward` | XFCCForwardModeAppendForward appends the client certificate information to the request’s XFCC header and forward it if the client connection is mTLS.<br /> | 
+| `SanitizeSet` | XFCCForwardModeSanitizeSet resets the XFCC header with the client certificate information and forward it if the client connection is mTLS.<br />The existing certificate information in the XFCC header is removed.<br /> | 
+| `AlwaysForwardOnly` | XFCCForwardModeAlwaysForwardOnly always forwards the XFCC header in the request, regardless of whether the client connection is mTLS.<br /> | 
+
+
+#### XForwardedClientCert
+
+
+
+XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `mode` | _[XFCCForwardMode](#xfccforwardmode)_ |  false  | Mode defines how XFCC header is handled by Envoy Proxy.<br />If not set, the default mode is `Sanitize`. |
+| `certDetailsToAdd` | _[XFCCCertData](#xfcccertdata) array_ |  false  | CertDetailsToAdd specifies the fields in the client certificate to be forwarded in the XFCC header.<br /><br />Hash(the SHA 256 digest of the current client certificate) and By(the Subject Alternative Name)<br />are always included if the client certificate is forwarded.<br /><br />This field is only applicable when the mode is set to `AppendForward` or<br />`SanitizeSet` and the client connection is mTLS. |
 
 
 #### XForwardedForSettings

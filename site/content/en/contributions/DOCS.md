@@ -4,12 +4,6 @@ description: "This section tells the development of
  Envoy Gateway Documents."
 ---
 
-{{% alert title="Note" color="warning" %}}
-We migrated from ***Sphinx*** to ***Hugo*** for Envoy Gateway Documents.
-
-Read blog: [Welcome to new website!](/blog/2023/10/08/welcome-to-new-website/)
-{{% /alert %}}
-
 The documentation for the Envoy Gateway lives in the `site/content/en` directory (the Chinese content in the `site/content/zh` directory).
 Any individual document can be written using [Markdown].
 

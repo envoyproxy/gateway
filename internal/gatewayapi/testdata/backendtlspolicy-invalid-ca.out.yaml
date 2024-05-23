@@ -4,7 +4,7 @@ backendTLSPolicies:
   metadata:
     creationTimestamp: null
     name: policy-btls
-    namespace: policies
+    namespace: backends
   spec:
     targetRefs:
     - group: ""
@@ -142,10 +142,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-btls/rule/0
           settings:
           - addressType: IP

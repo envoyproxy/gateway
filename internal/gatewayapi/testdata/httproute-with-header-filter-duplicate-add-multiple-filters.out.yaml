@@ -136,9 +136,6 @@ xdsIR:
         - append: true
           name: add-header-3
           value: some-value
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:

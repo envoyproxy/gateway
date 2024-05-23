@@ -373,12 +373,22 @@ const (
 	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
 )
 
+// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +k8s:deepcopy-gen=true
+type XForwardedClientCert struct {
+	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	Mode egv1a1.XFCCForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
+	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+	CertDetailsToAdd []egv1a1.XFCCCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
+}
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
+	Name    string `json:"name" yaml:"name"`
 	Valid   uint32 `json:"valid" yaml:"valid"`
 	Invalid uint32 `json:"invalid" yaml:"invalid"`
 }
@@ -418,10 +428,19 @@ type HeaderSettings struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
 
+	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
+	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty" yaml:"xForwardedClientCert,omitempty"`
+
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
 	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
+
+	// PreserveXRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
+	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
+	// It defaults to false.
+	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -456,8 +475,6 @@ type HTTPRoute struct {
 	HeaderMatches []*StringMatch `json:"headerMatches,omitempty" yaml:"headerMatches,omitempty"`
 	// QueryParamMatches define the match conditions on the query parameters.
 	QueryParamMatches []*StringMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
-	// DestinationWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
-	BackendWeights BackendWeights `json:"backendWeights" yaml:"backendWeights"`
 	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
 	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.
@@ -476,6 +493,24 @@ type HTTPRoute struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
+	// Wasm extensions
+	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+
+	// Traffic holds the features associated with BackendTrafficPolicy
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	// Security holds the features associated with SecurityPolicy
+	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// UseClientProtocol enables using the same protocol upstream that was used downstream
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+}
+
+// TrafficFeatures holds the information associated with the Backend Traffic Policy.
+// +k8s:deepcopy-gen=true
+type TrafficFeatures struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -487,8 +522,6 @@ type HTTPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Request and connection timeout settings
@@ -497,15 +530,23 @@ type HTTPRoute struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
-	// External Processing extensions
-	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
-	// Wasm extensions
-	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
+}
 
-	// Security holds the features associated with SecurityPolicy
-	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
-	// UseClientProtocol enables using the same protocol upstream that was used downstream
-	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+func (b *TrafficFeatures) Validate() error {
+	var errs error
+
+	if b.LoadBalancer != nil {
+		if err := b.LoadBalancer.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if b.HealthCheck != nil {
+		if err := b.HealthCheck.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
 // SecurityFeatures holds the information associated with the Security Policy.
@@ -521,19 +562,6 @@ type SecurityFeatures struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
-}
-
-// Empty returns true if all the features are not set.
-func (s *SecurityFeatures) Empty() bool {
-	if s == nil {
-		return true
-	}
-
-	return s.CORS == nil &&
-		s.JWT == nil &&
-		s.OIDC == nil &&
-		s.BasicAuth == nil &&
-		s.ExtAuth == nil
 }
 
 func (s *SecurityFeatures) Printable() *SecurityFeatures {
@@ -872,18 +900,13 @@ func (h HTTPRoute) Validate() error {
 			occurred.Insert(header)
 		}
 	}
-	if h.LoadBalancer != nil {
-		if err := h.LoadBalancer.Validate(); err != nil {
+	if h.Traffic != nil {
+		if err := h.Traffic.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 	if h.Security != nil {
 		if err := h.Security.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	if h.HealthCheck != nil {
-		if err := h.HealthCheck.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -912,7 +935,7 @@ type RouteDestination struct {
 }
 
 // Validate the fields within the RouteDestination structure
-func (r RouteDestination) Validate() error {
+func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
@@ -926,23 +949,45 @@ func (r RouteDestination) Validate() error {
 	return errs
 }
 
+func (r *RouteDestination) ToBackendWeights() *BackendWeights {
+	w := &BackendWeights{
+		Name: r.Name,
+	}
+
+	for _, s := range r.Settings {
+		if s.Weight == nil {
+			continue
+		}
+
+		if len(s.Endpoints) > 0 {
+			w.Valid += *s.Weight
+		} else {
+			w.Invalid += *s.Weight
+		}
+	}
+
+	return w
+}
+
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
-	// Weight associated with this destination.
-	// Note: Weight is not used in TCP/UDP route.
+	// Weight associated with this destination,
+	// invalid endpoints are represents with a
+	// non-zero weight with an empty endpoints list
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
+	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 
-	TLS *TLSUpstreamConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	TLS     *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
+	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
-func (d DestinationSetting) Validate() error {
+func (d *DestinationSetting) Validate() error {
 	var errs error
 	for _, ep := range d.Endpoints {
 		if err := ep.Validate(); err != nil {
@@ -1179,8 +1224,12 @@ type TCPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// TLS holds information for configuring TLS on a listener.
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// EnableProxyProtocol enables the listener to interpret proxy protocol header
+	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
@@ -1306,6 +1355,15 @@ type UDPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// Route associated with UDP traffic to the listener.
+	Route *UDPRoute `json:"route,omitempty" yaml:"route,omitempty"`
+}
+
+// UDPRoute holds the route information associated with the UDP Route.
+// +k8s:deepcopy-gen=true
+type UDPRoute struct {
+	// Name of the UDPRoute.
+	Name string `json:"name" yaml:"name"`
 	// Destination associated with UDP traffic to the service.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
@@ -1326,8 +1384,25 @@ func (h UDPListener) Validate() error {
 	if h.Port == 0 {
 		errs = errors.Join(errs, ErrListenerPortInvalid)
 	}
-	if h.Destination != nil {
-		if err := h.Destination.Validate(); err != nil {
+
+	if h.Route != nil {
+		if err := h.Route.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
+}
+
+func (u UDPRoute) Validate() error {
+	var errs error
+
+	if u.Name == "" {
+		errs = errors.Join(errs, ErrRouteNameEmpty)
+	}
+
+	if u.Destination != nil {
+		if err := u.Destination.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1426,11 +1501,11 @@ type JSONAccessLog struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	Text       *string           `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	Host       string            `json:"host" yaml:"host"`
-	Port       uint32            `json:"port" yaml:"port"`
-	Resources  map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Authority   string            `json:"authority,omitempty" yaml:"authority,omitempty"`
+	Text        *string           `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -1485,10 +1560,10 @@ type JSONPatchOperation struct {
 // +k8s:deepcopy-gen=true
 type Tracing struct {
 	ServiceName  string                      `json:"serviceName"`
-	Host         string                      `json:"host"`
-	Port         uint32                      `json:"port"`
+	Authority    string                      `json:"authority,omitempty"`
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Destination  RouteDestination            `json:"destination,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -2034,4 +2109,17 @@ type HTTPWasmCode struct {
 
 	// SHA256 checksum that will be used to verify the wasm code.
 	SHA256 string `json:"sha256"`
+}
+
+// DestinationFilters contains HTTP filters that will be used with the DestinationSetting.
+// +k8s:deepcopy-gen=true
+type DestinationFilters struct {
+	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
+	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
+	// RemoveRequestHeaders defines a list of headers to be removed from requests.
+	RemoveRequestHeaders []string `json:"removeRequestHeaders,omitempty" yaml:"removeRequestHeaders,omitempty"`
+	// AddResponseHeaders defines header/value sets to be added to the headers of response.
+	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
+	// RemoveResponseHeaders defines a list of headers to be removed from response.
+	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 }

@@ -104,10 +104,29 @@ type HeaderSettings struct {
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 
+	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+	//
+	// x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate
+	// information of part or all of the clients or proxies that a request has flowed through,
+	// on its way from the client to the server.
+	//
+	// Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.
+	//
+	// If not set, the default behavior is sanitizing the XFCC header.
+	// +optional
+	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty"`
+
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.
 	// +optional
 	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
+
+	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
+	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
+	// It defaults to false.
+	//
+	// +optional
+	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -127,6 +146,65 @@ const (
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
 )
 
+// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +kubebuilder:validation:XValidation:rule="(has(self.certDetailsToAdd) && self.certDetailsToAdd.size() > 0) ? (self.mode == 'AppendForward' || self.mode == 'SanitizeSet') : true",message="certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet"
+type XForwardedClientCert struct {
+	// Mode defines how XFCC header is handled by Envoy Proxy.
+	// If not set, the default mode is `Sanitize`.
+	// +optional
+	Mode *XFCCForwardMode `json:"mode,omitempty"`
+
+	// CertDetailsToAdd specifies the fields in the client certificate to be forwarded in the XFCC header.
+	//
+	// Hash(the SHA 256 digest of the current client certificate) and By(the Subject Alternative Name)
+	// are always included if the client certificate is forwarded.
+	//
+	// This field is only applicable when the mode is set to `AppendForward` or
+	// `SanitizeSet` and the client connection is mTLS.
+	// +kubebuilder:validation:MaxItems=5
+	// +optional
+	CertDetailsToAdd []XFCCCertData `json:"certDetailsToAdd,omitempty"`
+}
+
+// XFCCForwardMode defines how XFCC header is handled by Envoy Proxy.
+// +kubebuilder:validation:Enum=Sanitize;ForwardOnly;AppendForward;SanitizeSet;AlwaysForwardOnly
+type XFCCForwardMode string
+
+const (
+	// XFCCForwardModeSanitize removes the XFCC header from the request. This is the default mode.
+	XFCCForwardModeSanitize XFCCForwardMode = "Sanitize"
+
+	// XFCCForwardModeForwardOnly forwards the XFCC header in the request if the client connection is mTLS.
+	XFCCForwardModeForwardOnly XFCCForwardMode = "ForwardOnly"
+
+	// XFCCForwardModeAppendForward appends the client certificate information to the request’s XFCC header and forward it if the client connection is mTLS.
+	XFCCForwardModeAppendForward XFCCForwardMode = "AppendForward"
+
+	// XFCCForwardModeSanitizeSet resets the XFCC header with the client certificate information and forward it if the client connection is mTLS.
+	// The existing certificate information in the XFCC header is removed.
+	XFCCForwardModeSanitizeSet XFCCForwardMode = "SanitizeSet"
+
+	// XFCCForwardModeAlwaysForwardOnly always forwards the XFCC header in the request, regardless of whether the client connection is mTLS.
+	XFCCForwardModeAlwaysForwardOnly XFCCForwardMode = "AlwaysForwardOnly"
+)
+
+// XFCCCertData specifies the fields in the client certificate to be forwarded in the XFCC header.
+// +kubebuilder:validation:Enum=Subject;Cert;Chain;DNS;URI
+type XFCCCertData string
+
+const (
+	// XFCCCertDataSubject is the Subject field of the current client certificate.
+	XFCCCertDataSubject XFCCCertData = "Subject"
+	// XFCCCertDataCert is the entire client certificate in URL encoded PEM format.
+	XFCCCertDataCert XFCCCertData = "Cert"
+	// XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.
+	XFCCCertDataChain XFCCCertData = "Chain"
+	// XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.
+	XFCCCertDataDNS XFCCCertData = "DNS"
+	// XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.
+	XFCCCertDataURI XFCCCertData = "URI"
+)
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction with xForwardedFor"
@@ -136,7 +214,7 @@ type ClientIPDetectionSettings struct {
 	// +optional
 	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
 	// CustomHeader provides configuration for determining the client IP address for a request based on
-	// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+	// a trusted custom HTTP header. This uses the custom_header original IP detection extension.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 	// for more details.
 	//

@@ -10,12 +10,13 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    circuitBreaker:
-      maxConnections: 1
-      maxPendingRequests: 1
-      maxParallelRequests: 1
-      maxParallelRetries: 2
-      maxRequestsPerConnection: 10
+    traffic:
+      circuitBreaker:
+        maxConnections: 1
+        maxPendingRequests: 1
+        maxParallelRequests: 1
+        maxParallelRetries: 2
+        maxRequestsPerConnection: 10
     destination:
       name: "first-route-dest"
       settings:

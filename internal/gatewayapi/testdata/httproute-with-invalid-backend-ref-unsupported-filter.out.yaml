@@ -53,11 +53,11 @@ httpRoutes:
     rules:
     - backendRefs:
       - filters:
-        - responseHeaderModifier:
-            set:
-            - name: set-header-1
-              value: some-value
-          type: ResponseHeaderModifier
+        - requestRedirect:
+            hostname: redirected.com
+            scheme: https
+            statusCode: 301
+          type: RequestRedirect
         name: service-1
         port: 8080
       matches:
@@ -73,7 +73,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: The filters field within BackendRef is not supported
+        message: Specific filter is not supported within BackendRef, only RequestHeaderModifier
+          and ResponseHeaderModifier are supported
         reason: UnsupportedRefValue
         status: "False"
         type: ResolvedRefs
@@ -113,9 +114,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
         hostname: '*'

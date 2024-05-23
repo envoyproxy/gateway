@@ -1,5 +1,5 @@
 ---
-title: "快速开始"
+title: "快速入门"
 weight: 1
 description: 只需几个简单的步骤即可开始使用 Envoy Gateway。
 ---
@@ -122,4 +122,4 @@ helm uninstall eg -n envoy-gateway-system
 
 ## 接下来 {#next-steps}
 
-浏览[开发者指南](../contributions/develop) ，了解如何参与项目。
+浏览[开发者指南](../../contributions/develop) ，了解如何参与项目。

@@ -18,4 +18,17 @@ http:
                   port: 50000
     connection:
       bufferLimit: 1500
-
+tcp:
+  - name: "second-listener"
+    address: "0.0.0.0"
+    connection:
+      bufferLimit: 1500
+    port: 10081
+    routes:
+      - name: "tcp-route-dest"
+        destination:
+          name: "tcp-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000

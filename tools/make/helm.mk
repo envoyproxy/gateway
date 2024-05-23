@@ -28,9 +28,15 @@ helm-install: helm-generate ## Install envoy gateway helm chart from OCI registr
 
 .PHONY: helm-generate
 helm-generate:
-	ImageRepository=${IMAGE} ImageTag=${TAG} ImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
+	GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
 	helm lint charts/gateway-helm
 
-helm-template: ## Template envoy gateway helm chart.
+HELM_VALUES := $(wildcard test/helm/*.in.yaml)
+
+helm-template: ## Template envoy gateway helm chart.z
 	@$(LOG_TARGET)
-	helm template eg charts/gateway-helm --set deployment.envoyGateway.image.tag=latest --set config.envoyGateway.provider.kubernetes.shutdownManager.image="docker.io/envoyproxy/gateway-dev:latest" > ./test/helm/default.yaml --namespace=envoy-gateway-system
+	@for file in $(HELM_VALUES); do \
+  		filename=$$(basename $${file}); \
+  		output="$${filename%.in.*}.out.yaml"; \
+		helm template eg charts/gateway-helm -f $${file} > test/helm/$$output --namespace=envoy-gateway-system; \
+	done
