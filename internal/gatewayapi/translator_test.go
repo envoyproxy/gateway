@@ -476,8 +476,8 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			got := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 			// Also fix lastTransitionTime in unstructured members
-			for i := range got.ExtServerPolicies {
-				field.SetMapValues(got.ExtServerPolicies[i].Object, "lastTransitionTime", nil)
+			for i := range got.ExtensionServerPolicies {
+				field.SetMapValues(got.ExtensionServerPolicies[i].Object, "lastTransitionTime", nil)
 			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")

@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/gateway-api/apis/v1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -250,8 +250,8 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.ExtServerPolicies != nil {
-		in, out := &in.ExtServerPolicies, &out.ExtServerPolicies
+	if in.ExtensionServerPolicies != nil {
+		in, out := &in.ExtensionServerPolicies, &out.ExtensionServerPolicies
 		*out = make([]unstructured.Unstructured, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

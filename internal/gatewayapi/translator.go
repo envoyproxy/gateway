@@ -9,7 +9,6 @@ import (
 	"sort"
 
 	"golang.org/x/exp/maps"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -109,8 +108,9 @@ type Translator struct {
 
 type TranslateResult struct {
 	Resources
-	XdsIR   XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
-	InfraIR InfraIRMap `json:"infraIR" yaml:"infraIR"`
+	XdsIR        XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
+	InfraIR      InfraIRMap `json:"infraIR" yaml:"infraIR"`
+	LoggedErrors []string   `json:"loggedErrors,omitempty" yaml:"loggedErrors,omitempty"`
 }
 
 func newTranslateResult(gateways []*GatewayContext,
@@ -124,7 +124,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	securityPolicies []*egv1a1.SecurityPolicy,
 	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
-	extPolicies []unstructured.Unstructured,
+	extPolicies ExtensionServerPoliciesResult,
 	xdsIR XdsIRMap, infraIR InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -156,7 +156,9 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
 	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
 	translateResult.EnvoyExtensionPolicies = append(translateResult.EnvoyExtensionPolicies, envoyExtensionPolicies...)
-	translateResult.ExtServerPolicies = append(translateResult.ExtServerPolicies, extPolicies...)
+	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies.AcceptedPolicies...)
+	// If any future translation mechanism has errors to log - aggregate them into the TranslateResult
+	translateResult.LoggedErrors = append(translateResult.LoggedErrors, extPolicies.Errors...)
 
 	return translateResult
 }
@@ -231,7 +233,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 		resources.EnvoyExtensionPolicies, gateways, routes, resources, xdsIR)
 
 	extServerPolicies := t.ProcessExtensionServerPolicies(
-		resources.ExtServerPolicies, gateways, xdsIR)
+		resources.ExtensionServerPolicies, gateways, xdsIR)
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)

@@ -22,12 +22,18 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
+type ExtensionServerPoliciesResult struct {
+	AcceptedPolicies []unstructured.Unstructured
+	Errors           []string
+}
+
 func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unstructured,
 	gateways []*GatewayContext,
 	xdsIR XdsIRMap,
-) []unstructured.Unstructured {
-	var res []unstructured.Unstructured
-
+) ExtensionServerPoliciesResult {
+	res := ExtensionServerPoliciesResult{
+		AcceptedPolicies: []unstructured.Unstructured{},
+	}
 	// Sort based on timestamp
 	sort.Slice(policies, func(i, j int) bool {
 		iTime := policies[i].GetCreationTimestamp()
@@ -47,16 +53,15 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	for _, policy := range policies {
 		policy := policy.DeepCopy()
 		var policyStatus gwv1a2.PolicyStatus
-		res = append(res, *policy)
+		accepted := false
 		targetRefs, err := extractTargetRefs(policy)
 		if err != nil {
-			t.Logger.Sugar().Errorf("error finding targetRefs for policy %s: %w", policy.GetName(), err)
+			res.Errors = append(res.Errors, fmt.Sprintf("error finding targetRefs for policy %s: %s", policy.GetName(), err))
 			continue
 		}
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind != KindGateway {
-				// TODO: mark this targetRef as an error
-				t.Logger.Sugar().Errorf("extension policy %s doesn't target a Gateway", policy.GetName())
+				res.Errors = append(res.Errors, fmt.Sprintf("extension policy %s doesn't target a Gateway", policy.GetName()))
 				continue
 			}
 
@@ -84,10 +89,13 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 					getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
 				}
 				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName)
+				accepted = true
 			}
-
 		}
-		policy.Object["status"] = policyStatusToUnstructured(policyStatus)
+		if accepted {
+			res.AcceptedPolicies = append(res.AcceptedPolicies, *policy)
+			policy.Object["status"] = policyStatusToUnstructured(policyStatus)
+		}
 	}
 
 	return res

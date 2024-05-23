@@ -100,6 +100,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 				// Translate to IR
 				result := t.Translate(resources)
+				if result.LoggedErrors != nil {
+					r.Logger.Sugar().Errorf("errors detected during translation: %s", result.LoggedErrors)
+				}
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.
@@ -198,7 +201,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					}
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
-				for _, extServerPolicy := range result.ExtServerPolicies {
+				for _, extServerPolicy := range result.ExtensionServerPolicies {
 					extServerPolicy := extServerPolicy
 					key := message.NamespacedNameAndGVK{
 						NamespacedName:   utils.NamespacedName(&extServerPolicy),

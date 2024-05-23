@@ -232,7 +232,7 @@ func TestProcessExtensionPolicies(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree has the extensions
 				for _, policy := range tc.extensionPolicies {
-					require.Contains(t, resourceTree.ExtServerPolicies, *policy)
+					require.Contains(t, resourceTree.ExtensionServerPolicies, *policy)
 				}
 			} else {
 				require.Error(t, err)

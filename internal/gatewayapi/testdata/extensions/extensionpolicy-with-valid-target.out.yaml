@@ -1,4 +1,4 @@
-extServerPolicies:
+extensionServerPolicies:
 - apiVersion: foo.example.io/v1alpha1
   kind: Bar
   metadata:

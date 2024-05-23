@@ -1744,7 +1744,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			}
 
 			delete(policy.Object, "status")
-			resourceTree.ExtServerPolicies = append(resourceTree.ExtServerPolicies, policy)
+			resourceTree.ExtensionServerPolicies = append(resourceTree.ExtensionServerPolicies, policy)
 		}
 	}
 
