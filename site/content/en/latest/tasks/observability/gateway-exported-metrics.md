@@ -71,7 +71,26 @@ Envoy Gateway collects the following metrics in xDS Server:
 | `xds_stream_duration_seconds`       | How long a xds stream takes to finish.                        |
 | `xds_delta_stream_duration_seconds` | How long a xds delta stream takes to finish.                  |
 
-For xDS snapshot cache update and xDS stream connection status, each metric includes `nodeID` label to identify the connection peer.
-For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream.
+- For xDS snapshot cache update and xDS stream connection status, each metric includes `nodeID` label to identify the connection peer.
+- For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream.
+
+## Infrastructure Manager
+
+Envoy Gateway monitors the create/update and delete operations in Infrastructure Manager.
+
+Envoy Gateway collects the following metrics in Infrastructure Manager:
+
+| Name                                      | Description                                                              |
+|-------------------------------------------|--------------------------------------------------------------------------|
+| `infra_create_or_update_failed`           | Number of created or updated infrastructures that failed.                |
+| `infra_create_or_update_success`          | Number of created or updated infrastructures that succeed.               |
+| `infra_create_or_update_duration_seconds` | How long in seconds a infrastructure is created or updated successfully. |
+| `infra_delete_failed`                     | Number of deleted infrastructures that failed.                           |
+| `infra_delete_success`                    | Number of deleted infrastructures that succeed.                          |
+| `infra_delete_duration_seconds`           | How long in seconds a infrastructure is deleted successfully.            |
+
+Each metric includes the `kind` label to identify the corresponding resources created/updated or deleted by Infrastructure Manager.
+
+Metrics may also include `infra` label to identify the kind of corresponding Infrastructure Manager.
 
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format
