@@ -48,3 +48,76 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+tcp:
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10081
+  tls:
+    ciphers:
+    - ECDHE-ECDSA-AES128-GCM-SHA256
+    - ECDHE-RSA-AES128-GCM-SHA256
+    - ECDHE-ECDSA-AES256-GCM-SHA384
+    - ECDHE-RSA-AES256-GCM-SHA384
+    ecdhCurves:
+    - X25519
+    - P-256
+    signatureAlgorithms:
+    - ecdsa_secp256r1_sha256
+    - rsa_pss_rsae_sha256
+    - rsa_pkcs1_sha256
+    - ecdsa_secp384r1_sha384
+    - rsa_pss_rsae_sha384
+    - rsa_pkcs1_sha384
+    - rsa_pss_rsae_sha512
+    - rsa_pkcs1_sha512
+    - rsa_pkcs1_sha1
+    maxVersion: "1.2"
+    minVersion: "1.0"
+    alpnProtocols:
+    - some-other-protocol
+    certificates:
+    - name: secret-3
+      # byte slice representation of "key-data"
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "tls-route-terminate"
+    tls:
+      terminate:
+        ciphers:
+        - ECDHE-ECDSA-AES128-GCM-SHA256
+        - ECDHE-RSA-AES128-GCM-SHA256
+        - ECDHE-ECDSA-AES256-GCM-SHA384
+        - ECDHE-RSA-AES256-GCM-SHA384
+        ecdhCurves:
+        - X25519
+        - P-256
+        signatureAlgorithms:
+        - ecdsa_secp256r1_sha256
+        - rsa_pss_rsae_sha256
+        - rsa_pkcs1_sha256
+        - ecdsa_secp384r1_sha384
+        - rsa_pss_rsae_sha384
+        - rsa_pkcs1_sha384
+        - rsa_pss_rsae_sha512
+        - rsa_pkcs1_sha512
+        - rsa_pkcs1_sha1
+        maxVersion: "1.2"
+        minVersion: "1.0"
+        alpnProtocols:
+        - some-other-protocol
+        certificates:
+        - name: secret-3
+          # byte slice representation of "key-data"
+          serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+          # byte slice representation of "key-data"
+          privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    destination:
+      name: "tls-terminate-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        - host: "5.6.7.8"
+          port: 50001

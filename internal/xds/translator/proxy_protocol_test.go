@@ -11,8 +11,6 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/stretchr/testify/require"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestPatchProxyProtocolFilter(t *testing.T) {
@@ -21,9 +19,7 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 		listener *listenerv3.Listener
 	}
 
-	irListener := &ir.HTTPListener{
-		EnableProxyProtocol: true,
-	}
+	enableProxyProtocol := true
 
 	testCases := []testCase{
 		{
@@ -50,7 +46,7 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			patchProxyProtocolFilter(tc.listener, irListener)
+			patchProxyProtocolFilter(tc.listener, enableProxyProtocol)
 			// proxy proto filter should be added always as first
 			require.Equal(t, wellknown.ProxyProtocol, tc.listener.ListenerFilters[0].Name)
 		})

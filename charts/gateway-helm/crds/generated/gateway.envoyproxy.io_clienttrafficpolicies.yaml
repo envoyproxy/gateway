@@ -162,6 +162,62 @@ spec:
                     - RejectRequest
                     - DropHeader
                     type: string
+                  xForwardedClientCert:
+                    description: |-
+                      XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+
+
+                      x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate
+                      information of part or all of the clients or proxies that a request has flowed through,
+                      on its way from the client to the server.
+
+
+                      Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.
+
+
+                      If not set, the default behavior is sanitizing the XFCC header.
+                    properties:
+                      certDetailsToAdd:
+                        description: |-
+                          CertDetailsToAdd specifies the fields in the client certificate to be forwarded in the XFCC header.
+
+
+                          Hash(the SHA 256 digest of the current client certificate) and By(the Subject Alternative Name)
+                          are always included if the client certificate is forwarded.
+
+
+                          This field is only applicable when the mode is set to `AppendForward` or
+                          `SanitizeSet` and the client connection is mTLS.
+                        items:
+                          description: XFCCCertData specifies the fields in the client
+                            certificate to be forwarded in the XFCC header.
+                          enum:
+                          - Subject
+                          - Cert
+                          - Chain
+                          - DNS
+                          - URI
+                          type: string
+                        maxItems: 5
+                        type: array
+                      mode:
+                        description: |-
+                          Mode defines how XFCC header is handled by Envoy Proxy.
+                          If not set, the default mode is `Sanitize`.
+                        enum:
+                        - Sanitize
+                        - ForwardOnly
+                        - AppendForward
+                        - SanitizeSet
+                        - AlwaysForwardOnly
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: certDetailsToAdd can only be set when mode is AppendForward
+                        or SanitizeSet
+                      rule: '(has(self.certDetailsToAdd) && self.certDetailsToAdd.size()
+                        > 0) ? (self.mode == ''AppendForward'' || self.mode == ''SanitizeSet'')
+                        : true'
                 type: object
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.

@@ -67,7 +67,7 @@ func conditionChanged(a, b metav1.Condition) bool {
 
 // Error2ConditionMsg format the error string to a Status condition message.
 // * Convert the first letter to capital
-// * Append "." to the string if it doesn't exit
+// * Append "." to the string if it doesn't exist
 func Error2ConditionMsg(err error) string {
 	if err == nil {
 		return ""
@@ -84,6 +84,12 @@ func Error2ConditionMsg(err error) string {
 	// Check if the first rune is a letter and convert it to uppercase
 	if unicode.IsLetter(runes[0]) {
 		runes[0] = unicode.ToUpper(runes[0])
+	}
+
+	// Check if the last rune is a punctuation '.' and append it if not
+	last := runes[len(runes)-1]
+	if !unicode.IsPunct(last) || last != '.' {
+		runes = append(runes, '.')
 	}
 
 	// Convert the rune slice back to a string
