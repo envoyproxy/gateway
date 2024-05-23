@@ -46,11 +46,15 @@ type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	//
-	// The client IP is inferred from the x-forwarder-for header, a custom header,
+	// The client IP is inferred from the X-Forwarded-For header, a custom header,
 	// or the proxy protocol.
 	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
-	ClientCIDRs []CIDR `json:"clientCIDRs,omitempty"`
+	// +kubebuilder:validation:MinItems=1
+	ClientCIDRs []CIDR `json:"clientCIDRs"`
+
+	// TODO: Zhaohuabing the MinItems=1 validation can be relaxed to allow empty list
+	// after other principal types are supported. However, at least one principal is required
 }
 
 // AuthorizationAction defines the action to be taken if a rule matches.
