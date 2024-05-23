@@ -30,3 +30,16 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+tcp:
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10081
+  enableProxyProtocol: true
+  routes:
+  - name: "tcp-route-dest"
+    destination:
+      name: "tls-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

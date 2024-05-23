@@ -14,7 +14,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-
 	corev1 "k8s.io/api/core/v1"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"

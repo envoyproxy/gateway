@@ -373,6 +373,15 @@ const (
 	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
 )
 
+// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +k8s:deepcopy-gen=true
+type XForwardedClientCert struct {
+	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	Mode egv1a1.XFCCForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
+	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
+	CertDetailsToAdd []egv1a1.XFCCCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
+}
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
@@ -419,10 +428,19 @@ type HeaderSettings struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
 
+	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
+	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
+	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty" yaml:"xForwardedClientCert,omitempty"`
+
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
 	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
+
+	// PreserveXRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
+	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
+	// It defaults to false.
+	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -964,7 +982,8 @@ type DestinationSetting struct {
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 
-	TLS *TLSUpstreamConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	TLS     *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
+	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1205,8 +1224,12 @@ type TCPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// TLS holds information for configuring TLS on a listener.
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// EnableProxyProtocol enables the listener to interpret proxy protocol header
+	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
@@ -1478,11 +1501,11 @@ type JSONAccessLog struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	Text       *string           `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	Host       string            `json:"host" yaml:"host"`
-	Port       uint32            `json:"port" yaml:"port"`
-	Resources  map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Authority   string            `json:"authority,omitempty" yaml:"authority,omitempty"`
+	Text        *string           `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -1537,10 +1560,10 @@ type JSONPatchOperation struct {
 // +k8s:deepcopy-gen=true
 type Tracing struct {
 	ServiceName  string                      `json:"serviceName"`
-	Host         string                      `json:"host"`
-	Port         uint32                      `json:"port"`
+	Authority    string                      `json:"authority,omitempty"`
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Destination  RouteDestination            `json:"destination,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -2086,4 +2109,17 @@ type HTTPWasmCode struct {
 
 	// SHA256 checksum that will be used to verify the wasm code.
 	SHA256 string `json:"sha256"`
+}
+
+// DestinationFilters contains HTTP filters that will be used with the DestinationSetting.
+// +k8s:deepcopy-gen=true
+type DestinationFilters struct {
+	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
+	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
+	// RemoveRequestHeaders defines a list of headers to be removed from requests.
+	RemoveRequestHeaders []string `json:"removeRequestHeaders,omitempty" yaml:"removeRequestHeaders,omitempty"`
+	// AddResponseHeaders defines header/value sets to be added to the headers of response.
+	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
+	// RemoveResponseHeaders defines a list of headers to be removed from response.
+	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 }

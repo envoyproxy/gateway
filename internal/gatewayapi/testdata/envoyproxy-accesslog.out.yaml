@@ -134,8 +134,15 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
-      - host: otel-collector.monitoring.svc.cluster.local
-        port: 4317
+      - authority: otel-collector.monitoring.svc.cluster.local
+        destination:
+          name: accesslog-0
+          settings:
+          - endpoints:
+            - host: otel-collector.monitoring.svc.cluster.local
+              port: 4317
+            protocol: GRPC
+            weight: 1
         resources:
           k8s.cluster.name: cluster-1
         text: |

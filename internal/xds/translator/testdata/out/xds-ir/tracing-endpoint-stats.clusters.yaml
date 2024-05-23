@@ -27,19 +27,19 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+    clusterName: tracing-0
     endpoints:
     - lbEndpoints:
       - endpoint:
           address:
             socketAddress:
-              address: otel-collector.monitoring.svc.cluster.local
+              address: otel-collector.default.svc.cluster.local
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: tracing|otel-collector.monitoring.svc.cluster.local|4317/backend/0
-  name: tracing|otel-collector.monitoring.svc.cluster.local|4317
+        region: tracing-0/backend/0
+  name: tracing-0
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
