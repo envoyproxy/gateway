@@ -23,7 +23,6 @@ import (
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
-	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -179,8 +178,8 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				GrpcService: &cfgcore.GrpcService{
 					TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{
 						EnvoyGrpc: &cfgcore.GrpcService_EnvoyGrpc{
-							ClusterName: buildClusterName("accesslog", otel.Host, otel.Port),
-							Authority:   otel.Host,
+							ClusterName: otel.Destination.Name,
+							Authority:   otel.Authority,
 						},
 					},
 				},
@@ -334,23 +333,15 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	}
 
 	for _, otel := range al.OpenTelemetry {
-		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
-
-		ds := &ir.DestinationSetting{
-			Weight:    ptr.To[uint32](1),
-			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
-		}
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         clusterName,
-			settings:     []*ir.DestinationSetting{ds},
+			name:         otel.Destination.Name,
+			settings:     otel.Destination.Settings,
 			tSocket:      nil,
 			endpointType: EndpointTypeDNS,
 			metrics:      metrics,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
-
 	}
 
 	return nil

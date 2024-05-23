@@ -221,6 +221,19 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
+		// Process the parametersRef of the accepted GatewayClass.
+		// This should run before processBackendRefs
+		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+			if err := r.processParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
+				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
+					r.log.Error(err, "unable to update GatewayClass status")
+				}
+				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
+				return reconcile.Result{}, err
+			}
+		}
+
 		// Add the referenced services, ServiceImports, and EndpointSlices in
 		// the collected BackendRefs to the resourceTree.
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
@@ -239,18 +252,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 
 			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
-		}
-
-		// Process the parametersRef of the accepted GatewayClass.
-		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
-			if err := r.processParamsRef(ctx, managedGC, gwcResource); err != nil {
-				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
-					r.log.Error(err, "unable to update GatewayClass status")
-				}
-				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
-				return reconcile.Result{}, err
-			}
 		}
 
 		if gwcResource.EnvoyProxy != nil && gwcResource.EnvoyProxy.Spec.MergeGateways != nil {
@@ -1451,7 +1452,7 @@ func (r *gatewayAPIReconciler) hasManagedClass(ep *egv1a1.EnvoyProxy) bool {
 }
 
 // processParamsRef processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceTree *gatewayapi.Resources) error {
+func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	if !refsEnvoyProxy(gc) {
 		return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
 	}
@@ -1480,6 +1481,60 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 				validationErr = fmt.Errorf("invalid envoyproxy: %w", err)
 				continue
 			}
+
+			if ep.Spec.Telemetry != nil {
+				telemetry := ep.Spec.Telemetry
+
+				if telemetry.AccessLog != nil {
+					for _, setting := range telemetry.AccessLog.Settings {
+						for _, sink := range setting.Sinks {
+							if sink.OpenTelemetry == nil {
+								continue
+							}
+							for _, backendRef := range sink.OpenTelemetry.BackendRefs {
+								backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
+								resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+									Group:     backendRef.BackendObjectReference.Group,
+									Kind:      backendRef.BackendObjectReference.Kind,
+									Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+									Name:      backendRef.Name,
+								}] = struct{}{}
+							}
+						}
+					}
+				}
+
+				if telemetry.Metrics != nil {
+					for _, sink := range telemetry.Metrics.Sinks {
+						if sink.OpenTelemetry == nil {
+							continue
+						}
+						for _, backendRef := range sink.OpenTelemetry.BackendRefs {
+							backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
+							resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+								Group:     backendRef.BackendObjectReference.Group,
+								Kind:      backendRef.BackendObjectReference.Kind,
+								Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+								Name:      backendRef.Name,
+							}] = struct{}{}
+						}
+					}
+				}
+
+				if telemetry.Tracing != nil {
+					for _, backendRef := range telemetry.Tracing.Provider.BackendRefs {
+						backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
+						resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+							Group:     backendRef.BackendObjectReference.Group,
+							Kind:      backendRef.BackendObjectReference.Kind,
+							Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+							Name:      backendRef.Name,
+						}] = struct{}{}
+
+					}
+				}
+			}
+
 			valid = true
 			resourceTree.EnvoyProxy = &ep
 			break

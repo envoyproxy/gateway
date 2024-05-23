@@ -484,6 +484,13 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
+		// Add the proxy protocol filter if needed
+		// TODO: should make sure all listeners that will be translated into same xDS listener have
+		// same EnableProxyProtocol value, otherwise listeners with EnableProxyProtocol=false will
+		// never accept connection, because listeners with EnableProxyProtocol=true has configured
+		// proxy protocol listener filter for xDS listener, all connection must have ProxyProtocol header.
+		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
+
 		for _, route := range tcpListener.Routes {
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
 				name:           route.Destination.Name,

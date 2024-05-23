@@ -1062,18 +1062,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			accepted = true
 			irKey := t.getIRKey(listener.gateway)
 
-			var tls *ir.TLS
-			if len(listener.tlsSecrets) > 0 {
-				tls = &ir.TLS{
-					Terminate: irTLSConfigs(listener.tlsSecrets),
-				}
-			}
-
-			if listener.Hostname != nil {
-				tls.TLSInspectorConfig = &ir.TLSInspectorConfig{
-					SNIs: []string{string(*listener.Hostname)},
-				}
-			}
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
@@ -1083,8 +1071,18 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
 						Settings: destSettings,
 					},
-					TLS: tls,
 				}
+
+				if irListener.TLS != nil {
+					irRoute.TLS = &ir.TLS{Terminate: irListener.TLS}
+
+					if listener.Hostname != nil {
+						irRoute.TLS.TLSInspectorConfig = &ir.TLSInspectorConfig{
+							SNIs: []string{string(*listener.Hostname)},
+						}
+					}
+				}
+
 				irListener.Routes = append(irListener.Routes, irRoute)
 
 			}
@@ -1148,7 +1146,6 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		addrType  *ir.DestinationAddressType
 	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
-	var backendTLS *ir.TLSUpstreamConfig
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindServiceImport:
 		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -1172,35 +1169,16 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				endpoints = append(endpoints, ep)
 			}
 		}
+
+		ds = &ir.DestinationSetting{
+			Weight:      &weight,
+			Protocol:    protocol,
+			Endpoints:   endpoints,
+			AddressType: addrType,
+		}
 	case KindService:
-		service := resources.GetService(backendNamespace, string(backendRef.Name))
-		var servicePort corev1.ServicePort
-		for _, port := range service.Spec.Ports {
-			if port.Port == int32(*backendRef.Port) {
-				servicePort = port
-				break
-			}
-		}
-
-		// support HTTPRouteBackendProtocolH2C
-		if servicePort.AppProtocol != nil &&
-			*servicePort.AppProtocol == "kubernetes.io/h2c" {
-			protocol = ir.HTTP2
-		}
-
-		// Route to endpoints by default
-		if !t.EndpointRoutingDisabled {
-			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
-		} else {
-			// Fall back to Service ClusterIP routing
-			ep := ir.NewDestEndpoint(
-				service.Spec.ClusterIP,
-				uint32(*backendRef.Port))
-			endpoints = append(endpoints, ep)
-		}
-
-		backendTLS = t.processBackendTLSPolicy(
+		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds.TLS = t.processBackendTLSPolicy(
 			backendRef.BackendObjectReference,
 			backendNamespace,
 			gwapiv1a2.ParentReference{
@@ -1212,6 +1190,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				Port:        parentRef.Port,
 			},
 			resources)
+		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
@@ -1225,17 +1204,51 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			gwapiv1a2.RouteReasonResolvedRefs,
 			"Mixed endpointslice address type for the same backendRef is not supported")
 	}
-	destinationFilters := t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-	ds = &ir.DestinationSetting{
-		Weight:      &weight,
+
+	ds.Weight = &weight
+	return ds
+}
+
+func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string,
+	protocol ir.AppProtocol, resources *Resources,
+) *ir.DestinationSetting {
+	var (
+		endpoints []*ir.DestinationEndpoint
+		addrType  *ir.DestinationAddressType
+	)
+
+	service := resources.GetService(backendNamespace, string(backendRef.Name))
+	var servicePort corev1.ServicePort
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	// support HTTPRouteBackendProtocolH2C
+	if servicePort.AppProtocol != nil &&
+		*servicePort.AppProtocol == "kubernetes.io/h2c" {
+		protocol = ir.HTTP2
+	}
+
+	// Route to endpoints by default
+	if !t.EndpointRoutingDisabled {
+		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		ep := ir.NewDestEndpoint(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port))
+		endpoints = append(endpoints, ep)
+	}
+
+	return &ir.DestinationSetting{
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
-		TLS:         backendTLS,
-		Filters:     destinationFilters,
 	}
-
-	return ds
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
@@ -1452,7 +1465,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	return endpoints
 }
 
-func GetTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, namespace string) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	ref := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 			Group: func() gwapiv1a2.Group {

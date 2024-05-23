@@ -24,12 +24,15 @@ func (t *Translator) processBackendTLSPolicy(
 	parent gwapiv1a2.ParentReference,
 	resources *Resources,
 ) *ir.TLSUpstreamConfig {
-	tlsBundle, err := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, backendRef, backendNamespace)
-	if err == nil && tlsBundle == nil {
+	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	if policy == nil {
 		return nil
 	}
 
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	tlsBundle, err := getBackendTLSBundle(policy, resources.ConfigMaps)
+	if err == nil && tlsBundle == nil {
+		return nil
+	}
 
 	ancestorRefs := []gwapiv1a2.ParentReference{
 		parent,
@@ -43,40 +46,6 @@ func (t *Translator) processBackendTLSPolicy(
 			status.Error2ConditionMsg(err),
 		)
 		return nil
-	}
-
-	// Check if the reference from BackendTLSPolicy to BackendRef is permitted by
-	// any ReferenceGrant
-	backendRefKind := KindService
-	if backendRef.Kind != nil {
-		backendRefKind = string(*backendRef.Kind)
-	}
-	if policy.Namespace != backendNamespace {
-		if !t.validateCrossNamespaceRef(
-			crossNamespaceFrom{
-				group:     gwapiv1.GroupName,
-				kind:      KindBackendTLSPolicy,
-				namespace: policy.Namespace,
-			},
-			crossNamespaceTo{
-				group:     "",
-				kind:      backendRefKind,
-				namespace: backendNamespace,
-				name:      string(backendRef.Name),
-			},
-			resources.ReferenceGrants,
-		) {
-			err = fmt.Errorf("target ref to %s %s/%s not permitted by any ReferenceGrant",
-				backendRefKind, backendNamespace, backendRef.Name)
-
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				status.Error2ConditionMsg(err),
-			)
-			return nil
-		}
 	}
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
@@ -109,12 +78,13 @@ func (t *Translator) processBackendTLSPolicy(
 	return tlsBundle
 }
 
-func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
+func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
 	// TODO: support multiple targetRefs
 	policyTarget := policy.Spec.TargetRefs[0]
 
 	if target.Group == policyTarget.Group &&
 		target.Kind == policyTarget.Kind &&
+		backendNamespace == policy.Namespace &&
 		target.Name == policyTarget.Name {
 		if policyTarget.SectionName != nil && *policyTarget.SectionName != *target.SectionName {
 			return false
@@ -125,22 +95,16 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 }
 
 func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a3.BackendTLSPolicy {
-	target := GetTargetBackendReference(backendRef, backendNamespace)
+	target := getTargetBackendReference(backendRef)
 	for _, policy := range policies {
-		if backendTLSTargetMatched(*policy, target) {
+		if backendTLSTargetMatched(*policy, target, backendNamespace) {
 			return policy
 		}
 	}
 	return nil
 }
 
-func getBackendTLSBundle(policies []*gwapiv1a3.BackendTLSPolicy, configmaps []*corev1.ConfigMap, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) (*ir.TLSUpstreamConfig, error) {
-	backendTLSPolicy := getBackendTLSPolicy(policies, backendRef, backendNamespace)
-
-	if backendTLSPolicy == nil {
-		return nil, nil
-	}
-
+func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, configmaps []*corev1.ConfigMap) (*ir.TLSUpstreamConfig, error) {
 	tlsBundle := &ir.TLSUpstreamConfig{
 		SNI:                 string(backendTLSPolicy.Spec.Validation.Hostname),
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
