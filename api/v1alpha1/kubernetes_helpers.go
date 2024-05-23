@@ -185,7 +185,7 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 
 	// Deserialize the patched JSON into a new deployment object
 	var patchedDeployment appv1.Deployment
-	if err = json.Unmarshal(patchedJSON, &patchedDeployment); err != nil {
+	if err := json.Unmarshal(patchedJSON, &patchedDeployment); err != nil {
 		return nil, fmt.Errorf("error unmarshaling patched deployment: %w", err)
 	}
 
