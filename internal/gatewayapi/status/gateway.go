@@ -16,6 +16,12 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+func UpdateGatewayListenersNotValidCondition(gw *gwapiv1.Gateway, reason gwapiv1.GatewayConditionReason, status metav1.ConditionStatus, msg string) *gwapiv1.Gateway {
+	cond := newCondition(string(gwapiv1.GatewayReasonListenersNotValid), status, string(reason), msg, time.Now(), gw.Generation)
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, cond)
+	return gw
+}
+
 // UpdateGatewayStatusAcceptedCondition updates the status condition for the provided Gateway based on the accepted state.
 func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) *gwapiv1.Gateway {
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayAcceptedCondition(gw, accepted))

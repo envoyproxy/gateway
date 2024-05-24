@@ -281,7 +281,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 
 	// Add the proxy protocol filter if needed
-	patchProxyProtocolFilter(xdsListener, irListener)
+	patchProxyProtocolFilter(xdsListener, irListener.EnableProxyProtocol)
 
 	if irListener.IsHTTP2 {
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
@@ -639,7 +639,7 @@ func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 		Type: &tlsv3.Secret_TlsCertificate{
 			TlsCertificate: &tlsv3.TlsCertificate{
 				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
 				},
 				PrivateKey: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
