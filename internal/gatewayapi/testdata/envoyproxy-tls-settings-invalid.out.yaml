@@ -21,7 +21,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: 'Failed to locate TLS secret for client auth: client-auth-not-found
-          in namespace: envoy-gateway-system'
+          in namespace: envoy-gateway-system.'
         reason: Invalid
         status: "False"
         type: Accepted
