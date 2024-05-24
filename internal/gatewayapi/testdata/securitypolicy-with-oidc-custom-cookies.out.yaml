@@ -110,7 +110,7 @@ securityPolicies:
         kind: null
         name: client1-secret
       cookieNames:
-        bearerToken: CustomBearerTokenCookie
+        accessToken: CustomAccessTokenCookie
         idToken: CustomIdTokenCookie
       logoutPath: /bar/logout
       provider:
@@ -171,7 +171,7 @@ xdsIR:
             clientID: client1.apps.googleusercontent.com
             clientSecret: Y2xpZW50MTpzZWNyZXQK
             cookieNameOverrides:
-              bearerToken: CustomBearerTokenCookie
+              accessToken: CustomAccessTokenCookie
               idToken: CustomIdTokenCookie
             cookieSuffix: b0a1b740
             hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=

@@ -68,4 +68,4 @@ http:
         cookieSuffix: 5f93c2e4
         cookieNameOverrides:
           idToken: "CustomIdTokenOverride"
-          bearerToken: "CustomBearerTokenOverride"
+          accessToken: "CustomAccessTokenOverride"

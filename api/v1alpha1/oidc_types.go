@@ -84,11 +84,11 @@ type OIDCProvider struct {
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
 type OIDCCookieNames struct {
-	// The name of the cookie used to store the BearerToken in the
+	// The name of the cookie used to store the AccessToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	// If not specified, defaults to "BearerToken-(randomly generated uid)"
+	// If not specified, defaults to "AccessToken-(randomly generated uid)"
 	// +optional
-	BearerToken *string `json:"bearerToken,omitempty"`
+	AccessToken *string `json:"accessToken,omitempty"`
 	// The name of the cookie used to store the IdToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, defaults to "IdToken-(randomly generated uid)"

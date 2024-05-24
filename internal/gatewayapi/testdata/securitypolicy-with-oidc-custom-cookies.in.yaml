@@ -70,4 +70,4 @@ securityPolicies:
       logoutPath: "/bar/logout"
       cookieNames:
         idToken: "CustomIdTokenCookie"
-        bearerToken: "CustomBearerTokenCookie"
+        accessToken: "CustomAccessTokenCookie"
