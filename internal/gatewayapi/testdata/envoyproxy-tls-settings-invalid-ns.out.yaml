@@ -22,7 +22,7 @@ backendTLSPolicies:
       - lastTransitionTime: null
         message: 'Client authentication TLS secret is not located in the same namespace
           as Envoyproxy. Secret namespace: envoy-gateway-user-ns does not match Envoyproxy
-          namespace: envoy-gateway-system'
+          namespace: envoy-gateway-system.'
         reason: Invalid
         status: "False"
         type: Accepted
