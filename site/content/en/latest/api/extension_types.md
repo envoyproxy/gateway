@@ -2341,9 +2341,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: Use BackendRef instead. |
-| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRef instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the accesslog will be sent.<br />Only service Kind is supported for now. |
+| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
+| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the access log will be sent.<br />Only service Kind is supported for now. |
 | `resources` | _object (keys:string, values:string)_ |  false  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
@@ -2676,8 +2676,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  false  | Host define the service hostname.<br />Deprecated: Use BackendRef instead. |
-| `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRef instead. |
+| `host` | _string_ |  false  | Host define the service hostname.<br />Deprecated: Use BackendRefs instead. |
+| `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
 
 
