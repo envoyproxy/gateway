@@ -986,6 +986,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			epPredicates...)); err != nil {
 		return err
 	}
+	if err := addEnvoyProxyIndexers(ctx, mgr); err != nil {
+		return err
+	}
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
 	gPredicates := []predicate.TypedPredicate[*gwapiv1.Gateway]{
