@@ -10822,7 +10822,7 @@ spec:
                           backendRefs:
                             description: |-
                               BackendRefs references a Kubernetes object that represents the
-                              backend server to which the accesslog will be sent.
+                              backend server to which the trace will be sent.
                               Only service Kind is supported for now.
                             items:
                               description: BackendRef defines how an ObjectReference
@@ -10909,13 +10909,13 @@ spec:
                           host:
                             description: |-
                               Host define the provider service hostname.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             type: string
                           port:
                             default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             format: int32
                             minimum: 0
                             type: integer
