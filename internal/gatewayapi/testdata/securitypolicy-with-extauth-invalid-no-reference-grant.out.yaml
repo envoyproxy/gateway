@@ -105,8 +105,8 @@ securityPolicies:
     extAuth:
       failOpen: false
       http:
-        backendRef:
-          name: http-backend
+        backendRefs:
+        - name: http-backend
           namespace: envoy-gateway
           port: 80
         headersToBackend:

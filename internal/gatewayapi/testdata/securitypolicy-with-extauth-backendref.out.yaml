@@ -149,8 +149,8 @@ securityPolicies:
     extAuth:
       failOpen: true
       grpc:
-        backendRefs:
-        - name: grpc-backend
+        backendRef:
+          name: grpc-backend
           port: 9000
       headersToExtAuth:
       - header1
@@ -184,8 +184,8 @@ securityPolicies:
     extAuth:
       failOpen: false
       http:
-        backendRefs:
-        - name: http-backend
+        backendRef:
+          name: http-backend
           namespace: envoy-gateway
           port: 80
         headersToBackend:
