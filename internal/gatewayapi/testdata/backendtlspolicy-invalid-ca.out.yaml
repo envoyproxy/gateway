@@ -25,7 +25,7 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: No ca found in configmap no-ca-cmap
+        message: No ca found in configmap no-ca-cmap.
         reason: Invalid
         status: "False"
         type: Accepted

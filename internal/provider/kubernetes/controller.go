@@ -262,6 +262,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
+		// process envoy gateway secret refs
+		r.processEnvoyProxySecretRef(ctx, gwcResource)
+
 		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 			r.log.Error(err, "unable to update GatewayClass status")
 			return reconcile.Result{}, err
@@ -294,6 +297,27 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *gatewayapi.Resources) {
+	if gwcResource.EnvoyProxy == nil || gwcResource.EnvoyProxy.Spec.BackendTLS == nil || gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef == nil {
+		return
+	}
+	certRef := gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef
+	if refsSecret(certRef) {
+		if err := r.processSecretRef(
+			ctx,
+			newResourceMapping(),
+			gwcResource,
+			gatewayapi.KindGateway,
+			gwcResource.EnvoyProxy.Namespace,
+			gatewayapi.KindEnvoyProxy,
+			*certRef); err != nil {
+			r.log.Error(err,
+				"failed to process TLS SecretRef for gateway",
+				"gateway", "issue", "secretRef", certRef)
+		}
+	}
 }
 
 // managedGatewayClasses returns a list of GatewayClass objects that are managed by the Envoy Gateway Controller.
@@ -897,7 +921,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	}
 
 	// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree.
-	r.processBackendTLSPolicyConfigMapRefs(ctx, resourceTree, resourceMap)
+	r.processBackendTLSPolicyRefs(ctx, resourceTree, resourceMap)
 	return nil
 }
 
@@ -1575,27 +1599,49 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	return serviceImportFound
 }
 
-func (r *gatewayAPIReconciler) processBackendTLSPolicyConfigMapRefs(ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
+	ctx context.Context,
+	resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings,
+) {
 	for _, policy := range resourceTree.BackendTLSPolicies {
 		tls := policy.Spec.Validation
 
 		if tls.CACertificateRefs != nil {
 			for _, caCertRef := range tls.CACertificateRefs {
-				if string(caCertRef.Kind) == gatewayapi.KindConfigMap {
+				// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
+				if string(caCertRef.Kind) == gatewayapi.KindConfigMap ||
+					string(caCertRef.Kind) == gatewayapi.KindSecret {
+
+					var err error
 					caRefNew := gwapiv1b1.SecretObjectReference{
 						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
 						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
 						Name:      caCertRef.Name,
 						Namespace: gatewayapi.NamespacePtr(policy.Namespace),
 					}
-					if err := r.processConfigMapRef(
-						ctx,
-						resourceMap,
-						resourceTree,
-						gatewayapi.KindBackendTLSPolicy,
-						policy.Namespace,
-						policy.Name,
-						caRefNew); err != nil {
+					switch string(caCertRef.Kind) {
+					case gatewayapi.KindConfigMap:
+						err = r.processConfigMapRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindBackendTLSPolicy,
+							policy.Namespace,
+							policy.Name,
+							caRefNew)
+
+					case gatewayapi.KindSecret:
+						err = r.processSecretRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindBackendTLSPolicy,
+							policy.Namespace,
+							policy.Name,
+							caRefNew)
+					}
+					if err != nil {
 						// we don't return an error here, because we want to continue
 						// reconciling the rest of the ClientTrafficPolicies despite that this
 						// reference is invalid.
