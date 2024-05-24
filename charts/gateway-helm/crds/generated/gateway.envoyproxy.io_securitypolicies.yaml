@@ -616,6 +616,12 @@ spec:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.
                 properties:
+                  ForwardAccessToken:
+                    description: |-
+                      ForwardAccessToken indicates whether the Envoy should forward the access token
+                      via the Authorization header Bearer scheme to the upstream.
+                      If not specified, defaults to false.
+                    type: boolean
                   clientID:
                     description: |-
                       The client ID to be used in the OIDC
@@ -693,14 +699,6 @@ spec:
                       the authorization response must be set by the authorization server, or the
                       OAuth flow will fail.
                     type: string
-                  forwardAccessTokenAsBearerToken:
-                    description: |-
-                      ForwardAccessTokenAsBearerToken indicates whether the Envoy should forward
-                      the access token as a bearer token in the "Authorization" header to the backend.
-
-
-                      If not specified, defaults to false.
-                    type: boolean
                   logoutPath:
                     description: |-
                       The path to log a user out, clearing their credential cookies.

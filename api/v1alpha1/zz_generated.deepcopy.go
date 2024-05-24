@@ -3156,8 +3156,8 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.ForwardAccessTokenAsBearerToken != nil {
-		in, out := &in.ForwardAccessTokenAsBearerToken, &out.ForwardAccessTokenAsBearerToken
+	if in.ForwardAccessToken != nil {
+		in, out := &in.ForwardAccessToken, &out.ForwardAccessToken
 		*out = new(bool)
 		**out = **in
 	}
