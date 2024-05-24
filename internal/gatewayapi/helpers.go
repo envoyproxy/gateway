@@ -17,6 +17,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -228,7 +229,13 @@ func GatewayClassOwnerLabel(name string) map[string]string {
 
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
-func servicePortToContainerPort(servicePort int32) int32 {
+func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
+	if envoyProxy != nil {
+		if !envoyProxy.NeedToSwitchPorts() {
+			return servicePort
+		}
+	}
+
 	// If the service port is a privileged port (1-1023)
 	// add a constant to the value converting it into an ephemeral port.
 	// This allows the container to bind to the port without needing a
@@ -373,7 +380,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
-func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
+func irTLSConfigs(tlsSecrets ...*v1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
 	}
@@ -383,9 +390,9 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
 	}
 	for i, tlsSecret := range tlsSecrets {
 		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
-			Name:              irTLSListenerConfigName(tlsSecret),
-			ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
-			PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
+			Name:        irTLSListenerConfigName(tlsSecret),
+			Certificate: tlsSecret.Data[v1.TLSCertKey],
+			PrivateKey:  tlsSecret.Data[v1.TLSPrivateKeyKey],
 		}
 	}
 	return tlsListenerConfigs

@@ -1,42 +1,9 @@
-backendTLSPolicies:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: BackendTLSPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-btls
-    namespace: policies
-  spec:
-    targetRefs:
-    - group: ""
-      kind: Service
-      name: http-backend
-      sectionName: "8080"
-    validation:
-      caCertificateRefs:
-      - group: ""
-        kind: ConfigMap
-        name: ca-cmap
-      hostname: example.com
-  status:
-    ancestors:
-    - ancestorRef:
-        name: gateway-btls
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Target ref to Service backends/http-backend not permitted by any
-          ReferenceGrant
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
-    name: gateway-btls
+    name: gateway-1
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
@@ -77,22 +44,44 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-btls
-    namespace: envoy-gateway
+    name: httproute-1
+    namespace: default
   spec:
     parentRefs:
-    - name: gateway-btls
+    - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
     rules:
     - backendRefs:
-      - name: http-backend
-        namespace: backends
+      - filters:
+        - requestHeaderModifier:
+            add:
+            - name: add-header-1
+              value: some-value
+            - name: add-header-2
+              value: some-value
+          type: RequestHeaderModifier
+        name: service-1
         port: 8080
+        weight: 8
+      - name: service-2
+        port: 8080
+        weight: 2
       matches:
       - path:
-          type: Exact
-          value: /exact
+          value: /
+    - backendRefs:
+      - filters:
+        - requestHeaderModifier:
+            set:
+            - name: add-header-3
+              value: some-value
+          type: RequestHeaderModifier
+        name: service-3
+        port: 8080
+        weight: 1
+      matches:
+      - path:
+          value: /foo
   status:
     parents:
     - conditions:
@@ -108,15 +97,14 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-btls
+        name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
 infraIR:
-  envoy-gateway/gateway-btls:
+  envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-btls/http
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -124,11 +112,11 @@ infraIR:
           servicePort: 80
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-btls
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway/gateway-btls
+      name: envoy-gateway/gateway-1
 xdsIR:
-  envoy-gateway/gateway-btls:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
@@ -137,25 +125,60 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
-      name: envoy-gateway/gateway-btls/http
+      name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
       - destination:
-          name: httproute/envoy-gateway/httproute-btls/rule/0
+          name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
             endpoints:
-            - host: 10.244.0.11
+            - host: 7.7.7.7
               port: 8080
+            filters:
+              addRequestHeaders:
+              - append: false
+                name: add-header-3
+                value: some-value
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
-        name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
+        name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
           distinct: false
-          exact: /exact
           name: ""
+          prefix: /foo
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters:
+              addRequestHeaders:
+              - append: true
+                name: add-header-1
+                value: some-value
+              - append: true
+                name: add-header-2
+                value: some-value
+            protocol: HTTP
+            weight: 8
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 2
+        hostname: '*'
+        isHTTP2: false
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /

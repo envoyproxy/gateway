@@ -20,8 +20,6 @@ updates:
     ignore:
       # skip to update retest, because it won't work with the latest version
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
-      # skip until https://github.com/codecov/feedback/issues/112 is resolved
-      - dependency-name: "codecov/codecov-action"
   - package-ecosystem: github-actions
     directory: /tools/github-actions/setup-deps
     schedule:

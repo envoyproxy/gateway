@@ -187,6 +187,7 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 
 // TODO: [v1alpha2-gwapiv1] This should not be required once all Route
 // objects being implemented are of type gwapiv1.
+
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
@@ -368,5 +369,9 @@ func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
 }
 
 func GetFilters(b BackendRefContext) any {
-	return reflect.ValueOf(b).FieldByName("Filters").Interface()
+	filters := reflect.ValueOf(b).FieldByName("Filters")
+	if !filters.IsValid() {
+		return nil
+	}
+	return filters.Interface()
 }
