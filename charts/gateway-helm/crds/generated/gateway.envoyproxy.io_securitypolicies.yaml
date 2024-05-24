@@ -677,9 +677,9 @@ spec:
                     required:
                     - name
                     type: object
-                  defaultRefreshTokenExpireTime:
+                  defaultRefreshTokenExpireIn:
                     description: |-
-                      The default lifetime of the refresh token.
+                      DefaultRefreshTokenExpireIn is the default lifetime of the refresh token.
                       This field is only used when the exp (expiration time) claim is omitted in
                       the refresh token or the refresh token is not JWT.
 
@@ -687,9 +687,9 @@ spec:
                       If not specified, defaults to 604800s (one week).
                       Note: this field is only applicable when the "refreshToken" field is set to true.
                     type: string
-                  defaultTokenExpireTime:
+                  defaultTokenExpireIn:
                     description: |-
-                      The default lifetime of the ID token and access token.
+                      DefaultTokenExpireIn is the default lifetime of the id token and access token.
                       Please note that Envoy will always use the expiry time from the response
                       of the authorization server if it is provided. This field is only used when
                       the expiry time is not provided by the authorization.

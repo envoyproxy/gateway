@@ -60,7 +60,7 @@ type OIDC struct {
 	// +notImplementedHide
 	ForwardAccessToken *bool `json:"ForwardAccessToken,omitempty"`
 
-	// The default lifetime of the ID token and access token.
+	// DefaultTokenExpireIn is the default lifetime of the id token and access token.
 	// Please note that Envoy will always use the expiry time from the response
 	// of the authorization server if it is provided. This field is only used when
 	// the expiry time is not provided by the authorization.
@@ -71,7 +71,7 @@ type OIDC struct {
 	//
 	// +optional
 	// +notImplementedHide
-	DefaultTokenExpireTime *metav1.Duration `json:"defaultTokenExpireTime,omitempty"`
+	DefaultTokenExpireIn *metav1.Duration `json:"defaultTokenExpireIn,omitempty"`
 
 	// RefreshToken indicates whether the Envoy should automatically refresh the
 	// id token and access token when they expire.
@@ -83,7 +83,7 @@ type OIDC struct {
 	// +notImplementedHide
 	RefreshToken *bool `json:"refreshToken,omitempty"`
 
-	// The default lifetime of the refresh token.
+	// DefaultRefreshTokenExpireIn is the default lifetime of the refresh token.
 	// This field is only used when the exp (expiration time) claim is omitted in
 	// the refresh token or the refresh token is not JWT.
 	//
@@ -91,7 +91,7 @@ type OIDC struct {
 	// Note: this field is only applicable when the "refreshToken" field is set to true.
 	// +optional
 	// +notImplementedHide
-	DefaultRefreshTokenExpireTime *metav1.Duration `json:"defaultRefreshTokenExpireTime,omitempty"`
+	DefaultRefreshTokenExpireIn *metav1.Duration `json:"defaultRefreshTokenExpireIn,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
