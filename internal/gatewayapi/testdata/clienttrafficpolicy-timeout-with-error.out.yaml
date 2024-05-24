@@ -22,7 +22,7 @@ clientTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Time: unknown unit "sec" in duration "5sec"'
+        message: 'Timeout: invalid HTTP RequestReceivedTimeout value 5sec.'
         reason: Invalid
         status: "False"
         type: Accepted

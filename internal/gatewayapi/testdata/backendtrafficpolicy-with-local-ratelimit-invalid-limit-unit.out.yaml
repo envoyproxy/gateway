@@ -47,7 +47,7 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: 'RateLimit: local rateLimit rule limit unit must be a multiple of
-          the default limit unit'
+          the default limit unit.'
         reason: Invalid
         status: "False"
         type: Accepted

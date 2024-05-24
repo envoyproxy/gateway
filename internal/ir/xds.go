@@ -284,6 +284,8 @@ const (
 type TLSConfig struct {
 	// Certificates contains the set of certificates associated with this listener
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
+	// ClientCertificates contains the set of certificates used for mtls as client side certificates
+	ClientCertificates []TLSCertificate `json:"clientCertificates,omitempty" yaml:"clientCertificates,omitempty"`
 	// CACertificate to verify the client
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	// RequireClientCertificate to enforce client certificate
@@ -307,8 +309,8 @@ type TLSConfig struct {
 type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
-	// ServerCertificate of the server.
-	ServerCertificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
+	// Certificate can be either a client or server certificate.
+	Certificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey []byte `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
@@ -324,7 +326,7 @@ type TLSCACertificate struct {
 
 func (t TLSCertificate) Validate() error {
 	var errs error
-	if len(t.ServerCertificate) == 0 {
+	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSServerCertEmpty)
 	}
 	if len(t.PrivateKey) == 0 {

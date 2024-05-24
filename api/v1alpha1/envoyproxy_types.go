@@ -128,6 +128,7 @@ type BackendTLSConfig struct {
 	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
 	// the client certificate and private key for Envoy to use when connecting to
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	// This secret should be located within the same namespace as the Envoy proxy resource that references it.
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 	TLSSettings          `json:",inline"`

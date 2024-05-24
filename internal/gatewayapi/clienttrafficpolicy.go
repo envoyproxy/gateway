@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -385,23 +386,25 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	var (
 		keepalive           *ir.TCPKeepalive
 		connection          *ir.Connection
-		enableProxyProtocol bool
 		tlsConfig           *ir.TLSConfig
+		enableProxyProtocol bool
 		timeout             *ir.ClientTimeout
-		err                 error
+		err, errs           error
 	)
 
 	// Build common IR shared by HTTP and TCP listeners, return early if some field is invalid.
 	// Translate TCPKeepalive
 	keepalive, err = buildKeepAlive(policy.Spec.TCPKeepalive)
 	if err != nil {
-		return err
+		err = perr.WithMessage(err, "TCP KeepAlive")
+		errs = errors.Join(errs, err)
 	}
 
 	// Translate Connection
 	connection, err = buildConnection(policy.Spec.Connection)
 	if err != nil {
-		return err
+		err = perr.WithMessage(err, "Connection")
+		errs = errors.Join(errs, err)
 	}
 
 	// Translate Proxy Protocol
@@ -410,7 +413,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// Translate Client Timeout Settings
 	timeout, err = buildClientTimeout(policy.Spec.Timeout)
 	if err != nil {
-		return err
+		err = perr.WithMessage(err, "Timeout")
+		errs = errors.Join(errs, err)
 	}
 
 	// IR must exist since we're past validation
@@ -425,13 +429,15 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		translatePathSettings(policy.Spec.Path, httpIR)
 
 		// Translate HTTP1 Settings
-		if err := translateHTTP1Settings(policy.Spec.HTTP1, httpIR); err != nil {
-			return err
+		if err = translateHTTP1Settings(policy.Spec.HTTP1, httpIR); err != nil {
+			err = perr.WithMessage(err, "HTTP1")
+			errs = errors.Join(errs, err)
 		}
 
 		// Translate HTTP2 Settings
-		if err := translateHTTP2Settings(policy.Spec.HTTP2, httpIR); err != nil {
-			return err
+		if err = translateHTTP2Settings(policy.Spec.HTTP2, httpIR); err != nil {
+			err = perr.WithMessage(err, "HTTP2")
+			errs = errors.Join(errs, err)
 		}
 
 		// enable http3 if set and TLS is enabled
@@ -455,7 +461,13 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
 		if err != nil {
-			return err
+			err = perr.WithMessage(err, "TLS")
+			errs = errors.Join(errs, err)
+		}
+
+		// Early return if got any errors
+		if errs != nil {
+			return errs
 		}
 
 		httpIR.TCPKeepalive = keepalive
@@ -469,7 +481,13 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, tcpIR.TLS, resources)
 		if err != nil {
-			return err
+			err = perr.WithMessage(err, "TLS")
+			errs = errors.Join(errs, err)
+		}
+
+		// Early return if got any errors
+		if errs != nil {
+			return errs
 		}
 
 		tcpIR.TCPKeepalive = keepalive
@@ -538,7 +556,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 		if clientTimeout.TCP.IdleTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.TCP.IdleTimeout))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("invalid TCP IdleTimeout value %s", *clientTimeout.TCP.IdleTimeout)
 			}
 			irTCPTimeout.IdleTimeout = &metav1.Duration{
 				Duration: d,
@@ -552,7 +570,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 		if clientTimeout.HTTP.RequestReceivedTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestReceivedTimeout))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("invalid HTTP RequestReceivedTimeout value %s", *clientTimeout.HTTP.RequestReceivedTimeout)
 			}
 			irHTTPTimeout.RequestReceivedTimeout = &metav1.Duration{
 				Duration: d,
@@ -562,7 +580,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 		if clientTimeout.HTTP.IdleTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.HTTP.IdleTimeout))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("invalid HTTP IdleTimeout value %s", *clientTimeout.HTTP.IdleTimeout)
 			}
 			irHTTPTimeout.IdleTimeout = &metav1.Duration{
 				Duration: d,
@@ -633,7 +651,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 				}
 			}
 			if defaultHost == nil {
-				return fmt.Errorf("can't set http10 default host on listener with only wildcard hostnames")
+				return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
 			}
 		}
 		// If useDefaultHost was set, then defaultHost will have the hostname to use.

@@ -645,7 +645,7 @@ func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 		Type: &tlsv3.Secret_TlsCertificate{
 			TlsCertificate: &tlsv3.TlsCertificate{
 				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
 				},
 				PrivateKey: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
