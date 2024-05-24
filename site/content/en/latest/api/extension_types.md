@@ -700,6 +700,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | ConsistentHashType defines the type of input to hash on. Valid Type values are "SourceIP" or "Header". |
 | `header` | _[Header](#header)_ |  false  | Header configures the header hash policy when the consistent hash type is set to Header. |
+| `tableSize` | _integer_ |  false  | The table size for consistent hashing, must be prime number limited to 5000011. |
 
 
 #### ConsistentHashType

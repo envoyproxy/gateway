@@ -60,3 +60,10 @@
             headerName: name
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: eighth-route
+      route:
+        cluster: eighth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
