@@ -780,10 +780,10 @@ func (t *Translator) buildExtAuth(
 	case http != nil && grpc != nil:
 		return nil, errors.New("only one of grpc or http can be specified")
 	case http != nil:
-		backendRef = &http.BackendRef
+		backendRef = http.BackendRef
 		protocol = ir.HTTP
 	case grpc != nil:
-		backendRef = &grpc.BackendRef
+		backendRef = grpc.BackendRef
 		protocol = ir.GRPC
 	}
 

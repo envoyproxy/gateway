@@ -464,7 +464,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRef gwapiv1.BackendObjectReference
+			var backendRef *gwapiv1.BackendObjectReference
 			if extAuth.GRPC != nil {
 				backendRef = extAuth.GRPC.BackendRef
 			} else {
