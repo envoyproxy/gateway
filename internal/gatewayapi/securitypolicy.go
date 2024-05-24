@@ -777,13 +777,13 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 	case http != nil:
 		backendRef = http.BackendRef
 		if len(http.BackendRefs) != 0 {
-			backendRef = toBackendObjectReference(http.BackendRefs[0])
+			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
 		}
 		protocol = ir.HTTP
 	case grpc != nil:
 		backendRef = grpc.BackendRef
 		if len(grpc.BackendRefs) != 0 {
-			backendRef = toBackendObjectReference(grpc.BackendRefs[0])
+			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
 		}
 		protocol = ir.GRPC
 	// These are sanity checks, they should never happen because the API server
@@ -856,14 +856,4 @@ func irConfigName(policy *egv1a1.SecurityPolicy) string {
 		"%s/%s",
 		strings.ToLower(KindSecurityPolicy),
 		utils.NamespacedName(policy).String())
-}
-
-func toBackendObjectReference(ref egv1a1.BackendRef) *gwapiv1.BackendObjectReference {
-	return &gwapiv1.BackendObjectReference{
-		Group:     ref.Group,
-		Kind:      ref.Kind,
-		Namespace: ref.Namespace,
-		Name:      ref.Name,
-		Port:      ref.Port,
-	}
 }
