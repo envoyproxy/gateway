@@ -262,6 +262,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
+		// process envoy gateway secret refs
+		r.processEnvoyProxySecretRef(ctx, gwcResource)
+
 		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 			r.log.Error(err, "unable to update GatewayClass status")
 			return reconcile.Result{}, err
@@ -294,6 +297,27 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *gatewayapi.Resources) {
+	if gwcResource.EnvoyProxy == nil || gwcResource.EnvoyProxy.Spec.BackendTLS == nil || gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef == nil {
+		return
+	}
+	certRef := gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef
+	if refsSecret(certRef) {
+		if err := r.processSecretRef(
+			ctx,
+			newResourceMapping(),
+			gwcResource,
+			gatewayapi.KindGateway,
+			gwcResource.EnvoyProxy.Namespace,
+			gatewayapi.KindEnvoyProxy,
+			*certRef); err != nil {
+			r.log.Error(err,
+				"failed to process TLS SecretRef for gateway",
+				"gateway", "issue", "secretRef", certRef)
+		}
+	}
 }
 
 // managedGatewayClasses returns a list of GatewayClass objects that are managed by the Envoy Gateway Controller.

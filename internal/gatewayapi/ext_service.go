@@ -69,7 +69,7 @@ func (t *Translator) processExtServiceDestination(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
 
-	backendTLS = t.processBackendTLSPolicy(
+	backendTLS = t.applyBackendTLSSetting(
 		*backendRef,
 		serviceNamespace,
 		// Gateway is not the appropriate parent reference here because the owner
