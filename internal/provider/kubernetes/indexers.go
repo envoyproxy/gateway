@@ -181,7 +181,6 @@ func metricRefs(ep *v1alpha1.EnvoyProxy) []string {
 	}
 
 	return refs
-
 }
 
 func traceRefs(ep *v1alpha1.EnvoyProxy) []string {
