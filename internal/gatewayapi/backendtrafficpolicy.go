@@ -313,7 +313,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.LoadBalancer != nil {
 		if lb, err = t.buildLoadBalancer(policy); err != nil {
-			return errors.Wrap(err, "LoadBalancer")
+			err = perr.WithMessage(err, "LoadBalancer")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.ProxyProtocol != nil {
@@ -439,7 +440,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.LoadBalancer != nil {
 		if lb, err = t.buildLoadBalancer(policy); err != nil {
-			return errors.Wrap(err, "LoadBalancer")
+			err = perr.WithMessage(err, "LoadBalancer")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.ProxyProtocol != nil {
@@ -779,7 +781,7 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir
 	case egv1a1.ConsistentHashLoadBalancerType:
 		consistentHash, err := t.buildConsistentHashLoadBalancer(policy)
 		if err != nil {
-			return nil, errors.Wrap(err, "ConsistentHash")
+			return nil, perr.WithMessage(err, "ConsistentHash")
 		}
 
 		lb = &ir.LoadBalancer{
