@@ -448,8 +448,19 @@ type HeaderSettings struct {
 // ClientTimeout sets the timeout configuration for downstream connections
 // +k8s:deepcopy-gen=true
 type ClientTimeout struct {
+	// Timeout settings for TCP (not HTTP).
+	TCP *TCPClientTimeout `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+
 	// Timeout settings for HTTP.
 	HTTP *HTTPClientTimeout `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// TCPClientTimeout set the configuration for client TCP (not HTTP).
+// +k8s:deepcopy-gen=true
+type TCPClientTimeout struct {
+	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
+	// bytes sent or received on either the upstream or downstream connection.
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // HTTPClientTimeout set the configuration for client HTTP.
@@ -1232,6 +1243,8 @@ type TCPListener struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// ClientTimeout sets the timeout configuration for downstream connections.
+	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
