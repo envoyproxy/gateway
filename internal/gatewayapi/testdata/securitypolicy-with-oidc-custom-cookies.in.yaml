@@ -6,6 +6,13 @@ secrets:
     name: client1-secret
   data:
     client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway-system
+    name: envoy-oidc-hmac
+  data:
+    hmac-secret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

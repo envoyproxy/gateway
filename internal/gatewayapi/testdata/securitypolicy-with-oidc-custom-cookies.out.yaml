@@ -129,9 +129,9 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: HMAC secret envoy-gateway-system/envoy-oidc-hmac not found
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
@@ -166,4 +166,21 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
-        security: {}
+        security:
+          oidc:
+            clientID: client1.apps.googleusercontent.com
+            clientSecret: Y2xpZW50MTpzZWNyZXQK
+            cookieNameOverrides:
+              bearerToken: CustomBearerTokenCookie
+              idToken: CustomIdTokenCookie
+            cookieSuffix: b0a1b740
+            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+            logoutPath: /bar/logout
+            name: securitypolicy/envoy-gateway/policy-for-gateway
+            provider:
+              authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+              tokenEndpoint: https://oauth2.googleapis.com/token
+            redirectPath: /bar/oauth2/callback
+            redirectURL: https://www.example.com/bar/oauth2/callback
+            scopes:
+            - openid
