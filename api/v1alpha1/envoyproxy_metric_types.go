@@ -56,12 +56,12 @@ type ProxyMetricSink struct {
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type ProxyOpenTelemetrySink struct {
 	// Host define the service hostname.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the service is exposed on.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
