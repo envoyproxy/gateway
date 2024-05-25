@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
@@ -78,7 +77,6 @@ func TestTranslate(t *testing.T) {
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
-				Logger:                  logging.NewLogger(&egv1a1.EnvoyGatewayLogging{}),
 			}
 
 			// Add common test fixtures
@@ -325,7 +323,6 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					{Group: "bar.example.io", Kind: "Bar"},
 				},
 				MergeGateways: IsMergeGatewaysEnabled(resources),
-				Logger:        logging.NewLogger(&egv1a1.EnvoyGatewayLogging{}),
 			}
 
 			// Add common test fixtures

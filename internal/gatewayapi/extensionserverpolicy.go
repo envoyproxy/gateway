@@ -68,14 +68,13 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			// Negative statuses have already been assigned so its safe to skip
 			gateway, resolveErr := resolveExtServerPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
 			if gateway == nil {
-				t.Logger.Sugar().Warnf("unable to find a matching Gateway for policy %s", policy.GetName())
+				// unable to find a matching Gateway for policy
 				continue
 			}
 
 			// Skip the gateway. Don't add anything to the policy status.
 			if resolveErr != nil {
-				t.Logger.Sugar().Warnf("targetRef %s in policy %s cannot be attached: %s",
-					currTarget, policy.GetName(), resolveErr)
+				// The targetRef part is somehow wrong, this policy can't be attached.
 				continue
 			}
 
