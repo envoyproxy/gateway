@@ -47,10 +47,11 @@ func (g *GatewayContext) ResetListeners() {
 type ListenerContext struct {
 	*gwapiv1.Listener
 
-	gateway           *gwapiv1.Gateway
-	listenerStatusIdx int
-	namespaceSelector labels.Selector
-	tlsSecrets        []*v1.Secret
+	gateway                   *gwapiv1.Gateway
+	listenerStatusIdx         int
+	namespaceSelector         labels.Selector
+	tlsSecrets                []*v1.Secret
+	frontendValidationSecrets []*v1.Secret
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
@@ -115,6 +116,10 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*v1.Secret) {
 	l.tlsSecrets = tlsSecrets
+}
+
+func (l *ListenerContext) SetFrontendValidationSecrets(frontendValidationSecrets []*v1.Secret) {
+	l.frontendValidationSecrets = frontendValidationSecrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)

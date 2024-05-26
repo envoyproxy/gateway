@@ -462,6 +462,17 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 	return secrets
 }
 
+func (t *Translator) validateAndGetFrontendValidationSecrets(listener *ListenerContext, resources *Resources) []*v1.Secret {
+	secrets := make([]*v1.Secret, 0)
+	for _, certificateRef := range listener.TLS.FrontendValidation.CACertificateRefs {
+		// TODO zhaohuabing: reuse validateSecretRef
+		t.validateSecretRef()
+	}
+	
+	return secrets
+}
+
+
 func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resources *Resources) {
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType:
@@ -500,6 +511,14 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 		secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 		listener.SetTLSSecrets(secrets)
 
+		if listener.TLS.FrontendValidation != nil {
+			if len(listener.TLS.FrontendValidation.CACertificateRefs) > 0 {
+				secrets := t.validateAndGetFrontendValidationSecrets(listener, resources)
+				listener.SetFrontendValidationSecrets(secrets)
+			}
+		}
+
+
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
 			status.SetGatewayListenerStatusCondition(listener.gateway,
@@ -536,6 +555,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				)
 				break
 			}
+		
 			secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 			listener.SetTLSSecrets(secrets)
 		}
