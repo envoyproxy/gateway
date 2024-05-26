@@ -595,8 +595,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtAuth: &v1alpha1.ExtAuth{
 							HTTP: &v1alpha1.HTTPExtAuthService{
-								BackendRef: &gwapiv1.BackendObjectReference{
-									Name: "ext-auth-http-service",
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-auth-http-service",
+										},
+									},
 								},
 							},
 						},
@@ -604,6 +608,37 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				},
 			},
 			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by SecurityPolicy ExtAuth GRPC service",
+			configs: []client.Object{
+				&v1alpha1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http",
+					},
+					Spec: v1alpha1.SecurityPolicySpec{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtAuth: &v1alpha1.ExtAuth{
+							GRPC: &v1alpha1.GRPCExtAuthService{
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-auth-grpc-service",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service"}, nil, nil),
 			expect:  true,
 		},
 		{
