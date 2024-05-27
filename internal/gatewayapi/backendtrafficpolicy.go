@@ -1151,7 +1151,6 @@ func int64ToUint32(in int64) (uint32, bool) {
 }
 
 func (t *Translator) buildBackendConnection(policy *egv1a1.BackendTrafficPolicy) (*ir.BackendPolicyConnection, error) {
-
 	var (
 		bcIR = &ir.BackendPolicyConnection{}
 		bc   = &egv1a1.BackendTrafficPolicyConnection{}
