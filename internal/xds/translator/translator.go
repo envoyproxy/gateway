@@ -688,7 +688,6 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		http1Settings:     http1Settings,
 		metrics:           metrics,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
-		backendConnection: httpRoute.Traffic.BackendConnection,
 	}
 
 	// Populate traffic features.
@@ -700,6 +699,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		clusterArgs.healthCheck = bt.HealthCheck
 		clusterArgs.timeout = bt.Timeout
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
+		clusterArgs.backendConnection = bt.BackendConnection
 	}
 
 	if err := addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
