@@ -21,6 +21,3 @@
 .idea/
 *.tmproj
 .vscode/
-
-# Dependency Charts
-charts/
