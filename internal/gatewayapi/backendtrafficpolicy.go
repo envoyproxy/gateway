@@ -6,14 +6,16 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"net"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -25,6 +27,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
+)
+
+const (
+	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
 )
 
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
@@ -286,26 +292,30 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 
 func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR XdsIRMap) error {
 	var (
-		rl  *ir.RateLimit
-		lb  *ir.LoadBalancer
-		pp  *ir.ProxyProtocol
-		hc  *ir.HealthCheck
-		cb  *ir.CircuitBreaker
-		fi  *ir.FaultInjection
-		to  *ir.Timeout
-		ka  *ir.TCPKeepalive
-		rt  *ir.Retry
-		err error
+		rl        *ir.RateLimit
+		lb        *ir.LoadBalancer
+		pp        *ir.ProxyProtocol
+		hc        *ir.HealthCheck
+		cb        *ir.CircuitBreaker
+		fi        *ir.FaultInjection
+		to        *ir.Timeout
+		ka        *ir.TCPKeepalive
+		rt        *ir.Retry
+		err, errs error
 	)
 
 	// Build IR
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
-			return errors.Wrap(err, "RateLimit")
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		lb = t.buildLoadBalancer(policy)
+		if lb, err = t.buildLoadBalancer(policy); err != nil {
+			err = perr.WithMessage(err, "LoadBalancer")
+			errs = errors.Join(errs, err)
+		}
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
@@ -315,29 +325,36 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
-			return errors.Wrap(err, "CircuitBreaker")
+			err = perr.WithMessage(err, "CircuitBreaker")
+			errs = errors.Join(errs, err)
 		}
 	}
-
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
-			return errors.Wrap(err, "TCPKeepalive")
+			err = perr.WithMessage(err, "TCPKeepalive")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	// Apply IR to all relevant routes
-	prefix := irRoutePrefix(route)
-
 	if policy.Spec.Timeout != nil {
 		if to, err = t.buildTimeout(policy, nil); err != nil {
-			return errors.Wrap(err, "Timeout")
+			err = perr.WithMessage(err, "Timeout")
+			errs = errors.Join(errs, err)
 		}
 	}
+
+	// Early return if got any errors
+	if errs != nil {
+		return errs
+	}
+
+	// Apply IR to all relevant routes
+	prefix := irRoutePrefix(route)
 
 	for _, x := range xdsIR {
 		for _, tcp := range x.TCP {
@@ -384,10 +401,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 					// Some timeout setting originate from the route.
 					if policy.Spec.Timeout != nil {
-						if to, err = t.buildTimeout(policy, r); err != nil {
-							return errors.Wrap(err, "Timeout")
+						if to, err = t.buildTimeout(policy, r); err == nil {
+							r.Traffic.Timeout = to
 						}
-						r.Traffic.Timeout = to
 					}
 
 					if policy.Spec.UseClientProtocol != nil {
@@ -403,26 +419,30 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, gateway *GatewayContext, xdsIR XdsIRMap) error {
 	var (
-		rl  *ir.RateLimit
-		lb  *ir.LoadBalancer
-		pp  *ir.ProxyProtocol
-		hc  *ir.HealthCheck
-		cb  *ir.CircuitBreaker
-		fi  *ir.FaultInjection
-		ct  *ir.Timeout
-		ka  *ir.TCPKeepalive
-		rt  *ir.Retry
-		err error
+		rl        *ir.RateLimit
+		lb        *ir.LoadBalancer
+		pp        *ir.ProxyProtocol
+		hc        *ir.HealthCheck
+		cb        *ir.CircuitBreaker
+		fi        *ir.FaultInjection
+		ct        *ir.Timeout
+		ka        *ir.TCPKeepalive
+		rt        *ir.Retry
+		err, errs error
 	)
 
 	// Build IR
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
-			return errors.Wrap(err, "RateLimit")
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		lb = t.buildLoadBalancer(policy)
+		if lb, err = t.buildLoadBalancer(policy); err != nil {
+			err = perr.WithMessage(err, "LoadBalancer")
+			errs = errors.Join(errs, err)
+		}
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
@@ -432,7 +452,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.CircuitBreaker != nil {
 		if cb, err = t.buildCircuitBreaker(policy); err != nil {
-			return errors.Wrap(err, "CircuitBreaker")
+			err = perr.WithMessage(err, "CircuitBreaker")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.FaultInjection != nil {
@@ -440,11 +461,23 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.TCPKeepalive != nil {
 		if ka, err = t.buildTCPKeepAlive(policy); err != nil {
-			return errors.Wrap(err, "TCPKeepalive")
+			err = perr.WithMessage(err, "TCPKeepalive")
+			errs = errors.Join(errs, err)
 		}
 	}
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
+	}
+	if policy.Spec.Timeout != nil {
+		if ct, err = t.buildTimeout(policy, nil); err != nil {
+			err = perr.WithMessage(err, "Timeout")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	// Early return if got any errors
+	if errs != nil {
+		return errs
 	}
 
 	// Apply IR to all the routes within the specific Gateway
@@ -455,12 +488,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	x := xdsIR[irKey]
 
 	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
-
-	if policy.Spec.Timeout != nil {
-		if ct, err = t.buildTimeout(policy, nil); err != nil {
-			return errors.Wrap(err, "Timeout")
-		}
-	}
 
 	for _, tcp := range x.TCP {
 		gatewayName := tcp.Name[0:strings.LastIndex(tcp.Name, "/")]
@@ -541,10 +568,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 			if policy.Spec.Timeout != nil {
-				if ct, err = t.buildTimeout(policy, r); err != nil {
-					return errors.Wrap(err, "Timeout")
+				if ct, err = t.buildTimeout(policy, r); err == nil {
+					r.Traffic.Timeout = ct
 				}
-				r.Traffic.Timeout = ct
 			}
 
 			if policy.Spec.UseClientProtocol != nil {
@@ -749,12 +775,17 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	return irRule, nil
 }
 
-func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.LoadBalancer {
+func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir.LoadBalancer, error) {
 	var lb *ir.LoadBalancer
 	switch policy.Spec.LoadBalancer.Type {
 	case egv1a1.ConsistentHashLoadBalancerType:
+		consistentHash, err := t.buildConsistentHashLoadBalancer(policy)
+		if err != nil {
+			return nil, perr.WithMessage(err, "ConsistentHash")
+		}
+
 		lb = &ir.LoadBalancer{
-			ConsistentHash: t.buildConsistentHashLoadBalancer(policy),
+			ConsistentHash: consistentHash,
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
 		lb = &ir.LoadBalancer{}
@@ -788,24 +819,32 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		}
 	}
 
-	return lb
+	return lb, nil
 }
 
-func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.ConsistentHash {
+func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir.ConsistentHash, error) {
+	consistentHash := &ir.ConsistentHash{}
+
+	if policy.Spec.LoadBalancer.ConsistentHash.TableSize != nil {
+		tableSize := policy.Spec.LoadBalancer.ConsistentHash.TableSize
+
+		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) {
+			return nil, fmt.Errorf("invalid TableSize value %d", *tableSize)
+		}
+
+		consistentHash.TableSize = tableSize
+	}
+
 	switch policy.Spec.LoadBalancer.ConsistentHash.Type {
 	case egv1a1.SourceIPConsistentHashType:
-		return &ir.ConsistentHash{
-			SourceIP: ptr.To(true),
-		}
+		consistentHash.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
-		return &ir.ConsistentHash{
-			Header: &ir.Header{
-				Name: policy.Spec.LoadBalancer.ConsistentHash.Header.Name,
-			},
+		consistentHash.Header = &ir.Header{
+			Name: policy.Spec.LoadBalancer.ConsistentHash.Header.Name,
 		}
-	default:
-		return &ir.ConsistentHash{}
 	}
+
+	return consistentHash, nil
 }
 
 func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {
@@ -1009,8 +1048,10 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) (*
 
 func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTTPRoute) (*ir.Timeout, error) {
 	var (
-		tto *ir.TCPTimeout
-		hto *ir.HTTPTimeout
+		tto  *ir.TCPTimeout
+		hto  *ir.HTTPTimeout
+		terr bool
+		errs error
 	)
 
 	pto := policy.Spec.Timeout
@@ -1018,11 +1059,12 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 	if pto.TCP != nil && pto.TCP.ConnectTimeout != nil {
 		d, err := time.ParseDuration(string(*pto.TCP.ConnectTimeout))
 		if err != nil {
-			return nil, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout)
-		}
-
-		tto = &ir.TCPTimeout{
-			ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+			terr = true
+			errs = errors.Join(errs, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
+		} else {
+			tto = &ir.TCPTimeout{
+				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+			}
 		}
 	}
 
@@ -1033,19 +1075,21 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
 			if err != nil {
-				return nil, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout)
+				terr = true
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
+			} else {
+				cit = ptr.To(metav1.Duration{Duration: d})
 			}
-
-			cit = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		if pto.HTTP.MaxConnectionDuration != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.MaxConnectionDuration))
 			if err != nil {
-				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration)
+				terr = true
+				errs = errors.Join(errs, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
+			} else {
+				mcd = ptr.To(metav1.Duration{Duration: d})
 			}
-
-			mcd = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		hto = &ir.HTTPTimeout{
@@ -1056,28 +1100,36 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 
 	// http request timeout is translated during the gateway-api route resource translation
 	// merge route timeout setting with backendtrafficpolicy timeout settings
-	if r != nil &&
-		r.Traffic != nil &&
-		r.Traffic.Timeout != nil &&
-		r.Traffic.Timeout.HTTP != nil &&
-		r.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		if hto == nil {
-			hto = &ir.HTTPTimeout{
-				RequestTimeout: r.Traffic.Timeout.HTTP.RequestTimeout,
+	if terr {
+		if r != nil && r.Traffic != nil && r.Traffic.Timeout != nil {
+			return r.Traffic.Timeout.DeepCopy(), errs
+		}
+	} else {
+		// http request timeout is translated during the gateway-api route resource translation
+		// merge route timeout setting with backendtrafficpolicy timeout settings
+		if r != nil &&
+			r.Traffic != nil &&
+			r.Traffic.Timeout != nil &&
+			r.Traffic.Timeout.HTTP != nil &&
+			r.Traffic.Timeout.HTTP.RequestTimeout != nil {
+			if hto == nil {
+				hto = &ir.HTTPTimeout{
+					RequestTimeout: r.Traffic.Timeout.HTTP.RequestTimeout,
+				}
+			} else {
+				hto.RequestTimeout = r.Traffic.Timeout.HTTP.RequestTimeout
 			}
-		} else {
-			hto.RequestTimeout = r.Traffic.Timeout.HTTP.RequestTimeout
+		}
+
+		if hto != nil || tto != nil {
+			return &ir.Timeout{
+				TCP:  tto,
+				HTTP: hto,
+			}, nil
 		}
 	}
 
-	if hto != nil || tto != nil {
-		return &ir.Timeout{
-			TCP:  tto,
-			HTTP: hto,
-		}, nil
-	}
-
-	return nil, nil
+	return nil, errs
 }
 
 func int64ToUint32(in int64) (uint32, bool) {

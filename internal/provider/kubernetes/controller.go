@@ -115,19 +115,19 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 
 type resourceMappings struct {
 	// Map for storing namespaces for Route, Service and Gateway objects.
-	allAssociatedNamespaces map[string]struct{}
+	allAssociatedNamespaces sets.Set[string]
 	// Map for storing TLSRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedTLSRoutes map[string]struct{}
+	allAssociatedTLSRoutes sets.Set[string]
 	// Map for storing HTTPRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedHTTPRoutes map[string]struct{}
+	allAssociatedHTTPRoutes sets.Set[string]
 	// Map for storing GRPCRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedGRPCRoutes map[string]struct{}
+	allAssociatedGRPCRoutes sets.Set[string]
 	// Map for storing TCPRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedTCPRoutes map[string]struct{}
+	allAssociatedTCPRoutes sets.Set[string]
 	// Map for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedUDPRoutes map[string]struct{}
+	allAssociatedUDPRoutes sets.Set[string]
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
-	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
+	allAssociatedBackendRefs sets.Set[gwapiv1.BackendObjectReference]
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name, group and kind of the filter and the value is the
 	// unstructured form of the resource.
@@ -136,13 +136,13 @@ type resourceMappings struct {
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedNamespaces:  map[string]struct{}{},
-		allAssociatedTLSRoutes:   map[string]struct{}{},
-		allAssociatedHTTPRoutes:  map[string]struct{}{},
-		allAssociatedGRPCRoutes:  map[string]struct{}{},
-		allAssociatedTCPRoutes:   map[string]struct{}{},
-		allAssociatedUDPRoutes:   map[string]struct{}{},
-		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
+		allAssociatedNamespaces:  sets.New[string](),
+		allAssociatedTLSRoutes:   sets.New[string](),
+		allAssociatedHTTPRoutes:  sets.New[string](),
+		allAssociatedGRPCRoutes:  sets.New[string](),
+		allAssociatedTCPRoutes:   sets.New[string](),
+		allAssociatedUDPRoutes:   sets.New[string](),
+		allAssociatedBackendRefs: sets.New[gwapiv1.BackendObjectReference](),
 		extensionRefFilters:      map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
 	}
 }
@@ -262,6 +262,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
+		// process envoy gateway secret refs
+		r.processEnvoyProxySecretRef(ctx, gwcResource)
+
 		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 			r.log.Error(err, "unable to update GatewayClass status")
 			return reconcile.Result{}, err
@@ -294,6 +297,27 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *gatewayapi.Resources) {
+	if gwcResource.EnvoyProxy == nil || gwcResource.EnvoyProxy.Spec.BackendTLS == nil || gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef == nil {
+		return
+	}
+	certRef := gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef
+	if refsSecret(certRef) {
+		if err := r.processSecretRef(
+			ctx,
+			newResourceMapping(),
+			gwcResource,
+			gatewayapi.KindGateway,
+			gwcResource.EnvoyProxy.Namespace,
+			gatewayapi.KindEnvoyProxy,
+			*certRef); err != nil {
+			r.log.Error(err,
+				"failed to process TLS SecretRef for gateway",
+				"gateway", "issue", "secretRef", certRef)
+		}
+	}
 }
 
 // managedGatewayClasses returns a list of GatewayClass objects that are managed by the Envoy Gateway Controller.
@@ -343,7 +367,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			} else {
-				resourceMappings.allAssociatedNamespaces[service.Namespace] = struct{}{}
+				resourceMappings.allAssociatedNamespaces.Insert(service.Namespace)
 				gwcResource.Services = append(gwcResource.Services, service)
 				r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
@@ -357,7 +381,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			} else {
-				resourceMappings.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
+				resourceMappings.allAssociatedNamespaces.Insert(serviceImport.Namespace)
 				gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
 				r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
@@ -448,12 +472,12 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 			}
 
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-			resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 				Group:     backendRef.Group,
 				Kind:      backendRef.Kind,
 				Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 				Name:      backendRef.Name,
-			}] = struct{}{}
+			})
 
 			if backendNamespace != policy.Namespace {
 				from := ObjectKindNamespacedName{
@@ -559,7 +583,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 				"name", refGrant.Name)
 		}
 	}
-	resourceMap.allAssociatedNamespaces[secretNS] = struct{}{} // TODO Zhaohuabing do we need this line?
+	resourceMap.allAssociatedNamespaces.Insert(secretNS) // TODO Zhaohuabing do we need this line?
 	resourceTree.Secrets = append(resourceTree.Secrets, secret)
 	r.log.Info("processing Secret", "namespace", secretNS, "name", string(secretRef.Name))
 	return nil
@@ -661,7 +685,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 				"name", refGrant.Name)
 		}
 	}
-	resourceMap.allAssociatedNamespaces[configMapNS] = struct{}{} // TODO Zhaohuabing do we need this line?
+	resourceMap.allAssociatedNamespaces.Insert(configMapNS) // TODO Zhaohuabing do we need this line?
 	resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
 	r.log.Info("processing ConfigMap", "namespace", configMapNS, "name", string(configMapRef.Name))
 	return nil
@@ -736,7 +760,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			}
 		}
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
-		resourceMap.allAssociatedNamespaces[gtw.Namespace] = struct{}{}
+		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
 		for _, listener := range gtw.Spec.Listeners {
 			listener := listener
@@ -897,7 +921,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	}
 
 	// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree.
-	r.processBackendTLSPolicyConfigMapRefs(ctx, resourceTree, resourceMap)
+	r.processBackendTLSPolicyRefs(ctx, resourceTree, resourceMap)
 	return nil
 }
 
@@ -960,6 +984,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.enqueueClass(ctx, t)
 			}),
 			epPredicates...)); err != nil {
+		return err
+	}
+	if err := addEnvoyProxyIndexers(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -1493,12 +1520,12 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 							}
 							for _, backendRef := range sink.OpenTelemetry.BackendRefs {
 								backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
-								resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+								resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 									Group:     backendRef.BackendObjectReference.Group,
 									Kind:      backendRef.BackendObjectReference.Kind,
 									Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 									Name:      backendRef.Name,
-								}] = struct{}{}
+								})
 							}
 						}
 					}
@@ -1511,12 +1538,12 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 						}
 						for _, backendRef := range sink.OpenTelemetry.BackendRefs {
 							backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
-							resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+							resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 								Group:     backendRef.BackendObjectReference.Group,
 								Kind:      backendRef.BackendObjectReference.Kind,
 								Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 								Name:      backendRef.Name,
-							}] = struct{}{}
+							})
 						}
 					}
 				}
@@ -1524,12 +1551,12 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 				if telemetry.Tracing != nil {
 					for _, backendRef := range telemetry.Tracing.Provider.BackendRefs {
 						backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
-						resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+						resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 							Group:     backendRef.BackendObjectReference.Group,
 							Kind:      backendRef.BackendObjectReference.Kind,
 							Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 							Name:      backendRef.Name,
-						}] = struct{}{}
+						})
 
 					}
 				}
@@ -1575,27 +1602,49 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	return serviceImportFound
 }
 
-func (r *gatewayAPIReconciler) processBackendTLSPolicyConfigMapRefs(ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
+	ctx context.Context,
+	resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings,
+) {
 	for _, policy := range resourceTree.BackendTLSPolicies {
 		tls := policy.Spec.Validation
 
 		if tls.CACertificateRefs != nil {
 			for _, caCertRef := range tls.CACertificateRefs {
-				if string(caCertRef.Kind) == gatewayapi.KindConfigMap {
+				// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
+				if string(caCertRef.Kind) == gatewayapi.KindConfigMap ||
+					string(caCertRef.Kind) == gatewayapi.KindSecret {
+
+					var err error
 					caRefNew := gwapiv1b1.SecretObjectReference{
 						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
 						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
 						Name:      caCertRef.Name,
 						Namespace: gatewayapi.NamespacePtr(policy.Namespace),
 					}
-					if err := r.processConfigMapRef(
-						ctx,
-						resourceMap,
-						resourceTree,
-						gatewayapi.KindBackendTLSPolicy,
-						policy.Namespace,
-						policy.Name,
-						caRefNew); err != nil {
+					switch string(caCertRef.Kind) {
+					case gatewayapi.KindConfigMap:
+						err = r.processConfigMapRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindBackendTLSPolicy,
+							policy.Namespace,
+							policy.Name,
+							caRefNew)
+
+					case gatewayapi.KindSecret:
+						err = r.processSecretRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindBackendTLSPolicy,
+							policy.Namespace,
+							policy.Name,
+							caRefNew)
+					}
+					if err != nil {
 						// we don't return an error here, because we want to continue
 						// reconciling the rest of the ClientTrafficPolicies despite that this
 						// reference is invalid.
@@ -1655,12 +1704,12 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 				backendRef := br.BackendObjectReference
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 					Group:     backendRef.Group,
 					Kind:      backendRef.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 					Name:      backendRef.Name,
-				}] = struct{}{}
+				})
 
 				if backendNamespace != policy.Namespace {
 					from := ObjectKindNamespacedName{
