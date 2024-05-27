@@ -44,7 +44,8 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		if _, ok := resourceMap.allAssociatedTLSRoutes[utils.NamespacedName(&tlsRoute).String()]; ok {
+		key := utils.NamespacedName(&tlsRoute).String()
+		if resourceMap.allAssociatedTLSRoutes.Has(key) {
 			r.log.Info("current TLSRoute has been processed already", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 			continue
 		}
@@ -61,12 +62,12 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 					Name:      backendRef.Name,
-				}] = struct{}{}
+				})
 
 				if backendNamespace != tlsRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindTLSRoute, namespace: tlsRoute.Namespace, name: tlsRoute.Name}
@@ -87,8 +88,8 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		resourceMap.allAssociatedNamespaces[tlsRoute.Namespace] = struct{}{}
-		resourceMap.allAssociatedTLSRoutes[utils.NamespacedName(&tlsRoute).String()] = struct{}{}
+		resourceMap.allAssociatedNamespaces.Insert(tlsRoute.Namespace)
+		resourceMap.allAssociatedTLSRoutes.Insert(key)
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		tlsRoute.Status = gwapiv1a2.TLSRouteStatus{}
@@ -123,7 +124,8 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 			}
 		}
 
-		if _, ok := resourceMap.allAssociatedGRPCRoutes[utils.NamespacedName(&grpcRoute).String()]; ok {
+		key := utils.NamespacedName(&grpcRoute).String()
+		if resourceMap.allAssociatedGRPCRoutes.Has(key) {
 			r.log.Info("current GRPCRoute has been processed already", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
 			continue
 		}
@@ -139,12 +141,12 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, grpcRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 					Name:      backendRef.Name,
-				}] = struct{}{}
+				})
 
 				if backendNamespace != grpcRoute.Namespace {
 					from := ObjectKindNamespacedName{
@@ -212,8 +214,8 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 			}
 		}
 
-		resourceMap.allAssociatedNamespaces[grpcRoute.Namespace] = struct{}{}
-		resourceMap.allAssociatedGRPCRoutes[utils.NamespacedName(&grpcRoute).String()] = struct{}{}
+		resourceMap.allAssociatedNamespaces.Insert(grpcRoute.Namespace)
+		resourceMap.allAssociatedGRPCRoutes.Insert(key)
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		grpcRoute.Status = gwapiv1.GRPCRouteStatus{}
@@ -257,7 +259,8 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 			}
 		}
 
-		if _, ok := resourceMap.allAssociatedHTTPRoutes[utils.NamespacedName(&httpRoute).String()]; ok {
+		key := utils.NamespacedName(&httpRoute).String()
+		if resourceMap.allAssociatedHTTPRoutes.Has(key) {
 			r.log.Info("current HTTPRoute has been processed already", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 			continue
 		}
@@ -273,12 +276,12 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 					Name:      backendRef.Name,
-				}] = struct{}{}
+				})
 
 				if backendNamespace != httpRoute.Namespace {
 					from := ObjectKindNamespacedName{
@@ -340,12 +343,12 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					}
 
 					backendNamespace := gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httpRoute.Namespace)
-					resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+					resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 						Group:     mirrorBackendRef.BackendObjectReference.Group,
 						Kind:      mirrorBackendRef.BackendObjectReference.Kind,
 						Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 						Name:      mirrorBackendRef.Name,
-					}] = struct{}{}
+					})
 
 					if backendNamespace != httpRoute.Namespace {
 						from := ObjectKindNamespacedName{
@@ -399,8 +402,8 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 			}
 		}
 
-		resourceMap.allAssociatedNamespaces[httpRoute.Namespace] = struct{}{}
-		resourceMap.allAssociatedHTTPRoutes[utils.NamespacedName(&httpRoute).String()] = struct{}{}
+		resourceMap.allAssociatedNamespaces.Insert(httpRoute.Namespace)
+		resourceMap.allAssociatedHTTPRoutes.Insert(key)
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		httpRoute.Status = gwapiv1.HTTPRouteStatus{}
@@ -434,7 +437,8 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		if _, ok := resourceMap.allAssociatedTCPRoutes[utils.NamespacedName(&tcpRoute).String()]; ok {
+		key := utils.NamespacedName(&tcpRoute).String()
+		if resourceMap.allAssociatedTCPRoutes.Has(key) {
 			r.log.Info("current TCPRoute has been processed already", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
 			continue
 		}
@@ -451,12 +455,12 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tcpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 					Name:      backendRef.Name,
-				}] = struct{}{}
+				})
 
 				if backendNamespace != tcpRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindTCPRoute, namespace: tcpRoute.Namespace, name: tcpRoute.Name}
@@ -477,8 +481,8 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		resourceMap.allAssociatedNamespaces[tcpRoute.Namespace] = struct{}{}
-		resourceMap.allAssociatedTCPRoutes[utils.NamespacedName(&tcpRoute).String()] = struct{}{}
+		resourceMap.allAssociatedNamespaces.Insert(tcpRoute.Namespace)
+		resourceMap.allAssociatedTCPRoutes.Insert(key)
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		tcpRoute.Status = gwapiv1a2.TCPRouteStatus{}
@@ -512,7 +516,8 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		if _, ok := resourceMap.allAssociatedUDPRoutes[utils.NamespacedName(&udpRoute).String()]; ok {
+		key := utils.NamespacedName(&udpRoute).String()
+		if resourceMap.allAssociatedUDPRoutes.Has(key) {
 			r.log.Info("current UDPRoute has been processed already", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
 			continue
 		}
@@ -529,12 +534,12 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 					Name:      backendRef.Name,
-				}] = struct{}{}
+				})
 
 				if backendNamespace != udpRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindUDPRoute, namespace: udpRoute.Namespace, name: udpRoute.Name}
@@ -555,8 +560,8 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		resourceMap.allAssociatedNamespaces[udpRoute.Namespace] = struct{}{}
-		resourceMap.allAssociatedUDPRoutes[utils.NamespacedName(&udpRoute).String()] = struct{}{}
+		resourceMap.allAssociatedNamespaces.Insert(udpRoute.Namespace)
+		resourceMap.allAssociatedUDPRoutes.Insert(key)
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		udpRoute.Status = gwapiv1a2.UDPRouteStatus{}

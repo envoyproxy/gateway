@@ -117,7 +117,7 @@ referenceGrants:
   spec:
     from:
     - group: gateway.envoyproxy.io
-      kind: SecurityPolicy
+      kind: EnvoyExtensionPolicy
       namespace: default
     to:
     - group: ''

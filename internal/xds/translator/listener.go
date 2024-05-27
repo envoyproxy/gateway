@@ -390,7 +390,7 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, connection *ir.Connection) error {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.Connection) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -413,6 +413,12 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 			Cluster: clusterName,
 		},
 		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
+	}
+
+	if timeout != nil && timeout.TCP != nil {
+		if timeout.TCP.IdleTimeout != nil {
+			mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
+		}
 	}
 
 	var filters []*listenerv3.Filter
