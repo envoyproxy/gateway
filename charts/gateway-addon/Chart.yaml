@@ -1,6 +1,6 @@
 apiVersion: v2
-name: dashboard-addon
-description: A Dashboard Addon Helm chart for Envoy Gateway
+name: gateway-addon
+description: A Addon Helm chart for Envoy Gateway
 type: application
 
 version: v0.0.0-latest
@@ -31,6 +31,3 @@ dependencies:
   - name: grafana
     repository: https://grafana.github.io/helm-charts
     version: 6.58.4
-  - name: envoy-gateway-helm
-    repository: file://../gateway-helm
-    version: 0.0.0-latest
