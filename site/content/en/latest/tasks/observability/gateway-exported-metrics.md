@@ -76,21 +76,23 @@ Envoy Gateway collects the following metrics in xDS Server:
 
 ## Infrastructure Manager
 
-Envoy Gateway monitors the create/update and delete operations in Infrastructure Manager.
+Envoy Gateway monitors the `apply` (`create` or `update`) and `delete` operations in Infrastructure Manager.
 
 Envoy Gateway collects the following metrics in Infrastructure Manager:
 
-| Name                                      | Description                                                              |
-|-------------------------------------------|--------------------------------------------------------------------------|
-| `infra_create_or_update_failed`           | Number of created or updated infrastructures that failed.                |
-| `infra_create_or_update_success`          | Number of created or updated infrastructures that succeed.               |
-| `infra_create_or_update_duration_seconds` | How long in seconds a infrastructure is created or updated successfully. |
-| `infra_delete_failed`                     | Number of deleted infrastructures that failed.                           |
-| `infra_delete_success`                    | Number of deleted infrastructures that succeed.                          |
-| `infra_delete_duration_seconds`           | How long in seconds a infrastructure is deleted successfully.            |
+| Name                               | Description                                             |
+|------------------------------------|---------------------------------------------------------|
+| `resource_apply_total`             | Total number of applied resources.                      |
+| `resource_apply_failed`            | Number of applied resources that failed.                |
+| `resource_apply_success`           | Number of applied resources that succeed.               |
+| `resource_apply_duration_seconds`  | How long in seconds a resource be applied successfully. |
+| `resource_delete_total`            | Total number of deleted resources.                      |
+| `resource_delete_failed`           | Number of deleted resources that failed.                |
+| `resource_delete_success`          | Number of deleted resources that succeed.               |
+| `resource_delete_duration_seconds` | How long in seconds a resource be deleted successfully. |
 
-Each metric includes the `kind` label to identify the corresponding resources created/updated or deleted by Infrastructure Manager.
+Each metric includes the `kind` label to identify the corresponding resources being applied or deleted by Infrastructure Manager.
 
-Metrics may also include `infra` label to identify the kind of corresponding Infrastructure Manager.
+Metrics may also include `name` and `namespace` label to identify the name and namespace of corresponding Infrastructure Manager.
 
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format

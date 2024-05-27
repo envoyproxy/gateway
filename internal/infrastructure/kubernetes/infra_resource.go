@@ -25,22 +25,25 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("ServiceAccount"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
 		}
 	)
 
+	resourceApplyTotal.With(labels...).Increment()
+
 	if sa, err = r.ServiceAccount(); err != nil {
-		infraCreateOrUpdateFailed.With(labels...).Increment()
+		resourceApplyFailed.With(labels...).Increment()
 
 		return err
 	}
 
 	defer func() {
 		if err == nil {
-			infraCreateOrUpdateDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraCreateOrUpdateSuccess.With(labels...).Increment()
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplySuccess.With(labels...).Increment()
 		} else {
-			infraCreateOrUpdateFailed.With(labels...).Increment()
+			resourceApplyFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -55,12 +58,15 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("ConfigMap"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
 		}
 	)
 
+	resourceApplyTotal.With(labels...).Increment()
+
 	if cm, err = r.ConfigMap(); err != nil {
-		infraCreateOrUpdateFailed.With(labels...).Increment()
+		resourceApplyFailed.With(labels...).Increment()
 
 		return err
 	}
@@ -71,10 +77,10 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 
 	defer func() {
 		if err == nil {
-			infraCreateOrUpdateDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraCreateOrUpdateSuccess.With(labels...).Increment()
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplySuccess.With(labels...).Increment()
 		} else {
-			infraCreateOrUpdateFailed.With(labels...).Increment()
+			resourceApplyFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -89,12 +95,15 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		startTime  = time.Now()
 		labels     = []metrics.LabelValue{
 			kindLabel.Value("Deployment"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
 		}
 	)
 
+	resourceApplyTotal.With(labels...).Increment()
+
 	if deployment, err = r.Deployment(); err != nil {
-		infraCreateOrUpdateFailed.With(labels...).Increment()
+		resourceApplyFailed.With(labels...).Increment()
 
 		return err
 	}
@@ -108,10 +117,10 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 
 	defer func() {
 		if err == nil {
-			infraCreateOrUpdateDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraCreateOrUpdateSuccess.With(labels...).Increment()
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplySuccess.With(labels...).Increment()
 		} else {
-			infraCreateOrUpdateFailed.With(labels...).Increment()
+			resourceApplyFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -126,12 +135,15 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("DaemonSet"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
 		}
 	)
 
+	resourceApplyTotal.With(labels...).Increment()
+
 	if daemonSet, err = r.DaemonSet(); err != nil {
-		infraCreateOrUpdateFailed.With(labels...).Increment()
+		resourceApplyFailed.With(labels...).Increment()
 
 		return err
 	}
@@ -145,10 +157,10 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 
 	defer func() {
 		if err == nil {
-			infraCreateOrUpdateDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraCreateOrUpdateSuccess.With(labels...).Increment()
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplySuccess.With(labels...).Increment()
 		} else {
-			infraCreateOrUpdateFailed.With(labels...).Increment()
+			resourceApplyFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -164,12 +176,15 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("HPA"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
 		}
 	)
 
+	resourceApplyTotal.With(labels...).Increment()
+
 	if hpa, err = r.HorizontalPodAutoscaler(); err != nil {
-		infraCreateOrUpdateFailed.With(labels...).Increment()
+		resourceApplyFailed.With(labels...).Increment()
 
 		return err
 	}
@@ -182,10 +197,10 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 
 	defer func() {
 		if err == nil {
-			infraCreateOrUpdateDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraCreateOrUpdateSuccess.With(labels...).Increment()
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplySuccess.With(labels...).Increment()
 		} else {
-			infraCreateOrUpdateFailed.With(labels...).Increment()
+			resourceApplyFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -200,22 +215,25 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("Service"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
 		}
 	)
 
+	resourceApplyTotal.With(labels...).Increment()
+
 	if svc, err = r.Service(); err != nil {
-		infraCreateOrUpdateFailed.With(labels...).Increment()
+		resourceApplyFailed.With(labels...).Increment()
 
 		return err
 	}
 
 	defer func() {
 		if err == nil {
-			infraCreateOrUpdateDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraCreateOrUpdateSuccess.With(labels...).Increment()
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplySuccess.With(labels...).Increment()
 		} else {
-			infraCreateOrUpdateFailed.With(labels...).Increment()
+			resourceApplyFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -225,25 +243,29 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 // deleteServiceAccount deletes the ServiceAccount in the kube api server, if it exists.
 func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		sa = &corev1.ServiceAccount{
+		name, ns = r.Name(), i.Namespace
+		sa       = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: i.Namespace,
-				Name:      r.Name(),
+				Namespace: ns,
+				Name:      name,
 			},
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("ServiceAccount"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
 		}
 	)
 
+	resourceDeleteTotal.With(labels...).Increment()
+
 	defer func() {
 		if err == nil {
-			infraDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraDeleteSuccess.With(labels...).Increment()
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteSuccess.With(labels...).Increment()
 		} else {
-			infraDeleteFailed.With(labels...).Increment()
+			resourceDeleteFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -253,25 +275,29 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
 	var (
+		name, ns   = r.Name(), i.Namespace
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: i.Namespace,
-				Name:      r.Name(),
+				Namespace: ns,
+				Name:      name,
 			},
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("Deployment"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
 		}
 	)
 
+	resourceDeleteTotal.With(labels...).Increment()
+
 	defer func() {
 		if err == nil {
-			infraDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraDeleteSuccess.With(labels...).Increment()
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteSuccess.With(labels...).Increment()
 		} else {
-			infraDeleteFailed.With(labels...).Increment()
+			resourceDeleteFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -281,25 +307,29 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
 	var (
+		name, ns  = r.Name(), i.Namespace
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: i.Namespace,
-				Name:      r.Name(),
+				Namespace: ns,
+				Name:      name,
 			},
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("DaemonSet"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
 		}
 	)
 
+	resourceDeleteTotal.With(labels...).Increment()
+
 	defer func() {
 		if err == nil {
-			infraDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraDeleteSuccess.With(labels...).Increment()
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteSuccess.With(labels...).Increment()
 		} else {
-			infraDeleteFailed.With(labels...).Increment()
+			resourceDeleteFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -309,25 +339,29 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 // deleteConfigMap deletes the ConfigMap in the kube api server, if it exists.
 func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		cm = &corev1.ConfigMap{
+		name, ns = r.Name(), i.Namespace
+		cm       = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: i.Namespace,
-				Name:      r.Name(),
+				Namespace: ns,
+				Name:      name,
 			},
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("ConfigMap"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
 		}
 	)
 
+	resourceDeleteTotal.With(labels...).Increment()
+
 	defer func() {
 		if err == nil {
-			infraDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraDeleteSuccess.With(labels...).Increment()
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteSuccess.With(labels...).Increment()
 		} else {
-			infraDeleteFailed.With(labels...).Increment()
+			resourceDeleteFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -337,25 +371,29 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err erro
 // deleteService deletes the Service in the kube api server, if it exists.
 func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		svc = &corev1.Service{
+		name, ns = r.Name(), i.Namespace
+		svc      = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: i.Namespace,
-				Name:      r.Name(),
+				Namespace: ns,
+				Name:      name,
 			},
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("Service"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
 		}
 	)
 
+	resourceDeleteTotal.With(labels...).Increment()
+
 	defer func() {
 		if err == nil {
-			infraDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraDeleteSuccess.With(labels...).Increment()
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteSuccess.With(labels...).Increment()
 		} else {
-			infraDeleteFailed.With(labels...).Increment()
+			resourceDeleteFailed.With(labels...).Increment()
 		}
 	}()
 
@@ -365,25 +403,29 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
 func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		hpa = &autoscalingv2.HorizontalPodAutoscaler{
+		name, ns = r.Name(), i.Namespace
+		hpa      = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: i.Namespace,
-				Name:      r.Name(),
+				Namespace: ns,
+				Name:      name,
 			},
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("HPA"),
-			infraLabel.Value(r.Name()),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
 		}
 	)
 
+	resourceDeleteTotal.With(labels...).Increment()
+
 	defer func() {
 		if err == nil {
-			infraDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			infraDeleteSuccess.With(labels...).Increment()
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteSuccess.With(labels...).Increment()
 		} else {
-			infraDeleteFailed.With(labels...).Increment()
+			resourceDeleteFailed.With(labels...).Increment()
 		}
 	}()
 
