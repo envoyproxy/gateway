@@ -936,6 +936,7 @@ func (t *Translator) validateSecretObjectRef(
 func (t *Translator) validateExtServiceBackendReference(
 	backendRef *gwapiv1.BackendObjectReference,
 	ownerNamespace string,
+	policyKind string,
 	resources *Resources,
 ) error {
 	// These are sanity checks, they should never happen because the API server
@@ -985,7 +986,7 @@ func (t *Translator) validateExtServiceBackendReference(
 		if !t.validateCrossNamespaceRef(
 			crossNamespaceFrom{
 				group:     egv1a1.GroupName,
-				kind:      KindSecurityPolicy,
+				kind:      policyKind,
 				namespace: ownerNamespace,
 			},
 			crossNamespaceTo{
