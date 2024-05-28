@@ -511,7 +511,7 @@ spec:
                 properties:
                   version:
                     description: |-
-                      Version of ProxyProtol
+                      Version of ProxyProtocol
                       Valid ProxyProtocolVersion values are
                       "V1"
                       "V2"
@@ -564,7 +564,7 @@ spec:
                               items:
                                 description: |-
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
-                                  be used to select a subset of clients to be ratelimited.
+                                  be used to select a subset of clients to be rate limited.
                                   All the individual conditions must hold True for the overall condition to hold True.
                                 properties:
                                   headers:
@@ -636,7 +636,7 @@ spec:
                                 Limit holds the rate limit values.
                                 This limit is applied for traffic flows when the selectors
                                 compute to True, causing the request to be counted towards the limit.
-                                The limit is enforced and the request is ratelimited, i.e. a response with
+                                The limit is enforced and the request is rate limited, i.e. a response with
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
@@ -697,7 +697,7 @@ spec:
                               items:
                                 description: |-
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
-                                  be used to select a subset of clients to be ratelimited.
+                                  be used to select a subset of clients to be rate limited.
                                   All the individual conditions must hold True for the overall condition to hold True.
                                 properties:
                                   headers:
@@ -769,7 +769,7 @@ spec:
                                 Limit holds the rate limit values.
                                 This limit is applied for traffic flows when the selectors
                                 compute to True, causing the request to be counted towards the limit.
-                                The limit is enforced and the request is ratelimited, i.e. a response with
+                                The limit is enforced and the request is rate limited, i.e. a response with
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
