@@ -85,6 +85,11 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 			return fmt.Errorf("extension service config is empty")
 		}
 
+		if (eg.ExtensionManager.Service.Path != "" && eg.ExtensionManager.Service.Host != "") ||
+			(eg.ExtensionManager.Service.Path == "" && eg.ExtensionManager.Service.Host == "") {
+			return fmt.Errorf("extension service must contain either a TCP target or a UDS target")
+		}
+
 		if eg.ExtensionManager.Service.TLS != nil {
 			certificateRefKind := eg.ExtensionManager.Service.TLS.CertificateRef.Kind
 

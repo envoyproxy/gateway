@@ -547,6 +547,52 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "no extension server target set",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway:  v1alpha1.DefaultGateway(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &v1alpha1.ExtensionManager{
+						Resources: []v1alpha1.GroupVersionKind{
+							{
+								Group:   "foo.example.io",
+								Version: "v1alpha1",
+								Kind:    "Foo",
+							},
+						},
+						Service: &v1alpha1.ExtensionService{
+							Port: 8080,
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "both host and path targets are set for extension server",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway:  v1alpha1.DefaultGateway(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &v1alpha1.ExtensionManager{
+						Resources: []v1alpha1.GroupVersionKind{
+							{
+								Group:   "foo.example.io",
+								Version: "v1alpha1",
+								Kind:    "Foo",
+							},
+						},
+						Service: &v1alpha1.ExtensionService{
+							Path: "/some/path",
+							Host: "foo.example.io",
+							Port: 8080,
+						},
+					},
+				},
+			},
+			expect: false,
+		},
 	}
 
 	for _, tc := range testCases {
