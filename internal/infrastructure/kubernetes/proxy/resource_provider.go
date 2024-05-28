@@ -69,6 +69,14 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Service returns the expected Service based on the provided infra.
 func (r *ResourceRender) Service() (*corev1.Service, error) {
+	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
+
+	// If the service is disabled, return nil
+	if envoyServiceConfig.Disable {
+		return nil, nil
+	}
+
 	var ports []corev1.ServicePort
 	for _, listener := range r.infra.Listeners {
 		for _, port := range listener.Ports {
@@ -110,8 +118,6 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	annotations := map[string]string{}
 	maps.Copy(annotations, r.infra.GetProxyMetadata().Annotations)
 
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
 	if envoyServiceConfig.Annotations != nil {
 		maps.Copy(annotations, envoyServiceConfig.Annotations)
 	}

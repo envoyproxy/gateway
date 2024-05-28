@@ -54,6 +54,24 @@ func newTestInfraWithAddresses(addresses []string) *ir.Infra {
 	return infra
 }
 
+func newTestInfraWithDisabledService() *ir.Infra {
+	infra := newTestInfraWithAnnotationsAndLabels(nil, nil)
+	infra.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+					EnvoyService: &egv1a1.KubernetesServiceSpec{
+						Disable: true,
+					},
+				},
+			},
+		},
+	}
+
+	return infra
+}
+
 func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string) *ir.Infra {
 	i := ir.NewInfra()
 
@@ -1083,6 +1101,11 @@ func TestService(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "without-service",
+			infra:    newTestInfraWithDisabledService(),
+			service:  nil,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -1095,10 +1118,12 @@ func TestService(t *testing.T) {
 			svc, err := r.Service()
 			require.NoError(t, err)
 
-			expected, err := loadService(tc.caseName)
-			require.NoError(t, err)
+			if tc.caseName != "without-service" {
+				expected, err := loadService(tc.caseName)
+				require.NoError(t, err)
 
-			assert.Equal(t, expected, svc)
+				assert.Equal(t, expected, svc)
+			}
 		})
 	}
 }

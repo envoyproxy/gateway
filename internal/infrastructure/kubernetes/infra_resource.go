@@ -102,6 +102,12 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 		return err
 	}
 
+	// when Service is disabled,
+	// then delete the object in the kube api server if any.
+	if svc == nil {
+		return i.deleteService(ctx, r)
+	}
+
 	return i.Client.ServerSideApply(ctx, svc)
 }
 
