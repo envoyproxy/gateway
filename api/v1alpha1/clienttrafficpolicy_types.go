@@ -104,6 +104,12 @@ type HeaderSettings struct {
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 
+	// DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit" headers.
+	// If DisableRateLimitHeaders is false, "X-RateLimit" headers will be emitted.
+	// If not set, DisableRateLimitHeaders is False.
+	// +optional
+	DisableRateLimitHeaders bool `json:"disableRateLimitHeaders,omitempty"`
+
 	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
 	//
 	// x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate

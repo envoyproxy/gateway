@@ -403,7 +403,6 @@ rateLimit:
     type: Redis
     redis:
       url: redis.redis-system.svc.cluster.local:6379
-  disableHeaders: true
 `,
 				},
 			},

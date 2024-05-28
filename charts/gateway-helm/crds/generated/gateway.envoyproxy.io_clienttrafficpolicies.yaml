@@ -142,6 +142,12 @@ spec:
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
+                  disableRateLimitHeaders:
+                    description: |-
+                      DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit" headers.
+                      If DisableRateLimitHeaders is false, "X-RateLimit" headers will be emitted.
+                      If not set, DisableRateLimitHeaders is False.
+                    type: boolean
                   enableEnvoyHeaders:
                     description: |-
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests

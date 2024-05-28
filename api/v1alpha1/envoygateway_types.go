@@ -340,13 +340,6 @@ type RateLimit struct {
 	// state associated with global ratelimiting.
 	Backend RateLimitDatabaseBackend `json:"backend"`
 
-	// DisableHeaders is a switch used to control whether
-	// X-RateLimit headers should be emitted
-	// If DisableHeaders is false, X-RateLimit headers
-	// will be emitted.
-	// If not set, DisableHeaders is False.
-	DisableHeaders bool `json:"disableHeaders"`
-
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
 	// If not set, timeout is 20ms.
 	// +optional
