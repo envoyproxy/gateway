@@ -86,6 +86,16 @@ func (m *Manager) HasExtension(g v1.Group, k v1.Kind) bool {
 	return false
 }
 
+func getExtensionServerAddress(service *v1alpha1.ExtensionService) string {
+	var serverAddr string
+	if service.Path != "" {
+		serverAddr = fmt.Sprintf("unix://%s", service.Path)
+	} else {
+		serverAddr = fmt.Sprintf("%s:%d", service.Host, service.Port)
+	}
+	return serverAddr
+}
+
 // GetPreXDSHookClient checks if the registered extension makes use of a particular hook type that modifies inputs
 // that are used to generate an xDS resource.
 // If the extension makes use of the hook then the XDS Hook Client is returned. If it does not support
@@ -113,7 +123,7 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType v1alpha1.XDSTranslatorHook) ex
 	}
 
 	if m.extensionConnCache == nil {
-		serverAddr := fmt.Sprintf("%s:%d", ext.Service.Host, ext.Service.Port)
+		serverAddr := getExtensionServerAddress(ext.Service)
 
 		opts, err := setupGRPCOpts(ctx, m.k8sClient, &ext, m.namespace)
 		if err != nil {
@@ -162,7 +172,7 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType v1alpha1.XDSTranslatorHook) e
 	}
 
 	if m.extensionConnCache == nil {
-		serverAddr := fmt.Sprintf("%s:%d", ext.Service.Host, ext.Service.Port)
+		serverAddr := getExtensionServerAddress(ext.Service)
 
 		opts, err := setupGRPCOpts(ctx, m.k8sClient, &ext, m.namespace)
 		if err != nil {

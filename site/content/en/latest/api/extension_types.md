@@ -1464,7 +1464,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the extension service hostname. |
+| `path` | _string_ |  false  | Path defines the path to the extension service Unix Domain Socket file. |
+| `host` | _string_ |  false  | Host define the extension service hostname. |
 | `port` | _integer_ |  false  | Port defines the port the extension service is exposed on. |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
 
