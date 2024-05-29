@@ -584,9 +584,75 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &v1alpha1.ExtensionService{
-							Path: "/some/path",
-							Host: "foo.example.io",
+							Backend: v1alpha1.BackendEndpoint{
+								FQDN: &v1alpha1.FQDNEndpoint{
+									Hostname: "foo.example.com",
+									Port:     8080,
+								},
+								Unix: &v1alpha1.UnixSocket{
+									Path: "/some/path",
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "multiple backend targets are set for extension server",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway:  v1alpha1.DefaultGateway(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &v1alpha1.ExtensionManager{
+						Resources: []v1alpha1.GroupVersionKind{
+							{
+								Group:   "foo.example.io",
+								Version: "v1alpha1",
+								Kind:    "Foo",
+							},
+						},
+						Service: &v1alpha1.ExtensionService{
+							Backend: v1alpha1.BackendEndpoint{
+								FQDN: &v1alpha1.FQDNEndpoint{
+									Hostname: "foo.example.com",
+									Port:     8080,
+								},
+								IPv4: &v1alpha1.IPv4Endpoint{
+									Address: "10.9.8.7",
+									Port:    8080,
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "both host and path targets are set for extension server",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway:  v1alpha1.DefaultGateway(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &v1alpha1.ExtensionManager{
+						Resources: []v1alpha1.GroupVersionKind{
+							{
+								Group:   "foo.example.io",
+								Version: "v1alpha1",
+								Kind:    "Foo",
+							},
+						},
+						Service: &v1alpha1.ExtensionService{
+							Host: "foo.example.com",
 							Port: 8080,
+							Backend: v1alpha1.BackendEndpoint{
+								FQDN: &v1alpha1.FQDNEndpoint{
+									Hostname: "foo.example.com",
+									Port:     8080,
+								},
+							},
 						},
 					},
 				},

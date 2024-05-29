@@ -286,6 +286,7 @@ corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/ap
 
 _Appears in:_
 - [BackendSpec](#backendspec)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1514,9 +1515,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `path` | _string_ |  false  | Path defines the path to the extension service Unix Domain Socket file. |
-| `host` | _string_ |  false  | Host define the extension service hostname. |
-| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on. |
+| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: use the backend attribute instead |
+| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: use the backend attribute instead |
+| `backend` | _[BackendEndpoint](#backendendpoint)_ |  true  | Backend points to where the extension server can be found. |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
 
 

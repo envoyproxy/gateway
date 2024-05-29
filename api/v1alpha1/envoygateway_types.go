@@ -480,25 +480,24 @@ type XDSTranslatorHooks struct {
 	Post []XDSTranslatorHook `json:"post,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="(has(self.Path) && !has(self.Host)) || (has(self.Host) && !has(self.Path))",message="transport configuration must be either tcp or uds"
 // ExtensionService defines the configuration for connecting to a registered extension service.
 type ExtensionService struct {
-	// Path defines the path to the extension service Unix Domain Socket file.
-	//
-	// +optional
-	Path string `json:"path,omitempty"`
-
 	// Host define the extension service hostname.
+	// Deprecated: use the backend attribute instead
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
+	// Deprecated: use the backend attribute instead
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=80
 	Port int32 `json:"port,omitempty"`
+
+	// Backend points to where the extension server can be found.
+	Backend BackendEndpoint `json:"backend"`
 
 	// TLS defines TLS configuration for communication between Envoy Gateway and
 	// the extension service.
