@@ -38,19 +38,19 @@ type TracingProvider struct {
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the provider service is exposed on.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
 	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the accesslog will be sent.
+	// backend server to which the trace will be sent.
 	// Only service Kind is supported for now.
 	//
 	// +optional

@@ -108,6 +108,7 @@ backendTrafficPolicies:
       type: ConsistentHash
       consistentHash:
         type: SourceIP
+        tableSize: 524287
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

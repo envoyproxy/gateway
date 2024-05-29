@@ -78,7 +78,7 @@ udpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: UDP Port 8080 not found on service default/service-1
-        reason: PortNotFound
+        reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

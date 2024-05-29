@@ -8,6 +8,7 @@ backendTrafficPolicies:
   spec:
     loadBalancer:
       consistentHash:
+        tableSize: 524287
         type: SourceIP
       type: ConsistentHash
     targetRef:
@@ -431,3 +432,4 @@ xdsIR:
           loadBalancer:
             consistentHash:
               sourceIP: true
+              tableSize: 524287

@@ -77,6 +77,8 @@ title: Envoy Gateway
 
 {{% /blocks/section %}}
 
+{{< adopters >}}
+
 {{% blocks/lead type="row" color="white" %}}
 
 <img src="/img/cncf.svg" alt="CNCF" width="40%">

@@ -379,6 +379,70 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 func TestValidateServiceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
+	telemetryEnabledGatewaysConfig := &v1alpha1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "telemetry",
+		},
+		Spec: v1alpha1.EnvoyProxySpec{
+			Telemetry: &v1alpha1.ProxyTelemetry{
+				AccessLog: &v1alpha1.ProxyAccessLog{
+					Settings: []v1alpha1.ProxyAccessLogSetting{
+						{
+							Sinks: []v1alpha1.ProxyAccessLogSink{
+								{
+									Type: v1alpha1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &v1alpha1.OpenTelemetryEnvoyProxyAccessLog{
+										BackendRefs: []v1alpha1.BackendRef{
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name:      "otel-collector",
+													Namespace: ptr.To(gwapiv1.Namespace("default")),
+													Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Metrics: &v1alpha1.ProxyMetrics{
+					Sinks: []v1alpha1.ProxyMetricSink{
+						{
+							Type: v1alpha1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &v1alpha1.ProxyOpenTelemetrySink{
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name:      "otel-collector",
+											Namespace: ptr.To(gwapiv1.Namespace("default")),
+											Port:      ptr.To(gwapiv1.PortNumber(4317)),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Tracing: &v1alpha1.ProxyTracing{
+					Provider: v1alpha1.TracingProvider{
+						Type: v1alpha1.TracingProviderTypeOpenTelemetry,
+						BackendRefs: []v1alpha1.BackendRef{
+							{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Name:      "otel-collector",
+									Namespace: ptr.To(gwapiv1.Namespace("default")),
+									Port:      ptr.To(gwapiv1.PortNumber(4317)),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
 	testCases := []struct {
 		name    string
@@ -488,6 +552,34 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name: "service referenced by EnvoyProxy updated",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(telemetryEnabledGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(telemetryEnabledGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(telemetryEnabledGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(telemetryEnabledGatewaysConfig.Name),
+				}),
+				telemetryEnabledGatewaysConfig,
+			},
+			service: test.GetService(types.NamespacedName{Name: "otel-collector", Namespace: "default"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by EnvoyProxy unrelated",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(telemetryEnabledGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(telemetryEnabledGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(telemetryEnabledGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(telemetryEnabledGatewaysConfig.Name),
+				}),
+				telemetryEnabledGatewaysConfig,
+			},
+			service: test.GetService(types.NamespacedName{Name: "otel-collector-unrelated", Namespace: "default"}, nil, nil),
+			expect:  false,
+		},
+		{
 			name: "service referenced by SecurityPolicy ExtAuth HTTP service",
 			configs: []client.Object{
 				&v1alpha1.SecurityPolicy{
@@ -503,8 +595,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtAuth: &v1alpha1.ExtAuth{
 							HTTP: &v1alpha1.HTTPExtAuthService{
-								BackendRef: gwapiv1.BackendObjectReference{
-									Name: "ext-auth-http-service",
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-auth-http-service",
+										},
+									},
 								},
 							},
 						},
@@ -512,6 +608,37 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				},
 			},
 			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by SecurityPolicy ExtAuth GRPC service",
+			configs: []client.Object{
+				&v1alpha1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http",
+					},
+					Spec: v1alpha1.SecurityPolicySpec{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtAuth: &v1alpha1.ExtAuth{
+							GRPC: &v1alpha1.GRPCExtAuthService{
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-auth-grpc-service",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service"}, nil, nil),
 			expect:  true,
 		},
 		{
@@ -634,6 +761,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			WithIndex(&v1alpha1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
 			WithIndex(&v1alpha1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
+			WithIndex(&v1alpha1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)

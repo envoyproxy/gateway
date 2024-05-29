@@ -215,6 +215,56 @@ func TestTranslate(t *testing.T) {
 				},
 			)
 
+			// add otel-collector service
+			resources.Services = append(resources.Services,
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "monitoring",
+						Name:      "otel-collector",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "3.3.3.3",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       4317,
+								TargetPort: intstr.IntOrString{IntVal: 4317},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			)
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "otel-collector-endpointslice",
+						Namespace: "monitoring",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "otel-collector",
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     ptr.To("grpc"),
+							Port:     ptr.To[int32](4317),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"8.7.6.5",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(true),
+							},
+						},
+					},
+				},
+			)
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
