@@ -1228,16 +1228,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Secret{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, s *corev1.Secret) []reconcile.Request {
-				return r.enqueueClass(ctx, s)
-			}),
 			secretPredicates...)); err != nil {
 		return err
 	}
 
 	// Watch ConfigMap CRUDs and process affected ClienTraffiPolicies and BackendTLSPolicies.
 	configMapPredicates := []predicate.TypedPredicate[*corev1.ConfigMap]{
-		predicate.TypedGenerationChangedPredicate[*corev1.ConfigMap]{},
 		predicate.NewTypedPredicateFuncs[*corev1.ConfigMap](func(cm *corev1.ConfigMap) bool {
 			return r.validateConfigMapForReconcile(cm)
 		}),
