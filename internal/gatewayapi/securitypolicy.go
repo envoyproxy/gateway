@@ -604,7 +604,9 @@ func (t *Translator) buildOIDC(
 		logoutPath = *oidc.LogoutPath
 	}
 
-	// Generate a unique cookie suffix for oauth filters
+	// Generate a unique cookie suffix for oauth filters.
+	// This is to avoid cookie name collision when multiple security policies are applied
+	// to the same route.
 	suffix := utils.Digest32(string(policy.UID))
 
 	// Get the HMAC secret.
@@ -622,17 +624,18 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
-		Name:         irConfigName(policy),
-		Provider:     *provider,
-		ClientID:     oidc.ClientID,
-		ClientSecret: clientSecretBytes,
-		Scopes:       scopes,
-		Resources:    oidc.Resources,
-		RedirectURL:  redirectURL,
-		RedirectPath: redirectPath,
-		LogoutPath:   logoutPath,
-		CookieSuffix: suffix,
-		HMACSecret:   hmacData,
+		Name:                irConfigName(policy),
+		Provider:            *provider,
+		ClientID:            oidc.ClientID,
+		ClientSecret:        clientSecretBytes,
+		Scopes:              scopes,
+		Resources:           oidc.Resources,
+		RedirectURL:         redirectURL,
+		RedirectPath:        redirectPath,
+		LogoutPath:          logoutPath,
+		CookieSuffix:        suffix,
+		CookieNameOverrides: policy.Spec.OIDC.CookieNames,
+		HMACSecret:          hmacData,
 	}, nil
 }
 

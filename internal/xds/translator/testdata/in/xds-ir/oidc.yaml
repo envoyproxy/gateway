@@ -66,3 +66,6 @@ http:
         redirectPath: "/bar/oauth2/callback"
         logoutPath: "/bar/logout"
         cookieSuffix: 5f93c2e4
+        cookieNameOverrides:
+          idToken: "CustomIdTokenOverride"
+          accessToken: "CustomAccessTokenOverride"

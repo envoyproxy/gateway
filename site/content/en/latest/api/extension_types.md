@@ -2361,10 +2361,26 @@ _Appears in:_
 | `provider` | _[OIDCProvider](#oidcprovider)_ |  true  | The OIDC Provider configuration. |
 | `clientID` | _string_ |  true  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br /><br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
+| `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
 | `scopes` | _string array_ |  false  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
 | `logoutPath` | _string_ |  true  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
+
+
+#### OIDCCookieNames
+
+
+
+OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `accessToken` | _string_ |  false  | The name of the cookie used to store the AccessToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "AccessToken-(randomly generated uid)" |
+| `idToken` | _string_ |  false  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-(randomly generated uid)" |
 
 
 #### OIDCProvider

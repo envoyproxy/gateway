@@ -862,6 +862,25 @@ spec:
                     required:
                     - name
                     type: object
+                  cookieNames:
+                    description: |-
+                      The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+                      [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      If not specified, uses a randomly generated suffix
+                    properties:
+                      accessToken:
+                        description: |-
+                          The name of the cookie used to store the AccessToken in the
+                          [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                          If not specified, defaults to "AccessToken-(randomly generated uid)"
+                        type: string
+                      idToken:
+                        description: |-
+                          The name of the cookie used to store the IdToken in the
+                          [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                          If not specified, defaults to "IdToken-(randomly generated uid)"
+                        type: string
+                    type: object
                   logoutPath:
                     description: |-
                       The path to log a user out, clearing their credential cookies.
