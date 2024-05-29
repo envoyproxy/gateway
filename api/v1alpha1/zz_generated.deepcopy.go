@@ -2551,6 +2551,11 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.DisableRateLimitHeaders != nil {
+		in, out := &in.DisableRateLimitHeaders, &out.DisableRateLimitHeaders
+		*out = new(bool)
+		**out = **in
+	}
 	if in.XForwardedClientCert != nil {
 		in, out := &in.XForwardedClientCert, &out.XForwardedClientCert
 		*out = new(XForwardedClientCert)

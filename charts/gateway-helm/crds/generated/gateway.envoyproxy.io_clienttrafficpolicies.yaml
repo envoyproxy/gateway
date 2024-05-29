@@ -144,9 +144,8 @@ spec:
                 properties:
                   disableRateLimitHeaders:
                     description: |-
-                      DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit" headers.
-                      If DisableRateLimitHeaders is false, "X-RateLimit" headers will be emitted.
-                      If not set, DisableRateLimitHeaders is False.
+                      DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
+                      when rate limiting is enabled.
                     type: boolean
                   enableEnvoyHeaders:
                     description: |-
