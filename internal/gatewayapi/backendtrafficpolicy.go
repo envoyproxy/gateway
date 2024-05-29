@@ -301,7 +301,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		to        *ir.Timeout
 		ka        *ir.TCPKeepalive
 		rt        *ir.Retry
-		bc        *ir.BackendPolicyConnection
+		bc        *ir.BackendConnection
 		err, errs error
 	)
 
@@ -1150,9 +1150,9 @@ func int64ToUint32(in int64) (uint32, bool) {
 	return 0, false
 }
 
-func (t *Translator) buildBackendConnection(policy *egv1a1.BackendTrafficPolicy) (*ir.BackendPolicyConnection, error) {
+func (t *Translator) buildBackendConnection(policy *egv1a1.BackendTrafficPolicy) (*ir.BackendConnection, error) {
 	var (
-		bcIR = &ir.BackendPolicyConnection{}
+		bcIR = &ir.BackendConnection{}
 		bc   = &egv1a1.BackendTrafficPolicyConnection{}
 	)
 

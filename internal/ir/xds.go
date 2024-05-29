@@ -544,7 +544,7 @@ type TrafficFeatures struct {
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 	// settings of upstream connection
-	BackendConnection *BackendPolicyConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1275,7 +1275,7 @@ type TCPRoute struct {
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// settings of upstream connection
-	BackendConnection *BackendPolicyConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1390,7 +1390,7 @@ type UDPRoute struct {
 	// Request and connection timeout settings
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// settings of upstream connection
-	BackendConnection *BackendPolicyConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -2030,9 +2030,9 @@ type TLSUpstreamConfig struct {
 	TLSConfig           `json:",inline"`
 }
 
-// BackendPolicyConnection settings for upstream connections
+// BackendConnection settings for upstream connections
 // +k8s:deepcopy-gen=true
-type BackendPolicyConnection struct {
+type BackendConnection struct {
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
 }

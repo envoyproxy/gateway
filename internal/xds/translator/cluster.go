@@ -51,7 +51,7 @@ type xdsClusterArgs struct {
 	timeout           *ir.Timeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
-	backendConnection *ir.BackendPolicyConnection
+	backendConnection *ir.BackendConnection
 	useClientProtocol bool
 }
 
@@ -629,7 +629,7 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 	return ka
 }
 
-func buildBackandConnectionBufferLimitBytes(bc *ir.BackendPolicyConnection) *wrappers.UInt32Value {
+func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.UInt32Value {
 	if bc != nil && bc.BufferLimitBytes != nil {
 		return wrapperspb.UInt32(*bc.BufferLimitBytes)
 	}
