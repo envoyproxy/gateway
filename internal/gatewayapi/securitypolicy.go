@@ -758,10 +758,7 @@ func (t *Translator) buildBasicAuth(
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(
-	policy *egv1a1.SecurityPolicy,
-	resources *Resources,
-) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Resources) (*ir.ExtAuth, error) {
 	var (
 		http       = policy.Spec.ExtAuth.HTTP
 		grpc       = policy.Spec.ExtAuth.GRPC
@@ -775,16 +772,24 @@ func (t *Translator) buildExtAuth(
 	switch {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
-	case http == nil && grpc == nil:
-		return nil, errors.New("one of grpc or http must be specified")
 	case http != nil && grpc != nil:
 		return nil, errors.New("only one of grpc or http can be specified")
 	case http != nil:
-		backendRef = &http.BackendRef
+		backendRef = http.BackendRef
+		if len(http.BackendRefs) != 0 {
+			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
+		}
 		protocol = ir.HTTP
 	case grpc != nil:
-		backendRef = &grpc.BackendRef
+		backendRef = grpc.BackendRef
+		if len(grpc.BackendRefs) != 0 {
+			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
+		}
 		protocol = ir.GRPC
+	// These are sanity checks, they should never happen because the API server
+	// should have caught them
+	default: // http == nil && grpc == nil:
+		return nil, errors.New("one of grpc or http must be specified")
 	}
 
 	if err = t.validateExtServiceBackendReference(
@@ -794,8 +799,7 @@ func (t *Translator) buildExtAuth(
 		resources); err != nil {
 		return nil, err
 	}
-	authority = fmt.Sprintf(
-		"%s.%s:%d",
+	authority = fmt.Sprintf("%s.%s:%d",
 		backendRef.Name,
 		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
 		*backendRef.Port)
