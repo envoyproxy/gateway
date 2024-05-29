@@ -185,6 +185,14 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_RANDOM
 	} else if args.loadBalancer.ConsistentHash != nil {
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
+
+		if args.loadBalancer.ConsistentHash.TableSize != nil {
+			cluster.LbConfig = &clusterv3.Cluster_MaglevLbConfig_{
+				MaglevLbConfig: &clusterv3.Cluster_MaglevLbConfig{
+					TableSize: &wrapperspb.UInt64Value{Value: *args.loadBalancer.ConsistentHash.TableSize},
+				},
+			}
+		}
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
@@ -537,13 +545,6 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	}
 
 	return extensionOptions
-}
-
-// buildClusterName returns a cluster name for the given `host` and `port`.
-// The format is: <type>|<host>|<port>, where type is "accesslog" for access logs.
-// It's easy to distinguish when debugging.
-func buildClusterName(prefix string, host string, port uint32) string {
-	return fmt.Sprintf("%s|%s|%d", prefix, host, port)
 }
 
 // buildProxyProtocolSocket builds the ProxyProtocol transport socket.

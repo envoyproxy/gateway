@@ -199,7 +199,7 @@ func TestError2ConditionMsg(t *testing.T) {
 		{
 			name:   "error with message",
 			err:    errors.New("something is wrong"),
-			expect: "Something is wrong",
+			expect: "Something is wrong.",
 		},
 	}
 	for _, tt := range testCases {

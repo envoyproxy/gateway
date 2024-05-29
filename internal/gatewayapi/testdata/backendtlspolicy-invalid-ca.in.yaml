@@ -48,9 +48,6 @@ referenceGrants:
         - group: gateway.networking.k8s.io
           kind: Gateway
           namespace: envoy-gateway
-        - group: gateway.networking.k8s.io
-          kind: BackendTLSPolicy
-          namespace: policies
       to:
         - group: ""
           kind: Service
@@ -93,7 +90,7 @@ configMaps:
     kind: ConfigMap
     metadata:
       name: no-ca-cmap
-      namespace: policies
+      namespace: backends
     data:
       garbage.crt: |
         itsAllGarbage
@@ -102,7 +99,7 @@ backendTLSPolicies:
     kind: BackendTLSPolicy
     metadata:
       name: policy-btls
-      namespace: policies
+      namespace: backends
     spec:
       targetRefs:
         - group: ""

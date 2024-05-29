@@ -10,8 +10,6 @@ http:
   headers:
     xForwardedClientCert:
       mode: Sanitize
-      certDetailsToAdd:
-      - Subject
   tls:
     alpnProtocols:
     - h2
@@ -125,8 +123,8 @@ http:
       mode: SanitizeSet
       certDetailsToAdd:
       - Subject
-      - Dns
-      - Uri
+      - DNS
+      - URI
   tls:
     alpnProtocols:
     - h2
@@ -165,10 +163,10 @@ http:
       mode: SanitizeSet
       certDetailsToAdd:
       - Subject
-      - Dns
+      - DNS
       - Chain
       - Cert
-      - Uri
+      - URI
   tls:
     alpnProtocols:
     - h2

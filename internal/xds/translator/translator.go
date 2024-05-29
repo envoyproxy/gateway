@@ -254,6 +254,22 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 					errs = errors.Join(errs, err)
 				}
 			}
+
+			// add http route client certs
+			for _, route := range httpListener.Routes {
+				if route.Destination != nil {
+					for _, st := range route.Destination.Settings {
+						if st.TLS != nil {
+							for _, cert := range st.TLS.ClientCertificates {
+								secret := buildXdsTLSCertSecret(cert)
+								if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+									errs = errors.Join(errs, err)
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 
 		// Create a route config if we have not found one yet
@@ -484,6 +500,13 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
+		// Add the proxy protocol filter if needed
+		// TODO: should make sure all listeners that will be translated into same xDS listener have
+		// same EnableProxyProtocol value, otherwise listeners with EnableProxyProtocol=false will
+		// never accept connection, because listeners with EnableProxyProtocol=true has configured
+		// proxy protocol listener filter for xDS listener, all connection must have ProxyProtocol header.
+		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
+
 		for _, route := range tcpListener.Routes {
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
 				name:           route.Destination.Name,
@@ -500,6 +523,14 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 				errs = errors.Join(errs, err)
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
+				// add tls route client certs
+				for _, cert := range route.TLS.Terminate.ClientCertificates {
+					secret := buildXdsTLSCertSecret(cert)
+					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+
 				for _, s := range route.TLS.Terminate.Certificates {
 					secret := buildXdsTLSCertSecret(s)
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
@@ -513,7 +544,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 					}
 				}
 			}
-			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Connection); err != nil {
+			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -807,6 +838,18 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	if len(tlsConfig.ALPNProtocols) > 0 {
 		tlsCtx.CommonTlsContext.AlpnProtocols = buildALPNProtocols(tlsConfig.ALPNProtocols)
 	}
+
+	if len(tlsConfig.ClientCertificates) > 0 {
+		for _, cert := range tlsConfig.ClientCertificates {
+			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
+				tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+				&tlsv3.SdsSecretConfig{
+					Name:      cert.Name,
+					SdsConfig: makeConfigSource(),
+				})
+		}
+	}
+
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
 		return nil, err

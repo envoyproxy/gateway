@@ -187,6 +187,7 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 
 // TODO: [v1alpha2-gwapiv1] This should not be required once all Route
 // objects being implemented are of type gwapiv1.
+
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()

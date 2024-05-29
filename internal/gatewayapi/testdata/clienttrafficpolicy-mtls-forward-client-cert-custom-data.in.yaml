@@ -76,7 +76,7 @@ clientTrafficPolicies:
         mode: SanitizeSet
         certDetailsToAdd:
         - Cert
-        - Uri
+        - URI
         - Chain
     tls:
       clientValidation:
@@ -99,10 +99,10 @@ clientTrafficPolicies:
         mode: SanitizeSet
         certDetailsToAdd:
         - Cert
-        - Uri
+        - URI
         - Chain
         - Subject
-        - Dns
+        - DNS
     tls:
       clientValidation:
         caCertificateRefs:

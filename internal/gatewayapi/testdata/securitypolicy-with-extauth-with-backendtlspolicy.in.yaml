@@ -119,9 +119,6 @@ referenceGrants:
         - group: gateway.envoyproxy.io
           kind: SecurityPolicy
           namespace: default
-        - group: gateway.networking.k8s.io
-          kind: BackendTLSPolicy
-          namespace: default
       to:
         - group: ""
           kind: Service
@@ -157,7 +154,7 @@ backendTLSPolicies:
     kind: BackendTLSPolicy
     metadata:
       name: policy-btls-http
-      namespace: default
+      namespace: envoy-gateway
     spec:
       targetRefs:
         - group: ""
@@ -200,10 +197,10 @@ securityPolicies:
         name: gateway-1
       extAuth:
         http:
-          backendRef:
-            Name: http-backend
-            Namespace: envoy-gateway
-            Port: 80
+          backendRefs:
+            - Name: http-backend
+              Namespace: envoy-gateway
+              Port: 80
           Path: /auth
           headersToBackend:
             - header1
@@ -224,7 +221,7 @@ securityPolicies:
           - header1
           - header2
         grpc:
-          backendRef:
-            name: grpc-backend
-            port: 9000
+          backendRefs:
+            - name: grpc-backend
+              port: 9000
         failOpen: true

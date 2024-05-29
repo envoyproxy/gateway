@@ -284,6 +284,8 @@ const (
 type TLSConfig struct {
 	// Certificates contains the set of certificates associated with this listener
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
+	// ClientCertificates contains the set of certificates used for mtls as client side certificates
+	ClientCertificates []TLSCertificate `json:"clientCertificates,omitempty" yaml:"clientCertificates,omitempty"`
 	// CACertificate to verify the client
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	// RequireClientCertificate to enforce client certificate
@@ -307,8 +309,8 @@ type TLSConfig struct {
 type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
-	// ServerCertificate of the server.
-	ServerCertificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
+	// Certificate can be either a client or server certificate.
+	Certificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey []byte `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
@@ -324,7 +326,7 @@ type TLSCACertificate struct {
 
 func (t TLSCertificate) Validate() error {
 	var errs error
-	if len(t.ServerCertificate) == 0 {
+	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSServerCertEmpty)
 	}
 	if len(t.PrivateKey) == 0 {
@@ -377,34 +379,10 @@ const (
 // +k8s:deepcopy-gen=true
 type XForwardedClientCert struct {
 	// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-	Mode ForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Mode egv1a1.XFCCForwardMode `json:"mode,omitempty" yaml:"mode,omitempty"`
 	// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-	CertDetailsToAdd []ClientCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
+	CertDetailsToAdd []egv1a1.XFCCCertData `json:"certDetailsToAdd,omitempty" yaml:"certDetailsToAdd,omitempty"`
 }
-
-// Envoy Proxy mode how to handle the x-forwarded-client-cert (XFCC) HTTP header.
-// +k8s:deepcopy-gen=true
-type ForwardMode egv1a1.ForwardMode
-
-const (
-	ForwardModeSanitize          = ForwardMode(egv1a1.ForwardModeSanitize)
-	ForwardModeForwardOnly       = ForwardMode(egv1a1.ForwardModeForwardOnly)
-	ForwardModeAppendForward     = ForwardMode(egv1a1.ForwardModeAppendForward)
-	ForwardModeSanitizeSet       = ForwardMode(egv1a1.ForwardModeSanitizeSet)
-	ForwardModeAlwaysForwardOnly = ForwardMode(egv1a1.ForwardModeAlwaysForwardOnly)
-)
-
-// Specifies the fields in the client certificate to be forwarded on the x-forwarded-client-cert (XFCC) HTTP header
-// +k8s:deepcopy-gen=true
-type ClientCertData egv1a1.ClientCertData
-
-const (
-	ClientCertDataSubject = ClientCertData(egv1a1.ClientCertDataSubject)
-	ClientCertDataCert    = ClientCertData(egv1a1.ClientCertDataCert)
-	ClientCertDataChain   = ClientCertData(egv1a1.ClientCertDataChain)
-	ClientCertDataDNS     = ClientCertData(egv1a1.ClientCertDataDNS)
-	ClientCertDataURI     = ClientCertData(egv1a1.ClientCertDataURI)
-)
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 // +k8s:deepcopy-gen=true
@@ -470,8 +448,19 @@ type HeaderSettings struct {
 // ClientTimeout sets the timeout configuration for downstream connections
 // +k8s:deepcopy-gen=true
 type ClientTimeout struct {
+	// Timeout settings for TCP (not HTTP).
+	TCP *TCPClientTimeout `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+
 	// Timeout settings for HTTP.
 	HTTP *HTTPClientTimeout `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// TCPClientTimeout set the configuration for client TCP (not HTTP).
+// +k8s:deepcopy-gen=true
+type TCPClientTimeout struct {
+	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
+	// bytes sent or received on either the upstream or downstream connection.
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // HTTPClientTimeout set the configuration for client HTTP.
@@ -1248,8 +1237,14 @@ type TCPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// TLS holds information for configuring TLS on a listener.
+	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// EnableProxyProtocol enables the listener to interpret proxy protocol header
+	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// ClientTimeout sets the timeout configuration for downstream connections.
+	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings for clients
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
@@ -1521,11 +1516,11 @@ type JSONAccessLog struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	Text       *string           `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	Host       string            `json:"host" yaml:"host"`
-	Port       uint32            `json:"port" yaml:"port"`
-	Resources  map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Authority   string            `json:"authority,omitempty" yaml:"authority,omitempty"`
+	Text        *string           `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -1580,10 +1575,10 @@ type JSONPatchOperation struct {
 // +k8s:deepcopy-gen=true
 type Tracing struct {
 	ServiceName  string                      `json:"serviceName"`
-	Host         string                      `json:"host"`
-	Port         uint32                      `json:"port"`
+	Authority    string                      `json:"authority,omitempty"`
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Destination  RouteDestination            `json:"destination,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -1669,8 +1664,9 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP *bool   `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Header   *Header `json:"header,omitempty" yaml:"header,omitempty"`
+	SourceIP  *bool   `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Header    *Header `json:"header,omitempty" yaml:"header,omitempty"`
+	TableSize *uint64 `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
 }
 
 // Header consistent hash type settings

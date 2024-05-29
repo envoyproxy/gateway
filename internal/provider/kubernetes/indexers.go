@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -40,6 +41,7 @@ const (
 	secretCtpIndex                   = "secretCtpIndex"
 	configMapBtlsIndex               = "configMapBtlsIndex"
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
+	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -107,6 +109,99 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return backendRefs
+}
+
+func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func backendEnvoyProxyTelemetryIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*v1alpha1.EnvoyProxy)
+
+	refs := sets.New[string]()
+	refs.Insert(accessLogRefs(ep)...)
+	refs.Insert(metricRefs(ep)...)
+	refs.Insert(traceRefs(ep)...)
+
+	return refs.UnsortedList()
+}
+
+func accessLogRefs(ep *v1alpha1.EnvoyProxy) []string {
+	var refs []string
+
+	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.Metrics == nil {
+		return refs
+	}
+
+	for _, sink := range ep.Spec.Telemetry.Metrics.Sinks {
+		if sink.OpenTelemetry != nil {
+			otel := sink.OpenTelemetry
+			if otel.BackendRefs != nil {
+				for _, ref := range otel.BackendRefs {
+					if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
+						refs = append(refs,
+							types.NamespacedName{
+								Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+								Name:      string(ref.Name),
+							}.String(),
+						)
+					}
+				}
+			}
+		}
+	}
+
+	return refs
+}
+
+func metricRefs(ep *v1alpha1.EnvoyProxy) []string {
+	var refs []string
+
+	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.Metrics == nil {
+		return refs
+	}
+
+	for _, sink := range ep.Spec.Telemetry.Metrics.Sinks {
+		if sink.OpenTelemetry != nil {
+			for _, backend := range sink.OpenTelemetry.BackendRefs {
+				if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+					refs = append(refs,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, ep.Namespace),
+							Name:      string(backend.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+
+	return refs
+}
+
+func traceRefs(ep *v1alpha1.EnvoyProxy) []string {
+	var refs []string
+
+	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.Tracing == nil {
+		return refs
+	}
+
+	for _, ref := range ep.Spec.Telemetry.Tracing.Provider.BackendRefs {
+		if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
+			refs = append(refs,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+					Name:      string(ref.Name),
+				}.String(),
+			)
+		}
+	}
+
+	return refs
 }
 
 // addGRPCRouteIndexers adds indexing on GRPCRoute, for Service objects that are
@@ -412,9 +507,17 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 
 	if securityPolicy.Spec.ExtAuth != nil {
 		if securityPolicy.Spec.ExtAuth.HTTP != nil {
-			backendRef = &securityPolicy.Spec.ExtAuth.HTTP.BackendRef
+			http := securityPolicy.Spec.ExtAuth.HTTP
+			backendRef = http.BackendRef
+			if len(http.BackendRefs) > 0 {
+				backendRef = v1alpha1.ToBackendObjectReference(http.BackendRefs[0])
+			}
 		} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
-			backendRef = &securityPolicy.Spec.ExtAuth.GRPC.BackendRef
+			grpc := securityPolicy.Spec.ExtAuth.GRPC
+			backendRef = grpc.BackendRef
+			if len(grpc.BackendRefs) > 0 {
+				backendRef = v1alpha1.ToBackendObjectReference(grpc.BackendRefs[0])
+			}
 		}
 	}
 

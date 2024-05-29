@@ -30,6 +30,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -280,7 +281,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 
 	// Add the proxy protocol filter if needed
-	patchProxyProtocolFilter(xdsListener, irListener)
+	patchProxyProtocolFilter(xdsListener, irListener.EnableProxyProtocol)
 
 	if irListener.IsHTTP2 {
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
@@ -389,7 +390,7 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, connection *ir.Connection) error {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.Connection) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -412,6 +413,12 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 			Cluster: clusterName,
 		},
 		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
+	}
+
+	if timeout != nil && timeout.TCP != nil {
+		if timeout.TCP.IdleTimeout != nil {
+			mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
+		}
 	}
 
 	var filters []*listenerv3.Filter
@@ -638,7 +645,7 @@ func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
 		Type: &tlsv3.Secret_TlsCertificate{
 			TlsCertificate: &tlsv3.TlsCertificate{
 				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
 				},
 				PrivateKey: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
@@ -796,15 +803,15 @@ func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnec
 	if in != nil {
 		if in.XForwardedClientCert != nil {
 			switch in.XForwardedClientCert.Mode {
-			case ir.ForwardModeSanitize:
+			case egv1a1.XFCCForwardModeSanitize:
 				return hcmv3.HttpConnectionManager_SANITIZE
-			case ir.ForwardModeForwardOnly:
+			case egv1a1.XFCCForwardModeForwardOnly:
 				return hcmv3.HttpConnectionManager_FORWARD_ONLY
-			case ir.ForwardModeAppendForward:
+			case egv1a1.XFCCForwardModeAppendForward:
 				return hcmv3.HttpConnectionManager_APPEND_FORWARD
-			case ir.ForwardModeSanitizeSet:
+			case egv1a1.XFCCForwardModeSanitizeSet:
 				return hcmv3.HttpConnectionManager_SANITIZE_SET
-			case ir.ForwardModeAlwaysForwardOnly:
+			case egv1a1.XFCCForwardModeAlwaysForwardOnly:
 				return hcmv3.HttpConnectionManager_ALWAYS_FORWARD_ONLY
 			}
 		}
@@ -828,15 +835,15 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	clientCertDetails := &hcmv3.HttpConnectionManager_SetCurrentClientCertDetails{}
 	for _, data := range in.XForwardedClientCert.CertDetailsToAdd {
 		switch data {
-		case ir.ClientCertDataCert:
+		case egv1a1.XFCCCertDataCert:
 			clientCertDetails.Cert = true
-		case ir.ClientCertDataChain:
+		case egv1a1.XFCCCertDataChain:
 			clientCertDetails.Chain = true
-		case ir.ClientCertDataDNS:
+		case egv1a1.XFCCCertDataDNS:
 			clientCertDetails.Dns = true
-		case ir.ClientCertDataSubject:
+		case egv1a1.XFCCCertDataSubject:
 			clientCertDetails.Subject = &wrapperspb.BoolValue{Value: true}
-		case ir.ClientCertDataURI:
+		case egv1a1.XFCCCertDataURI:
 			clientCertDetails.Uri = true
 		}
 	}

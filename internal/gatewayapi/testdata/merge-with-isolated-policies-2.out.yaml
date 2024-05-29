@@ -55,7 +55,7 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: ClientTrafficPolicy is being applied to multiple http (non https)
-          listeners (default/gateway-2/http-2) on the same port, which is not allowed
+          listeners (default/gateway-2/http-2) on the same port, which is not allowed.
         reason: Invalid
         status: "False"
         type: Accepted

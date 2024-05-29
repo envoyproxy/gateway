@@ -51,8 +51,7 @@
               '@type': type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
               grpcService:
                 envoyGrpc:
-                  authority: otel-collector.monitoring.svc.cluster.local
-                  clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+                  clusterName: tracing-0
               serviceName: fake-name.fake-ns
           randomSampling:
             value: 90

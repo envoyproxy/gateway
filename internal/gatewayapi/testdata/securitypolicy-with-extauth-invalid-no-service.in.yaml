@@ -46,10 +46,10 @@ securityPolicies:
         name: gateway-1
       extAuth:
         http:
-          backendRef:
-            name: http-backend
-            namespace: default
-            port: 80
+          backendRefs:
+            - name: http-backend
+              namespace: default
+              port: 80
           headersToBackend:
             - header1
             - header2

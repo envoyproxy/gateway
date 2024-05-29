@@ -30,6 +30,9 @@ clientTrafficPolicies:
     headers:
       xForwardedClientCert:
         mode: ForwardOnly
+        certDetailsToAdd:
+        - URI
+        - DNS
     tls:
       clientValidation:
         caCertificateRefs:

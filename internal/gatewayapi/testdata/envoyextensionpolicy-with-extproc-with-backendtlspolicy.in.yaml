@@ -117,10 +117,7 @@ referenceGrants:
   spec:
     from:
     - group: gateway.envoyproxy.io
-      kind: SecurityPolicy
-      namespace: default
-    - group: gateway.networking.k8s.io
-      kind: BackendTLSPolicy
+      kind: EnvoyExtensionPolicy
       namespace: default
     to:
     - group: ''
@@ -157,7 +154,7 @@ backendTLSPolicies:
   kind: BackendTLSPolicy
   metadata:
     name: policy-btls-grpc
-    namespace: default
+    namespace: envoy-gateway
   spec:
     targetRefs:
     - group: ''
