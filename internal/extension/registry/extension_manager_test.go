@@ -14,7 +14,6 @@ import (
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
-
 	tests := []struct {
 		Name     string
 		Service  *v1alpha1.ExtensionService
@@ -72,5 +71,4 @@ func TestGetExtensionServerAddress(t *testing.T) {
 			require.Equal(t, tc.Expected, out)
 		})
 	}
-
 }
