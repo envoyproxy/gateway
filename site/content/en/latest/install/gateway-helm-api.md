@@ -55,8 +55,10 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
 | global.images.envoyGateway.image | string | `nil` |  |
-| global.images.envoyGateway.imagePullSecrets | list | `[]` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
+| global.images.envoyGateway.pullSecrets | list | `[]` |  |
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
+| global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
+| global.images.ratelimit.pullSecrets | list | `[]` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 
