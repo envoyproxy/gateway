@@ -416,6 +416,7 @@ func (t *Translator) buildExtProc(
 		if err = t.validateExtServiceBackendReference(
 			&extProc.BackendRefs[i].BackendObjectReference,
 			policyNamespacedName.Namespace,
+			egv1a1.KindEnvoyExtensionPolicy,
 			resources); err != nil {
 			return nil, err
 		}

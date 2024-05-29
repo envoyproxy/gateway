@@ -57,6 +57,7 @@ func TestE2E(t *testing.T) {
 		SkipTests: []string{
 			tests.ClientTimeoutTest.ShortName,        // https://github.com/envoyproxy/gateway/issues/2720
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
+			tests.UseClientProtocolTest.ShortName,    // https://github.com/envoyproxy/gateway/issues/3473
 		},
 	})
 	if err != nil {

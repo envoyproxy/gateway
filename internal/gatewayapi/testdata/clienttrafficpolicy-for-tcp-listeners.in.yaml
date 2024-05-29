@@ -15,6 +15,9 @@ clientTrafficPolicies:
         value: 3
         closeDelay: 10s
     enableProxyProtocol: true
+    timeout:
+      tcp:
+        idleTimeout: 1200s
     tls:
       minVersion: "1.0"
       maxVersion: "1.2"

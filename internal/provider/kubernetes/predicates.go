@@ -249,6 +249,10 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
+	if r.isEnvoyProxyReferencingBackend(&nsName) {
+		return true
+	}
+
 	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
@@ -546,4 +550,16 @@ func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *
 	}
 
 	return len(spList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isEnvoyProxyReferencingBackend(nn *types.NamespacedName) bool {
+	proxyList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), proxyList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendEnvoyProxyTelemetryIndex, nn.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyProxies")
+		return false
+	}
+
+	return len(proxyList.Items) > 0
 }
