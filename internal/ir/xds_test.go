@@ -35,9 +35,9 @@ var (
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
-				Name:              "happy",
-				ServerCertificate: []byte{1, 2, 3},
-				PrivateKey:        []byte{1, 2, 3},
+				Name:        "happy",
+				Certificate: []byte{1, 2, 3},
+				PrivateKey:  []byte{1, 2, 3},
 			}},
 		},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
@@ -49,9 +49,9 @@ var (
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
-				Name:              "happy",
-				ServerCertificate: []byte{1, 2, 3},
-				PrivateKey:        redacted,
+				Name:        "happy",
+				Certificate: []byte{1, 2, 3},
+				PrivateKey:  redacted,
 			}},
 		},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
@@ -125,9 +125,9 @@ var (
 	happyTCPRouteTLSTermination = TCPRoute{
 		Name: "happy-tls-termination",
 		TLS: &TLS{Terminate: &TLSConfig{Certificates: []TLSCertificate{{
-			Name:              "happy",
-			ServerCertificate: []byte("server-cert"),
-			PrivateKey:        []byte("priv-key"),
+			Name:        "happy",
+			Certificate: []byte("server-cert"),
+			PrivateKey:  []byte("priv-key"),
 		}}}},
 		Destination: &happyRouteDestination,
 	}
@@ -676,8 +676,8 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			name: "happy",
 			input: TLSConfig{
 				Certificates: []TLSCertificate{{
-					ServerCertificate: []byte("server-cert"),
-					PrivateKey:        []byte("priv-key"),
+					Certificate: []byte("server-cert"),
+					PrivateKey:  []byte("priv-key"),
 				}},
 			},
 			want: nil,
@@ -695,7 +695,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			name: "invalid private key",
 			input: TLSConfig{
 				Certificates: []TLSCertificate{{
-					ServerCertificate: []byte("server-cert"),
+					Certificate: []byte("server-cert"),
 				}},
 			},
 			want: ErrTLSPrivateKey,

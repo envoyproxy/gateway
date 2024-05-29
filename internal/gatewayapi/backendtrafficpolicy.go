@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"sort"
 	"strings"
 	"time"
@@ -25,6 +26,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
+)
+
+const (
+	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
 )
 
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
@@ -306,7 +311,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		lb = t.buildLoadBalancer(policy)
+		if lb, err = t.buildLoadBalancer(policy); err != nil {
+			err = perr.WithMessage(err, "LoadBalancer")
+			errs = errors.Join(errs, err)
+		}
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
@@ -430,7 +438,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		lb = t.buildLoadBalancer(policy)
+		if lb, err = t.buildLoadBalancer(policy); err != nil {
+			err = perr.WithMessage(err, "LoadBalancer")
+			errs = errors.Join(errs, err)
+		}
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
@@ -757,12 +768,17 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	return irRule, nil
 }
 
-func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.LoadBalancer {
+func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir.LoadBalancer, error) {
 	var lb *ir.LoadBalancer
 	switch policy.Spec.LoadBalancer.Type {
 	case egv1a1.ConsistentHashLoadBalancerType:
+		consistentHash, err := t.buildConsistentHashLoadBalancer(policy)
+		if err != nil {
+			return nil, perr.WithMessage(err, "ConsistentHash")
+		}
+
 		lb = &ir.LoadBalancer{
-			ConsistentHash: t.buildConsistentHashLoadBalancer(policy),
+			ConsistentHash: consistentHash,
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
 		lb = &ir.LoadBalancer{}
@@ -796,24 +812,32 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 		}
 	}
 
-	return lb
+	return lb, nil
 }
 
-func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.ConsistentHash {
+func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir.ConsistentHash, error) {
+	consistentHash := &ir.ConsistentHash{}
+
+	if policy.Spec.LoadBalancer.ConsistentHash.TableSize != nil {
+		tableSize := policy.Spec.LoadBalancer.ConsistentHash.TableSize
+
+		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) {
+			return nil, fmt.Errorf("invalid TableSize value %d", *tableSize)
+		}
+
+		consistentHash.TableSize = tableSize
+	}
+
 	switch policy.Spec.LoadBalancer.ConsistentHash.Type {
 	case egv1a1.SourceIPConsistentHashType:
-		return &ir.ConsistentHash{
-			SourceIP: ptr.To(true),
-		}
+		consistentHash.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
-		return &ir.ConsistentHash{
-			Header: &ir.Header{
-				Name: policy.Spec.LoadBalancer.ConsistentHash.Header.Name,
-			},
+		consistentHash.Header = &ir.Header{
+			Name: policy.Spec.LoadBalancer.ConsistentHash.Header.Name,
 		}
-	default:
-		return &ir.ConsistentHash{}
 	}
+
+	return consistentHash, nil
 }
 
 func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {

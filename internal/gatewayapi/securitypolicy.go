@@ -805,6 +805,7 @@ func (t *Translator) buildExtAuth(
 	if err = t.validateExtServiceBackendReference(
 		backendRef,
 		policy.Namespace,
+		KindSecurityPolicy,
 		resources); err != nil {
 		return nil, err
 	}

@@ -87,6 +87,7 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
                     properties:
                       group:
                         default: ""
@@ -10404,7 +10405,7 @@ spec:
                                       backendRefs:
                                         description: |-
                                           BackendRefs references a Kubernetes object that represents the
-                                          backend server to which the accesslog will be sent.
+                                          backend server to which the access log will be sent.
                                           Only service Kind is supported for now.
                                         items:
                                           description: BackendRef defines how an ObjectReference
@@ -10492,13 +10493,13 @@ spec:
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
-                                          Deprecated: Use BackendRef instead.
+                                          Deprecated: Use BackendRefs instead.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
-                                          Deprecated: Use BackendRef instead.
+                                          Deprecated: Use BackendRefs instead.
                                         format: int32
                                         minimum: 0
                                         type: integer
@@ -10718,13 +10719,13 @@ spec:
                                 host:
                                   description: |-
                                     Host define the service hostname.
-                                    Deprecated: Use BackendRef instead.
+                                    Deprecated: Use BackendRefs instead.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
-                                    Deprecated: Use BackendRef instead.
+                                    Deprecated: Use BackendRefs instead.
                                   format: int32
                                   maximum: 65535
                                   minimum: 0
@@ -10827,7 +10828,7 @@ spec:
                           backendRefs:
                             description: |-
                               BackendRefs references a Kubernetes object that represents the
-                              backend server to which the accesslog will be sent.
+                              backend server to which the trace will be sent.
                               Only service Kind is supported for now.
                             items:
                               description: BackendRef defines how an ObjectReference
@@ -10914,13 +10915,13 @@ spec:
                           host:
                             description: |-
                               Host define the provider service hostname.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             type: string
                           port:
                             default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             format: int32
                             minimum: 0
                             type: integer
