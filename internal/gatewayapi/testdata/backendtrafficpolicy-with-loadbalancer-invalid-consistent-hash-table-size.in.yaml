@@ -13,35 +13,6 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    namespace: envoy-gateway
-    name: gateway-2
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: All
-grpcRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    namespace: default
-    name: grpcroute-1
-  spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -53,7 +24,7 @@ httpRoutes:
     - gateway.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
-      name: gateway-2
+      name: gateway-1
       sectionName: http
     rules:
     - matches:
@@ -72,7 +43,7 @@ httpRoutes:
     - gateway.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
-      name: gateway-2
+      name: gateway-1
       sectionName: http
     rules:
     - matches:
@@ -82,18 +53,6 @@ httpRoutes:
       - name: service-2
         port: 8080
 backendTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: envoy-gateway
-    name: policy-for-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-    loadBalancer:
-      type: Random
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -107,22 +66,7 @@ backendTrafficPolicies:
     loadBalancer:
       type: ConsistentHash
       consistentHash:
-        type: SourceIP
-        tableSize: 524287
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: envoy-gateway
-    name: policy-for-gateway2
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-2
-    loadBalancer:
-      type: RoundRobin
-      slowStart:
-        window: 300s
+        tableSize: 1024
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -134,6 +78,6 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: httproute-2
     loadBalancer:
-      type: LeastRequest
-      slowStart:
-        window: 300s
+      type: ConsistentHash
+      consistentHash:
+        tableSize: 5000012

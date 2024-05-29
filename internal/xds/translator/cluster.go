@@ -185,6 +185,14 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_RANDOM
 	} else if args.loadBalancer.ConsistentHash != nil {
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
+
+		if args.loadBalancer.ConsistentHash.TableSize != nil {
+			cluster.LbConfig = &clusterv3.Cluster_MaglevLbConfig_{
+				MaglevLbConfig: &clusterv3.Cluster_MaglevLbConfig{
+					TableSize: &wrapperspb.UInt64Value{Value: *args.loadBalancer.ConsistentHash.TableSize},
+				},
+			}
+		}
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
