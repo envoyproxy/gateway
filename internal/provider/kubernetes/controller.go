@@ -407,7 +407,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			}
 		}
 
-		// Retrieve the EndpointSlices associated with the service
+		// Retrieve the EndpointSlices associated with the Service and ServiceImport
 		if endpointSliceLabelKey != "" {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)
 			opts := []client.ListOption{
@@ -1222,6 +1222,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch Backend CRUDs and process affected *Route objects.
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
 		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
+			predicate.TypedGenerationChangedPredicate[*egv1a1.Backend]{},
 			predicate.NewTypedPredicateFuncs[*egv1a1.Backend](func(be *egv1a1.Backend) bool {
 				return r.validateBackendForReconcile(be)
 			}),

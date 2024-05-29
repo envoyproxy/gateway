@@ -1178,17 +1178,6 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			Endpoints:   endpoints,
 			AddressType: addrType,
 		}
-		// TODO: support mixed endpointslice address type for the same backendRef
-		if !t.EndpointRoutingDisabled && addrType != nil && *addrType == ir.MIXED {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1a2.RouteReasonResolvedRefs,
-				"Mixed endpointslice address type for the same backendRef is not supported")
-		}
 	case KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS = t.applyBackendTLSSetting(
@@ -1204,17 +1193,6 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			},
 			resources)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-		// TODO: support mixed endpointslice address type for the same backendRef
-		if !t.EndpointRoutingDisabled && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1a2.RouteReasonResolvedRefs,
-				"Mixed endpointslice address type for the same backendRef is not supported")
-		}
 	case v1alpha1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
 		ds.TLS = t.applyBackendTLSSetting(
@@ -1230,21 +1208,38 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			},
 			resources)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-		// TODO: support mixed endpointslice address type for the same backendRef
-		if ds.AddressType != nil && *ds.AddressType == ir.MIXED {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1a2.RouteReasonResolvedRefs,
-				"Mixed FQDN and IPv4 or Unix address type for the same backendRef is not supported")
-		}
+	}
+
+	valid, valMsg := validateDestinationSettings(ds, t.EndpointRoutingDisabled, backendRef.Kind)
+	if !valid {
+		routeStatus := GetRouteStatus(route)
+		status.SetRouteStatusCondition(routeStatus,
+			parentRef.routeParentStatusIdx,
+			route.GetGeneration(),
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			gwapiv1a2.RouteReasonResolvedRefs,
+			valMsg)
 	}
 
 	ds.Weight = &weight
 	return ds
+}
+
+func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) (bool, string) {
+	// TODO: support mixed endpointslice address type for the same backendRef
+	switch KindDerefOr(kind, KindService) {
+	case v1alpha1.KindBackend:
+		if destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
+			return false, "Mixed FQDN and IPv4 or Unix address type for the same backendRef is not supported"
+		}
+	case KindService, KindServiceImport:
+		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
+			return false, "Mixed endpointslice address type for the same backendRef is not supported"
+		}
+	}
+
+	return true, ""
 }
 
 func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string,

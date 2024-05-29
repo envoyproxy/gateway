@@ -112,8 +112,6 @@ metadata:
   name: grpc-uds-ext-proc
   namespace: gateway-conformance-infra
 spec:
-  appProtocol:
-  - gateway.envoyproxy.io/h2c
   endpoints:
   - unix:
       path: /var/run/ext-proc/extproc.sock

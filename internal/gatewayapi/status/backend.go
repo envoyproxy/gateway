@@ -33,10 +33,10 @@ func computeBackendAcceptedCondition(be *egv1a1.Backend, accepted bool) metav1.C
 	case true:
 		return newCondition(string(egv1a1.BackendReasonInvalid), metav1.ConditionTrue,
 			string(egv1a1.BackendConditionAccepted),
-			"The Backend was accepted Envoy Gateway", time.Now(), be.Generation)
+			"The Backend was accepted", time.Now(), be.Generation)
 	default:
 		return newCondition(string(egv1a1.BackendReasonAccepted), metav1.ConditionFalse,
 			string(egv1a1.BackendConditionAccepted),
-			"The Backend was not accepted Envoy Gateway", time.Now(), be.Generation)
+			"The Backend was not accepted", time.Now(), be.Generation)
 	}
 }

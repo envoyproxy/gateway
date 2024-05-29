@@ -77,7 +77,7 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: The Backend was accepted Envoy Gateway
+      message: The Backend was accepted
       reason: Accepted
       status: "True"
       type: Invalid
@@ -95,7 +95,7 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: The Backend was accepted Envoy Gateway
+      message: The Backend was accepted
       reason: Accepted
       status: "True"
       type: Invalid
