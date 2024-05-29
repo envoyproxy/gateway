@@ -17,6 +17,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -72,7 +73,7 @@ func ObjectNamePtr(val string) *v1alpha2.ObjectName {
 
 var (
 	PathMatchTypeDerefOr       = ptr.Deref[gwapiv1.PathMatchType]
-	GRPCMethodMatchTypeDerefOr = ptr.Deref[v1alpha2.GRPCMethodMatchType]
+	GRPCMethodMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCMethodMatchType]
 	HeaderMatchTypeDerefOr     = ptr.Deref[gwapiv1.HeaderMatchType]
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
@@ -185,15 +186,15 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 }
 
 // ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
-func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
+func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
 	case filter == nil:
 		return errors.New("filter is nil")
-	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
-		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
-		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+	case filter.Type == gwapiv1.GRPCRouteFilterRequestMirror ||
+		filter.Type == gwapiv1.GRPCRouteFilterRequestHeaderModifier ||
+		filter.Type == gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 		return nil
-	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
+	case filter.Type == gwapiv1.GRPCRouteFilterExtensionRef:
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
@@ -228,7 +229,13 @@ func GatewayClassOwnerLabel(name string) map[string]string {
 
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
-func servicePortToContainerPort(servicePort int32) int32 {
+func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
+	if envoyProxy != nil {
+		if !envoyProxy.NeedToSwitchPorts() {
+			return servicePort
+		}
+	}
+
 	// If the service port is a privileged port (1-1023)
 	// add a constant to the value converting it into an ephemeral port.
 	// This allows the container to bind to the port without needing a
@@ -343,20 +350,12 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
-func irHTTPListenerName(listener *ListenerContext) string {
+func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
-func irTLSListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
-}
-
-func irTCPListenerName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
-}
-
-func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
+func irListenerPortName(proto ir.ProtocolType, port int32) string {
+	return strings.ToLower(fmt.Sprintf("%s-%d", proto, port))
 }
 
 func irRoutePrefix(route RouteContext) string {
@@ -369,11 +368,19 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%srule/%d/match/%d", irRoutePrefix(route), ruleIdx, matchIdx)
 }
 
+func irTCPRouteName(route RouteContext) string {
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+}
+
+func irUDPRouteName(route RouteContext) string {
+	return irTCPRouteName(route)
+}
+
 func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
-func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
+func irTLSConfigs(tlsSecrets ...*v1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
 	}
@@ -383,9 +390,9 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
 	}
 	for i, tlsSecret := range tlsSecrets {
 		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
-			Name:              irTLSListenerConfigName(tlsSecret),
-			ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
-			PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
+			Name:        irTLSListenerConfigName(tlsSecret),
+			Certificate: tlsSecret.Data[v1.TLSCertKey],
+			PrivateKey:  tlsSecret.Data[v1.TLSPrivateKeyKey],
 		}
 	}
 	return tlsListenerConfigs
@@ -399,7 +406,7 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
-func isMergeGatewaysEnabled(resources *Resources) bool {
+func IsMergeGatewaysEnabled(resources *Resources) bool {
 	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
 }
 
@@ -409,4 +416,53 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 		protocolStrings = append(protocolStrings, string(protocol))
 	}
 	return protocolStrings
+}
+
+// getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alpha2.SectionName) v1alpha2.ParentReference {
+	return v1alpha2.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(KindGateway),
+		Namespace:   NamespacePtr(gatewayNN.Namespace),
+		Name:        gwapiv1.ObjectName(gatewayNN.Name),
+		SectionName: sectionName,
+	}
+}
+
+type policyTargetRouteKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+type policyRouteTargetContext struct {
+	RouteContext
+	attached bool
+}
+
+type policyGatewayTargetContext struct {
+	*GatewayContext
+	attached bool
+}
+
+// listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
+// that would share the same filter chain as the provided listener when translated
+// to XDS
+func listenersWithSameHTTPPort(xdsIR *ir.Xds, listener *ir.HTTPListener) []string {
+	// if TLS is enabled, the listener would have its own filterChain in Envoy, so
+	// no conflicts are possible
+	if listener.TLS != nil {
+		return nil
+	}
+	res := []string{}
+	for _, http := range xdsIR.HTTP {
+		if http == listener {
+			continue
+		}
+		// Non-TLS listeners can be distinguished by their ports
+		if http.Port == listener.Port {
+			res = append(res, http.Name)
+		}
+	}
+	return res
 }

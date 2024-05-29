@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -16,11 +17,10 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=btp
+// +kubebuilder:resource:categories=envoy-gateway,shortName=btp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-//
+
 // BackendTrafficPolicy allows the user to configure the behavior of the connection
 // between the Envoy Proxy listener and the backend service.
 type BackendTrafficPolicy struct {
@@ -31,10 +31,10 @@ type BackendTrafficPolicy struct {
 	Spec BackendTrafficPolicySpec `json:"spec"`
 
 	// status defines the current status of BackendTrafficPolicy.
-	Status BackendTrafficPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// spec defines the desired state of BackendTrafficPolicy.
+// BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
@@ -44,7 +44,7 @@ type BackendTrafficPolicySpec struct {
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway.
-	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+	TargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// RateLimit allows the user to limit the number of incoming requests
 	// to a predefined value based on attributes within the traffic flow.
@@ -87,6 +87,13 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	Retry *Retry `json:"retry,omitempty"`
 
+	// UseClientProtocol configures Envoy to prefer sending requests to backends using
+	// the same HTTP protocol that the incoming request used. Defaults to false, which means
+	// that Envoy will use the protocol indicated by the attached BackendRef.
+	//
+	// +optional
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
+
 	// Timeout settings for the backend connections.
 	//
 	// +optional
@@ -95,26 +102,34 @@ type BackendTrafficPolicySpec struct {
 	// The compression config for the http streams.
 	//
 	// +optional
+	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
-}
 
-// BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
-type BackendTrafficPolicyStatus struct {
-	// Conditions describe the current conditions of the BackendTrafficPolicy.
+	// Connection includes backend connection settings.
 	//
 	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Connection *BackendTrafficPolicyConnection `json:"connection,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BackendTrafficPolicy `json:"items"`
+}
+
+// BackendTrafficPolicyConnection allows users to configure connection-level settings of backend
+type BackendTrafficPolicyConnection struct {
+	// BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
+	// If unspecified, an implementation defined default is applied (32768 bytes).
+	// For example, 20Mi, 1Gi, 256Ki etc.
+	// Note: that when the suffix is not provided, the value is interpreted as bytes.
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="BufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +optional
+	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
 
 func init() {

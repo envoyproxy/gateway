@@ -56,6 +56,18 @@
                 }
               ]
             },
+            "overloadManager": {
+              "refreshInterval": "0.250s",
+              "resourceMonitors": [
+                {
+                  "name": "envoy.resource_monitors.global_downstream_max_connections",
+                  "typedConfig": {
+                    "@type": "type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig",
+                    "maxActiveDownstreamConnections": "50000"
+                  }
+                }
+              ]
+            },
             "staticResources": {
               "clusters": [
                 {
@@ -262,6 +274,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -284,6 +303,13 @@
             {
               "cluster": {
                 "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+                "circuitBreakers": {
+                  "thresholds": [
+                    {
+                      "maxRetries": 1024
+                    }
+                  ]
+                },
                 "commonLbConfig": {
                   "localityWeightedLbConfig": {}
                 },
@@ -452,6 +478,7 @@
                       }
                     ]
                   },
+                  "drainType": "MODIFY_ONLY",
                   "name": "envoy-gateway-system/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }

@@ -24,20 +24,31 @@ backendTrafficPolicies:
         unhealthyThreshold: 3
       passive:
         baseEjectionTime: 2m30s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
         interval: 1s
         maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -60,21 +71,32 @@ backendTrafficPolicies:
         type: TCP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 3m0s
-        interval: 1s
-        maxEjectionPercent: 100
+        baseEjectionTime: 10s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 10s
+        maxEjectionPercent: 10
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -98,20 +120,31 @@ backendTrafficPolicies:
         unhealthyThreshold: 3
       passive:
         baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
         interval: 8ms
         maxEjectionPercent: 11
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
-      namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -137,20 +170,30 @@ backendTrafficPolicies:
         unhealthyThreshold: 3
       passive:
         baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
         interval: 2s
         maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: BackendTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -389,7 +432,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -404,7 +447,7 @@ infraIR:
         name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -428,10 +471,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -440,27 +480,33 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
-        healthCheck:
-          active:
-            healthyThreshold: 1
-            http:
-              expectedResponse:
-                binary: RXZlcnl0aGluZyBPSw==
-              expectedStatuses:
-              - 200
-              - 300
-              method: GET
-              path: /healthz
-            interval: 3s
-            timeout: 500ms
-            unhealthyThreshold: 3
-          passive:
-            baseEjectionTime: 2m40s
-            interval: 2s
-            maxEjectionPercent: 100
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 1
+              http:
+                expectedResponse:
+                  binary: RXZlcnl0aGluZyBPSw==
+                expectedStatuses:
+                - 200
+                - 300
+                host: '*'
+                method: GET
+                path: /healthz
+              interval: 3s
+              timeout: 500ms
+              unhealthyThreshold: 3
+            passive:
+              baseEjectionTime: 2m40s
+              consecutive5XxErrors: 5
+              consecutiveGatewayErrors: 0
+              consecutiveLocalOriginFailures: 5
+              interval: 2s
+              maxEjectionPercent: 100
+              splitExternalLocalOriginErrors: false
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -476,10 +522,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -488,21 +531,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        healthCheck:
-          active:
-            healthyThreshold: 3
-            interval: 5s
-            tcp:
-              receive:
-                text: pong
-              send:
-                text: ping
-            timeout: 1s
-            unhealthyThreshold: 3
-          passive:
-            baseEjectionTime: 3m0s
-            interval: 1s
-            maxEjectionPercent: 100
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
@@ -510,10 +538,27 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v2
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 3
+              interval: 5s
+              tcp:
+                receive:
+                  text: pong
+                send:
+                  text: ping
+              timeout: 1s
+              unhealthyThreshold: 3
+            passive:
+              baseEjectionTime: 10s
+              consecutive5XxErrors: 5
+              consecutiveGatewayErrors: 0
+              consecutiveLocalOriginFailures: 5
+              interval: 10s
+              maxEjectionPercent: 10
+              splitExternalLocalOriginErrors: false
+      - destination:
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
@@ -522,21 +567,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        healthCheck:
-          active:
-            healthyThreshold: 1
-            interval: 3s
-            tcp:
-              receive:
-                binary: RXZlcnl0aGluZyBPSw==
-              send:
-                binary: cGluZw==
-            timeout: 1s
-            unhealthyThreshold: 3
-          passive:
-            baseEjectionTime: 2m40s
-            interval: 8ms
-            maxEjectionPercent: 11
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
@@ -544,10 +574,27 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v3
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 1
+              interval: 3s
+              tcp:
+                receive:
+                  binary: RXZlcnl0aGluZyBPSw==
+                send:
+                  binary: cGluZw==
+              timeout: 1s
+              unhealthyThreshold: 3
+            passive:
+              baseEjectionTime: 2m40s
+              consecutive5XxErrors: 5
+              consecutiveGatewayErrors: 0
+              consecutiveLocalOriginFailures: 5
+              interval: 8ms
+              maxEjectionPercent: 11
+              splitExternalLocalOriginErrors: false
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -556,24 +603,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        healthCheck:
-          active:
-            healthyThreshold: 3
-            http:
-              expectedResponse:
-                text: pong
-              expectedStatuses:
-              - 200
-              - 201
-              method: GET
-              path: /healthz
-            interval: 5s
-            timeout: 1s
-            unhealthyThreshold: 3
-          passive:
-            baseEjectionTime: 2m30s
-            interval: 1s
-            maxEjectionPercent: 100
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -581,3 +610,27 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 3
+              http:
+                expectedResponse:
+                  text: pong
+                expectedStatuses:
+                - 200
+                - 201
+                host: gateway.envoyproxy.io
+                method: GET
+                path: /healthz
+              interval: 5s
+              timeout: 1s
+              unhealthyThreshold: 3
+            passive:
+              baseEjectionTime: 2m30s
+              consecutive5XxErrors: 5
+              consecutiveGatewayErrors: 0
+              consecutiveLocalOriginFailures: 5
+              interval: 1s
+              maxEjectionPercent: 100
+              splitExternalLocalOriginErrors: false

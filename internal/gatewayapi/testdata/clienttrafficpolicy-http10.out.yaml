@@ -12,15 +12,22 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-1
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: ClientTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
@@ -35,15 +42,22 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-2
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: ClientTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
@@ -58,15 +72,23 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-3
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: Can't set http10 default host on listener with only wildcard hostnames
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-3
+      conditions:
+      - lastTransitionTime: null
+        message: 'HTTP1: cannot set http10 default host on listener with only wildcard
+          hostnames.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -175,21 +197,21 @@ infraIR:
         name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10080
-          name: http-1
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: envoy-gateway/gateway-1/http-2
         ports:
         - containerPort: 8080
-          name: http-2
+          name: http-8080
           protocol: HTTP
           servicePort: 8080
       - address: null
         name: envoy-gateway/gateway-1/http-3
         ports:
         - containerPort: 8081
-          name: http-3
+          name: http-8081
           protocol: HTTP
           servicePort: 8081
       metadata:

@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -156,7 +157,7 @@ func TestHasManagedClass(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		ep       client.Object
+		ep       *egv1a1.EnvoyProxy
 		classes  []*gwapiv1.GatewayClass
 		expected bool
 	}{
@@ -189,6 +190,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionTrue,
 							},
 						},
+						SupportedFeatures: status.GatewaySupportedFeatures,
 					},
 				},
 			},
@@ -223,6 +225,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionTrue,
 							},
 						},
+						SupportedFeatures: status.GatewaySupportedFeatures,
 					},
 				},
 			},
@@ -275,6 +278,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionTrue,
 							},
 						},
+						SupportedFeatures: status.GatewaySupportedFeatures,
 					},
 				},
 				{
@@ -297,6 +301,7 @@ func TestHasManagedClass(t *testing.T) {
 								Status: metav1.ConditionFalse,
 							},
 						},
+						SupportedFeatures: status.GatewaySupportedFeatures,
 					},
 				},
 			},
@@ -462,7 +467,8 @@ func TestProcessParamsRef(t *testing.T) {
 
 			// Process the test case gatewayclasses.
 			resourceTree := gatewayapi.NewResources()
-			err := r.processParamsRef(context.Background(), tc.gc, resourceTree)
+			resourceMap := newResourceMapping()
+			err := r.processParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.

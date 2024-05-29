@@ -49,7 +49,7 @@ type GlobalRateLimit struct {
 	// matches two rules, one rate limited and one not, the final decision will be
 	// to rate limit the request.
 	//
-	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:MaxItems=64
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -114,6 +114,7 @@ type RateLimitSelectCondition struct {
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
 }
 
+// +kubebuilder:validation:Enum=Exact;Distinct
 type SourceMatchType string
 
 const (

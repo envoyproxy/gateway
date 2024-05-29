@@ -92,7 +92,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
     faultInjection:
       abort:
         httpStatus: 14
@@ -107,7 +106,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     faultInjection:
       abort:
         httpStatus: 500
@@ -125,7 +123,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
-      namespace: default
     faultInjection:
       abort:
         grpcStatus: 14

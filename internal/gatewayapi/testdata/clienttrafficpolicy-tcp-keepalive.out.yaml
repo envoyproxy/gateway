@@ -10,19 +10,26 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-1
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
       probes: 3
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: ClientTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
@@ -34,21 +41,27 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     tcpKeepalive: {}
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: There are existing ClientTrafficPolicies that are overriding these
-        sections [http-1]
-      reason: Overridden
-      status: "True"
-      type: Overridden
-    - lastTransitionTime: null
-      message: ClientTrafficPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: There are existing ClientTrafficPolicies that are overriding these
+          sections [http-1]
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -127,14 +140,14 @@ infraIR:
         name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10080
-          name: http-1
+          name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
         name: envoy-gateway/gateway-1/http-2
         ports:
         - containerPort: 8080
-          name: http-2
+          name: http-8080
           protocol: HTTP
           servicePort: 8080
       metadata:

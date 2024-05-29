@@ -6,6 +6,8 @@
 package protocov
 
 import (
+	"errors"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -14,11 +16,12 @@ const (
 	APIPrefix = "type.googleapis.com/"
 )
 
-var (
-	marshalOpts = proto.MarshalOptions{}
-)
+var marshalOpts = proto.MarshalOptions{}
 
 func ToAnyWithError(msg proto.Message) (*anypb.Any, error) {
+	if msg == nil {
+		return nil, errors.New("empty message received")
+	}
 	b, err := marshalOpts.Marshal(msg)
 	if err != nil {
 		return nil, err

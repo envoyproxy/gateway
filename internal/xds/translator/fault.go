@@ -30,16 +30,14 @@ func init() {
 	registerHTTPFilter(&fault{})
 }
 
-type fault struct {
-}
+type fault struct{}
 
 var _ httpFilter = &fault{}
 
 // patchHCM builds and appends the fault Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: this method creates an fault filter for each route that contains an Fault config.
+// Note: this method creates a fault filter for each route that contains an Fault config.
 func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -59,7 +57,7 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 		}
 	}
 
-	faultFilter, err := buildHCMFaultFilter(irListener)
+	faultFilter, err := buildHCMFaultFilter()
 	if err != nil {
 		return err
 	}
@@ -69,8 +67,8 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 }
 
 // buildHCMFaultFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
-func buildHCMFaultFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
-	faultProto := faultConfig(irListener)
+func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
+	faultProto := &xdshttpfaultv3.HTTPFault{}
 
 	if err := faultProto.ValidateAll(); err != nil {
 		return nil, err
@@ -89,10 +87,6 @@ func buildHCMFaultFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error)
 	}, nil
 }
 
-func faultConfig(irListener *ir.HTTPListener) *xdshttpfaultv3.HTTPFault {
-	return &xdshttpfaultv3.HTTPFault{}
-}
-
 // listenerContainsFault returns true if Fault exists for the provided listener.
 func listenerContainsFault(irListener *ir.HTTPListener) bool {
 	for _, route := range irListener.Routes {
@@ -105,15 +99,11 @@ func listenerContainsFault(irListener *ir.HTTPListener) bool {
 
 // routeContainsFault returns true if Fault exists for the provided route.
 func routeContainsFault(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
 	if irRoute != nil &&
-		irRoute.FaultInjection != nil {
+		irRoute.Traffic != nil &&
+		irRoute.Traffic.FaultInjection != nil {
 		return true
 	}
-
 	return false
 }
 
@@ -130,7 +120,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.FaultInjection == nil {
+	if irRoute.Traffic == nil || irRoute.Traffic.FaultInjection == nil {
 		return nil
 	}
 
@@ -143,34 +133,35 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 	routeCfgProto := &xdshttpfaultv3.HTTPFault{}
 
-	if irRoute.FaultInjection.Delay != nil {
+	delay := irRoute.Traffic.FaultInjection.Delay
+	if delay != nil {
 		routeCfgProto.Delay = &xdsfault.FaultDelay{}
-		if irRoute.FaultInjection.Delay.Percentage != nil {
-			routeCfgProto.Delay.Percentage = translatePercentToFractionalPercent(irRoute.FaultInjection.Delay.Percentage)
+		if delay.Percentage != nil {
+			routeCfgProto.Delay.Percentage = translatePercentToFractionalPercent(delay.Percentage)
 		}
-		if irRoute.FaultInjection.Delay.FixedDelay != nil {
+		if delay.FixedDelay != nil {
 			routeCfgProto.Delay.FaultDelaySecifier = &xdsfault.FaultDelay_FixedDelay{
-				FixedDelay: durationpb.New(irRoute.FaultInjection.Delay.FixedDelay.Duration),
+				FixedDelay: durationpb.New(delay.FixedDelay.Duration),
 			}
 		}
 	}
 
-	if irRoute.FaultInjection.Abort != nil {
+	abort := irRoute.Traffic.FaultInjection.Abort
+	if abort != nil {
 		routeCfgProto.Abort = &xdshttpfaultv3.FaultAbort{}
-		if irRoute.FaultInjection.Abort.Percentage != nil {
-			routeCfgProto.Abort.Percentage = translatePercentToFractionalPercent(irRoute.FaultInjection.Abort.Percentage)
+		if abort.Percentage != nil {
+			routeCfgProto.Abort.Percentage = translatePercentToFractionalPercent(abort.Percentage)
 		}
-		if irRoute.FaultInjection.Abort.HTTPStatus != nil {
+		if abort.HTTPStatus != nil {
 			routeCfgProto.Abort.ErrorType = &xdshttpfaultv3.FaultAbort_HttpStatus{
-				HttpStatus: uint32(*irRoute.FaultInjection.Abort.HTTPStatus),
+				HttpStatus: uint32(*abort.HTTPStatus),
 			}
 		}
-		if irRoute.FaultInjection.Abort.GrpcStatus != nil {
+		if abort.GrpcStatus != nil {
 			routeCfgProto.Abort.ErrorType = &xdshttpfaultv3.FaultAbort_GrpcStatus{
-				GrpcStatus: uint32(*irRoute.FaultInjection.Abort.GrpcStatus),
+				GrpcStatus: uint32(*abort.GrpcStatus),
 			}
 		}
-
 	}
 
 	if routeCfgProto.Delay == nil && routeCfgProto.Abort == nil {
@@ -189,10 +180,9 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	route.TypedPerFilterConfig[wellknown.Fault] = routeCfgAny
 
 	return nil
-
 }
 
-// translatePercentToFractionalPercent translates an v1alpha3 Percent instance
+// translatePercentToFractionalPercent translates a v1alpha3 Percent instance
 // to an envoy.type.FractionalPercent instance.
 func translatePercentToFractionalPercent(p *float32) *xdstype.FractionalPercent {
 	return &xdstype.FractionalPercent{

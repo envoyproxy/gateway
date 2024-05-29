@@ -12,6 +12,7 @@ import (
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
 
@@ -56,6 +57,23 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 	}
 }
 
+// NeedToSwitchPorts returns true if the EnvoyProxy needs to switch ports.
+func (e *EnvoyProxy) NeedToSwitchPorts() bool {
+	if e.Spec.Provider == nil {
+		return true
+	}
+
+	if e.Spec.Provider.Kubernetes == nil {
+		return true
+	}
+
+	if e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort == nil {
+		return true
+	}
+
+	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
+}
+
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
 // a default EnvoyProxyKubernetesProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Kubernetes", a nil EnvoyProxyKubernetesProvider is returned.
@@ -69,11 +87,20 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 		return r.Kubernetes
 	}
 
-	if r.Kubernetes.EnvoyDeployment == nil {
+	// if EnvoyDeployment and EnvoyDaemonSet are both nil, use EnvoyDeployment
+	if r.Kubernetes.EnvoyDeployment == nil && r.Kubernetes.EnvoyDaemonSet == nil {
 		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
 	}
 
-	r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+	// if use EnvoyDeployment, set default values
+	if r.Kubernetes.EnvoyDeployment != nil {
+		r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+	}
+
+	// if use EnvoyDaemonSet, set default values
+	if r.Kubernetes.EnvoyDaemonSet != nil {
+		r.Kubernetes.EnvoyDaemonSet.defaultKubernetesDaemonSetSpec(DefaultEnvoyProxyImage)
+	}
 
 	if r.Kubernetes.EnvoyService == nil {
 		r.Kubernetes.EnvoyService = DefaultKubernetesService()
@@ -119,4 +146,14 @@ func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
 	sort.Strings(args)
 
 	return strings.Join(args, ",")
+}
+
+// DefaultShutdownManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
+func DefaultShutdownManagerContainerResourceRequirements() *v1.ResourceRequirements {
+	return &v1.ResourceRequirements{
+		Requests: v1.ResourceList{
+			v1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
+			v1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
+		},
+	}
 }

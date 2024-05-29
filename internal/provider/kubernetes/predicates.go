@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -27,16 +28,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
+// nolint: gosec
+const oidcHMACSecretName = "envoy-oidc-hmac"
+
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
 // or false otherwise.
-func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
-	gc, ok := obj.(*gwapiv1.GatewayClass)
-	if !ok {
-		r.log.Info("bypassing reconciliation due to unexpected object type", "type", obj)
-		return false
-	}
-
+func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) bool {
 	if gc.Spec.ControllerName == r.classController {
 		r.log.Info("gatewayclass has matching controller name, processing", "name", gc.Name)
 		return true
@@ -66,7 +64,6 @@ type NamespaceGetter interface {
 
 // checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
 func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
-
 	var nsString string
 	// TODO: it requires extra condition validate cluster resources or resources without namespace?
 	if nsString = obj.GetNamespace(); len(nsString) == 0 {
@@ -153,6 +150,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isOIDCHMACSecret(&nsName) {
+		return true
+	}
+
 	return false
 }
 
@@ -202,6 +203,14 @@ func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedNa
 	return len(ctpList.Items) > 0
 }
 
+func (r *gatewayAPIReconciler) isOIDCHMACSecret(nsName *types.NamespacedName) bool {
+	oidcHMACSecret := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      oidcHMACSecretName,
+	}
+	return *nsName == oidcHMACSecret
+}
+
 // validateServiceForReconcile tries finding the owning Gateway of the Service
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
@@ -223,7 +232,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gcName] {
+	if ok && r.mergeGateways.Has(gcName) {
 		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
@@ -236,7 +245,15 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	if r.isEnvoyProxyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
@@ -277,7 +294,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		return false
 	}
 
-	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
+	grpcRouteList := &gwapiv1.GRPCRouteList{}
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
 	}); err != nil {
@@ -348,7 +365,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		return true
 	}
 
-	return r.isSecurityPolicyReferencingBackend(&nsName)
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
@@ -375,7 +396,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways[gcName] {
+	if ok && r.mergeGateways.Has(gcName) {
 		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
@@ -391,7 +412,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
+		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -407,7 +428,7 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways[string(gateway.Spec.GatewayClassName)]),
+		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
@@ -504,5 +525,41 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return false
 	}
 
+	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
+
+	if len(btlsList.Items) == 0 {
+		return false
+	}
+
 	return true
+}
+
+func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *types.NamespacedName) bool {
+	spList := &egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendEnvoyExtensionPolicyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyExtensionPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isEnvoyProxyReferencingBackend(nn *types.NamespacedName) bool {
+	proxyList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), proxyList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendEnvoyProxyTelemetryIndex, nn.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyProxies")
+		return false
+	}
+
+	return len(proxyList.Items) > 0
 }

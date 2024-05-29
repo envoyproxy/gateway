@@ -16,9 +16,8 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=sp
+// +kubebuilder:resource:categories=envoy-gateway,shortName=sp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // SecurityPolicy allows the user to configure various security settings for a
@@ -31,7 +30,7 @@ type SecurityPolicy struct {
 	Spec SecurityPolicySpec `json:"spec"`
 
 	// Status defines the current status of SecurityPolicy.
-	Status SecurityPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // SecurityPolicySpec defines the desired state of SecurityPolicy.
@@ -44,7 +43,7 @@ type SecurityPolicySpec struct {
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway.
-	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+	TargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
 	//
@@ -70,17 +69,12 @@ type SecurityPolicySpec struct {
 	//
 	// +optional
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
-}
 
-// SecurityPolicyStatus defines the state of SecurityPolicy
-type SecurityPolicyStatus struct {
-	// Conditions describe the current conditions of the SecurityPolicy.
+	// Authorization defines the authorization configuration.
 	//
 	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// +notImplementedHide
+	Authorization *Authorization `json:"authorization,omitempty"`
 }
 
 //+kubebuilder:object:root=true

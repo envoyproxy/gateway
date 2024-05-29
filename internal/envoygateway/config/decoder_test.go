@@ -18,9 +18,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-var (
-	inPath = "./testdata/decoder/in/"
-)
+var inPath = "./testdata/decoder/in/"
 
 func TestDecode(t *testing.T) {
 	testCases := []struct {
@@ -135,7 +133,6 @@ func TestDecode(t *testing.T) {
 						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
-								Replicas: v1alpha1.DefaultKubernetesDeploymentReplicas(),
 								Strategy: v1alpha1.DefaultKubernetesDeploymentStrategy(),
 								Container: &v1alpha1.KubernetesContainerSpec{
 									Env: []corev1.EnvVar{
@@ -322,6 +319,30 @@ func TestDecode(t *testing.T) {
 		{
 			in:     inPath + "invalid-gateway-version.yaml",
 			expect: false,
+		},
+		{
+			in: inPath + "gateway-leaderelection.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							LeaderElection: &v1alpha1.LeaderElection{
+								Disable:       ptr.To(true),
+								LeaseDuration: ptr.To(gwapiv1.Duration("1s")),
+								RenewDeadline: ptr.To(gwapiv1.Duration("2s")),
+								RetryPeriod:   ptr.To(gwapiv1.Duration("3s")),
+							},
+						},
+					},
+				},
+			},
+			expect: true,
 		},
 	}
 

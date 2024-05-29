@@ -50,3 +50,20 @@
         cluster: sixth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: seventh-route
+      route:
+        cluster: seventh-route-dest
+        hashPolicy:
+        - header:
+            headerName: name
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: eighth-route
+      route:
+        cluster: eighth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

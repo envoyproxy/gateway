@@ -14,10 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -61,10 +62,10 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.HTTPRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						h, ok := obj.(*gwapiv1.HTTPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -84,18 +85,18 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// GRPCRoute object status updater
 	go func() {
 		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.GRPCRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.GRPCRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						h, ok := obj.(*gwapiv1a2.GRPCRoute)
+					Resource:       new(gwapiv1.GRPCRoute),
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						h, ok := obj.(*gwapiv1.GRPCRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -123,10 +124,10 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1a2.TLSRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.TLSRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -155,10 +156,10 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1a2.TCPRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.TCPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -187,10 +188,10 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1a2.UDPRoute),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.UDPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -212,17 +213,17 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		message.HandleSubscription(
 			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "envoypatchpolicy-status"},
 			r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.EnvoyPatchPolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(v1alpha1.EnvoyPatchPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*v1alpha1.EnvoyPatchPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -244,17 +245,17 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		message.HandleSubscription(
 			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "clienttrafficpolicy-status"},
 			r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.ClientTrafficPolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(v1alpha1.ClientTrafficPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*v1alpha1.ClientTrafficPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -276,17 +277,17 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		message.HandleSubscription(
 			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "backendtrafficpolicy-status"},
 			r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.BackendTrafficPolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(v1alpha1.BackendTrafficPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*v1alpha1.BackendTrafficPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -308,17 +309,17 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		message.HandleSubscription(
 			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "securitypolicy-status"},
 			r.resources.SecurityPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *v1alpha1.SecurityPolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(status.Update{
+				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(v1alpha1.SecurityPolicy),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*v1alpha1.SecurityPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
@@ -333,6 +334,68 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			},
 		)
 		r.log.Info("securityPolicy status subscriber shutting down")
+	}()
+
+	// BackendTLSPolicy object status updater
+	go func() {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "backendtlspolicy-status"}, r.resources.BackendTLSPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(Update{
+					NamespacedName: key,
+					Resource:       new(gwapiv1a3.BackendTLSPolicy),
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*gwapiv1a3.BackendTLSPolicy)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("backendTlsPolicy status subscriber shutting down")
+	}()
+
+	// EnvoyExtensionPolicy object status updater
+	go func() {
+		message.HandleSubscription(
+			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "envoyextensionpolicy-status"},
+			r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(Update{
+					NamespacedName: key,
+					Resource:       new(v1alpha1.EnvoyExtensionPolicy),
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*v1alpha1.EnvoyExtensionPolicy)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("envoyExtensionPolicy status subscriber shutting down")
 	}()
 }
 
@@ -363,10 +426,10 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	key := utils.NamespacedName(gtw)
 
 	// publish status
-	r.statusUpdater.Send(status.Update{
+	r.statusUpdater.Send(Update{
 		NamespacedName: key,
 		Resource:       new(gwapiv1.Gateway),
-		Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+		Mutator: MutatorFunc(func(obj client.Object) client.Object {
 			g, ok := obj.(*gwapiv1.Gateway)
 			if !ok {
 				panic(fmt.Sprintf("unsupported object type %T", obj))
@@ -385,12 +448,13 @@ func (r *gatewayAPIReconciler) updateStatusForGatewayClass(
 	gc *gwapiv1.GatewayClass,
 	accepted bool,
 	reason,
-	msg string) error {
+	msg string,
+) error {
 	if r.statusUpdater != nil {
-		r.statusUpdater.Send(status.Update{
+		r.statusUpdater.Send(Update{
 			NamespacedName: types.NamespacedName{Name: gc.Name},
 			Resource:       &gwapiv1.GatewayClass{},
-			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+			Mutator: MutatorFunc(func(obj client.Object) client.Object {
 				gc, ok := obj.(*gwapiv1.GatewayClass)
 				if !ok {
 					panic(fmt.Sprintf("unsupported object type %T", obj))

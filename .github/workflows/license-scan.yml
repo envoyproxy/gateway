@@ -1,0 +1,27 @@
+name: License Scan
+
+on:
+  pull_request:
+    branches:
+    - "main"
+  push:
+    branches:
+    - "main"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - name: Run scanner
+      uses: google/osv-scanner-action/osv-scanner-action@75532bf0bf75464b047d80414dbce04449498365  # v1.7.3
+      with:
+        scan-args: |-
+          --skip-git
+          --experimental-licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
+          ./
+      continue-on-error: true  # TODO remove once all issues are resolved

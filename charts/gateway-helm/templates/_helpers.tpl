@@ -60,3 +60,72 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+The name of the Envoy Gateway image.
+*/}}
+{{- define "eg.image" -}}
+{{- if .Values.deployment.envoyGateway.image.repository }}
+{{- .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
+{{- else if .Values.global.images.envoyGateway.image }}
+{{- .Values.global.images.envoyGateway.image }}
+{{- else }}
+docker.io/envoyproxy/gateway:{{ .Chart.Version }}
+{{- end }}
+{{- end }}
+
+{{/*
+Pull policy for the Envoy Gateway image.
+*/}}
+{{- define "eg.image.pullPolicy" -}}
+{{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.envoyGateway.pullPolicy | default "IfNotPresent" }}
+{{- end }}
+
+{{/*
+Pull secrets for the Envoy Gateway image.
+*/}}
+{{- define "eg.image.pullSecrets" -}}
+{{- if .Values.deployment.envoyGateway.imagePullSecrets -}}
+imagePullSecrets:
+{{ toYaml .Values.deployment.envoyGateway.imagePullSecrets }}
+{{- else if .Values.global.images.envoyGateway.pullSecrets -}}
+imagePullSecrets:
+{{ toYaml .Values.global.images.envoyGateway.pullSecrets }}
+{{- else -}}
+imagePullSecrets: []
+{{- end }}
+{{- end }}
+
+{{/*
+The default Envoy Gateway configuration.
+*/}}
+{{- define "eg.default-envoy-gateway-config" -}}
+provider:
+  type: Kubernetes
+  kubernetes:
+    rateLimitDeployment:
+      container:
+        {{- if .Values.global.images.ratelimit.image }}
+        image: {{ .Values.global.images.ratelimit.image }}
+        {{- else }}
+        image: "docker.io/envoyproxy/ratelimit:master"
+        {{- end }}
+      {{- with .Values.global.images.ratelimit.pullSecrets }}
+      pod:
+        imagePullSecrets:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.global.images.ratelimit.pullPolicy }}
+      patch:
+        type: StrategicMerge
+        value:
+          spec:
+            template:
+              spec:
+                containers:
+                - name: envoy-ratelimit
+                  imagePullPolicy: {{ . }}
+      {{- end }}
+    shutdownManager:
+      image: {{ include "eg.image" . }}
+{{- end }}

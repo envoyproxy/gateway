@@ -2,6 +2,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10080
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -32,6 +33,7 @@
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        preserveExternalRequestId: true
         rds:
           configSource:
             ads: {}

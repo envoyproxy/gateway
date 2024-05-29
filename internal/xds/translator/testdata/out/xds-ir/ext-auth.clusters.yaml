@@ -1,4 +1,7 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -12,7 +15,27 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/1
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-1/rule/1
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -26,7 +49,10 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -34,23 +60,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: securitypolicy/default/policy-for-first-route/http-backend
+    serviceName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   lbPolicy: LEAST_REQUEST
-  name: securitypolicy/default/policy-for-first-route/http-backend
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: securitypolicy/default/policy-for-second-route/grpc-backend
-  lbPolicy: LEAST_REQUEST
-  name: securitypolicy/default/policy-for-second-route/grpc-backend
+  name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -59,3 +71,20 @@
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
         http2ProtocolOptions: {}
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  lbPolicy: LEAST_REQUEST
+  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

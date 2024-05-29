@@ -213,6 +213,49 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
+
+		{
+			name: "envoy service type 'LoadBalancer' with loadBalancerSourceRanges",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "non envoy service type 'LoadBalancer' with loadBalancerSourceRanges",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 		{
 			name: "envoy service type 'LoadBalancer' with valid loadBalancerIP",
 			proxy: &egv1a1.EnvoyProxy{
@@ -404,7 +447,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
-		}, {
+		},
+		{
 			name: "should invalid when metrics type is OpenTelemetry, but `OpenTelemetry` field being empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -424,7 +468,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
-		}, {
+		},
+		{
 			name: "should valid when metrics type is OpenTelemetry and `OpenTelemetry` field being not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -438,7 +483,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										Host: "0.0.0.0",
+										Host: ptr.To("0.0.0.0"),
 										Port: 3217,
 									},
 								},
@@ -448,8 +493,33 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
-		}, {
-			name: "should invalid when patch type is empty",
+		},
+		{
+			name: "should be invalid when service patch type is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: v1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when deployment patch type is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -471,7 +541,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
-		}, {
+		},
+		{
 			name: "should invalid when patch object is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -492,7 +563,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
-		}, {
+		},
+		{
 			name: "should valid when patch type and object are both not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -516,7 +588,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
-		}, {
+		},
+		{
 			name: "should valid when patch type is empty and object is not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -539,6 +612,54 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "valid filter order",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:  egv1a1.EnvoyFilterExtProc,
+							After: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid filter order with circular dependency",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterJWTAuthn,
+							Before: ptr.To(egv1a1.EnvoyFilterExtProc),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterExtProc,
+							Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 	}
 
@@ -576,8 +697,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
-	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, egv1a1.DefaultKubernetesDeploymentReplicas())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod)
 	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egv1a1.DefaultKubernetesPod())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container)

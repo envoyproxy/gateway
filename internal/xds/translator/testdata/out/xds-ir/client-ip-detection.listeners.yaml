@@ -28,6 +28,7 @@
         statPrefix: http
         useRemoteAddress: true
         xffNumTrustedHops: 2
+  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -65,6 +66,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: false
+  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -104,5 +106,6 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: false
+  drainType: MODIFY_ONLY
   name: third-listener
   perConnectionBufferLimitBytes: 32768

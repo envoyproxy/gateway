@@ -73,11 +73,11 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     circuitBreaker:
       maxConnections: 2048
       maxPendingRequests: 1
       maxParallelRequests: 4294967295
+      maxParallelRetries: 1024
       maxRequestsPerConnection: 1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -89,9 +89,9 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     circuitBreaker:
       maxConnections: 42
       maxPendingRequests: 42
       maxParallelRequests: 42
+      maxParallelRetries: 24
       maxRequestsPerConnection: 42

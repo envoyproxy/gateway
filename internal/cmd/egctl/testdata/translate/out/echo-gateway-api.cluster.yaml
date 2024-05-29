@@ -12,6 +12,27 @@ gatewayClass:
       reason: Accepted
       status: "True"
       type: Accepted
+    supportedFeatures:
+    - GRPCRoute
+    - GatewayPort8080
+    - HTTPRouteBackendProtocolH2C
+    - HTTPRouteBackendProtocolWebSocket
+    - HTTPRouteBackendTimeout
+    - HTTPRouteDestinationPortMatching
+    - HTTPRouteHostRewrite
+    - HTTPRouteMethodMatching
+    - HTTPRouteParentRefPort
+    - HTTPRoutePathRedirect
+    - HTTPRoutePathRewrite
+    - HTTPRoutePortRedirect
+    - HTTPRouteQueryParamMatching
+    - HTTPRouteRequestMirror
+    - HTTPRouteRequestMultipleMirrors
+    - HTTPRouteRequestTimeout
+    - HTTPRouteResponseHeaderModification
+    - HTTPRouteSchemeRedirect
+    - ReferenceGrant
+    - TLSRoute
 gateways:
 - metadata:
     creationTimestamp: null
@@ -92,6 +113,9 @@ xds:
     dynamicActiveClusters:
     - cluster:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        circuitBreakers:
+          thresholds:
+          - maxRetries: 1024
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s

@@ -78,6 +78,19 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancerWithLoadBalancerSourceRanges",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+			}},
+			want: corev1.ServiceSpec{
+				Type:                     corev1.ServiceTypeLoadBalancer,
+				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+				SessionAffinity:          corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy:    corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
 			name: "LoadBalancerWithLoadBalancerIP",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -200,7 +213,8 @@ func TestCompareSvc(t *testing.T) {
 					Type: "NodePort",
 				},
 			},
-		}, {
+		},
+		{
 			// Only Spec.Ports[*].Port is different
 			ExpectRet: false,
 			NewSvc: &corev1.Service{
@@ -272,6 +286,49 @@ func TestCompareSvc(t *testing.T) {
 				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "192.168.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+		},
+		{
+			// Finalizers field differs
+			ExpectRet: true,
+			NewSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "my-service",
+					Namespace:  "default",
+					Finalizers: []string{"service.k8s.aws/resources"},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+			OriginalSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
 						{
 							Name:       "http",
@@ -361,7 +418,7 @@ func TestExpectedProxyContainerEnv(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, ExpectedProxyContainerEnv(tt.args.container, tt.args.env), "ExpectedProxyContainerEnv(%v, %v)", tt.args.container, tt.args.env)
+			assert.Equalf(t, tt.want, ExpectedContainerEnv(tt.args.container, tt.args.env), "ExpectedProxyContainerEnv(%v, %v)", tt.args.container, tt.args.env)
 		})
 	}
 }
@@ -432,7 +489,7 @@ func TestExpectedDeploymentVolumes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, ExpectedDeploymentVolumes(tt.args.pod, tt.args.volumes), "ExpectedDeploymentVolumes(%v, %v)", tt.args.pod, tt.args.volumes)
+			assert.Equalf(t, tt.want, ExpectedVolumes(tt.args.pod, tt.args.volumes), "ExpectedVolumes(%v, %v)", tt.args.pod, tt.args.volumes)
 		})
 	}
 }

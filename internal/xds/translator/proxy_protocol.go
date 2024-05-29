@@ -10,15 +10,13 @@ import (
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/proxy_protocol/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // patchProxyProtocolFilter builds and appends the Proxy Protocol Filter to the
 // HTTP Listener's Listener Filters if applicable.
-func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener) {
+func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, enableProxyProtocol bool) {
 	// Return early if unset
-	if xdsListener == nil || irListener == nil || !irListener.EnableProxyProtocol {
+	if xdsListener == nil || !enableProxyProtocol {
 		return
 	}
 
@@ -32,7 +30,8 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, irListener *ir.H
 	proxyProtocolFilter := buildProxyProtocolFilter()
 
 	if proxyProtocolFilter != nil {
-		xdsListener.ListenerFilters = append(xdsListener.ListenerFilters, proxyProtocolFilter)
+		// Add the Proxy Protocol filter as first to listeners.
+		xdsListener.ListenerFilters = append([]*listenerv3.ListenerFilter{proxyProtocolFilter}, xdsListener.ListenerFilters...)
 	}
 }
 

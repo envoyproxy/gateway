@@ -55,10 +55,7 @@ httpRoutes:
       namespace: envoy-gateway
       sectionName: http
     rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
+    - filters:
       - requestRedirect:
           hostname: redirected.com
           scheme: https
@@ -93,7 +90,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -117,10 +114,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        hostname: gateway.envoyproxy.io
+      - hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:

@@ -1,0 +1,69 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  connection: {}
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10081
+  hostnames:
+  - "foo.net"
+  connection:
+    limit:
+      value: 5
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+tcp:
+- name: "third-listener"
+  address: "0.0.0.0"
+  port: 10082
+  connection:
+    limit:
+      value: 3
+  tls:
+    passthrough:
+      snis:
+      - bar.com
+  destination:
+    name: "tls-route-dest"
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+- name: "fourth-listener"
+  address: "0.0.0.0"
+  connection:
+    limit:
+      value: 10
+      closeDelay: 3s
+  port: 10083
+  destination:
+    name: "tcp-route-dest"
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000

@@ -14,8 +14,8 @@ import (
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -29,8 +29,7 @@ func init() {
 	registerHTTPFilter(&extAuth{})
 }
 
-type extAuth struct {
-}
+type extAuth struct{}
 
 var _ httpFilter = &extAuth{}
 
@@ -55,7 +54,14 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		filter, err := buildHCMExtAuthFilter(route)
+		// Only generates one OAuth2 Envoy filter for each unique name.
+		// For example, if there are two routes under the same gateway with the
+		// same OIDC config, only one OAuth2 filter will be generated.
+		if hcmContainsFilter(mgr, extAuthFilterName(route.Security.ExtAuth)) {
+			continue
+		}
+
+		filter, err := buildHCMExtAuthFilter(route.Security.ExtAuth)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -64,12 +70,12 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return nil
+	return errs
 }
 
 // buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
-func buildHCMExtAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
-	extAuthProto := extAuthConfig(route.ExtAuth)
+func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
+	extAuthProto := extAuthConfig(extAuth)
 	if err := extAuthProto.ValidateAll(); err != nil {
 		return nil, err
 	}
@@ -80,7 +86,7 @@ func buildHCMExtAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name:     extAuthFilterName(route),
+		Name:     extAuthFilterName(extAuth),
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: extAuthAny,
@@ -88,12 +94,18 @@ func buildHCMExtAuthFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-func extAuthFilterName(route *ir.HTTPRoute) string {
-	return perRouteFilterName(extAuthFilter, route.Name)
+func extAuthFilterName(extAuth *ir.ExtAuth) string {
+	return perRouteFilterName(extAuthFilter, extAuth.Name)
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
-	config := &extauthv3.ExtAuthz{}
+	config := &extauthv3.ExtAuthz{
+		TransportApiVersion: corev3.ApiVersion_V3,
+	}
+
+	if extAuth.FailOpen != nil {
+		config.FailureModeAllow = *extAuth.FailOpen
+	}
 
 	var headersToExtAuth []*matcherv3.StringMatcher
 	for _, header := range extAuth.HeadersToExtAuth {
@@ -101,6 +113,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: header,
 			},
+			IgnoreCase: true,
 		})
 	}
 
@@ -120,7 +133,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 					EnvoyGrpc: grpcService(extAuth.GRPC),
 				},
-				Timeout: &duration.Duration{
+				Timeout: &durationpb.Duration{
 					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
@@ -134,7 +147,12 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	var (
 		uri              string
 		headersToBackend []*matcherv3.StringMatcher
+		service          *extauthv3.HttpService
 	)
+
+	service = &extauthv3.HttpService{
+		PathPrefix: http.Path,
+	}
 
 	u := url.URL{
 		// scheme should be decided by the TLS setting, but we don't have that info now.
@@ -146,30 +164,34 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	}
 	uri = u.String()
 
+	service.ServerUri = &corev3.HttpUri{
+		Uri: uri,
+		HttpUpstreamType: &corev3.HttpUri_Cluster{
+			Cluster: http.Destination.Name,
+		},
+		Timeout: &durationpb.Duration{
+			Seconds: defaultExtServiceRequestTimeout,
+		},
+	}
+
 	for _, header := range http.HeadersToBackend {
 		headersToBackend = append(headersToBackend, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: header,
 			},
+			IgnoreCase: true,
 		})
 	}
 
-	return &extauthv3.HttpService{
-		ServerUri: &corev3.HttpUri{
-			Uri: uri,
-			HttpUpstreamType: &corev3.HttpUri_Cluster{
-				Cluster: http.Destination.Name,
-			},
-			Timeout: &duration.Duration{
-				Seconds: defaultExtServiceRequestTimeout,
-			},
-		},
-		AuthorizationResponse: &extauthv3.AuthorizationResponse{
+	if len(headersToBackend) > 0 {
+		service.AuthorizationResponse = &extauthv3.AuthorizationResponse{
 			AllowedUpstreamHeaders: &matcherv3.ListStringMatcher{
 				Patterns: headersToBackend,
 			},
-		},
+		}
 	}
+
+	return service
 }
 
 func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
@@ -181,21 +203,18 @@ func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
 
 // routeContainsExtAuth returns true if ExtAuth exists for the provided route.
 func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil {
-		return false
-	}
-
 	if irRoute != nil &&
-		irRoute.ExtAuth != nil {
+		irRoute.Security != nil &&
+		irRoute.Security.ExtAuth != nil {
 		return true
 	}
-
 	return false
 }
 
 // patchResources patches the cluster resources for the external auth services.
 func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -205,15 +224,15 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		if !routeContainsExtAuth(route) {
 			continue
 		}
-		if route.ExtAuth.HTTP != nil {
+		if route.Security.ExtAuth.HTTP != nil {
 			if err := createExtServiceXDSCluster(
-				&route.ExtAuth.HTTP.Destination, tCtx); err != nil && !errors.Is(
+				&route.Security.ExtAuth.HTTP.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
 		} else {
 			if err := createExtServiceXDSCluster(
-				&route.ExtAuth.GRPC.Destination, tCtx); err != nil && !errors.Is(
+				&route.Security.ExtAuth.GRPC.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -221,28 +240,6 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 	}
 
 	return errs
-}
-
-func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
-	// Get the address type from the first setting.
-	// This is safe because no mixed address types in the settings.
-	addrTypeState := rd.Settings[0].AddressType
-
-	var endpointType EndpointType
-	if addrTypeState != nil && *addrTypeState == ir.FQDN {
-		endpointType = EndpointTypeDNS
-	} else {
-		endpointType = EndpointTypeStatic
-	}
-	if err := addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      nil,
-		endpointType: endpointType,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-	return nil
 }
 
 // patchRoute patches the provided route with the extAuth config if applicable.
@@ -254,10 +251,11 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.ExtAuth == nil {
+	if irRoute.Security == nil || irRoute.Security.ExtAuth == nil {
 		return nil
 	}
-	if err := enableFilterOnRoute(extAuthFilter, route, irRoute); err != nil {
+	filterName := extAuthFilterName(irRoute.Security.ExtAuth)
+	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}
 	return nil

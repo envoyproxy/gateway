@@ -17,7 +17,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=epp
+// +kubebuilder:resource:categories=envoy-gateway,shortName=epp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -32,7 +32,7 @@ type EnvoyPatchPolicy struct {
 	Spec EnvoyPatchPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyPatchPolicy.
-	Status EnvoyPatchPolicyStatus `json:"status,omitempty"`
+	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
@@ -49,12 +49,12 @@ type EnvoyPatchPolicySpec struct {
 	JSONPatches []EnvoyJSONPatchConfig `json:"jsonPatches,omitempty"`
 	// TargetRef is the name of the Gateway API resource this policy
 	// is being attached to.
-	// By default attaching to Gateway is supported and
+	// By default, attaching to Gateway is supported and
 	// when mergeGateways is enabled it should attach to GatewayClass.
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway
 	// TargetRef
-	TargetRef gwapiv1a2.PolicyTargetReference `json:"targetRef"`
+	TargetRef gwapiv1a2.LocalPolicyTargetReference `json:"targetRef"`
 	// Priority of the EnvoyPatchPolicy.
 	// If multiple EnvoyPatchPolicies are applied to the same
 	// TargetRef, they will be applied in the ascending order of
@@ -123,17 +123,6 @@ type JSONPatchOperation struct {
 	Value *apiextensionsv1.JSON `json:"value,omitempty"`
 }
 
-// EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy
-type EnvoyPatchPolicyStatus struct {
-	// Conditions describe the current conditions of the EnvoyPatchPolicy.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
 const (
 	// PolicyConditionProgrammed indicates whether the policy has been translated
 	// and ready to be programmed into the data plane.
@@ -157,7 +146,7 @@ const (
 	// is syntactically or semantically invalid.
 	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
 
-	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
+	// PolicyReasonResourceNotFound is used with the "Programmed" condition when the
 	// policy cannot find the resource type to patch to.
 	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
 

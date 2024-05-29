@@ -112,7 +112,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -146,9 +146,6 @@ xdsIR:
         - append: false
           name: X-Header-Set
           value: set-overwrites-values
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:

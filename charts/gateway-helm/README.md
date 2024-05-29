@@ -8,10 +8,10 @@ The Helm chart for Envoy Gateway
 
 ## Maintainers
 
-| Name                             | Email | Url                                                             |
-| -------------------------------- | ----- | --------------------------------------------------------------- |
-| envoy-gateway-steering-committee |       | <https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md> |
-| envoy-gateway-maintainers        |       | <https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS>    |
+| Name | Email | Url |
+| ---- | ------ | --- |
+| envoy-gateway-steering-committee |  | <https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md> |
+| envoy-gateway-maintainers |  | <https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS> |
 
 ## Source Code
 
@@ -27,8 +27,9 @@ Helm's [documentation](https://helm.sh/docs) to get started.
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-  helm install eg oci://docker.io/envoyproxy/gateway-helm -n envoy-gateway-system --create-namespace
+  helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
+You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
 ### Install from Source Code
 
@@ -45,7 +46,7 @@ To install the eg chart along with Gateway API CRDs and Envoy Gateway CRDs:
 You can install the eg chart along without Gateway API CRDs and Envoy Gateway CRDs, make sure CRDs exist in Cluster first if you want to skip to install them, otherwise EG may fail to start:
 
 ``` shell
-    helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm -n envoy-gateway-system --skip-crds
+    helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds
 ```
 
 To uninstall the chart:
@@ -56,35 +57,44 @@ To uninstall the chart:
 
 ## Values
 
-| Key                                                | Type   | Default                                           | Description |
-|----------------------------------------------------| ------ |---------------------------------------------------| ----------- |
-| config.envoyGateway.gateway.controllerName         | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |             |
-| config.envoyGateway.provider.type                  | string | `"Kubernetes"`                                    |             |
-| deployment.envoyGateway.image.repository           | string | `"docker.io/envoyproxy/gateway-dev"`              |             |
-| deployment.envoyGateway.image.tag                  | string | `"latest"`                                        |             |
-| deployment.envoyGateway.imagePullPolicy            | string | `"Always"`                                        |             |
-| deployment.envoyGateway.resources.limits.cpu       | string | `"500m"`                                          |             |
-| deployment.envoyGateway.resources.limits.memory    | string | `"128Mi"`                                         |             |
-| deployment.envoyGateway.resources.requests.cpu     | string | `"10m"`                                           |             |
-| deployment.envoyGateway.resources.requests.memory  | string | `"64Mi"`                                          |             |
-| deployment.kubeRbacProxy.image.repository          | string | `"gcr.io/kubebuilder/kube-rbac-proxy"`            |             |
-| deployment.kubeRbacProxy.image.tag                 | string | `"v0.11.0"`                                       |             |
-| deployment.kubeRbacProxy.imagePullPolicy           | string | `"IfNotPresent"`                                  |             |
-| deployment.kubeRbacProxy.resources.limits.cpu      | string | `"500m"`                                          |             |
-| deployment.kubeRbacProxy.resources.limits.memory   | string | `"128Mi"`                                         |             |
-| deployment.kubeRbacProxy.resources.requests.cpu    | string | `"5m"`                                            |             |
-| deployment.kubeRbacProxy.resources.requests.memory | string | `"64Mi"`                                          |             |
-| deployment.ports[0].name                           | string | `"grpc"`                                          |             |
-| deployment.ports[0].port                           | int    | `18000`                                           |             |
-| deployment.ports[0].targetPort                     | int    | `18000`                                           |             |
-| deployment.ports[1].name                           | string | `"ratelimit"`                                     |             |
-| deployment.ports[1].port                           | int    | `18001`                                           |             |
-| deployment.ports[1].targetPort                     | int    | `18001`                                           |             |
-| deployment.replicas                                | int    | `1`                                               |             |
-| deployment.pod.annotations                         | object | `{}`                                              |             |
-| deployment.pod.labels                              | object | `{}`                                              |             |
-| envoyGatewayMetricsService.ports[0].name           | string | `"https"`                                         |             |
-| envoyGatewayMetricsService.ports[0].port           | int    | `8443`                                            |             |
-| envoyGatewayMetricsService.ports[0].protocol       | string | `"TCP"`                                           |             |
-| envoyGatewayMetricsService.ports[0].targetPort     | string | `"https"`                                         |             |
-| kubernetesClusterDomain                            | string | `"cluster.local"`                                 |             |
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| certgen.job.annotations | object | `{}` |  |
+| certgen.job.resources | object | `{}` |  |
+| certgen.job.ttlSecondsAfterFinished | int | `30` |  |
+| certgen.rbac.annotations | object | `{}` |  |
+| certgen.rbac.labels | object | `{}` |  |
+| config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
+| config.envoyGateway.logging.level.default | string | `"info"` |  |
+| config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
+| createNamespace | bool | `false` |  |
+| deployment.envoyGateway.image.repository | string | `""` |  |
+| deployment.envoyGateway.image.tag | string | `""` |  |
+| deployment.envoyGateway.imagePullPolicy | string | `""` |  |
+| deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
+| deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
+| deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
+| deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
+| deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |
+| deployment.pod.affinity | object | `{}` |  |
+| deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
+| deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
+| deployment.pod.labels | object | `{}` |  |
+| deployment.ports[0].name | string | `"grpc"` |  |
+| deployment.ports[0].port | int | `18000` |  |
+| deployment.ports[0].targetPort | int | `18000` |  |
+| deployment.ports[1].name | string | `"ratelimit"` |  |
+| deployment.ports[1].port | int | `18001` |  |
+| deployment.ports[1].targetPort | int | `18001` |  |
+| deployment.ports[2].name | string | `"metrics"` |  |
+| deployment.ports[2].port | int | `19001` |  |
+| deployment.ports[2].targetPort | int | `19001` |  |
+| deployment.replicas | int | `1` |  |
+| global.images.envoyGateway.image | string | `nil` |  |
+| global.images.envoyGateway.pullPolicy | string | `nil` |  |
+| global.images.envoyGateway.pullSecrets | list | `[]` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
+| global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
+| global.images.ratelimit.pullSecrets | list | `[]` |  |
+| kubernetesClusterDomain | string | `"cluster.local"` |  |
+

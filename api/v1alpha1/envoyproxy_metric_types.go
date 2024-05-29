@@ -27,6 +27,10 @@ type ProxyMetrics struct {
 
 	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
+
+	// EnablePerEndpointStats enables per endpoint envoy stats metrics.
+	// Please use with caution.
+	EnablePerEndpointStats bool `json:"enablePerEndpointStats,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.
@@ -47,16 +51,31 @@ type ProxyMetricSink struct {
 	OpenTelemetry *ProxyOpenTelemetrySink `json:"openTelemetry,omitempty"`
 }
 
+// ProxyOpenTelemetrySink defines the configuration for OpenTelemetry sink.
+//
+// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type ProxyOpenTelemetrySink struct {
 	// Host define the service hostname.
-	Host string `json:"host"`
+	// Deprecated: Use BackendRefs instead.
+	//
+	// +optional
+	Host *string `json:"host,omitempty"`
 	// Port defines the port the service is exposed on.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// BackendRefs references a Kubernetes object that represents the
+	// backend server to which the metric will be sent.
+	// Only service Kind is supported for now.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 
 	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
 }
@@ -64,4 +83,7 @@ type ProxyOpenTelemetrySink struct {
 type ProxyPrometheusProvider struct {
 	// Disable the Prometheus endpoint.
 	Disable bool `json:"disable,omitempty"`
+	// Configure the compression on Prometheus endpoint. Compression is useful in situations when bandwidth is scarce and large payloads can be effectively compressed at the expense of higher CPU load.
+	// +optional
+	Compression *Compression `json:"compression,omitempty"`
 }

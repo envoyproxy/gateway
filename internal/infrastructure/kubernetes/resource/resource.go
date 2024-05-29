@@ -37,6 +37,9 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 		if service.AllocateLoadBalancerNodePorts != nil {
 			serviceSpec.AllocateLoadBalancerNodePorts = service.AllocateLoadBalancerNodePorts
 		}
+		if service.LoadBalancerSourceRanges != nil && len(service.LoadBalancerSourceRanges) > 0 {
+			serviceSpec.LoadBalancerSourceRanges = service.LoadBalancerSourceRanges
+		}
 		if service.LoadBalancerIP != nil {
 			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP
 		}
@@ -46,15 +49,16 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	return serviceSpec
 }
 
-// CompareSvc compare entire Svc.Spec but ignored the ports[*].nodePort, ClusterIP and ClusterIPs in case user have modified for some scene.
+// CompareSvc compares the Service resource and ignores specific fields that may have been modified by other actors.
 func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
 		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
-		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"))
+		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"),
+		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "Finalizers"))
 }
 
-// ExpectedProxyContainerEnv returns expected container envs.
-func ExpectedProxyContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
+// ExpectedContainerEnv returns expected container envs.
+func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
 	amendFunc := func(envVar corev1.EnvVar) {
 		for index, e := range env {
 			if e.Name == envVar.Name {
@@ -72,8 +76,8 @@ func ExpectedProxyContainerEnv(container *egv1a1.KubernetesContainerSpec, env []
 	return env
 }
 
-// ExpectedDeploymentVolumes returns expected deployment volumes.
-func ExpectedDeploymentVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
+// ExpectedVolumes returns expected deployment volumes.
+func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
 	amendFunc := func(volume corev1.Volume) {
 		for index, e := range volumes {
 			if e.Name == volume.Name {

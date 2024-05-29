@@ -1,0 +1,33 @@
+name: OSV-Scanner
+
+on:
+  pull_request:
+    branches:
+    - "main"
+  merge_group:
+    branches:
+    - "main"
+  push:
+    branches:
+    - "main"
+  schedule:
+  - cron: '44 15 * * 5'
+
+permissions:
+  contents: read
+
+jobs:
+  scan-scheduled:
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@75532bf0bf75464b047d80414dbce04449498365"  # v1.7.3
+    permissions:
+      contents: read
+      # Require writing security events to upload SARIF file to security tab
+      security-events: write
+  scan-pr:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@75532bf0bf75464b047d80414dbce04449498365"  # v1.7.3
+    permissions:
+      contents: read
+      # Require writing security events to upload SARIF file to security tab
+      security-events: write

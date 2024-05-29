@@ -47,7 +47,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -64,14 +64,21 @@ xdsIR:
     - name: edit-conn-buffer-bytes
       namespace: envoy-gateway
       status:
-        conditions:
-        - lastTransitionTime: null
-          message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:MyGateway,
-            only TargetRef.Group:gateway.networking.k8s.io and TargetRef.Kind:Gateway
-            is supported.
-          reason: Invalid
-          status: "False"
-          type: Accepted
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+          conditions:
+          - lastTransitionTime: null
+            message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:MyGateway,
+              only TargetRef.Group:gateway.networking.k8s.io and TargetRef.Kind:Gateway
+              is supported.
+            reason: Invalid
+            status: "False"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
     http:
     - address: 0.0.0.0
       hostnames:

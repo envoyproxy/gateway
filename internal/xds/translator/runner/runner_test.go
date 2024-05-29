@@ -13,7 +13,6 @@ import (
 
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -27,12 +26,14 @@ func TestRunner(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
+	pResource := new(message.ProviderResources)
 	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
-		Server: *cfg,
-		XdsIR:  xdsIR,
-		Xds:    xds,
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		Xds:               xds,
 	})
 
 	ctx := context.Background()
@@ -96,20 +97,22 @@ func TestRunner(t *testing.T) {
 		// Ensure that xds has no key, value pairs
 		return len(out) == 0
 	}, time.Second*5, time.Millisecond*50)
-
 }
 
 func TestRunner_withExtensionManager(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
+	pResource := new(message.ProviderResources)
+
 	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
-		Server:           *cfg,
-		XdsIR:            xdsIR,
-		Xds:              xds,
-		ExtensionManager: &extManagerMock{},
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		Xds:               xds,
+		ExtensionManager:  &extManagerMock{},
 	})
 
 	ctx := context.Background()

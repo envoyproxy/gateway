@@ -73,6 +73,17 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
 
+func routeContainsGlobalRateLimit(irRoute *ir.HTTPRoute) bool {
+	if irRoute == nil ||
+		irRoute.Traffic == nil ||
+		irRoute.Traffic.RateLimit == nil ||
+		irRoute.Traffic.RateLimit.Global == nil {
+		return false
+	}
+
+	return true
+}
+
 // isRateLimitPresent returns true if rate limit config exists for the listener.
 func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	// Return false if global ratelimiting is disabled.
@@ -81,7 +92,7 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	}
 	// Return true if rate limit config exists.
 	for _, route := range irListener.Routes {
-		if route.RateLimit != nil && route.RateLimit.Global != nil {
+		if routeContainsGlobalRateLimit(route) {
 			return true
 		}
 	}
@@ -128,11 +139,11 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
 func patchRouteWithRateLimit(xdsRouteAction *routev3.RouteAction, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
-	if irRoute.RateLimit == nil || irRoute.RateLimit.Global == nil || xdsRouteAction == nil {
+	if !routeContainsGlobalRateLimit(irRoute) || xdsRouteAction == nil {
 		return nil
 	}
 
-	rateLimits := buildRouteRateLimits(irRoute.Name, irRoute.RateLimit.Global)
+	rateLimits := buildRouteRateLimits(irRoute.Name, irRoute.Traffic.RateLimit.Global)
 	xdsRouteAction.RateLimits = rateLimits
 	return nil
 }
@@ -268,7 +279,16 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 	enc.SetIndent(2)
 	// Translate pb config to yaml
 	yamlRoot := config.ConfigXdsProtoToYaml(pbCfg)
-	err := enc.Encode(*yamlRoot)
+	rateLimitConfig := &struct {
+		Name        string
+		Domain      string
+		Descriptors []config.YamlDescriptor
+	}{
+		Name:        pbCfg.Name,
+		Domain:      yamlRoot.Domain,
+		Descriptors: yamlRoot.Descriptors,
+	}
+	err := enc.Encode(rateLimitConfig)
 	return buf.String(), err
 }
 
@@ -278,8 +298,8 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, len(irListener.Routes))
 
 	for _, route := range irListener.Routes {
-		if route.RateLimit != nil && route.RateLimit.Global != nil {
-			serviceDescriptors := buildRateLimitServiceDescriptors(route.RateLimit.Global)
+		if routeContainsGlobalRateLimit(route) {
+			serviceDescriptors := buildRateLimitServiceDescriptors(route.Traffic.RateLimit.Global)
 
 			// Get route rule descriptors within each route.
 			//
@@ -306,8 +326,10 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 		return nil
 	}
 
+	domain := getRateLimitDomain(irListener)
 	return &rlsconfv3.RateLimitConfig{
-		Domain:      getRateLimitDomain(irListener),
+		Name:        domain,
+		Domain:      domain,
 		Descriptors: pbDescriptors,
 	}
 }
@@ -451,7 +473,7 @@ func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
 	}, nil
 }
 
-func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
+func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, metrics *ir.Metrics) error {
 	// Return early if rate limits don't exist.
 	if !t.isRateLimitPresent(irListener) {
 		return nil
@@ -475,6 +497,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,
+		metrics:      metrics,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

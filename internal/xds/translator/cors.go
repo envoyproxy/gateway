@@ -16,8 +16,8 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -27,8 +27,7 @@ func init() {
 	registerHTTPFilter(&cors{})
 }
 
-type cors struct {
-}
+type cors struct{}
 
 var _ httpFilter = &cors{}
 
@@ -36,7 +35,8 @@ var _ httpFilter = &cors{}
 // applicable.
 func (*cors) patchHCM(
 	mgr *hcmv3.HttpConnectionManager,
-	irListener *ir.HTTPListener) error {
+	irListener *ir.HTTPListener,
+) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -92,7 +92,7 @@ func listenerContainsCORS(irListener *ir.HTTPListener) bool {
 	}
 
 	for _, route := range irListener.Routes {
-		if route.CORS != nil {
+		if route.Security != nil && route.Security.CORS != nil {
 			return true
 		}
 	}
@@ -108,7 +108,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.CORS == nil {
+	if irRoute.Security == nil || irRoute.Security.CORS == nil {
 		return nil
 	}
 
@@ -125,30 +125,32 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		allowHeaders     string
 		exposeHeaders    string
 		maxAge           string
-		allowCredentials *wrappers.BoolValue
+		allowCredentials *wrapperspb.BoolValue
+		c                = irRoute.Security.CORS
 	)
 
 	//nolint:gocritic
 
-	for _, origin := range irRoute.CORS.AllowOrigins {
+	for _, origin := range c.AllowOrigins {
 		allowOrigins = append(allowOrigins, buildXdsStringMatcher(origin))
 	}
 
-	allowMethods = strings.Join(irRoute.CORS.AllowMethods, ", ")
-	allowHeaders = strings.Join(irRoute.CORS.AllowHeaders, ", ")
-	exposeHeaders = strings.Join(irRoute.CORS.ExposeHeaders, ", ")
-	if irRoute.CORS.MaxAge != nil {
-		maxAge = strconv.Itoa(int(irRoute.CORS.MaxAge.Seconds()))
+	allowMethods = strings.Join(c.AllowMethods, ", ")
+	allowHeaders = strings.Join(c.AllowHeaders, ", ")
+	exposeHeaders = strings.Join(c.ExposeHeaders, ", ")
+	if c.MaxAge != nil {
+		maxAge = strconv.Itoa(int(c.MaxAge.Seconds()))
 	}
-	allowCredentials = &wrappers.BoolValue{Value: irRoute.CORS.AllowCredentials}
+	allowCredentials = &wrapperspb.BoolValue{Value: c.AllowCredentials}
 
 	routeCfgProto := &corsv3.CorsPolicy{
-		AllowOriginStringMatch: allowOrigins,
-		AllowMethods:           allowMethods,
-		AllowHeaders:           allowHeaders,
-		ExposeHeaders:          exposeHeaders,
-		MaxAge:                 maxAge,
-		AllowCredentials:       allowCredentials,
+		AllowOriginStringMatch:       allowOrigins,
+		AllowMethods:                 allowMethods,
+		AllowHeaders:                 allowHeaders,
+		ExposeHeaders:                exposeHeaders,
+		MaxAge:                       maxAge,
+		AllowCredentials:             allowCredentials,
+		ForwardNotMatchingPreflights: &wrapperspb.BoolValue{Value: false},
 	}
 
 	routeCfgAny, err := anypb.New(routeCfgProto)

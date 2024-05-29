@@ -77,6 +77,7 @@ type ProxyListener struct {
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
 type HTTP3Settings struct {
+	QUICPort int32 `json:"quicPort" yaml:"quicPort"`
 }
 
 // ListenerPort defines a network port of a listener.
@@ -221,8 +222,8 @@ func (p *ProxyInfra) Validate() error {
 				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > 65353 {
 					errs = append(errs, errors.New("listener service port must be a valid port number"))
 				}
-				if listener.Ports[j].ContainerPort < 1024 || listener.Ports[j].ContainerPort > 65353 {
-					errs = append(errs, errors.New("listener container port must be a valid ephemeral port number"))
+				if listener.Ports[j].ContainerPort < 1 || listener.Ports[j].ContainerPort > 65353 {
+					errs = append(errs, errors.New("listener container port must be a valid port number"))
 				}
 			}
 		}

@@ -9,14 +9,13 @@ import (
 	"fmt"
 	"sort"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1"
+	"k8s.io/apimachinery/pkg/types"
+	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/status"
 )
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR XdsIRMap) {
@@ -26,36 +25,43 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	})
 
 	for _, policy := range envoyPatchPolicies {
-		policy := policy.DeepCopy()
-		targetNs := policy.Spec.TargetRef.Namespace
-		targetKind := KindGateway
+		var (
+			policy       = policy.DeepCopy()
+			ancestorRefs []gwv1a2.ParentReference
+			resolveErr   *status.PolicyResolveError
+			targetKind   string
+			irKey        string
+		)
 
-		// If empty, default to namespace of policy
-		if targetNs == nil {
-			targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
-		}
+		targetNs := policy.Namespace
 
-		// Get the IR
-		// It must exist since the gateways have already been processed
-		irKey := irStringKey(string(*targetNs), string(policy.Spec.TargetRef.Name))
 		if t.MergeGateways {
-			irKey = string(t.GatewayClassName)
 			targetKind = KindGatewayClass
+			irKey = string(t.GatewayClassName)
+
+			ancestorRefs = []gwv1a2.ParentReference{
+				{
+					Group: GroupPtr(gwv1.GroupName),
+					Kind:  KindPtr(targetKind),
+					Name:  policy.Spec.TargetRef.Name,
+				},
+			}
+		} else {
+			targetKind = KindGateway
+			gatewayNN := types.NamespacedName{
+				Namespace: targetNs,
+				Name:      string(policy.Spec.TargetRef.Name),
+			}
+			// It must exist since the gateways have already been processed
+			irKey = irStringKey(gatewayNN.Namespace, gatewayNN.Name)
+
+			ancestorRefs = []gwv1a2.ParentReference{
+				getAncestorRefForPolicy(gatewayNN, nil),
+			}
 		}
 
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
-			// This status condition will not get updated in the resource because
-			// the IR is missing, but it has been kept here in case we publish
-			// the status from this layer instead of the xds layer.
-			message := fmt.Sprintf("%s:%s not found.", targetKind, policy.Spec.TargetRef.Name)
-
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonTargetNotFound,
-				message,
-			)
 			continue
 		}
 
@@ -67,40 +73,58 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		// Append the IR
 		gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
-		if policy.Spec.TargetRef.Group != gwv1b1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
-			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1b1.GroupName, targetKind)
 
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				message,
-			)
-			continue
-		}
-
-		// Ensure Policy and target Gateway are in the same namespace
-		if policy.Namespace != string(*targetNs) {
-			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a %s in the same namespace.",
-				policy.Namespace, *targetNs, targetKind)
-
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				message,
-			)
-			continue
-		}
-
+		// Ensure EnvoyPatchPolicy is enabled
 		if !t.EnvoyPatchPolicyEnabled {
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				egv1a1.PolicyReasonDisabled,
-				"EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
+			resolveErr = &status.PolicyResolveError{
+				Reason:  egv1a1.PolicyReasonDisabled,
+				Message: "EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
+			}
+			status.SetResolveErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				resolveErr,
 			)
+
+			continue
+		}
+
+		// Ensure EnvoyPatchPolicy is targeting to a support type
+		if policy.Spec.TargetRef.Group != gwv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
+			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
+				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1.GroupName, targetKind)
+
+			resolveErr = &status.PolicyResolveError{
+				Reason:  gwv1a2.PolicyReasonInvalid,
+				Message: message,
+			}
+			status.SetResolveErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				resolveErr,
+			)
+
+			continue
+		}
+
+		// Ensure EnvoyPatchPolicy and target Gateway are in the same namespace
+		if policy.Namespace != targetNs {
+			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a %s in the same namespace.",
+				policy.Namespace, targetNs, targetKind)
+
+			resolveErr = &status.PolicyResolveError{
+				Reason:  gwv1a2.PolicyReasonInvalid,
+				Message: message,
+			}
+			status.SetResolveErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				resolveErr,
+			)
+
 			continue
 		}
 
@@ -118,11 +142,6 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Set Accepted=True
-		status.SetEnvoyPatchPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionTrue,
-			gwv1a2.PolicyReasonAccepted,
-			"EnvoyPatchPolicy has been accepted.",
-		)
+		status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 	}
 }

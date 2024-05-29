@@ -47,7 +47,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-	r := proxy.NewResourceRender(cfg.Namespace, infra.GetProxyInfra())
+	r := proxy.NewResourceRender(cfg.Namespace, infra.GetProxyInfra(), cfg.EnvoyGateway)
 	deploy, err := r.Deployment()
 	require.NoError(t, err)
 
@@ -106,13 +106,20 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var cli client.Client
 			if tc.current != nil {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.current).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			} else {
-				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
 			}
 
 			kube := NewInfra(cli, cfg)
-			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra())
+			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
@@ -129,7 +136,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 }
 
 func TestDeleteProxyDeployment(t *testing.T) {
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects().
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
 	cfg, err := config.New()
 	require.NoError(t, err)
 
@@ -151,7 +162,7 @@ func TestDeleteProxyDeployment(t *testing.T) {
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
+			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra(), kube.EnvoyGateway)
 
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)

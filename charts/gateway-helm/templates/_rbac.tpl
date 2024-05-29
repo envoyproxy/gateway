@@ -69,6 +69,7 @@ resources:
 - clienttrafficpolicies
 - backendtrafficpolicies
 - securitypolicies
+- envoyextensionpolicies
 verbs:
 - get
 - list
@@ -83,6 +84,7 @@ resources:
 - clienttrafficpolicies/status
 - backendtrafficpolicies/status
 - securitypolicies/status
+- envoyextensionpolicies/status
 verbs:
 - update
 {{- end }}
@@ -98,6 +100,7 @@ resources:
 - tcproutes
 - tlsroutes
 - udproutes
+- backendtlspolicies
 verbs:
 - get
 - list
@@ -114,6 +117,7 @@ resources:
 - tcproutes/status
 - tlsroutes/status
 - udproutes/status
+- backendtlspolicies/status
 verbs:
 - update
 {{- end }}

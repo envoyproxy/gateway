@@ -1,4 +1,7 @@
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -15,6 +18,7 @@
         start: "200"
       - end: "301"
         start: "300"
+      host: '*'
       path: /healthz
       receive:
       - text: 6f6b
@@ -25,11 +29,17 @@
   name: first-route-dest
   outlierDetection:
     baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 2s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -44,6 +54,7 @@
       expectedStatuses:
       - end: "202"
         start: "200"
+      host: '*'
       path: /healthz
       receive:
       - binary: cG9uZw==
@@ -54,11 +65,17 @@
   name: second-route-dest
   outlierDetection:
     baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 1s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -81,11 +98,17 @@
   name: third-route-dest
   outlierDetection:
     baseEjectionTime: 160s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 1s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
@@ -108,7 +131,11 @@
   name: fourth-route-dest
   outlierDetection:
     baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
     interval: 1s
     maxEjectionPercent: 90
+    splitExternalLocalOriginErrors: true
   perConnectionBufferLimitBytes: 32768
   type: EDS

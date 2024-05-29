@@ -111,7 +111,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     healthCheck:
       active:
         timeout: "500ms"
@@ -132,6 +131,10 @@ backendTrafficPolicies:
         baseEjectionTime: 160s
         interval: 2s
         maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -142,7 +145,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     healthCheck:
       active:
         timeout: "1s"
@@ -163,6 +165,10 @@ backendTrafficPolicies:
         baseEjectionTime: 150s
         interval: 1s
         maxEjectionPercent: 100
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -173,7 +179,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
     healthCheck:
       active:
         timeout: "1s"
@@ -189,9 +194,13 @@ backendTrafficPolicies:
             type: Text
             text: pong
       passive:
-        baseEjectionTime: 180s
-        interval: 1s
-        maxEjectionPercent: 100
+        baseEjectionTime: 10s
+        interval: 10s
+        maxEjectionPercent: 10
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -202,7 +211,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
-      namespace: default
     healthCheck:
       active:
         timeout: 1s
@@ -221,3 +229,7 @@ backendTrafficPolicies:
         baseEjectionTime: 160s
         interval: 8ms
         maxEjectionPercent: 11
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        splitExternalLocalOriginErrors: false

@@ -91,26 +91,30 @@ tcp:
 - name: "fifth-listener"
   address: "0.0.0.0"
   port: 10080
-  tls:
-    passthrough:
-      snis:
-      - bar.com
-  destination:
-    name: "tcp-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - name: "fifth-route"
+    tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 - name: "sixth-listener"
   address: "0.0.0.0"
   port: 10080
-  tls:
-    passthrough:
-      snis:
-      - bar.net
-  destination:
-    name: "tls-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - name: "sixth-route"
+    tls:
+      inspector:
+        snis:
+        - bar.net
+    destination:
+      name: "tls-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

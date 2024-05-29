@@ -59,7 +59,13 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /foo1
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /foo2
   status:
     parents:
     - conditions:
@@ -93,7 +99,7 @@ httpRoutes:
       sectionName: http
     rules:
     - backendRefs:
-      - name: service-1
+      - name: service-3
         port: 8080
       matches:
       - path:
@@ -124,7 +130,7 @@ infraIR:
         name: default/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -137,13 +143,14 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-http-route
+    name: policy-for-http-route-1
     namespace: default
   spec:
     extAuth:
+      failOpen: true
       grpc:
-        backendRef:
-          name: grpc-backend
+        backendRefs:
+        - name: grpc-backend
           port: 9000
       headersToExtAuth:
       - header1
@@ -152,25 +159,33 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway
+    name: policy-for-gateway-1
     namespace: default
   spec:
     extAuth:
+      failOpen: false
       http:
-        backendRef:
-          name: http-backend
+        backendRefs:
+        - name: http-backend
           namespace: envoy-gateway
           port: 80
         headersToBackend:
@@ -181,14 +196,26 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [default/httproute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:
@@ -205,10 +232,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -217,32 +241,66 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        extAuth:
-          grpc:
-            authority: grpc-backend.default:9000
-            destination:
-              name: securitypolicy/default/policy-for-http-route/grpc-backend
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 8.8.8.8
-                  port: 9000
-                protocol: GRPC
-                weight: 1
-          headersToExtAuth:
-          - header1
-          - header2
         hostname: www.foo.com
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+          prefix: /foo1
+        security:
+          extAuth:
+            failOpen: true
+            grpc:
+              authority: grpc-backend.default:9000
+              destination:
+                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 8.8.8.8
+                    port: 9000
+                  protocol: GRPC
+                  weight: 1
+            headersToExtAuth:
+            - header1
+            - header2
+            name: securitypolicy/default/policy-for-http-route-1
+      - destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: www.foo.com
+        isHTTP2: false
+        name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo2
+        security:
+          extAuth:
+            failOpen: true
+            grpc:
+              authority: grpc-backend.default:9000
+              destination:
+                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 8.8.8.8
+                    port: 9000
+                  protocol: GRPC
+                  weight: 1
+            headersToExtAuth:
+            - header1
+            - header2
+            name: securitypolicy/default/policy-for-http-route-1
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -251,22 +309,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        extAuth:
-          http:
-            authority: http-backend.envoy-gateway:80
-            destination:
-              name: securitypolicy/default/policy-for-gateway/http-backend
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.7
-                  port: 80
-                protocol: HTTP
-                weight: 1
-            headersToBackend:
-            - header1
-            - header2
-            path: /auth
         hostname: www.bar.com
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
@@ -274,3 +316,22 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+        security:
+          extAuth:
+            failOpen: false
+            http:
+              authority: http-backend.envoy-gateway:80
+              destination:
+                name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 80
+                  protocol: HTTP
+                  weight: 1
+              headersToBackend:
+              - header1
+              - header2
+              path: /auth
+            name: securitypolicy/default/policy-for-gateway-1

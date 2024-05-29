@@ -10,17 +10,23 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway
-      namespace: envoy-gateway
     timeout:
       http:
         requestReceivedTimeout: 5sec
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Time: unknown unit "sec" in duration "5sec"'
-      reason: Invalid
-      status: "False"
-      type: Accepted
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: 'Timeout: invalid HTTP RequestReceivedTimeout value 5sec.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -70,7 +76,7 @@ infraIR:
         name: envoy-gateway/gateway/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:

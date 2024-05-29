@@ -3,6 +3,7 @@
     - maxConnections: 1
       maxPendingRequests: 1
       maxRequests: 1
+      maxRetries: 2
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s

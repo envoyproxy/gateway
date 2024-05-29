@@ -13,10 +13,14 @@ import (
 	"strconv"
 	"strings"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -35,17 +39,13 @@ type urlCluster struct {
 }
 
 // url2Cluster returns a urlCluster from the provided url.
-func url2Cluster(strURL string, secure bool) (*urlCluster, error) {
+func url2Cluster(strURL string) (*urlCluster, error) {
 	epType := EndpointTypeDNS
 
 	// The URL should have already been validated in the gateway API translator.
 	u, err := url.Parse(strURL)
 	if err != nil {
 		return nil, err
-	}
-
-	if secure && u.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported URI scheme %s", u.Scheme)
 	}
 
 	var port uint64
@@ -84,21 +84,17 @@ func clusterName(host string, port uint32) string {
 }
 
 // enableFilterOnRoute enables a filterType on the provided route.
-func enableFilterOnRoute(filterType string, route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func enableFilterOnRoute(route *routev3.Route, filterName string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
-	if irRoute == nil {
-		return errors.New("ir route is nil")
-	}
 
-	filterName := perRouteFilterName(filterType, irRoute.Name)
 	filterCfg := route.GetTypedPerFilterConfig()
 	if _, ok := filterCfg[filterName]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf("route already contains filter config: %s, %+v",
-			filterType, route)
+			filterName, route)
 	}
 
 	// Enable the corresponding filter for this route.
@@ -118,6 +114,79 @@ func enableFilterOnRoute(filterType string, route *routev3.Route, irRoute *ir.HT
 	return nil
 }
 
-func perRouteFilterName(filterType, routeName string) string {
-	return fmt.Sprintf("%s_%s", filterType, routeName)
+// perRouteFilterName generates a unique filter name for the provided filterType and configName.
+func perRouteFilterName(filterType, configName string) string {
+	return fmt.Sprintf("%s/%s", filterType, configName)
+}
+
+func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool {
+	for _, existingFilter := range mgr.HttpFilters {
+		if existingFilter.Name == filterName {
+			return true
+		}
+	}
+	return false
+}
+
+func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
+	var (
+		endpointType EndpointType
+		tSocket      *corev3.TransportSocket
+		err          error
+	)
+
+	// Get the address type from the first setting.
+	// This is safe because no mixed address types in the settings.
+	addrTypeState := rd.Settings[0].AddressType
+	if addrTypeState != nil && *addrTypeState == ir.FQDN {
+		endpointType = EndpointTypeDNS
+	} else {
+		endpointType = EndpointTypeStatic
+	}
+
+	if err = addXdsCluster(tCtx, &xdsClusterArgs{
+		name:         rd.Name,
+		settings:     rd.Settings,
+		tSocket:      tSocket,
+		endpointType: endpointType,
+	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
+	}
+	return nil
+}
+
+// addClusterFromURL adds a cluster to the resource version table from the provided URL.
+func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
+	var (
+		uc      *urlCluster
+		ds      *ir.DestinationSetting
+		tSocket *corev3.TransportSocket
+		err     error
+	)
+
+	if uc, err = url2Cluster(url); err != nil {
+		return err
+	}
+
+	ds = &ir.DestinationSetting{
+		Weight:    ptr.To[uint32](1),
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(uc.hostname, uc.port)},
+	}
+
+	clusterArgs := &xdsClusterArgs{
+		name:         uc.name,
+		settings:     []*ir.DestinationSetting{ds},
+		endpointType: uc.endpointType,
+	}
+	if uc.tls {
+		if tSocket, err = buildXdsUpstreamTLSSocket(uc.hostname); err != nil {
+			return err
+		}
+		clusterArgs.tSocket = tSocket
+	}
+
+	if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
+	}
+	return nil
 }

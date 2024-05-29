@@ -47,7 +47,7 @@ infraIR:
         name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
-          name: http
+          name: http-80
           protocol: HTTP
           servicePort: 80
       metadata:
@@ -60,17 +60,6 @@ xdsIR:
     accessLog:
       text:
       - path: /dev/stdout
-    envoyPatchPolicies:
-    - name: edit-conn-buffer-bytes
-      namespace: envoy-gateway-2
-      status:
-        conditions:
-        - lastTransitionTime: null
-          message: Namespace:envoy-gateway-2 TargetRef.Namespace:envoy-gateway, EnvoyPatchPolicy
-            can only target a Gateway in the same namespace.
-          reason: Invalid
-          status: "False"
-          type: Accepted
     http:
     - address: 0.0.0.0
       hostnames:

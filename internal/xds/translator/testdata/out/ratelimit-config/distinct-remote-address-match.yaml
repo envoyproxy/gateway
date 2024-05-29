@@ -1,3 +1,4 @@
+name: first-listener
 domain: first-listener
 descriptors:
   - key: first-route
