@@ -1591,8 +1591,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only service Kind is supported for now.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only service Kind is supported for now. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only Service kind is supported for now.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only Service kind is supported for now. |
 
 
 #### Gateway
@@ -1754,8 +1754,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only service Kind is supported for now.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only service Kind is supported for now. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only Service kind is supported for now.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Only Service kind is supported for now. |
 | `path` | _string_ |  true  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will be sent to the root path. |
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
@@ -2348,7 +2348,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the access log will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the access log will be sent.<br />Only Service kind is supported for now. |
 | `resources` | _object (keys:string, values:string)_ |  false  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
@@ -2683,7 +2683,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `host` | _string_ |  false  | Host define the service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only Service kind is supported for now. |
 
 
 #### ProxyPrometheusProvider
@@ -3432,7 +3432,7 @@ _Appears in:_
 | `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />EG currently only supports OpenTelemetry. |
 | `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the trace will be sent.<br />Only service Kind is supported for now. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the trace will be sent.<br />Only Service kind is supported for now. |
 
 
 #### TracingProviderType

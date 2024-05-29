@@ -246,7 +246,9 @@ spec:
                         description: |-
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
+
+
                           Deprecated: Use BackendRefs instead.
                         properties:
                           group:
@@ -326,7 +328,7 @@ spec:
                         description: |-
                           BackendRefs references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
                         items:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.
@@ -438,7 +440,9 @@ spec:
                         description: |-
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
+
+
                           Deprecated: Use BackendRefs instead.
                         properties:
                           group:
@@ -518,7 +522,7 @@ spec:
                         description: |-
                           BackendRefs references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
                         items:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.

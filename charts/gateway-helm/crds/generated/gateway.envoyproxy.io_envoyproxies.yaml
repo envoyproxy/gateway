@@ -10400,7 +10400,7 @@ spec:
                                         description: |-
                                           BackendRefs references a Kubernetes object that represents the
                                           backend server to which the access log will be sent.
-                                          Only service Kind is supported for now.
+                                          Only Service kind is supported for now.
                                         items:
                                           description: BackendRef defines how an ObjectReference
                                             that is specific to BackendRef.
@@ -10627,7 +10627,7 @@ spec:
                                   description: |-
                                     BackendRefs references a Kubernetes object that represents the
                                     backend server to which the metric will be sent.
-                                    Only service Kind is supported for now.
+                                    Only Service kind is supported for now.
                                   items:
                                     description: BackendRef defines how an ObjectReference
                                       that is specific to BackendRef.
@@ -10823,7 +10823,7 @@ spec:
                             description: |-
                               BackendRefs references a Kubernetes object that represents the
                               backend server to which the trace will be sent.
-                              Only service Kind is supported for now.
+                              Only Service kind is supported for now.
                             items:
                               description: BackendRef defines how an ObjectReference
                                 that is specific to BackendRef.

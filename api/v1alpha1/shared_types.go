@@ -443,6 +443,6 @@ type KubernetesPatchSpec struct {
 // BackendRef defines how an ObjectReference that is specific to BackendRef.
 type BackendRef struct {
 	// BackendObjectReference references a Kubernetes object that represents the backend.
-	// Only service Kind is supported for now.
+	// Only Service kind is supported for now.
 	gwapiv1.BackendObjectReference `json:",inline"`
 }
