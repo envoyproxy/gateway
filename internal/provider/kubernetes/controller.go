@@ -464,11 +464,21 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRef gwapiv1.BackendObjectReference
+			var backendRef *gwapiv1.BackendObjectReference
 			if extAuth.GRPC != nil {
 				backendRef = extAuth.GRPC.BackendRef
+				if len(extAuth.GRPC.BackendRefs) > 0 {
+					if len(extAuth.GRPC.BackendRefs) != 0 {
+						backendRef = egv1a1.ToBackendObjectReference(extAuth.GRPC.BackendRefs[0])
+					}
+				}
 			} else {
 				backendRef = extAuth.HTTP.BackendRef
+				if len(extAuth.HTTP.BackendRefs) > 0 {
+					if len(extAuth.HTTP.BackendRefs) != 0 {
+						backendRef = egv1a1.ToBackendObjectReference(extAuth.HTTP.BackendRefs[0])
+					}
+				}
 			}
 
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
