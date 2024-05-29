@@ -25,7 +25,7 @@ import (
 
 // subscribeAndUpdateStatus subscribes to gateway API object status updates and
 // writes it into the Kubernetes API Server.
-func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
+func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, extensionManagerEnabled bool) {
 	// Gateway object status updater
 	go func() {
 		message.HandleSubscription(
@@ -399,40 +399,42 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		r.log.Info("envoyExtensionPolicy status subscriber shutting down")
 	}()
 
-	// EnvoyExtensionPolicy object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "extensionserverpolicies-status"},
-			r.resources.ExtensionPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-				key := update.Key
-				val := update.Value
-				obj := unstructured.Unstructured{}
-				obj.SetGroupVersionKind(key.GroupVersionKind)
+	if extensionManagerEnabled {
+		// EnvoyExtensionPolicy object status updater
+		go func() {
+			message.HandleSubscription(
+				message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "extensionserverpolicies-status"},
+				r.resources.ExtensionPolicyStatuses.Subscribe(ctx),
+				func(update message.Update[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus], errChan chan error) {
+					// skip delete updates.
+					if update.Delete {
+						return
+					}
+					key := update.Key
+					val := update.Value
+					obj := unstructured.Unstructured{}
+					obj.SetGroupVersionKind(key.GroupVersionKind)
 
-				r.statusUpdater.Send(Update{
-					NamespacedName: key.NamespacedName,
-					Resource:       &obj,
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*unstructured.Unstructured)
-						if !ok {
-							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
-							panic(err)
-						}
-						tCopy := t.DeepCopy()
-						tCopy.Object["status"] = *val
-						return tCopy
-					}),
-				})
-			},
-		)
-		r.log.Info("extensionServerPolicies status subscriber shutting down")
-	}()
+					r.statusUpdater.Send(Update{
+						NamespacedName: key.NamespacedName,
+						Resource:       &obj,
+						Mutator: MutatorFunc(func(obj client.Object) client.Object {
+							t, ok := obj.(*unstructured.Unstructured)
+							if !ok {
+								err := fmt.Errorf("unsupported object type %T", obj)
+								errChan <- err
+								panic(err)
+							}
+							tCopy := t.DeepCopy()
+							tCopy.Object["status"] = *val
+							return tCopy
+						}),
+					})
+				},
+			)
+			r.log.Info("extensionServerPolicies status subscriber shutting down")
+		}()
+	}
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {

@@ -111,7 +111,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 	r.log.Info("created gatewayapi controller")
 
 	// Subscribe to status updates
-	r.subscribeAndUpdateStatus(ctx)
+	r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
 
 	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
