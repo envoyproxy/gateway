@@ -91,8 +91,7 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 
 		case eg.ExtensionManager.Service.Backend.FQDN != nil && (eg.ExtensionManager.Service.Backend.IPv4 != nil || eg.ExtensionManager.Service.Backend.Unix != nil || eg.ExtensionManager.Service.Host != ""),
 			eg.ExtensionManager.Service.Backend.IPv4 != nil && (eg.ExtensionManager.Service.Backend.FQDN != nil || eg.ExtensionManager.Service.Backend.Unix != nil || eg.ExtensionManager.Service.Host != ""),
-			eg.ExtensionManager.Service.Backend.Unix != nil && (eg.ExtensionManager.Service.Backend.IPv4 != nil || eg.ExtensionManager.Service.Backend.FQDN != nil || eg.ExtensionManager.Service.Host != ""),
-			eg.ExtensionManager.Service.Host != "" && (eg.ExtensionManager.Service.Backend.FQDN != nil || eg.ExtensionManager.Service.Backend.IPv4 != nil || eg.ExtensionManager.Service.Backend.Unix != nil):
+			eg.ExtensionManager.Service.Backend.Unix != nil && (eg.ExtensionManager.Service.Backend.IPv4 != nil || eg.ExtensionManager.Service.Backend.FQDN != nil || eg.ExtensionManager.Service.Host != ""):
 
 			return fmt.Errorf("only one backend target can be configured for the extension manager")
 
