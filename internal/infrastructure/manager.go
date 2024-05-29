@@ -36,14 +36,19 @@ type Manager interface {
 // NewManager returns a new infrastructure Manager.
 func NewManager(cfg *config.Server) (Manager, error) {
 	var mgr Manager
-	if cfg.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
+
+	switch cfg.EnvoyGateway.Provider.Type {
+	case v1alpha1.ProviderTypeKubernetes:
 		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}
 		mgr = kubernetes.NewInfra(cli, cfg)
-	} else {
-		// Kube is the only supported provider type for now.
+
+	case v1alpha1.ProviderTypeFile:
+		// TODO(sh2): implement host infra for file provider
+
+	default:
 		return nil, fmt.Errorf("unsupported provider type %v", cfg.EnvoyGateway.Provider.Type)
 	}
 

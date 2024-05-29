@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -113,6 +114,10 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		manager: mgr,
 		client:  mgr.GetClient(),
 	}, nil
+}
+
+func (p *Provider) Type() v1alpha1.ProviderType {
+	return v1alpha1.ProviderTypeKubernetes
 }
 
 // Start starts the Provider synchronously until a message is received from ctx.

@@ -186,7 +186,7 @@ type EnvoyGatewayProvider struct {
 	Kubernetes *EnvoyGatewayKubernetesProvider `json:"kubernetes,omitempty"`
 
 	// Custom defines the configuration for the Custom provider. This provider
-	// allows you to define a specific resource provider and a infrastructure
+	// allows you to define a specific resource provider and an infrastructure
 	// provider.
 	//
 	// +optional
@@ -300,7 +300,7 @@ type EnvoyGatewayResourceProvider struct {
 // EnvoyGatewayFileResourceProvider defines configuration for the File Resource provider.
 type EnvoyGatewayFileResourceProvider struct {
 	// Paths are the paths to a directory or file containing the resource configuration.
-	// Recursive sub directories are not currently supported.
+	// Recursive subdirectories are not currently supported.
 	Paths []string `json:"paths"`
 }
 
