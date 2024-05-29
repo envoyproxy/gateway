@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"net"
 	"sort"
 	"strings"
 	"time"
@@ -758,18 +757,12 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				distinct = true
 			}
 
-			ip, ipn, err := net.ParseCIDR(sourceCIDR)
+			cidrMatch, err := parseCIDR(sourceCIDR)
 			if err != nil {
-				return nil, fmt.Errorf("unable to translate rateLimit")
+				return nil, fmt.Errorf("unable to translate rateLimit: %w", err)
 			}
-
-			mask, _ := ipn.Mask.Size()
-			irRule.CIDRMatch = &ir.CIDRMatch{
-				CIDR:     ipn.String(),
-				IPv6:     ip.To4() == nil,
-				MaskLen:  mask,
-				Distinct: distinct,
-			}
+			cidrMatch.Distinct = distinct
+			irRule.CIDRMatch = cidrMatch
 		}
 	}
 	return irRule, nil

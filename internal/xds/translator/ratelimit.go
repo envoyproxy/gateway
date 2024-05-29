@@ -69,7 +69,6 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 	}
 
 	rateLimitFilter := t.buildRateLimitFilter(irListener)
-	// Make sure the router filter is the terminal filter in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
 
@@ -225,8 +224,8 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		if rule.CIDRMatch != nil {
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-			maskLen := &wrapperspb.UInt32Value{Value: uint32(rule.CIDRMatch.MaskLen)}
-			if rule.CIDRMatch.IPv6 {
+			maskLen := &wrapperspb.UInt32Value{Value: rule.CIDRMatch.MaskLen}
+			if rule.CIDRMatch.IsIPv6 {
 				mra.V6PrefixMaskLen = maskLen
 			} else {
 				mra.V4PrefixMaskLen = maskLen
