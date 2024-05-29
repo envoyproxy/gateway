@@ -1,10 +1,16 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package registry
 
 import (
 	"testing"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/stretchr/testify/require"
+
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
