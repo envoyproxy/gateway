@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"net"
 	"sort"
 	"strings"
 	"time"
@@ -301,6 +300,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		to        *ir.Timeout
 		ka        *ir.TCPKeepalive
 		rt        *ir.Retry
+		bc        *ir.BackendConnection
 		err, errs error
 	)
 
@@ -348,6 +348,13 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
+	if policy.Spec.Connection != nil {
+		if bc, err = t.buildBackendConnection(policy); err != nil {
+			err = perr.WithMessage(err, "BackendConnection")
+			errs = errors.Join(errs, err)
+		}
+	}
+
 	// Early return if got any errors
 	if errs != nil {
 		return errs
@@ -366,17 +373,19 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.CircuitBreaker = cb
 					r.TCPKeepalive = ka
 					r.Timeout = to
+					r.BackendConnection = bc
 				}
 			}
 		}
 
 		for _, udp := range x.UDP {
 			if udp.Route != nil {
-				route := udp.Route
+				r := udp.Route
 
-				if strings.HasPrefix(route.Destination.Name, prefix) {
-					route.LoadBalancer = lb
-					route.Timeout = to
+				if strings.HasPrefix(r.Destination.Name, prefix) {
+					r.LoadBalancer = lb
+					r.Timeout = to
+					r.BackendConnection = bc
 				}
 			}
 		}
@@ -386,14 +395,15 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
 					r.Traffic = &ir.TrafficFeatures{
-						RateLimit:      rl,
-						LoadBalancer:   lb,
-						ProxyProtocol:  pp,
-						HealthCheck:    hc,
-						CircuitBreaker: cb,
-						FaultInjection: fi,
-						TCPKeepalive:   ka,
-						Retry:          rt,
+						RateLimit:         rl,
+						LoadBalancer:      lb,
+						ProxyProtocol:     pp,
+						HealthCheck:       hc,
+						CircuitBreaker:    cb,
+						FaultInjection:    fi,
+						TCPKeepalive:      ka,
+						Retry:             rt,
+						BackendConnection: bc,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -758,18 +768,12 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				distinct = true
 			}
 
-			ip, ipn, err := net.ParseCIDR(sourceCIDR)
+			cidrMatch, err := parseCIDR(sourceCIDR)
 			if err != nil {
-				return nil, fmt.Errorf("unable to translate rateLimit")
+				return nil, fmt.Errorf("unable to translate rateLimit: %w", err)
 			}
-
-			mask, _ := ipn.Mask.Size()
-			irRule.CIDRMatch = &ir.CIDRMatch{
-				CIDR:     ipn.String(),
-				IPv6:     ip.To4() == nil,
-				MaskLen:  mask,
-				Distinct: distinct,
-			}
+			cidrMatch.Distinct = distinct
+			irRule.CIDRMatch = cidrMatch
 		}
 	}
 	return irRule, nil
@@ -1137,6 +1141,31 @@ func int64ToUint32(in int64) (uint32, bool) {
 		return uint32(in), true
 	}
 	return 0, false
+}
+
+func (t *Translator) buildBackendConnection(policy *egv1a1.BackendTrafficPolicy) (*ir.BackendConnection, error) {
+	var (
+		bcIR = &ir.BackendConnection{}
+		bc   = &egv1a1.BackendTrafficPolicyConnection{}
+	)
+
+	if policy.Spec.Connection != nil {
+		bc = policy.Spec.Connection
+
+		if bc.BufferLimit != nil {
+			bf, ok := bc.BufferLimit.AsInt64()
+			if !ok {
+				return nil, fmt.Errorf("invalid BufferLimit value %s", bc.BufferLimit.String())
+			}
+			if bf < 0 || bf > math.MaxUint32 {
+				return nil, fmt.Errorf("BufferLimit value %s is out of range", bc.BufferLimit.String())
+			}
+
+			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
+		}
+	}
+
+	return bcIR, nil
 }
 
 func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {

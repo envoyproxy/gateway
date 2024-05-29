@@ -28,7 +28,7 @@
               credentials:
                 clientId: client.oauth.foo.com
                 cookieNames:
-                  bearerToken: BearerToken-5F93C2E4
+                  bearerToken: AccessToken-5F93C2E4
                   idToken: IdToken-5F93C2E4
                   oauthExpires: OauthExpires-5F93C2E4
                   oauthHmac: OauthHMAC-5F93C2E4
@@ -71,8 +71,8 @@
               credentials:
                 clientId: client.oauth.bar.com
                 cookieNames:
-                  bearerToken: BearerToken-5f93c2e4
-                  idToken: IdToken-5f93c2e4
+                  bearerToken: CustomAccessTokenOverride
+                  idToken: CustomIdTokenOverride
                   oauthExpires: OauthExpires-5f93c2e4
                   oauthHmac: OauthHMAC-5f93c2e4
                   refreshToken: RefreshToken-5f93c2e4
