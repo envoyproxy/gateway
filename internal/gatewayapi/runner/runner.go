@@ -98,9 +98,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					t.ExtensionGroupKinds = extGKs
 				}
 				// Translate to IR
-				result := t.Translate(resources)
-				if result.LoggedErrors != nil {
-					r.Logger.Sugar().Errorf("errors detected during translation: %s", result.LoggedErrors)
+				result, err := t.Translate(resources)
+				if err != nil {
+					// Currently all errors that Translate returns should just be logged
+					r.Logger.Error(err, "errors detected during translation")
 				}
 
 				// Publish the IRs.

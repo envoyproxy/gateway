@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"golang.org/x/exp/maps"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -58,7 +59,7 @@ const (
 var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
-	Translate(resources *Resources) *TranslateResult
+	Translate(resources *Resources) (*TranslateResult, error)
 	GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext
 
 	RoutesTranslator
@@ -105,9 +106,8 @@ type Translator struct {
 
 type TranslateResult struct {
 	Resources
-	XdsIR        XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
-	InfraIR      InfraIRMap `json:"infraIR" yaml:"infraIR"`
-	LoggedErrors []string   `json:"loggedErrors,omitempty" yaml:"loggedErrors,omitempty"`
+	XdsIR   XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
+	InfraIR InfraIRMap `json:"infraIR" yaml:"infraIR"`
 }
 
 func newTranslateResult(gateways []*GatewayContext,
@@ -121,7 +121,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	securityPolicies []*egv1a1.SecurityPolicy,
 	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
-	extPolicies ExtensionServerPoliciesResult,
+	extPolicies []unstructured.Unstructured,
 	xdsIR XdsIRMap, infraIR InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -153,14 +153,12 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
 	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
 	translateResult.EnvoyExtensionPolicies = append(translateResult.EnvoyExtensionPolicies, envoyExtensionPolicies...)
-	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies.AcceptedPolicies...)
-	// If any future translation mechanism has errors to log - aggregate them into the TranslateResult
-	translateResult.LoggedErrors = append(translateResult.LoggedErrors, extPolicies.Errors...)
+	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies...)
 
 	return translateResult
 }
 
-func (t *Translator) Translate(resources *Resources) *TranslateResult {
+func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
 
@@ -229,7 +227,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, gateways, routes, resources, xdsIR)
 
-	extServerPolicies := t.ProcessExtensionServerPolicies(
+	extServerPolicies, translateErrs := t.ProcessExtensionServerPolicies(
 		resources.ExtensionServerPolicies, gateways, xdsIR)
 
 	// Sort xdsIR based on the Gateway API spec
@@ -247,7 +245,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, xdsIR, infraIR)
+		extServerPolicies, xdsIR, infraIR), translateErrs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

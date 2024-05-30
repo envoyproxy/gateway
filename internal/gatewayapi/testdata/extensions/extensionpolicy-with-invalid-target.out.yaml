@@ -91,10 +91,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
-loggedErrors:
-- 'error finding targetRefs for policy test1: no targets found for the policy'
-- 'error finding targetRefs for policy test2: targetRefs is not an array'
-- extension policy test4 doesn't target a Gateway
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

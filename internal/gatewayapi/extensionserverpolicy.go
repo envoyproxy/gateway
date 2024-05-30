@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -22,18 +23,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-type ExtensionServerPoliciesResult struct {
-	AcceptedPolicies []unstructured.Unstructured
-	Errors           []string
-}
-
 func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unstructured,
 	gateways []*GatewayContext,
 	xdsIR XdsIRMap,
-) ExtensionServerPoliciesResult {
-	res := ExtensionServerPoliciesResult{
-		AcceptedPolicies: []unstructured.Unstructured{},
-	}
+) ([]unstructured.Unstructured, error) {
+	res := []unstructured.Unstructured{}
+
 	// Sort based on timestamp
 	sort.Slice(policies, func(i, j int) bool {
 		iTime := policies[i].GetCreationTimestamp()
@@ -48,6 +43,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
+	var errs error
 	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
 	for _, policy := range policies {
@@ -56,12 +52,12 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		accepted := false
 		targetRefs, err := extractTargetRefs(policy)
 		if err != nil {
-			res.Errors = append(res.Errors, fmt.Sprintf("error finding targetRefs for policy %s: %s", policy.GetName(), err))
+			errs = errors.Join(errs, fmt.Errorf("error finding targetRefs for policy %s: %w", policy.GetName(), err))
 			continue
 		}
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind != KindGateway {
-				res.Errors = append(res.Errors, fmt.Sprintf("extension policy %s doesn't target a Gateway", policy.GetName()))
+				errs = errors.Join(errs, fmt.Errorf("extension policy %s doesn't target a Gateway", policy.GetName()))
 				continue
 			}
 
@@ -92,12 +88,12 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			}
 		}
 		if accepted {
-			res.AcceptedPolicies = append(res.AcceptedPolicies, *policy)
+			res = append(res, *policy)
 			policy.Object["status"] = policyStatusToUnstructured(policyStatus)
 		}
 	}
 
-	return res
+	return res, errs
 }
 
 func extractTargetRefs(policy *unstructured.Unstructured) ([]gwv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
