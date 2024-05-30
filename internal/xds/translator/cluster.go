@@ -21,6 +21,7 @@ import (
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -50,6 +51,7 @@ type xdsClusterArgs struct {
 	timeout           *ir.Timeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
+	backendConnection *ir.BackendConnection
 	useClientProtocol bool
 }
 
@@ -86,11 +88,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			},
 		},
 		OutlierDetection:              &clusterv3.OutlierDetection{},
-		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
+		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 	}
 
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
-
 	// set peer endpoint stats
 	if args.metrics != nil && args.metrics.EnablePerEndpointStats {
 		cluster.TrackClusterStats = &clusterv3.TrackClusterStats{
@@ -626,4 +627,12 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 	}
 
 	return ka
+}
+
+func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.UInt32Value {
+	if bc != nil && bc.BufferLimitBytes != nil {
+		return wrapperspb.UInt32(*bc.BufferLimitBytes)
+	}
+
+	return wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes)
 }

@@ -70,7 +70,8 @@ spec:
                       For example, if there are two rules: the first rule allows the request
                       and the second rule denies it, when a request matches both rules, it will be allowed.
                     items:
-                      description: Rule defines the single authorization rule.
+                      description: AuthorizationRule defines a single authorization
+                        rule.
                       properties:
                         action:
                           description: Action defines the action to be taken if the
@@ -79,22 +80,34 @@ spec:
                           - Allow
                           - Deny
                           type: string
+                        name:
+                          description: Name is a user-friendly name for the rule.
+                            It's just for display purposes.
+                          type: string
                         principal:
                           description: Principal specifies the client identity of
                             a request.
                           properties:
-                            clientCIDR:
+                            clientCIDRs:
                               description: |-
-                                ClientCIDR is the IP CIDR range of the client.
+                                ClientCIDRs are the IP CIDR ranges of the client.
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 
 
-                                By default, the client IP is inferred from the x-forwarder-for header and proxy protocol.
-                                You can use the `EnableProxyProtocol` and `ClientIPDetection` options in
+                                The client IP is inferred from the X-Forwarded-For header, a custom header,
+                                or the proxy protocol.
+                                You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
                               items:
+                                description: |-
+                                  CIDR defines a CIDR Address range.
+                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
                                 type: string
+                              minItems: 1
                               type: array
+                          required:
+                          - clientCIDRs
                           type: object
                       required:
                       - action
@@ -246,7 +259,9 @@ spec:
                         description: |-
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
+
+
                           Deprecated: Use BackendRefs instead.
                         properties:
                           group:
@@ -326,7 +341,7 @@ spec:
                         description: |-
                           BackendRefs references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
                         items:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.
@@ -438,7 +453,9 @@ spec:
                         description: |-
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
+
+
                           Deprecated: Use BackendRefs instead.
                         properties:
                           group:
@@ -518,7 +535,7 @@ spec:
                         description: |-
                           BackendRefs references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
                         items:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.
@@ -848,6 +865,25 @@ spec:
                         type: string
                     required:
                     - name
+                    type: object
+                  cookieNames:
+                    description: |-
+                      The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+                      [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      If not specified, uses a randomly generated suffix
+                    properties:
+                      accessToken:
+                        description: |-
+                          The name of the cookie used to store the AccessToken in the
+                          [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                          If not specified, defaults to "AccessToken-(randomly generated uid)"
+                        type: string
+                      idToken:
+                        description: |-
+                          The name of the cookie used to store the IdToken in the
+                          [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                          If not specified, defaults to "IdToken-(randomly generated uid)"
+                        type: string
                     type: object
                   logoutPath:
                     description: |-

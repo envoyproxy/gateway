@@ -59,13 +59,14 @@ type ExtAuth struct {
 type GRPCExtAuthService struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
-	// Only service Kind is supported for now.
+	// Only Service kind is supported for now.
+	//
 	// Deprecated: Use BackendRefs instead.
 	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
 	// BackendRefs references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
-	// Only service Kind is supported for now.
+	// Only Service kind is supported for now.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
@@ -79,13 +80,14 @@ type GRPCExtAuthService struct {
 type HTTPExtAuthService struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
-	// Only service Kind is supported for now.
+	// Only Service kind is supported for now.
+	//
 	// Deprecated: Use BackendRefs instead.
 	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
 	// BackendRefs references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
-	// Only service Kind is supported for now.
+	// Only Service kind is supported for now.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
