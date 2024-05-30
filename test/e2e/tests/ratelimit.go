@@ -169,16 +169,16 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 }
 
 var RateLimitHeadersDisabled = suite.ConformanceTest{
-	ShortName:   "RateLimitHeadersDisables",
+	ShortName:   "RateLimitHeadersDisabled",
 	Description: "Disable rate limit headers",
 	Manifests:   []string{"testdata/ratelimit-headers-disabled.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "ratelimit-headers-disabled", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		t.Run("all matched headers can got limited", func(t *testing.T) {
+		t.Run("all matched headers can get limited", func(t *testing.T) {
 			requestHeaders := map[string]string{
 				"x-user-id":  "one",
 				"x-user-org": "acme",
@@ -196,7 +196,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600" // THIS SHOULD FAIL
+			// expectOkResp.Response.Headers["X-Ratelimit-Limit"] is not defined because we disabled it.
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
