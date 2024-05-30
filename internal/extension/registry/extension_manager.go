@@ -10,10 +10,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -25,6 +27,7 @@ import (
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/proto/extension"
+	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 const grpcServiceConfig = `{
@@ -71,6 +74,37 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 		namespace: cfg.Namespace,
 		extension: *extension,
 	}, nil
+}
+
+func NewInMemoryManager(cfg v1alpha1.ExtensionManager, server pb.EnvoyGatewayExtensionServer) (extTypes.Manager, func() error, error) {
+	if server == nil {
+		return nil, nil, fmt.Errorf("in-memory manager must be passed a server")
+	}
+
+	buffer := 101024 * 1024
+	lis := bufconn.Listen(buffer)
+
+	baseServer := grpc.NewServer()
+	pb.RegisterEnvoyGatewayExtensionServer(baseServer, server)
+	go func() {
+		_ = baseServer.Serve(lis)
+	}()
+	conn, err := grpc.DialContext(context.Background(), "",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return lis.Dial()
+		}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, nil, err
+	}
+	c := func() error {
+		baseServer.Stop()
+		return lis.Close()
+	}
+
+	return &Manager{
+		extensionConnCache: conn,
+		extension:          cfg,
+	}, c, nil
 }
 
 // HasExtension checks to see whether a given Group and Kind has an
