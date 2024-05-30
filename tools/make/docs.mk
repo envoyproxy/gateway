@@ -41,7 +41,7 @@ helm-readme-gen: $(tools/helm-docs)
 	$(tools/helm-docs) --template-files=tools/helm-docs/readme.gotmpl charts/gateway-helm/ -f values.yaml -o README.md
 	$(tools/helm-docs) --template-files=tools/helm-docs/api.gotmpl charts/gateway-helm/ -f values.yaml -o api.md
 	mv charts/gateway-helm/api.md site/content/en/latest/install/gateway-helm-api.md
-  # below line copy command for sync English api doc into Chinese
+	# below line copy command for sync English api doc into Chinese
 	cp site/content/en/latest/install/gateway-helm-api.md site/content/zh/latest/install/gateway-helm-api.md
 
 .PHONY: docs-api-gen
