@@ -3260,8 +3260,8 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.DefaultTokenExpireIn != nil {
-		in, out := &in.DefaultTokenExpireIn, &out.DefaultTokenExpireIn
+	if in.DefaultTokenTTL != nil {
+		in, out := &in.DefaultTokenTTL, &out.DefaultTokenTTL
 		*out = new(v1.Duration)
 		**out = **in
 	}
@@ -3270,8 +3270,8 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.DefaultRefreshTokenExpireIn != nil {
-		in, out := &in.DefaultRefreshTokenExpireIn, &out.DefaultRefreshTokenExpireIn
+	if in.DefaultRefreshTokenTTL != nil {
+		in, out := &in.DefaultRefreshTokenTTL, &out.DefaultRefreshTokenTTL
 		*out = new(v1.Duration)
 		**out = **in
 	}
