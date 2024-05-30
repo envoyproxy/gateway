@@ -94,7 +94,7 @@ type Header struct {
 // load balancing.
 type Cookie struct {
 	// Name of the cookie to hash.
-	// If this cookie doesnt exist in the request, Envoy will generate a cookie and set
+	// If this cookie does not exist in the request, Envoy will generate a cookie and set
 	// the TTL on the response back to the client based on Layer 4
 	// attributes of the backend endpoint, to ensure that these future requests
 	// go to the same backend endpoint. Make sure to set the TTL field for this case.
