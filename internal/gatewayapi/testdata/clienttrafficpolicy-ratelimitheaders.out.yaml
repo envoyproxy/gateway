@@ -128,8 +128,8 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
-        enableEnvoyHeaders: true
         disableRateLimitHeaders: true
+        enableEnvoyHeaders: true
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
@@ -141,8 +141,8 @@ xdsIR:
       port: 10080
     - address: 0.0.0.0
       headers:
-        enableEnvoyHeaders: true
         disableRateLimitHeaders: true
+        enableEnvoyHeaders: true
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
