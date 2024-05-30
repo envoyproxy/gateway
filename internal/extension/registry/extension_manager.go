@@ -27,7 +27,6 @@ import (
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/proto/extension"
-	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 const grpcServiceConfig = `{
@@ -76,7 +75,7 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 	}, nil
 }
 
-func NewInMemoryManager(cfg v1alpha1.ExtensionManager, server pb.EnvoyGatewayExtensionServer) (extTypes.Manager, func() error, error) {
+func NewInMemoryManager(cfg v1alpha1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {
 	if server == nil {
 		return nil, nil, fmt.Errorf("in-memory manager must be passed a server")
 	}
@@ -85,7 +84,7 @@ func NewInMemoryManager(cfg v1alpha1.ExtensionManager, server pb.EnvoyGatewayExt
 	lis := bufconn.Listen(buffer)
 
 	baseServer := grpc.NewServer()
-	pb.RegisterEnvoyGatewayExtensionServer(baseServer, server)
+	extension.RegisterEnvoyGatewayExtensionServer(baseServer, server)
 	go func() {
 		_ = baseServer.Serve(lis)
 	}()
@@ -96,9 +95,9 @@ func NewInMemoryManager(cfg v1alpha1.ExtensionManager, server pb.EnvoyGatewayExt
 	if err != nil {
 		return nil, nil, err
 	}
-	c := func() error {
+	c := func() {
+		lis.Close()
 		baseServer.Stop()
-		return lis.Close()
 	}
 
 	return &Manager{

@@ -89,7 +89,6 @@ func (t *testingExtensionServer) PostRouteModify(_ context.Context, req *pb.Post
 	return &pb.PostRouteModifyResponse{
 		Route: modifiedRoute,
 	}, nil
-
 }
 
 // PostVirtualHostModifyHook returns a modified version of the virtualhost with a new route injected
