@@ -71,7 +71,28 @@ Envoy Gateway collects the following metrics in xDS Server:
 | `xds_stream_duration_seconds`       | How long a xds stream takes to finish.                        |
 | `xds_delta_stream_duration_seconds` | How long a xds delta stream takes to finish.                  |
 
-For xDS snapshot cache update and xDS stream connection status, each metric includes `nodeID` label to identify the connection peer.
-For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream.
+- For xDS snapshot cache update and xDS stream connection status, each metric includes `nodeID` label to identify the connection peer.
+- For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream.
+
+## Infrastructure Manager
+
+Envoy Gateway monitors the `apply` (`create` or `update`) and `delete` operations in Infrastructure Manager.
+
+Envoy Gateway collects the following metrics in Infrastructure Manager:
+
+| Name                               | Description                                             |
+|------------------------------------|---------------------------------------------------------|
+| `resource_apply_total`             | Total number of applied resources.                      |
+| `resource_apply_failed`            | Number of applied resources that failed.                |
+| `resource_apply_success`           | Number of applied resources that succeed.               |
+| `resource_apply_duration_seconds`  | How long in seconds a resource be applied successfully. |
+| `resource_delete_total`            | Total number of deleted resources.                      |
+| `resource_delete_failed`           | Number of deleted resources that failed.                |
+| `resource_delete_success`          | Number of deleted resources that succeed.               |
+| `resource_delete_duration_seconds` | How long in seconds a resource be deleted successfully. |
+
+Each metric includes the `kind` label to identify the corresponding resources being applied or deleted by Infrastructure Manager.
+
+Metrics may also include `name` and `namespace` label to identify the name and namespace of corresponding Infrastructure Manager.
 
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format

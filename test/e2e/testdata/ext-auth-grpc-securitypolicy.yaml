@@ -47,8 +47,8 @@ spec:
     name: http-with-ext-auth
   extAuth:
     grpc:
-      backendRef:
-        name: grpc-ext-auth
+      backendRefs:
+      - name: grpc-ext-auth
         namespace: gateway-conformance-infra
         port: 9002
 ---

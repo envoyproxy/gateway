@@ -61,7 +61,6 @@ func (*cors) patchHCM(
 		return err
 	}
 
-	// Ensure the CORS filter is the first one in the filter chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{corsFilter}, mgr.HttpFilters...)
 
 	return nil
