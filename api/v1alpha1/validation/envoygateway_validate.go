@@ -86,12 +86,12 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 		}
 
 		switch {
-		case eg.ExtensionManager.Service.Host == "" && eg.ExtensionManager.Service.Backend.FQDN == nil && eg.ExtensionManager.Service.Backend.Unix == nil && eg.ExtensionManager.Service.Backend.IPv4 == nil:
+		case eg.ExtensionManager.Service.Host == "" && eg.ExtensionManager.Service.FQDN == nil && eg.ExtensionManager.Service.Unix == nil && eg.ExtensionManager.Service.IPv4 == nil:
 			return fmt.Errorf("extension service must contain a configured target")
 
-		case eg.ExtensionManager.Service.Backend.FQDN != nil && (eg.ExtensionManager.Service.Backend.IPv4 != nil || eg.ExtensionManager.Service.Backend.Unix != nil || eg.ExtensionManager.Service.Host != ""),
-			eg.ExtensionManager.Service.Backend.IPv4 != nil && (eg.ExtensionManager.Service.Backend.FQDN != nil || eg.ExtensionManager.Service.Backend.Unix != nil || eg.ExtensionManager.Service.Host != ""),
-			eg.ExtensionManager.Service.Backend.Unix != nil && (eg.ExtensionManager.Service.Backend.IPv4 != nil || eg.ExtensionManager.Service.Backend.FQDN != nil || eg.ExtensionManager.Service.Host != ""):
+		case eg.ExtensionManager.Service.FQDN != nil && (eg.ExtensionManager.Service.IPv4 != nil || eg.ExtensionManager.Service.Unix != nil || eg.ExtensionManager.Service.Host != ""),
+			eg.ExtensionManager.Service.IPv4 != nil && (eg.ExtensionManager.Service.FQDN != nil || eg.ExtensionManager.Service.Unix != nil || eg.ExtensionManager.Service.Host != ""),
+			eg.ExtensionManager.Service.Unix != nil && (eg.ExtensionManager.Service.IPv4 != nil || eg.ExtensionManager.Service.FQDN != nil || eg.ExtensionManager.Service.Host != ""):
 
 			return fmt.Errorf("only one backend target can be configured for the extension manager")
 

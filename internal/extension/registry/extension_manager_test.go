@@ -22,7 +22,7 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		{
 			Name: "has an FQDN",
 			Service: &v1alpha1.ExtensionService{
-				Backend: v1alpha1.BackendEndpoint{
+				BackendEndpoint: v1alpha1.BackendEndpoint{
 					FQDN: &v1alpha1.FQDNEndpoint{
 						Hostname: "extserver.svc.cluster.local",
 						Port:     5050,
@@ -34,7 +34,7 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		{
 			Name: "has an IPv4",
 			Service: &v1alpha1.ExtensionService{
-				Backend: v1alpha1.BackendEndpoint{
+				BackendEndpoint: v1alpha1.BackendEndpoint{
 					IPv4: &v1alpha1.IPv4Endpoint{
 						Address: "10.10.10.10",
 						Port:    5050,
@@ -46,7 +46,7 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		{
 			Name: "has a Unix path",
 			Service: &v1alpha1.ExtensionService{
-				Backend: v1alpha1.BackendEndpoint{
+				BackendEndpoint: v1alpha1.BackendEndpoint{
 					Unix: &v1alpha1.UnixSocket{
 						Path: "/some/path",
 					},
