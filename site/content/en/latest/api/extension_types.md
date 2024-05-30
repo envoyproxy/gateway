@@ -286,6 +286,7 @@ corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/ap
 
 _Appears in:_
 - [BackendSpec](#backendspec)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1514,8 +1515,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the extension service hostname. |
-| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on. |
+| `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
+| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IPv4 defines an IPv4 endpoint |
+| `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
+| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix) |
+| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix) |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
 
 
@@ -1542,6 +1546,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#
 
 _Appears in:_
 - [BackendEndpoint](#backendendpoint)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1925,6 +1930,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#
 
 _Appears in:_
 - [BackendEndpoint](#backendendpoint)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -3520,6 +3526,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#
 
 _Appears in:_
 - [BackendEndpoint](#backendendpoint)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |

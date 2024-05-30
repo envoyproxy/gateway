@@ -85,6 +85,18 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 			return fmt.Errorf("extension service config is empty")
 		}
 
+		switch {
+		case eg.ExtensionManager.Service.Host == "" && eg.ExtensionManager.Service.FQDN == nil && eg.ExtensionManager.Service.Unix == nil && eg.ExtensionManager.Service.IPv4 == nil:
+			return fmt.Errorf("extension service must contain a configured target")
+
+		case eg.ExtensionManager.Service.FQDN != nil && (eg.ExtensionManager.Service.IPv4 != nil || eg.ExtensionManager.Service.Unix != nil || eg.ExtensionManager.Service.Host != ""),
+			eg.ExtensionManager.Service.IPv4 != nil && (eg.ExtensionManager.Service.FQDN != nil || eg.ExtensionManager.Service.Unix != nil || eg.ExtensionManager.Service.Host != ""),
+			eg.ExtensionManager.Service.Unix != nil && (eg.ExtensionManager.Service.IPv4 != nil || eg.ExtensionManager.Service.FQDN != nil || eg.ExtensionManager.Service.Host != ""):
+
+			return fmt.Errorf("only one backend target can be configured for the extension manager")
+
+		}
+
 		if eg.ExtensionManager.Service.TLS != nil {
 			certificateRefKind := eg.ExtensionManager.Service.TLS.CertificateRef.Kind
 
