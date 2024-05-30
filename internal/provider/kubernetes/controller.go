@@ -1107,7 +1107,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Secret CRUDs and process affected EG CRs (Gateway, SecurityPolicy, more in the future).
 	secretPredicates := []predicate.Predicate{
-		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	}
 	if r.namespaceLabel != nil {
@@ -1123,7 +1122,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ConfigMap CRUDs and process affected ClienTraffiPolicies and BackendTLSPolicies.
 	configMapPredicates := []predicate.Predicate{
-		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateConfigMapForReconcile),
 	}
 	if r.namespaceLabel != nil {
