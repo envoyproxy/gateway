@@ -70,7 +70,7 @@ type ProxyOpenTelemetrySink struct {
 	Port int32 `json:"port,omitempty"`
 	// BackendRefs references a Kubernetes object that represents the
 	// backend server to which the metric will be sent.
-	// Only service Kind is supported for now.
+	// Only Service kind is supported for now.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1

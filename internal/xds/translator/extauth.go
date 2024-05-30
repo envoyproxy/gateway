@@ -37,7 +37,6 @@ var _ httpFilter = &extAuth{}
 // if applicable, and it does not already exist.
 // Note: this method creates an ext_authz filter for each route that contains an ExtAuthz config.
 // The filter is disabled by default. It is enabled on the route level.
-// TODO: zhaohuabing avoid duplicated HTTP filters
 func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 

@@ -332,12 +332,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 ) error {
 	// Build IR
 	var (
-		cors      *ir.CORS
-		jwt       *ir.JWT
-		oidc      *ir.OIDC
-		basicAuth *ir.BasicAuth
-		extAuth   *ir.ExtAuth
-		err, errs error
+		cors          *ir.CORS
+		jwt           *ir.JWT
+		oidc          *ir.OIDC
+		basicAuth     *ir.BasicAuth
+		extAuth       *ir.ExtAuth
+		authorization *ir.Authorization
+		err, errs     error
 	)
 
 	if policy.Spec.CORS != nil {
@@ -371,6 +372,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.Authorization != nil {
+		if authorization, err = t.buildAuthorization(policy); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -388,11 +395,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					// This security policy matches the current route.
 					// It should only be accepted if it doesn't match any other route
 					r.Security = &ir.SecurityFeatures{
-						CORS:      cors,
-						JWT:       jwt,
-						OIDC:      oidc,
-						BasicAuth: basicAuth,
-						ExtAuth:   extAuth,
+						CORS:          cors,
+						JWT:           jwt,
+						OIDC:          oidc,
+						BasicAuth:     basicAuth,
+						ExtAuth:       extAuth,
+						Authorization: authorization,
 					}
 				}
 			}
@@ -407,12 +415,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 ) error {
 	// Build IR
 	var (
-		cors      *ir.CORS
-		jwt       *ir.JWT
-		oidc      *ir.OIDC
-		basicAuth *ir.BasicAuth
-		extAuth   *ir.ExtAuth
-		err, errs error
+		cors          *ir.CORS
+		jwt           *ir.JWT
+		oidc          *ir.OIDC
+		basicAuth     *ir.BasicAuth
+		extAuth       *ir.ExtAuth
+		authorization *ir.Authorization
+		err, errs     error
 	)
 
 	if policy.Spec.CORS != nil {
@@ -450,6 +459,11 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 
+	if policy.Spec.Authorization != nil {
+		if authorization, err = t.buildAuthorization(policy); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	// Apply IR to all the routes within the specific Gateway that originated
 	// from the gateway to which this security policy was attached.
 	// If the feature is already set, then skip it, since it must have be
@@ -477,11 +491,12 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 
 			r.Security = &ir.SecurityFeatures{
-				CORS:      cors,
-				JWT:       jwt,
-				OIDC:      oidc,
-				BasicAuth: basicAuth,
-				ExtAuth:   extAuth,
+				CORS:          cors,
+				JWT:           jwt,
+				OIDC:          oidc,
+				BasicAuth:     basicAuth,
+				ExtAuth:       extAuth,
+				Authorization: authorization,
 			}
 		}
 	}
@@ -589,7 +604,9 @@ func (t *Translator) buildOIDC(
 		logoutPath = *oidc.LogoutPath
 	}
 
-	// Generate a unique cookie suffix for oauth filters
+	// Generate a unique cookie suffix for oauth filters.
+	// This is to avoid cookie name collision when multiple security policies are applied
+	// to the same route.
 	suffix := utils.Digest32(string(policy.UID))
 
 	// Get the HMAC secret.
@@ -607,17 +624,18 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
-		Name:         irConfigName(policy),
-		Provider:     *provider,
-		ClientID:     oidc.ClientID,
-		ClientSecret: clientSecretBytes,
-		Scopes:       scopes,
-		Resources:    oidc.Resources,
-		RedirectURL:  redirectURL,
-		RedirectPath: redirectPath,
-		LogoutPath:   logoutPath,
-		CookieSuffix: suffix,
-		HMACSecret:   hmacData,
+		Name:                irConfigName(policy),
+		Provider:            *provider,
+		ClientID:            oidc.ClientID,
+		ClientSecret:        clientSecretBytes,
+		Scopes:              scopes,
+		Resources:           oidc.Resources,
+		RedirectURL:         redirectURL,
+		RedirectPath:        redirectPath,
+		LogoutPath:          logoutPath,
+		CookieSuffix:        suffix,
+		CookieNameOverrides: policy.Spec.OIDC.CookieNames,
+		HMACSecret:          hmacData,
 	}, nil
 }
 
@@ -758,10 +776,7 @@ func (t *Translator) buildBasicAuth(
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(
-	policy *egv1a1.SecurityPolicy,
-	resources *Resources,
-) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Resources) (*ir.ExtAuth, error) {
 	var (
 		http       = policy.Spec.ExtAuth.HTTP
 		grpc       = policy.Spec.ExtAuth.GRPC
@@ -775,16 +790,24 @@ func (t *Translator) buildExtAuth(
 	switch {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
-	case http == nil && grpc == nil:
-		return nil, errors.New("one of grpc or http must be specified")
 	case http != nil && grpc != nil:
 		return nil, errors.New("only one of grpc or http can be specified")
 	case http != nil:
-		backendRef = &http.BackendRef
+		backendRef = http.BackendRef
+		if len(http.BackendRefs) != 0 {
+			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
+		}
 		protocol = ir.HTTP
 	case grpc != nil:
-		backendRef = &grpc.BackendRef
+		backendRef = grpc.BackendRef
+		if len(grpc.BackendRefs) != 0 {
+			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
+		}
 		protocol = ir.GRPC
+	// These are sanity checks, they should never happen because the API server
+	// should have caught them
+	default: // http == nil && grpc == nil:
+		return nil, errors.New("one of grpc or http must be specified")
 	}
 
 	if err = t.validateExtServiceBackendReference(
@@ -794,8 +817,7 @@ func (t *Translator) buildExtAuth(
 		resources); err != nil {
 		return nil, err
 	}
-	authority = fmt.Sprintf(
-		"%s.%s:%d",
+	authority = fmt.Sprintf("%s.%s:%d",
 		backendRef.Name,
 		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
 		*backendRef.Port)
@@ -853,4 +875,52 @@ func irConfigName(policy *egv1a1.SecurityPolicy) string {
 		"%s/%s",
 		strings.ToLower(KindSecurityPolicy),
 		utils.NamespacedName(policy).String())
+}
+
+func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {
+	var (
+		authorization = policy.Spec.Authorization
+		irAuth        = &ir.Authorization{}
+		// The default action is Deny if not specified
+		defaultAction = egv1a1.AuthorizationActionDeny
+	)
+
+	if authorization.DefaultAction != nil {
+		defaultAction = *authorization.DefaultAction
+	}
+	irAuth.DefaultAction = defaultAction
+
+	for i, rule := range authorization.Rules {
+		principal := ir.Principal{}
+
+		for _, cidr := range rule.Principal.ClientCIDRs {
+			cidrMatch, err := parseCIDR(string(cidr))
+			if err != nil {
+				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+			}
+
+			principal.ClientCIDRs = append(principal.ClientCIDRs, cidrMatch)
+		}
+
+		var name string
+		if rule.Name != nil && *rule.Name != "" {
+			name = *rule.Name
+		} else {
+			name = defaultAuthorizationRuleName(policy, i)
+		}
+		irAuth.Rules = append(irAuth.Rules, &ir.AuthorizationRule{
+			Name:      name,
+			Action:    rule.Action,
+			Principal: principal,
+		})
+	}
+
+	return irAuth, nil
+}
+
+func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/authorization/rule/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }

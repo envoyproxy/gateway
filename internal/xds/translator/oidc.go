@@ -159,7 +159,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 					},
 				},
 				CookieNames: &oauth2v3.OAuth2Credentials_CookieNames{
-					BearerToken:  fmt.Sprintf("BearerToken-%s", oidc.CookieSuffix),
+					BearerToken:  fmt.Sprintf("AccessToken-%s", oidc.CookieSuffix),
 					OauthHmac:    fmt.Sprintf("OauthHMAC-%s", oidc.CookieSuffix),
 					OauthExpires: fmt.Sprintf("OauthExpires-%s", oidc.CookieSuffix),
 					IdToken:      fmt.Sprintf("IdToken-%s", oidc.CookieSuffix),
@@ -172,6 +172,17 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			Resources:  oidc.Resources,
 		},
 	}
+
+	if oidc.CookieNameOverrides != nil &&
+		oidc.CookieNameOverrides.AccessToken != nil {
+		oauth2.Config.Credentials.CookieNames.BearerToken = *oidc.CookieNameOverrides.AccessToken
+	}
+
+	if oidc.CookieNameOverrides != nil &&
+		oidc.CookieNameOverrides.IDToken != nil {
+		oauth2.Config.Credentials.CookieNames.IdToken = *oidc.CookieNameOverrides.IDToken
+	}
+
 	return oauth2, nil
 }
 

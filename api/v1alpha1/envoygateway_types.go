@@ -482,10 +482,17 @@ type XDSTranslatorHooks struct {
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
 type ExtensionService struct {
+	// BackendEndpoint points to where the extension server can be found.
+	BackendEndpoint `json:",inline"`
+
 	// Host define the extension service hostname.
-	Host string `json:"host"`
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix)
+	//
+	// +optional
+	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix)
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

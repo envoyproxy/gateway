@@ -31,6 +31,12 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 
+	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, uses a randomly generated suffix
+	// +optional
+	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
+
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// The "openid" scope is always added to the list of scopes if not already
@@ -116,4 +122,18 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+}
+
+// OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+type OIDCCookieNames struct {
+	// The name of the cookie used to store the AccessToken in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, defaults to "AccessToken-(randomly generated uid)"
+	// +optional
+	AccessToken *string `json:"accessToken,omitempty"`
+	// The name of the cookie used to store the IdToken in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, defaults to "IdToken-(randomly generated uid)"
+	// +optional
+	IDToken *string `json:"idToken,omitempty"`
 }

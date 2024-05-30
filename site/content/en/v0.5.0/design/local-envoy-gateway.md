@@ -30,7 +30,7 @@ Envoy Proxy fleet on Kubernetes.
 with two fields called `resource` and `infrastructure` to allow the user to configure
 the sub providers for providing resource configuration and an infrastructure to deploy
 the Envoy Proxy data plane in.
-* A `File` resource provider will be introduced to enable retrieveing configuration locally
+* A `File` resource provider will be introduced to enable retrieving configuration locally
 by reading from the configuration from a file.
 * A `Host` infrastructure provider will be introduced to allow Envoy Gateway to spawn a 
 Envoy Proxy child process on the host.

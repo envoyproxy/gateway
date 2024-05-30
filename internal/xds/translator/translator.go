@@ -509,16 +509,17 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 
 		for _, route := range tcpListener.Routes {
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:           route.Destination.Name,
-				settings:       route.Destination.Settings,
-				loadBalancer:   route.LoadBalancer,
-				proxyProtocol:  route.ProxyProtocol,
-				circuitBreaker: route.CircuitBreaker,
-				tcpkeepalive:   route.TCPKeepalive,
-				healthCheck:    route.HealthCheck,
-				timeout:        route.Timeout,
-				endpointType:   buildEndpointType(route.Destination.Settings),
-				metrics:        metrics,
+				name:              route.Destination.Name,
+				settings:          route.Destination.Settings,
+				loadBalancer:      route.LoadBalancer,
+				proxyProtocol:     route.ProxyProtocol,
+				circuitBreaker:    route.CircuitBreaker,
+				tcpkeepalive:      route.TCPKeepalive,
+				healthCheck:       route.HealthCheck,
+				timeout:           route.Timeout,
+				endpointType:      buildEndpointType(route.Destination.Settings),
+				metrics:           metrics,
+				backendConnection: route.BackendConnection,
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -577,13 +578,14 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 			// 1:1 between IR UDPRoute and xDS Cluster
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:         route.Destination.Name,
-				settings:     route.Destination.Settings,
-				loadBalancer: route.LoadBalancer,
-				timeout:      route.Timeout,
-				tSocket:      nil,
-				endpointType: buildEndpointType(route.Destination.Settings),
-				metrics:      metrics,
+				name:              route.Destination.Name,
+				settings:          route.Destination.Settings,
+				loadBalancer:      route.LoadBalancer,
+				timeout:           route.Timeout,
+				tSocket:           nil,
+				endpointType:      buildEndpointType(route.Destination.Settings),
+				metrics:           metrics,
+				backendConnection: route.BackendConnection,
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -697,6 +699,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		clusterArgs.healthCheck = bt.HealthCheck
 		clusterArgs.timeout = bt.Timeout
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
+		clusterArgs.backendConnection = bt.BackendConnection
 	}
 
 	if err := addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {

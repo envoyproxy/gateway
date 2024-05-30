@@ -38,6 +38,15 @@ data:
         rateLimitDeployment:
           container:
             image: docker.io/envoyproxy/ratelimit:master
+          patch:
+            type: StrategicMerge
+            value:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - imagePullPolicy: IfNotPresent
+                      name: envoy-ratelimit
         shutdownManager:
           image: private-hub/envoyproxy/gateway:abcdef12
       type: Kubernetes
