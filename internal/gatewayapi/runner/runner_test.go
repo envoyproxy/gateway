@@ -25,10 +25,6 @@ import (
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
-type testingExtensionServer struct {
-	pb.UnimplementedEnvoyGatewayExtensionServer
-}
-
 func TestRunner(t *testing.T) {
 	// Setup
 	pResources := new(message.ProviderResources)
@@ -36,7 +32,7 @@ func TestRunner(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &testingExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
@@ -123,7 +119,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &testingExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
@@ -216,7 +212,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &testingExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
