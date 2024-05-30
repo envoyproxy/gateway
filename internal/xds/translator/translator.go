@@ -813,6 +813,16 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 								Filename: "/etc/ssl/certs/ca-certificates.crt",
 							},
 						},
+						MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
+							{
+								SanType: tlsv3.SubjectAltNameMatcher_DNS,
+								Matcher: &matcherv3.StringMatcher{
+									MatchPattern: &matcherv3.StringMatcher_Exact{
+										Exact: tlsConfig.SNI,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -822,10 +832,24 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
 				TlsCertificateSdsSecretConfigs: nil,
-				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-						Name:      tlsConfig.CACertificate.Name,
-						SdsConfig: makeConfigSource(),
+				ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
+					CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+						ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+							Name:      tlsConfig.CACertificate.Name,
+							SdsConfig: makeConfigSource(),
+						},
+						DefaultValidationContext: &tlsv3.CertificateValidationContext{
+							MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
+								{
+									SanType: tlsv3.SubjectAltNameMatcher_DNS,
+									Matcher: &matcherv3.StringMatcher{
+										MatchPattern: &matcherv3.StringMatcher_Exact{
+											Exact: tlsConfig.SNI,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
