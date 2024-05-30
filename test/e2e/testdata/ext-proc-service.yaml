@@ -127,6 +127,7 @@ data:
     	// Create TLS configuration
     	tlsConfig := &tls.Config{
     		RootCAs: certPool,
+    		ServerName: "grpc-ext-proc.envoygateway",
     	}
 
     	// Create gRPC dial options
