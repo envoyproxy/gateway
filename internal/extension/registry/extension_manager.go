@@ -89,12 +89,12 @@ func (m *Manager) HasExtension(g v1.Group, k v1.Kind) bool {
 func getExtensionServerAddress(service *v1alpha1.ExtensionService) string {
 	var serverAddr string
 	switch {
-	case service.Backend.FQDN != nil:
-		serverAddr = fmt.Sprintf("%s:%d", service.Backend.FQDN.Hostname, service.Backend.FQDN.Port)
-	case service.Backend.IPv4 != nil:
-		serverAddr = fmt.Sprintf("%s:%d", service.Backend.IPv4.Address, service.Backend.IPv4.Port)
-	case service.Backend.Unix != nil:
-		serverAddr = fmt.Sprintf("unix://%s", service.Backend.Unix.Path)
+	case service.FQDN != nil:
+		serverAddr = fmt.Sprintf("%s:%d", service.FQDN.Hostname, service.FQDN.Port)
+	case service.IPv4 != nil:
+		serverAddr = fmt.Sprintf("%s:%d", service.IPv4.Address, service.IPv4.Port)
+	case service.Unix != nil:
+		serverAddr = fmt.Sprintf("unix://%s", service.Unix.Path)
 	case service.Host != "":
 		serverAddr = fmt.Sprintf("%s:%d", service.Host, service.Port)
 	}

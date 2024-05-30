@@ -584,7 +584,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &v1alpha1.ExtensionService{
-							Backend: v1alpha1.BackendEndpoint{
+							BackendEndpoint: v1alpha1.BackendEndpoint{
 								FQDN: &v1alpha1.FQDNEndpoint{
 									Hostname: "foo.example.com",
 									Port:     8080,
@@ -614,7 +614,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &v1alpha1.ExtensionService{
-							Backend: v1alpha1.BackendEndpoint{
+							BackendEndpoint: v1alpha1.BackendEndpoint{
 								FQDN: &v1alpha1.FQDNEndpoint{
 									Hostname: "foo.example.com",
 									Port:     8080,
@@ -647,7 +647,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Service: &v1alpha1.ExtensionService{
 							Host: "foo.example.com",
 							Port: 8080,
-							Backend: v1alpha1.BackendEndpoint{
+							BackendEndpoint: v1alpha1.BackendEndpoint{
 								FQDN: &v1alpha1.FQDNEndpoint{
 									Hostname: "foo.example.com",
 									Port:     8080,
