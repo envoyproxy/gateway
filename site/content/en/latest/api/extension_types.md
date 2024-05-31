@@ -766,6 +766,22 @@ _Appears in:_
 | ----- | ----------- |
 | `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
 | `Header` | HeaderConsistentHashType hashes based on a request header.<br /> | 
+| `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
+
+
+#### Cookie
+
+
+
+Cookie defines the cookie hashing configuration for consistent hash based
+load balancing.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  true  | Name of the cookie to hash.<br />If this cookie does not exist in the request, Envoy will generate a cookie and set<br />the TTL on the response back to the client based on Layer 4<br />attributes of the backend endpoint, to ensure that these future requests<br />go to the same backend endpoint. Make sure to set the TTL field for this case. |
 
 
 #### CustomHeaderExtensionSettings
