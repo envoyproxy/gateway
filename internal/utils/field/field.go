@@ -12,6 +12,22 @@ import (
 	"unicode"
 )
 
+func SetMapValues(input map[string]any, fieldName string, fieldValue any) {
+	for k, v := range input {
+		if k == fieldName {
+			input[k] = fieldValue
+		} else if innerMap, ok := v.(map[string]any); ok {
+			SetMapValues(innerMap, fieldName, fieldValue)
+		} else if innerArray, ok := v.([]any); ok {
+			for i := range innerArray {
+				if mapMember, ok := innerArray[i].(map[string]any); ok {
+					SetMapValues(mapMember, fieldName, fieldValue)
+				}
+			}
+		}
+	}
+}
+
 func SetValue(s any, fieldName string, fieldValue any) error {
 	// Get the reflect.Value of the struct.
 	v := reflect.ValueOf(s)
