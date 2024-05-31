@@ -19,9 +19,10 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/extension/testutils"
+	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 func TestRunner(t *testing.T) {
@@ -31,12 +32,15 @@ func TestRunner(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
+		ExtensionManager:  extMgr,
 	})
 	ctx := context.Background()
 	// Start
@@ -115,12 +119,15 @@ func TestDeleteStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
+		ExtensionManager:  extMgr,
 	})
 	ctx := context.Background()
 
@@ -205,12 +212,15 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
+		ExtensionManager:  extMgr,
 	})
 	ctx := context.Background()
 

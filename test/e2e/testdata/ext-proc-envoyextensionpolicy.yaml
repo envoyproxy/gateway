@@ -86,4 +86,4 @@ spec:
     - name: grpc-ext-proc-ca
       group: ''
       kind: ConfigMap
-    hostname: grpc-ext-proc
+    hostname: grpc-ext-proc.envoygateway

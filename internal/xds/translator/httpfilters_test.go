@@ -13,14 +13,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/ptr"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func Test_sortHTTPFilters(t *testing.T) {
 	tests := []struct {
 		name        string
 		filters     []*hcmv3.HttpFilter
-		filterOrder []v1alpha1.FilterPosition
+		filterOrder []egv1a1.FilterPosition
 		want        []*hcmv3.HttpFilter
 	}{
 		{
@@ -40,6 +40,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(wellknown.Fault),
@@ -53,6 +54,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
@@ -75,15 +77,16 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:  v1alpha1.EnvoyFilterFault,
-					After: ptr.To(v1alpha1.EnvoyFilterCORS),
+					Name:  egv1a1.EnvoyFilterFault,
+					After: ptr.To(egv1a1.EnvoyFilterCORS),
 				},
 				{
-					Name:   v1alpha1.EnvoyFilterRateLimit,
-					Before: ptr.To(v1alpha1.EnvoyFilterJWTAuthn),
+					Name:   egv1a1.EnvoyFilterRateLimit,
+					Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -99,6 +102,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.Router),
 			},
@@ -120,11 +124,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:   v1alpha1.EnvoyFilterRateLimit,
-					Before: ptr.To(v1alpha1.EnvoyFilterWasm),
+					Name:   egv1a1.EnvoyFilterRateLimit,
+					Before: ptr.To(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -140,6 +145,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.Router),
 			},
@@ -161,11 +167,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:  v1alpha1.EnvoyFilterJWTAuthn,
-					After: ptr.To(v1alpha1.EnvoyFilterWasm),
+					Name:  egv1a1.EnvoyFilterJWTAuthn,
+					After: ptr.To(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -180,6 +187,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
 				httpFilterForTest(jwtAuthn),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
@@ -202,11 +210,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:   v1alpha1.EnvoyFilterWasm,
-					Before: ptr.To(v1alpha1.EnvoyFilterJWTAuthn),
+					Name:   egv1a1.EnvoyFilterWasm,
+					Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -221,6 +230,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(jwtAuthn),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
@@ -243,11 +253,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:  v1alpha1.EnvoyFilterWasm,
-					After: ptr.To(v1alpha1.EnvoyFilterRateLimit),
+					Name:  egv1a1.EnvoyFilterWasm,
+					After: ptr.To(egv1a1.EnvoyFilterRateLimit),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -259,6 +270,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(jwtAuthn),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
@@ -284,11 +296,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:   v1alpha1.EnvoyFilterWasm,
-					Before: ptr.To(v1alpha1.EnvoyFilterExtProc),
+					Name:   egv1a1.EnvoyFilterWasm,
+					Before: ptr.To(egv1a1.EnvoyFilterExtProc),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -303,6 +316,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
@@ -325,11 +339,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:  v1alpha1.EnvoyFilterExtProc,
-					After: ptr.To(v1alpha1.EnvoyFilterWasm),
+					Name:  egv1a1.EnvoyFilterExtProc,
+					After: ptr.To(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -344,6 +359,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
@@ -366,23 +382,24 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(extProcFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 			},
-			filterOrder: []v1alpha1.FilterPosition{
+			filterOrder: []egv1a1.FilterPosition{
 				{
-					Name:   v1alpha1.EnvoyFilterLocalRateLimit,
-					Before: ptr.To(v1alpha1.EnvoyFilterJWTAuthn),
+					Name:   egv1a1.EnvoyFilterLocalRateLimit,
+					Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
 				},
 				{
-					Name:  v1alpha1.EnvoyFilterLocalRateLimit,
-					After: ptr.To(v1alpha1.EnvoyFilterCORS),
+					Name:  egv1a1.EnvoyFilterLocalRateLimit,
+					After: ptr.To(egv1a1.EnvoyFilterCORS),
 				},
 				{
-					Name:   v1alpha1.EnvoyFilterWasm,
-					Before: ptr.To(v1alpha1.EnvoyFilterOAuth2),
+					Name:   egv1a1.EnvoyFilterWasm,
+					Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
 				},
 				{
-					Name:   v1alpha1.EnvoyFilterExtProc,
-					Before: ptr.To(v1alpha1.EnvoyFilterWasm),
+					Name:   egv1a1.EnvoyFilterExtProc,
+					Before: ptr.To(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -398,6 +415,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
 				httpFilterForTest(oauth2Filter + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(jwtAuthn),
+				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
 			},

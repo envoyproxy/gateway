@@ -254,6 +254,9 @@ spec:
                   - envoy.filters.http.wasm
 
 
+                  - envoy.filters.http.rbac
+
+
                   - envoy.filters.http.local_ratelimit
 
 
@@ -280,6 +283,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                     before:
                       description: |-
@@ -296,6 +300,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                     name:
                       description: Name of the filter.
@@ -310,6 +315,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                   required:
                   - name
@@ -10399,8 +10405,8 @@ spec:
                                       backendRefs:
                                         description: |-
                                           BackendRefs references a Kubernetes object that represents the
-                                          backend server to which the accesslog will be sent.
-                                          Only service Kind is supported for now.
+                                          backend server to which the access log will be sent.
+                                          Only Service kind is supported for now.
                                         items:
                                           description: BackendRef defines how an ObjectReference
                                             that is specific to BackendRef.
@@ -10487,13 +10493,13 @@ spec:
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
-                                          Deprecated: Use BackendRef instead.
+                                          Deprecated: Use BackendRefs instead.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
-                                          Deprecated: Use BackendRef instead.
+                                          Deprecated: Use BackendRefs instead.
                                         format: int32
                                         minimum: 0
                                         type: integer
@@ -10627,7 +10633,7 @@ spec:
                                   description: |-
                                     BackendRefs references a Kubernetes object that represents the
                                     backend server to which the metric will be sent.
-                                    Only service Kind is supported for now.
+                                    Only Service kind is supported for now.
                                   items:
                                     description: BackendRef defines how an ObjectReference
                                       that is specific to BackendRef.
@@ -10713,13 +10719,13 @@ spec:
                                 host:
                                   description: |-
                                     Host define the service hostname.
-                                    Deprecated: Use BackendRef instead.
+                                    Deprecated: Use BackendRefs instead.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
-                                    Deprecated: Use BackendRef instead.
+                                    Deprecated: Use BackendRefs instead.
                                   format: int32
                                   maximum: 65535
                                   minimum: 0
@@ -10822,8 +10828,8 @@ spec:
                           backendRefs:
                             description: |-
                               BackendRefs references a Kubernetes object that represents the
-                              backend server to which the accesslog will be sent.
-                              Only service Kind is supported for now.
+                              backend server to which the trace will be sent.
+                              Only Service kind is supported for now.
                             items:
                               description: BackendRef defines how an ObjectReference
                                 that is specific to BackendRef.
@@ -10909,13 +10915,13 @@ spec:
                           host:
                             description: |-
                               Host define the provider service hostname.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             type: string
                           port:
                             default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             format: int32
                             minimum: 0
                             type: integer

@@ -354,7 +354,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Name: "grpc-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(80)),
 							},
@@ -372,14 +372,88 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "GRPC external auth service with backendRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-auth-service",
+										Kind: ptr.To(gwapiv1a2.Kind("Service")),
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "empty GRPC external auth service",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{},
+					},
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{" backendRef or backendRefs needs to be set"},
+		},
+		{
 			desc: "HTTP external auth service",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "HTTP external auth service with backendRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-auth-service",
+										Kind: ptr.To(gwapiv1a2.Kind("Service")),
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
+								},
 							},
 						},
 					},
@@ -418,13 +492,13 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Name: "grpc-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(80)),
 							},
 						},
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),
 							},
@@ -449,7 +523,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Group: ptr.To(gwapiv1.Group("unsupported")),
 								Name:  "http-auth-service",
 								Port:  ptr.To(gwapiv1.PortNumber(15001)),
@@ -475,7 +549,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Kind: ptr.To(gwapiv1.Kind("unsupported")),
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),
@@ -496,12 +570,40 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "http extAuth service backendRefs invalid Kind",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-auth-service",
+										Kind: ptr.To(gwapiv1a2.Kind("unsupported")),
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{" only support Service kind"},
+		},
+		{
 			desc: "grpc extAuth service invalid Group",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Group: ptr.To(gwapiv1.Group("unsupported")),
 								Name:  "http-auth-service",
 								Port:  ptr.To(gwapiv1.PortNumber(15001)),
@@ -527,7 +629,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendRef: gwapiv1.BackendObjectReference{
+							BackendRef: &gwapiv1.BackendObjectReference{
 								Kind: ptr.To(gwapiv1.Kind("unsupported")),
 								Name: "http-auth-service",
 								Port: ptr.To(gwapiv1.PortNumber(15001)),
@@ -547,6 +649,35 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				"spec.extAuth: Invalid value: \"object\": kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported",
 			},
 		},
+		{
+			desc: "grpc extAuth service backendRefs invalid Kind",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "grpc-auth-service",
+										Kind: ptr.To(gwapiv1a2.Kind("unsupported")),
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "eg",
+						},
+					},
+				}
+			},
+			wantErrors: []string{" only support Service kind"},
+		},
+
 		// JWT
 		{
 			desc: "valid jwt",

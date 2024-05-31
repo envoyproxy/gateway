@@ -10,10 +10,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -73,6 +75,37 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 	}, nil
 }
 
+func NewInMemoryManager(cfg v1alpha1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {
+	if server == nil {
+		return nil, nil, fmt.Errorf("in-memory manager must be passed a server")
+	}
+
+	buffer := 101024 * 1024
+	lis := bufconn.Listen(buffer)
+
+	baseServer := grpc.NewServer()
+	extension.RegisterEnvoyGatewayExtensionServer(baseServer, server)
+	go func() {
+		_ = baseServer.Serve(lis)
+	}()
+	conn, err := grpc.DialContext(context.Background(), "",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return lis.Dial()
+		}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, nil, err
+	}
+	c := func() {
+		lis.Close()
+		baseServer.Stop()
+	}
+
+	return &Manager{
+		extensionConnCache: conn,
+		extension:          cfg,
+	}, c, nil
+}
+
 // HasExtension checks to see whether a given Group and Kind has an
 // associated extension registered for it.
 func (m *Manager) HasExtension(g v1.Group, k v1.Kind) bool {
@@ -84,6 +117,21 @@ func (m *Manager) HasExtension(g v1.Group, k v1.Kind) bool {
 		}
 	}
 	return false
+}
+
+func getExtensionServerAddress(service *v1alpha1.ExtensionService) string {
+	var serverAddr string
+	switch {
+	case service.FQDN != nil:
+		serverAddr = fmt.Sprintf("%s:%d", service.FQDN.Hostname, service.FQDN.Port)
+	case service.IPv4 != nil:
+		serverAddr = fmt.Sprintf("%s:%d", service.IPv4.Address, service.IPv4.Port)
+	case service.Unix != nil:
+		serverAddr = fmt.Sprintf("unix://%s", service.Unix.Path)
+	case service.Host != "":
+		serverAddr = fmt.Sprintf("%s:%d", service.Host, service.Port)
+	}
+	return serverAddr
 }
 
 // GetPreXDSHookClient checks if the registered extension makes use of a particular hook type that modifies inputs
@@ -113,7 +161,7 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType v1alpha1.XDSTranslatorHook) ex
 	}
 
 	if m.extensionConnCache == nil {
-		serverAddr := fmt.Sprintf("%s:%d", ext.Service.Host, ext.Service.Port)
+		serverAddr := getExtensionServerAddress(ext.Service)
 
 		opts, err := setupGRPCOpts(ctx, m.k8sClient, &ext, m.namespace)
 		if err != nil {
@@ -162,7 +210,7 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType v1alpha1.XDSTranslatorHook) e
 	}
 
 	if m.extensionConnCache == nil {
-		serverAddr := fmt.Sprintf("%s:%d", ext.Service.Host, ext.Service.Port)
+		serverAddr := getExtensionServerAddress(ext.Service)
 
 		opts, err := setupGRPCOpts(ctx, m.k8sClient, &ext, m.namespace)
 		if err != nil {

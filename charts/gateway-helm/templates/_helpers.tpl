@@ -88,9 +88,9 @@ Pull secrets for the Envoy Gateway image.
 {{- if .Values.deployment.envoyGateway.imagePullSecrets -}}
 imagePullSecrets:
 {{ toYaml .Values.deployment.envoyGateway.imagePullSecrets }}
-{{- else if .Values.global.images.envoyGateway.imagePullSecrets -}}
+{{- else if .Values.global.images.envoyGateway.pullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.global.images.envoyGateway.imagePullSecrets }}
+{{ toYaml .Values.global.images.envoyGateway.pullSecrets }}
 {{- else -}}
 imagePullSecrets: []
 {{- end }}
@@ -110,6 +110,22 @@ provider:
         {{- else }}
         image: "docker.io/envoyproxy/ratelimit:master"
         {{- end }}
+      {{- with .Values.global.images.ratelimit.pullSecrets }}
+      pod:
+        imagePullSecrets:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.global.images.ratelimit.pullPolicy }}
+      patch:
+        type: StrategicMerge
+        value:
+          spec:
+            template:
+              spec:
+                containers:
+                - name: envoy-ratelimit
+                  imagePullPolicy: {{ . }}
+      {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}
 {{- end }}

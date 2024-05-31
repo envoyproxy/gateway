@@ -632,8 +632,8 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayapi.Resources, error) {
 	resources := gatewayapi.NewResources()
 	var useDefaultNamespace bool
-	providedNamespaceMap := map[string]struct{}{}
-	requiredNamespaceMap := map[string]struct{}{}
+	providedNamespaceMap := sets.New[string]()
+	requiredNamespaceMap := sets.New[string]()
 	yamls := strings.Split(str, "\n---")
 	combinedScheme := envoygateway.GetScheme()
 	for _, y := range yamls {
@@ -655,7 +655,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
 		}
-		requiredNamespaceMap[namespace] = struct{}{}
+		requiredNamespaceMap.Insert(namespace)
 		kobj, err := combinedScheme.New(gvk)
 		if err != nil {
 			return nil, err
@@ -779,7 +779,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 			}
 			resources.Namespaces = append(resources.Namespaces, namespace)
-			providedNamespaceMap[name] = struct{}{}
+			providedNamespaceMap.Insert(name)
 		case gatewayapi.KindService:
 			typedSpec := spec.Interface()
 			service := &v1.Service{
@@ -850,20 +850,20 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 	}
 
 	if useDefaultNamespace {
-		if _, found := providedNamespaceMap[config.DefaultNamespace]; !found {
+		if !providedNamespaceMap.Has(config.DefaultNamespace) {
 			namespace := &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: config.DefaultNamespace,
 				},
 			}
 			resources.Namespaces = append(resources.Namespaces, namespace)
-			providedNamespaceMap[config.DefaultNamespace] = struct{}{}
+			providedNamespaceMap.Insert(config.DefaultNamespace)
 		}
 	}
 
 	if addMissingResources {
 		for ns := range requiredNamespaceMap {
-			if _, found := providedNamespaceMap[ns]; !found {
+			if !providedNamespaceMap.Has(ns) {
 				namespace := &v1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: ns,
