@@ -451,10 +451,17 @@ type RateLimitRedisSettings struct {
 // ExtensionManager defines the configuration for registering an extension manager to
 // the Envoy Gateway control plane.
 type ExtensionManager struct {
-	// Resources defines the set of K8s resources the extension will handle.
+	// Resources defines the set of K8s resources the extension will handle as route
+	// filter resources
 	//
 	// +optional
 	Resources []GroupVersionKind `json:"resources,omitempty"`
+
+	// PolicyResources defines the set of K8S resources the extension server will handle
+	// as directly attached GatewayAPI policies
+	//
+	// +optional
+	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`
 
 	// Hooks defines the set of hooks the extension supports
 	//
