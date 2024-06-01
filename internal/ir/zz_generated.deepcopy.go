@@ -1565,6 +1565,16 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.DefaultTokenTTL != nil {
+		in, out := &in.DefaultTokenTTL, &out.DefaultTokenTTL
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.DefaultRefreshTokenTTL != nil {
+		in, out := &in.DefaultRefreshTokenTTL, &out.DefaultRefreshTokenTTL
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.CookieNameOverrides != nil {
 		in, out := &in.CookieNameOverrides, &out.CookieNameOverrides
 		*out = new(v1alpha1.OIDCCookieNames)
