@@ -286,6 +286,7 @@ corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/ap
 
 _Appears in:_
 - [BackendSpec](#backendspec)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -765,6 +766,22 @@ _Appears in:_
 | ----- | ----------- |
 | `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
 | `Header` | HeaderConsistentHashType hashes based on a request header.<br /> | 
+| `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
+
+
+#### Cookie
+
+
+
+Cookie defines the cookie hashing configuration for consistent hash based
+load balancing.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  true  | Name of the cookie to hash.<br />If this cookie does not exist in the request, Envoy will generate a cookie and set<br />the TTL on the response back to the client based on Layer 4<br />attributes of the backend endpoint, to ensure that these future requests<br />go to the same backend endpoint. Make sure to set the TTL field for this case. |
 
 
 #### CustomHeaderExtensionSettings
@@ -1498,7 +1515,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `resources` | _[GroupVersionKind](#groupversionkind) array_ |  false  | Resources defines the set of K8s resources the extension will handle. |
+| `resources` | _[GroupVersionKind](#groupversionkind) array_ |  false  | Resources defines the set of K8s resources the extension will handle as route<br />filter resources |
+| `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached GatewayAPI policies |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
 
@@ -1514,8 +1532,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `host` | _string_ |  true  | Host define the extension service hostname. |
-| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on. |
+| `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
+| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IPv4 defines an IPv4 endpoint |
+| `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
+| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix) |
+| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix) |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
 
 
@@ -1542,6 +1563,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#
 
 _Appears in:_
 - [BackendEndpoint](#backendendpoint)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1895,6 +1917,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
+| `disableRateLimitHeaders` | _boolean_ |  false  | DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers<br />when rate limiting is enabled. |
 | `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  | XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.<br /><br />x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate<br />information of part or all of the clients or proxies that a request has flowed through,<br />on its way from the client to the server.<br /><br />Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.<br /><br />If not set, the default behavior is sanitizing the XFCC header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
 | `preserveXRequestID` | _boolean_ |  false  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />It defaults to false. |
@@ -1925,6 +1948,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#
 
 _Appears in:_
 - [BackendEndpoint](#backendendpoint)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -2365,7 +2389,7 @@ _Appears in:_
 | `scopes` | _string array_ |  false  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
-| `logoutPath` | _string_ |  true  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
+| `logoutPath` | _string_ |  true  | The path to log a user out, clearing their credential cookies.<br /><br />If not specified, uses a default logout path "/logout" |
 
 
 #### OIDCCookieNames
@@ -3520,6 +3544,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#
 
 _Appears in:_
 - [BackendEndpoint](#backendendpoint)
+- [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
