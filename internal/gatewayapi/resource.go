@@ -48,7 +48,7 @@ type Resources struct {
 	EndpointSlices          []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
 	Secrets                 []*corev1.Secret               `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	ConfigMaps              []*corev1.ConfigMap            `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
-	EnvoyProxy              *egv1a1.EnvoyProxy             `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
+	ClassEnvoyProxy         *egv1a1.EnvoyProxy             `json:"classEnvoyProxy,omitempty" yaml:"classEnvoyProxy,omitempty"`
 	ExtensionRefFilters     []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies      []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	ClientTrafficPolicies   []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`

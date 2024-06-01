@@ -53,27 +53,27 @@ func (t *Translator) processBackendTLSPolicy(
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 	// apply defaults as per envoyproxy
-	if resources.EnvoyProxy != nil {
-		if resources.EnvoyProxy.Spec.BackendTLS != nil {
-			if len(resources.EnvoyProxy.Spec.BackendTLS.Ciphers) > 0 {
-				tlsBundle.Ciphers = resources.EnvoyProxy.Spec.BackendTLS.Ciphers
+	if resources.ClassEnvoyProxy != nil {
+		if resources.ClassEnvoyProxy.Spec.BackendTLS != nil {
+			if len(resources.ClassEnvoyProxy.Spec.BackendTLS.Ciphers) > 0 {
+				tlsBundle.Ciphers = resources.ClassEnvoyProxy.Spec.BackendTLS.Ciphers
 			}
-			if len(resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves) > 0 {
-				tlsBundle.ECDHCurves = resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves
+			if len(resources.ClassEnvoyProxy.Spec.BackendTLS.ECDHCurves) > 0 {
+				tlsBundle.ECDHCurves = resources.ClassEnvoyProxy.Spec.BackendTLS.ECDHCurves
 			}
-			if len(resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms) > 0 {
-				tlsBundle.SignatureAlgorithms = resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms
+			if len(resources.ClassEnvoyProxy.Spec.BackendTLS.SignatureAlgorithms) > 0 {
+				tlsBundle.SignatureAlgorithms = resources.ClassEnvoyProxy.Spec.BackendTLS.SignatureAlgorithms
 			}
-			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != nil {
-				tlsBundle.MinVersion = ptr.To(ir.TLSVersion(*resources.EnvoyProxy.Spec.BackendTLS.MinVersion))
+			if resources.ClassEnvoyProxy.Spec.BackendTLS.MinVersion != nil {
+				tlsBundle.MinVersion = ptr.To(ir.TLSVersion(*resources.ClassEnvoyProxy.Spec.BackendTLS.MinVersion))
 			}
-			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != nil {
-				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(*resources.EnvoyProxy.Spec.BackendTLS.MaxVersion))
+			if resources.ClassEnvoyProxy.Spec.BackendTLS.MinVersion != nil {
+				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(*resources.ClassEnvoyProxy.Spec.BackendTLS.MaxVersion))
 			}
-			if len(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols) > 0 {
-				tlsBundle.ALPNProtocols = make([]string, len(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols))
-				for i := range resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols {
-					tlsBundle.ALPNProtocols[i] = string(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols[i])
+			if len(resources.ClassEnvoyProxy.Spec.BackendTLS.ALPNProtocols) > 0 {
+				tlsBundle.ALPNProtocols = make([]string, len(resources.ClassEnvoyProxy.Spec.BackendTLS.ALPNProtocols))
+				for i := range resources.ClassEnvoyProxy.Spec.BackendTLS.ALPNProtocols {
+					tlsBundle.ALPNProtocols[i] = string(resources.ClassEnvoyProxy.Spec.BackendTLS.ALPNProtocols[i])
 				}
 			}
 		}
@@ -82,7 +82,7 @@ func (t *Translator) processBackendTLSPolicy(
 }
 
 func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendTLSPolicy, tlsConfig *ir.TLSUpstreamConfig, resources *Resources, parent gwapiv1a2.ParentReference) *ir.TLSUpstreamConfig {
-	ep := resources.EnvoyProxy
+	ep := resources.ClassEnvoyProxy
 
 	if ep == nil || ep.Spec.BackendTLS == nil || tlsConfig == nil {
 		return tlsConfig

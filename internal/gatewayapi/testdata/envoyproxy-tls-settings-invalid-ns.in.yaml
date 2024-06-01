@@ -124,7 +124,7 @@ backendTLSPolicies:
       validation:
         wellKnownCACertificates: System
         hostname: example.com
-envoyproxy:
+classEnvoyProxy:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:

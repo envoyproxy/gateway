@@ -244,10 +244,10 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 	// Set custom filter order if EnvoyProxy is set
 	// The custom filter order will be applied when generating the HTTP filter chain.
-	if resources.EnvoyProxy != nil {
+	if resources.ClassEnvoyProxy != nil {
 		for _, gateway := range gateways {
 			irKey := t.getIRKey(gateway.Gateway)
-			xdsIR[irKey].FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
+			xdsIR[irKey].FilterOrder = resources.ClassEnvoyProxy.Spec.FilterOrder
 		}
 	}
 
@@ -321,10 +321,10 @@ func (t *Translator) IsEnvoyServiceRouting(r *Resources) bool {
 	if t.EndpointRoutingDisabled {
 		return true
 	}
-	if r.EnvoyProxy == nil {
+	if r.ClassEnvoyProxy == nil {
 		return false
 	}
-	switch ptr.Deref(r.EnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
+	switch ptr.Deref(r.ClassEnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
 	case egv1a1.ServiceRoutingType:
 		return true
 	case egv1a1.EndpointRoutingType:

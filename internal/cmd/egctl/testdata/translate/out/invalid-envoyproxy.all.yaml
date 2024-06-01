@@ -1,4 +1,4 @@
-envoyProxy:
+classEnvoyProxy:
   metadata:
     creationTimestamp: null
     name: example

@@ -1,4 +1,4 @@
-envoyproxy:
+classenvoyproxy:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:

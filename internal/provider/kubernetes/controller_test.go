@@ -472,7 +472,7 @@ func TestProcessParamsRef(t *testing.T) {
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
-				require.Equal(t, tc.ep, resourceTree.EnvoyProxy)
+				require.Equal(t, tc.ep, resourceTree.ClassEnvoyProxy)
 			} else {
 				require.Error(t, err)
 			}

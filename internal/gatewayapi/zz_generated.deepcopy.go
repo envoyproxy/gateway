@@ -172,8 +172,8 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.EnvoyProxy != nil {
-		in, out := &in.EnvoyProxy, &out.EnvoyProxy
+	if in.ClassEnvoyProxy != nil {
+		in, out := &in.ClassEnvoyProxy, &out.ClassEnvoyProxy
 		*out = new(apiv1alpha1.EnvoyProxy)
 		(*in).DeepCopyInto(*out)
 	}

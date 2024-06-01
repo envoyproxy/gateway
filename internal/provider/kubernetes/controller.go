@@ -269,8 +269,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
 		}
 
-		if gwcResource.EnvoyProxy != nil && gwcResource.EnvoyProxy.Spec.MergeGateways != nil {
-			if *gwcResource.EnvoyProxy.Spec.MergeGateways {
+		if gwcResource.ClassEnvoyProxy != nil && gwcResource.ClassEnvoyProxy.Spec.MergeGateways != nil {
+			if *gwcResource.ClassEnvoyProxy.Spec.MergeGateways {
 				r.mergeGateways.Insert(managedGC.Name)
 			} else {
 				r.mergeGateways.Delete(managedGC.Name)
@@ -315,17 +315,17 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 }
 
 func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *gatewayapi.Resources) {
-	if gwcResource.EnvoyProxy == nil || gwcResource.EnvoyProxy.Spec.BackendTLS == nil || gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef == nil {
+	if gwcResource.ClassEnvoyProxy == nil || gwcResource.ClassEnvoyProxy.Spec.BackendTLS == nil || gwcResource.ClassEnvoyProxy.Spec.BackendTLS.ClientCertificateRef == nil {
 		return
 	}
-	certRef := gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef
+	certRef := gwcResource.ClassEnvoyProxy.Spec.BackendTLS.ClientCertificateRef
 	if refsSecret(certRef) {
 		if err := r.processSecretRef(
 			ctx,
 			newResourceMapping(),
 			gwcResource,
 			gatewayapi.KindGateway,
-			gwcResource.EnvoyProxy.Namespace,
+			gwcResource.ClassEnvoyProxy.Namespace,
 			gatewayapi.KindEnvoyProxy,
 			*certRef); err != nil {
 			r.log.Error(err,
@@ -1656,7 +1656,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 			}
 
 			valid = true
-			resourceTree.EnvoyProxy = &ep
+			resourceTree.ClassEnvoyProxy = &ep
 			break
 		}
 	}

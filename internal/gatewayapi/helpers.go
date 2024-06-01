@@ -417,7 +417,7 @@ func irTLSCACertName(namespace, name string) string {
 }
 
 func IsMergeGatewaysEnabled(resources *Resources) bool {
-	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
+	return resources.ClassEnvoyProxy != nil && resources.ClassEnvoyProxy.Spec.MergeGateways != nil && *resources.ClassEnvoyProxy.Spec.MergeGateways
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
