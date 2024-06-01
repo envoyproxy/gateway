@@ -1,6 +1,6 @@
 apiVersion: v2
-name: gateway-addon
-description: A Addon Helm chart for Envoy Gateway
+name: gateway-addons-helm
+description: An Add-ons Helm chart for Envoy Gateway
 type: application
 
 version: v0.0.0-latest
