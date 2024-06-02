@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -69,8 +70,8 @@ type GlobalRateLimitSettings struct {
 }
 
 // Translate translates the XDS IR into xDS resources
-func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
-	if ir == nil {
+func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
+	if xdsIR == nil {
 		return nil, errors.New("ir is nil")
 	}
 
@@ -86,28 +87,34 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	// to fail the entire xDS translation to panic users, but instead, we want
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
+	listenerExtPolicies := make(listenerHookPolicies)
+
 	if err := t.processHTTPListenerXdsTranslation(
-		tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics); err != nil {
+		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, listenerExtPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog, ir.Metrics); err != nil {
+	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics, listenerExtPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP, ir.AccessLog, ir.Metrics); err != nil {
+	if err := processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics, listenerExtPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processJSONPatches(tCtx, ir.EnvoyPatchPolicies); err != nil {
+	if err := t.notifyExtensionServerAboutListeners(tCtx, listenerExtPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForAccessLog(tCtx, ir.AccessLog, ir.Metrics); err != nil {
+	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForTracing(tCtx, ir.Tracing, ir.Metrics); err != nil {
+	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -120,12 +127,60 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	return tCtx, errs
 }
 
+// Maps XDS listeners to the extension policy instances that were registered to be sent to them
+type listenerHookPolicies map[string][]*ir.UnstructuredRef
+
+// notifyExtensionServerAboutListeners calls the extension server about all the translated listeners.
+func (t *Translator) notifyExtensionServerAboutListeners(
+	tCtx *types.ResourceVersionTable,
+	listenerExtPolicies listenerHookPolicies,
+) error {
+	// Return quickly if there is no extension manager or the Listener hook is not being used.
+	if t.ExtensionManager == nil {
+		return nil
+	}
+	if (*t.ExtensionManager).GetPostXDSHookClient(v1alpha1.XDSHTTPListener) == nil {
+		return nil
+	}
+
+	var errs error
+	for _, l := range tCtx.XdsResources[resourcev3.ListenerType] {
+		listener := l.(*listenerv3.Listener)
+		pols, found := listenerExtPolicies[listener.Name]
+		if !found {
+			pols = nil
+		} else {
+			slices.SortFunc(pols, func(l, r *ir.UnstructuredRef) int {
+				lGVT, rGVT := l.Object.GroupVersionKind(), r.Object.GroupVersionKind()
+				res := strings.Compare(lGVT.String(), rGVT.String())
+				if res == 0 {
+					lName := fmt.Sprintf("%s/%s", l.Object.GetNamespace(), l.Object.GetName())
+					rName := fmt.Sprintf("%s/%s", r.Object.GetNamespace(), r.Object.GetName())
+					return strings.Compare(lName, rName)
+				} else {
+					return res
+				}
+			})
+			pols = slices.CompactFunc(pols, func(l, r *ir.UnstructuredRef) bool {
+				return l.Object.GroupVersionKind() == r.Object.GroupVersionKind() &&
+					l.Object.GetNamespace() == r.Object.GetNamespace() &&
+					l.Object.GetName() == r.Object.GetName()
+			})
+		}
+		if err := processExtensionPostListenerHook(tCtx, listener, pols, t.ExtensionManager); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
 func (t *Translator) processHTTPListenerXdsTranslation(
 	tCtx *types.ResourceVersionTable,
 	httpListeners []*ir.HTTPListener,
 	accessLog *ir.AccessLog,
 	tracing *ir.Tracing,
 	metrics *ir.Metrics,
+	extServerPolicies listenerHookPolicies,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -306,8 +361,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Check if an extension want to modify the listener that was just configured/created
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 		// TODO zhaohuabing should we also process the quicXDSListener?
-		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, httpListener.ExtensionRefs, t.ExtensionManager); err != nil {
-			errs = errors.Join(errs, err)
+		if len(httpListener.ExtensionRefs) > 0 {
+			extServerPolicies[httpListener.Name] = append(extServerPolicies[httpListener.Name], httpListener.ExtensionRefs...)
 		}
 	}
 
@@ -484,7 +539,13 @@ func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
 	}
 }
 
-func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog, metrics *ir.Metrics) error {
+func (t *Translator) processTCPListenerXdsTranslation(
+	tCtx *types.ResourceVersionTable,
+	tcpListeners []*ir.TCPListener,
+	accesslog *ir.AccessLog,
+	metrics *ir.Metrics,
+	extServerPolicies listenerHookPolicies,
+) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error
@@ -549,11 +610,20 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 				errs = errors.Join(errs, err)
 			}
 		}
+		if len(tcpListener.ExtensionRefs) > 0 {
+			extServerPolicies[tcpListener.Name] = append(extServerPolicies[tcpListener.Name], tcpListener.ExtensionRefs...)
+		}
 	}
 	return errs
 }
 
-func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener, accesslog *ir.AccessLog, metrics *ir.Metrics) error {
+func processUDPListenerXdsTranslation(
+	tCtx *types.ResourceVersionTable,
+	udpListeners []*ir.UDPListener,
+	accesslog *ir.AccessLog,
+	metrics *ir.Metrics,
+	extServerPolicies listenerHookPolicies,
+) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error
@@ -589,6 +659,10 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
+		}
+
+		if len(udpListener.ExtensionRefs) > 0 {
+			extServerPolicies[udpListener.Name] = append(extServerPolicies[udpListener.Name], udpListener.ExtensionRefs...)
 		}
 	}
 	return errs

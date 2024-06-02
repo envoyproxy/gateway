@@ -201,5 +201,25 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		})
 		found = true
 	}
+	for _, currListener := range gwIR.TCP {
+		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
+		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+			continue
+		}
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
+			Object: policy,
+		})
+		found = true
+	}
+	for _, currListener := range gwIR.UDP {
+		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
+		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+			continue
+		}
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
+			Object: policy,
+		})
+		found = true
+	}
 	return found
 }

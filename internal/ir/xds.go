@@ -1325,6 +1325,8 @@ type TCPListener struct {
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
 	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // TCPRoute holds the route information associated with the TCP Route
@@ -1450,6 +1452,8 @@ type UDPListener struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// Route associated with UDP traffic to the listener.
 	Route *UDPRoute `json:"route,omitempty" yaml:"route,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // UDPRoute holds the route information associated with the UDP Route.
