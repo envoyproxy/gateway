@@ -73,14 +73,14 @@ var EGUninstallAndInstallTest = suite.ConformanceTest{
 
 			ht := helm.NewPackageTool()
 			if err = ht.Setup(); err != nil {
-				t.Errorf("falied to setup of packageTool: %v", err)
+				t.Errorf("failed to setup of packageTool: %v", err)
 			}
 
 			t.Log("start uninstall envoy gateway resource")
 			if err := ht.RunUninstall(&helm.PackageOptions{
 				ReleaseName: relName,
 			}); err != nil {
-				t.Errorf("falied to uninstall envoy-gateway: %v", err)
+				t.Errorf("failed to uninstall envoy-gateway: %v", err)
 			}
 
 			t.Log("start install envoy gateway resource")
@@ -91,7 +91,7 @@ var EGUninstallAndInstallTest = suite.ConformanceTest{
 				Version:          lastVersionTag,
 				Timeout:          time.Minute * 5,
 			}); err != nil {
-				t.Errorf("falied to install envoy-gateway: %v", err)
+				t.Errorf("failed to install envoy-gateway: %v", err)
 			}
 
 			// finally, ensure that the envoy-gateway is in normal service.
