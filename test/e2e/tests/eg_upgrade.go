@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	UpgradeTests = append(UpgradeTests, EGUpgradeTest)
+	PackageTests = append(PackageTests, EGUpgradeTest)
 }
 
 var EGUpgradeTest = suite.ConformanceTest{
@@ -41,9 +41,9 @@ var EGUpgradeTest = suite.ConformanceTest{
 				lastVersionTag = "v1.0.0" // Default version tag if not specified
 			}
 
-			ns := "gateway-upgrade-infra"
+			ns := "gateway-package-infra"
 			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "ha-gateway", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "package-gateway", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/eg-upgrade"}
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})

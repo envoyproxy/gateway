@@ -14,7 +14,7 @@ FLUENT_BIT_CHART_VERSION ?= 0.30.4
 OTEL_COLLECTOR_CHART_VERSION ?= 0.73.1
 TEMPO_CHART_VERSION ?= 1.3.1
 E2E_RUN_TEST ?=
-E2E_RUN_EG_UPGRADE_TESTS ?= false
+E2E_RUN_EG_PACKAGE_TESTS ?= false
 E2E_CLEANUP ?= true
 
 # Set Kubernetes Resources Directory Path
@@ -125,15 +125,15 @@ run-e2e: install-e2e-telemetry
 ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
-	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	go test -v -tags e2e ./test/e2e/package_manage --gateway-class=package --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
-ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
+ifeq ($(E2E_RUN_EG_PACKAGE_TESTS),false)
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false \
 		--run-test $(E2E_RUN_TEST)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 else
-	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+	go test -v -tags e2e ./test/e2e/package_manage --gateway-class=package --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
 endif

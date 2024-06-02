@@ -35,7 +35,7 @@ import (
 )
 
 func init() {
-	UpgradeTests = append(UpgradeTests, EnvoyShutdownTest)
+	PackageTests = append(PackageTests, EnvoyShutdownTest)
 }
 
 var EnvoyShutdownTest = suite.ConformanceTest{
@@ -44,8 +44,8 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/envoy-shutdown.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("All requests must succeed", func(t *testing.T) {
-			ns := "gateway-upgrade-infra"
-			name := "ha-gateway"
+			ns := "gateway-package-infra"
+			name := "package-gateway"
 			routeNN := types.NamespacedName{Name: "http-envoy-shutdown", Namespace: ns}
 			gwNN := types.NamespacedName{Name: name, Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
