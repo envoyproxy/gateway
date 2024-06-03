@@ -792,7 +792,8 @@
                             "statPrefix": "tcp"
                           }
                         }
-                      ]
+                      ],
+                      "name": "tcproute/default/backend"
                     }
                   ],
                   "name": "default/eg/tcp",
@@ -862,7 +863,8 @@
                             "statPrefix": "passthrough"
                           }
                         }
-                      ]
+                      ],
+                      "name": "tlsroute/default/backend"
                     }
                   ],
                   "listenerFilters": [

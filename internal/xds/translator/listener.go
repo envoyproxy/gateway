@@ -441,6 +441,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
+		Name:    irRoute.Name,
 	}
 
 	if isTLSPassthrough {

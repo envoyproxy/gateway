@@ -127,6 +127,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
         statPrefix: passthrough
+    name: fifth-route
   - filterChainMatch:
       serverNames:
       - bar.net
@@ -136,6 +137,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-route-dest
         statPrefix: passthrough
+    name: sixth-route
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
