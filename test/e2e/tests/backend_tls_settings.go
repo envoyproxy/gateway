@@ -49,7 +49,7 @@ func init() {
 var BackendTLSSettingsTest = suite.ConformanceTest{
 	ShortName:   "Backend tls settings",
 	Description: "Use envoy proxy tls settings with backend",
-	Manifests:   []string{"testdata/backend-tls.yaml"},
+	Manifests:   []string{"testdata/backend-tls-settings.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Apply custom TLS settings when making backend requests.", func(t *testing.T) {
 			depNS := "envoy-gateway-system"
