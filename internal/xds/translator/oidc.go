@@ -15,6 +15,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
@@ -145,7 +146,8 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 					},
 				},
 			},
-			ForwardBearerToken: true,
+			UseRefreshToken:    &wrappers.BoolValue{Value: oidc.RefreshToken},
+			ForwardBearerToken: oidc.ForwardAccessToken,
 			Credentials: &oauth2v3.OAuth2Credentials{
 				ClientId: oidc.ClientID,
 				TokenSecret: &tlsv3.SdsSecretConfig{
@@ -171,6 +173,18 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			AuthScopes: oidc.Scopes,
 			Resources:  oidc.Resources,
 		},
+	}
+
+	if oidc.DefaultTokenTTL != nil {
+		oauth2.Config.DefaultExpiresIn = &durationpb.Duration{
+			Seconds: int64(oidc.DefaultTokenTTL.Seconds()),
+		}
+	}
+
+	if oidc.DefaultRefreshTokenTTL != nil {
+		oauth2.Config.DefaultRefreshTokenExpiresIn = &durationpb.Duration{
+			Seconds: int64(oidc.DefaultRefreshTokenTTL.Seconds()),
+		}
 	}
 
 	if oidc.CookieNameOverrides != nil &&

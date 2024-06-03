@@ -63,8 +63,7 @@ type OIDC struct {
 	// via the Authorization header Bearer scheme to the upstream.
 	// If not specified, defaults to false.
 	// +optional
-	// +notImplementedHide
-	ForwardAccessToken *bool `json:"ForwardAccessToken,omitempty"`
+	ForwardAccessToken *bool `json:"forwardAccessToken,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
 	// Please note that Envoy will always use the expiry time from the response
@@ -76,7 +75,6 @@ type OIDC struct {
 	// OAuth flow will fail.
 	//
 	// +optional
-	// +notImplementedHide
 	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
 
 	// RefreshToken indicates whether the Envoy should automatically refresh the
@@ -86,7 +84,6 @@ type OIDC struct {
 	//
 	// If not specified, defaults to false.
 	// +optional
-	// +notImplementedHide
 	RefreshToken *bool `json:"refreshToken,omitempty"`
 
 	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
@@ -96,7 +93,6 @@ type OIDC struct {
 	// If not specified, defaults to 604800s (one week).
 	// Note: this field is only applicable when the "refreshToken" field is set to true.
 	// +optional
-	// +notImplementedHide
 	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 }
 
