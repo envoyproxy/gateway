@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.22.3
 
 require (
-	fortio.org/fortio v1.63.8
+	fortio.org/fortio v1.63.9
 	fortio.org/log v1.12.2
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
@@ -58,7 +58,9 @@ require (
 
 require (
 	cel.dev/expr v0.15.0 // indirect
+	fortio.org/cli v1.5.2 // indirect
 	fortio.org/dflag v1.7.1 // indirect
+	fortio.org/scli v1.14.2 // indirect
 	fortio.org/sets v1.0.4 // indirect
 	fortio.org/struct2env v0.4.0 // indirect
 	fortio.org/version v1.0.4 // indirect
