@@ -620,7 +620,8 @@
                           "useRemoteAddress": true
                         }
                       }
-                    ]
+                    ],
+                    "name": "default/eg/http"
                   },
                   "drainType": "MODIFY_ONLY",
                   "name": "default/eg/http",
@@ -725,7 +726,8 @@
                           "useRemoteAddress": true
                         }
                       }
-                    ]
+                    ],
+                    "name": "default/eg/grpc"
                   },
                   "drainType": "MODIFY_ONLY",
                   "name": "default/eg/grpc",

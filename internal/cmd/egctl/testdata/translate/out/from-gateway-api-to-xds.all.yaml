@@ -363,6 +363,7 @@ xds:
                   serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
+              name: default/eg/http
             drainType: MODIFY_ONLY
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
@@ -430,6 +431,7 @@ xds:
                   serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
+              name: default/eg/grpc
             drainType: MODIFY_ONLY
             name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
