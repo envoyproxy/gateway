@@ -29,6 +29,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: third-listener
   drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
@@ -60,6 +61,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
         useRemoteAddress: true
+    name: first-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -102,6 +104,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
         useRemoteAddress: true
+    name: second-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
