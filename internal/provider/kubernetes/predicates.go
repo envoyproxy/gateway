@@ -154,6 +154,38 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isEnvoyProxyReferencingSecret(&nsName) {
+		return true
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.NamespacedName) bool {
+	epList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), epList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretEnvoyProxyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Gateways")
+		return false
+	}
+
+	if len(epList.Items) == 0 {
+		return false
+	}
+
+	for _, ep := range epList.Items {
+		if ep.Spec.BackendTLS != nil {
+			if ep.Spec.BackendTLS.ClientCertificateRef != nil {
+				certRef := ep.Spec.BackendTLS.ClientCertificateRef
+				ns := gatewayapi.NamespaceDerefOr(certRef.Namespace, ep.Namespace)
+				if nsName.Name == string(certRef.Name) && nsName.Namespace == ns {
+					return true
+				}
+				continue
+			}
+		}
+	}
 	return false
 }
 

@@ -42,6 +42,7 @@ const (
 	configMapBtlsIndex               = "configMapBtlsIndex"
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
+	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -111,8 +112,29 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return backendRefs
 }
 
+func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*v1alpha1.EnvoyProxy)
+	var secretReferences []string
+	if ep.Spec.BackendTLS != nil {
+		if ep.Spec.BackendTLS.ClientCertificateRef != nil {
+			if *ep.Spec.BackendTLS.ClientCertificateRef.Kind == gatewayapi.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, ep.Namespace),
+						Name:      string(ep.Spec.BackendTLS.ClientCertificateRef.Name),
+					}.String())
+			}
+		}
+	}
+	return secretReferences
+}
+
 func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc); err != nil {
 		return err
 	}
 
