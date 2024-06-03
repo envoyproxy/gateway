@@ -16,15 +16,21 @@ import (
 	nethttp "net/http"
 	"os"
 	"path"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -34,18 +40,18 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-const UpstreamTLSChangesMaxTimeout = 30 * time.Second
+const BackendTLSChangesMaxTimeout = 30 * time.Second
 
 func init() {
-	ConformanceTests = append(ConformanceTests, UpstreamTLSSettingsTest)
+	ConformanceTests = append(ConformanceTests, BackendTLSSettingsTest)
 }
 
-var UpstreamTLSSettingsTest = suite.ConformanceTest{
-	ShortName:   "Upstream tls settings",
-	Description: "Use envoy proxy tls settings with upstream",
-	Manifests:   []string{"testdata/upstream-tls.yaml"},
+var BackendTLSSettingsTest = suite.ConformanceTest{
+	ShortName:   "Backend tls settings",
+	Description: "Use envoy proxy tls settings with backend",
+	Manifests:   []string{"testdata/backend-tls.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("Apply custom TLS settings when making upstream requests.", func(t *testing.T) {
+		t.Run("Apply custom TLS settings when making backend requests.", func(t *testing.T) {
 			depNS := "envoy-gateway-system"
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-backend-tls", Namespace: ns}
@@ -75,11 +81,6 @@ var UpstreamTLSSettingsTest = suite.ConformanceTest{
 			if err != nil {
 				t.Error(err)
 			}
-			transport := &nethttp.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, //nolint:gosec
-				},
-			}
 
 			expectedRes, err := asExpectedResponse("echo-service-tls-settings-res")
 			if err != nil {
@@ -94,45 +95,66 @@ var UpstreamTLSSettingsTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			confirmEchoBackendRes := func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
-				req := http.MakeRequest(t, httpRes, gwAddr, "HTTPS", "https")
-				res, err := casePreservingRoundTrip(req, transport, suite)
-				if err != nil {
-					t.Log(err)
-				}
-				err = expectNewEchoBackendResponse(res, expectedResBody)
-				if err != nil {
-					return err
-				}
-				return nil
-			}
-			// Reconfigure upstream tls settings
+
+			// Reconfigure backend tls settings
 			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
-				return confirmEchoBackendRes(httpRes, expectedResBody)
-			}, UpstreamTLSChangesMaxTimeout, &expectOkResp, expectedRes)
+				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
+			}, BackendTLSChangesMaxTimeout, &expectOkResp, expectedRes)
 			if err != nil {
 				t.Error(err)
 			}
-			// Ensure that changes to envoy proxy re-configure the upstream tls settings.
+
+			// rotate the client mTLS secret to ensure that a new secret is used.
+			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-settings-client-cert-rotation.yaml", false)
+
+			err = restartDeploymentAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-backend",
+					Namespace: "gateway-conformance-infra",
+				},
+			})
+			if err != nil {
+				t.Error(err)
+			}
+
+			// confirm new mtls client cert is used when connecting to backend
+			expectedResNewMTLSSecret, err := asExpectedResponse("echo-service-tls-settings-new-mtls-secret")
+			if err != nil {
+				t.Error(err)
+			}
+
+			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
+				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
+			}, BackendTLSChangesMaxTimeout, &expectOkResp, expectedResNewMTLSSecret)
+			if err != nil {
+				t.Error(err)
+			}
+
 			config.TLSSettings = v1alpha1.TLSSettings{
 				MinVersion: ptr.To(v1alpha1.TLSv12),
 				MaxVersion: ptr.To(v1alpha1.TLSv12),
 				Ciphers:    []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
 			}
+
 			err = UpdateProxyConfig(suite.Client, proxyNN, config)
 			if err != nil {
 				t.Error(err)
 			}
-			expectedRes.TLS.Version = "TLSv1.2"
-			expectedRes.TLS.CipherSuite = "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
-				return confirmEchoBackendRes(httpRes, expectedResBody)
-			}, UpstreamTLSChangesMaxTimeout, &expectOkResp, expectedRes)
+
+			// confirm tls settings can be updated
+			expectedUpdatedTLSSettings, err := asExpectedResponse("echo-service-tls-settings-updated-tls-settings")
 			if err != nil {
 				t.Error(err)
 			}
 
-			// Cleanup upstream tls settings.
+			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
+				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
+			}, BackendTLSChangesMaxTimeout, &expectOkResp, expectedUpdatedTLSSettings)
+			if err != nil {
+				t.Error(err)
+			}
+
+			// Cleanup backend tls settings.
 			err = UpdateProxyConfig(suite.Client, proxyNN, &v1alpha1.BackendTLSConfig{
 				ClientCertificateRef: nil,
 				TLSSettings:          v1alpha1.TLSSettings{},
@@ -142,6 +164,24 @@ var UpstreamTLSSettingsTest = suite.ConformanceTest{
 			}
 		})
 	},
+}
+
+func confirmEchoBackendRes(httpRes *http.ExpectedResponse, expectedResBody *Response, gwAddr string, t *testing.T, suite *suite.ConformanceTestSuite) error {
+	transport := &nethttp.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, //nolint:gosec
+		},
+	}
+	req := http.MakeRequest(t, httpRes, gwAddr, "HTTPS", "https")
+	res, err := casePreservingRoundTrip(req, transport, suite)
+	if err != nil {
+		return err
+	}
+	err = expectNewEchoBackendResponse(res, expectedResBody)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateProxyConfig updates the proxy configuration with BackendTLS settings.
@@ -185,10 +225,10 @@ func expectNewEchoBackendResponse(respBody interface{}, expect *Response) error 
 		return err
 	}
 
-	if ok, err := hasAllFieldsAndValues(res.TLS, expect.TLS); !ok {
-		return err
+	if cmp.Equal(res.TLS, expect.TLS) {
+		return nil
 	}
-	return nil
+	return fmt.Errorf("mismatch found between returned and expected response. Difference: %s", cmp.Diff(res.TLS, expect.TLS))
 }
 
 func asExpectedResponse(fileName string) (*Response, error) {
@@ -207,70 +247,9 @@ func asExpectedResponse(fileName string) (*Response, error) {
 	return &res, nil
 }
 
-// Function to check if obj1 has all the fields of obj2, including nested fields, and matching values
-func hasAllFieldsAndValues(obj1, obj2 interface{}) (bool, error) {
-	return hasAllFieldsAndValuesRecursive(reflect.ValueOf(obj1), reflect.ValueOf(obj2))
-}
-
-func hasAllFieldsAndValuesRecursive(v1, v2 reflect.Value) (bool, error) {
-	if v1.Kind() == reflect.Ptr {
-		v1 = v1.Elem()
-	}
-	if v2.Kind() == reflect.Ptr {
-		v2 = v2.Elem()
-	}
-
-	if v1.Kind() != reflect.Struct || v2.Kind() != reflect.Struct {
-		return false, fmt.Errorf("both parameters must be structs")
-	}
-
-	t1 := v1.Type()
-	t2 := v2.Type()
-
-	for i := 0; i < t2.NumField(); i++ {
-		field2 := t2.Field(i)
-		field1, found := t1.FieldByName(field2.Name)
-
-		if !found {
-			fmt.Printf("Field %s is missing in obj1\n", field2.Name)
-			return false, nil
-		}
-
-		value1 := v1.FieldByName(field2.Name)
-		value2 := v2.Field(i)
-
-		// Recursively check nested fields
-		if field2.Type.Kind() == reflect.Struct {
-			hasFields, err := hasAllFieldsAndValuesRecursive(value1, value2)
-			if err != nil || !hasFields {
-				return hasFields, err
-			}
-		} else {
-			// Check if the field types and values are the same
-			if field1.Type != field2.Type {
-				return false, fmt.Errorf("field %s has different type in obj1: %v (expected %v)", field2.Name, field1.Type, field2.Type)
-			}
-			if !reflect.DeepEqual(value1.Interface(), value2.Interface()) {
-				return false, fmt.Errorf("field %s has different value in obj1: %v (expected %v)", field2.Name, value1.Interface(), value2.Interface())
-			}
-		}
-	}
-
-	return true, nil
-}
-
 // Response defines echo server response
 type Response struct {
-	Path      string              `json:"path"`
-	Host      string              `json:"host"`
-	Method    string              `json:"method"`
-	Proto     string              `json:"proto"`
-	Headers   map[string][]string `json:"headers"`
-	Namespace string              `json:"namespace"`
-	Ingress   string              `json:"ingress"`
-	Service   string              `json:"service"`
-	Pod       string              `json:"pod"`
-	TLS       TLSInfo             `json:"tls"`
+	TLS TLSInfo `json:"tls"`
 }
 
 type TLSInfo struct {
@@ -279,4 +258,53 @@ type TLSInfo struct {
 	ServerName         string   `json:"serverName"`
 	NegotiatedProtocol string   `json:"negotiatedProtocol"`
 	CipherSuite        string   `json:"cipherSuite"`
+}
+
+func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
+	t.Helper()
+	const restartAnnotation = "kubectl.kubernetes.io/restartedAt"
+	restartTime := time.Now().Format(time.RFC3339)
+	ctx := context.Background()
+
+	if err := c.Get(context.Background(), types.NamespacedName{Name: dp.Name, Namespace: dp.Namespace}, dp); err != nil {
+		return err
+	}
+
+	// Update an annotation to trigger a rolling update
+	if dp.Spec.Template.Annotations == nil {
+		dp.Spec.Template.Annotations = make(map[string]string)
+	}
+	dp.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = restartTime
+
+	if err := c.Update(ctx, dp); err != nil {
+		return err
+	}
+
+	return wait.PollUntilContextTimeout(ctx, 1*time.Second, timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+		// wait for replicaset with the same annotation to reach ready status
+		podList := &v1.PodList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(dp.Namespace),
+			client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(dp.Spec.Selector.MatchLabels)},
+		}
+
+		err := c.List(ctx, podList, listOpts...)
+		if err != nil {
+			return false, err
+		}
+
+		rolled := int32(0)
+		for _, rs := range podList.Items {
+			if rs.Annotations[restartAnnotation] == restartTime {
+				rolled++
+			}
+		}
+
+		// all pods are rolled
+		if rolled == int32(len(podList.Items)) && rolled >= *dp.Spec.Replicas {
+			return true, nil
+		}
+
+		return false, nil
+	})
 }

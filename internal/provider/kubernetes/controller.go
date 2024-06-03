@@ -325,7 +325,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, g
 			gatewayapi.KindEnvoyProxy,
 			*certRef); err != nil {
 			r.log.Error(err,
-				"failed to process TLS SecretRef for gateway",
+				"failed to process TLS SecretRef for EnvoyProxy",
 				"gateway", "issue", "secretRef", certRef)
 		}
 	}

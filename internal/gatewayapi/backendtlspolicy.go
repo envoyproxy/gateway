@@ -82,32 +82,32 @@ func (t *Translator) processBackendTLSPolicy(
 	return tlsBundle, policy
 }
 
-func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendTLSPolicy, tlsBundle *ir.TLSUpstreamConfig, resources *Resources, parent gwapiv1a2.ParentReference) *ir.TLSUpstreamConfig {
+func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendTLSPolicy, tlsConfig *ir.TLSUpstreamConfig, resources *Resources, parent gwapiv1a2.ParentReference) *ir.TLSUpstreamConfig {
 	ep := resources.EnvoyProxy
 
-	if ep == nil || ep.Spec.BackendTLS == nil {
-		return tlsBundle
+	if ep == nil || ep.Spec.BackendTLS == nil || tlsConfig == nil {
+		return tlsConfig
 	}
 
 	if len(ep.Spec.BackendTLS.Ciphers) > 0 {
-		tlsBundle.Ciphers = ep.Spec.BackendTLS.Ciphers
+		tlsConfig.Ciphers = ep.Spec.BackendTLS.Ciphers
 	}
 	if len(ep.Spec.BackendTLS.ECDHCurves) > 0 {
-		tlsBundle.ECDHCurves = ep.Spec.BackendTLS.ECDHCurves
+		tlsConfig.ECDHCurves = ep.Spec.BackendTLS.ECDHCurves
 	}
 	if len(ep.Spec.BackendTLS.SignatureAlgorithms) > 0 {
-		tlsBundle.SignatureAlgorithms = ep.Spec.BackendTLS.SignatureAlgorithms
+		tlsConfig.SignatureAlgorithms = ep.Spec.BackendTLS.SignatureAlgorithms
 	}
 	if ep.Spec.BackendTLS.MinVersion != nil {
-		tlsBundle.MinVersion = ptr.To(ir.TLSVersion(*ep.Spec.BackendTLS.MinVersion))
+		tlsConfig.MinVersion = ptr.To(ir.TLSVersion(*ep.Spec.BackendTLS.MinVersion))
 	}
 	if ep.Spec.BackendTLS.MaxVersion != nil {
-		tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(*ep.Spec.BackendTLS.MaxVersion))
+		tlsConfig.MaxVersion = ptr.To(ir.TLSVersion(*ep.Spec.BackendTLS.MaxVersion))
 	}
 	if len(ep.Spec.BackendTLS.ALPNProtocols) > 0 {
-		tlsBundle.ALPNProtocols = make([]string, len(ep.Spec.BackendTLS.ALPNProtocols))
+		tlsConfig.ALPNProtocols = make([]string, len(ep.Spec.BackendTLS.ALPNProtocols))
 		for i := range ep.Spec.BackendTLS.ALPNProtocols {
-			tlsBundle.ALPNProtocols[i] = string(ep.Spec.BackendTLS.ALPNProtocols[i])
+			tlsConfig.ALPNProtocols[i] = string(ep.Spec.BackendTLS.ALPNProtocols[i])
 		}
 	}
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
@@ -121,7 +121,7 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 				t.GatewayControllerName,
 				policy.Generation,
 				status.Error2ConditionMsg(fmt.Errorf("client authentication TLS secret is not located in the same namespace as Envoyproxy. Secret namespace: %s does not match Envoyproxy namespace: %s", ns, ep.Namespace)))
-			return tlsBundle
+			return tlsConfig
 		}
 		secret := resources.GetSecret(ns, string(ep.Spec.BackendTLS.ClientCertificateRef.Name))
 		if secret == nil {
@@ -131,12 +131,12 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 				policy.Generation,
 				status.Error2ConditionMsg(fmt.Errorf("failed to locate TLS secret for client auth: %s in namespace: %s", ep.Spec.BackendTLS.ClientCertificateRef.Name, ns)),
 			)
-			return tlsBundle
+			return tlsConfig
 		}
 		tlsConf := irTLSConfigs(secret)
-		tlsBundle.ClientCertificates = tlsConf.Certificates
+		tlsConfig.ClientCertificates = tlsConf.Certificates
 	}
-	return tlsBundle
+	return tlsConfig
 }
 
 func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
