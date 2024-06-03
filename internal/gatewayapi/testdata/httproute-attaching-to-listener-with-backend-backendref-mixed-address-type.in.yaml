@@ -78,7 +78,7 @@ backends:
       endpoints:
         - unix:
             path: /var/run/backend.sock
-        - ipv4:
+        - ip:
             address: 1.1.1.1
             port: 3001
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -90,7 +90,7 @@ backends:
       endpoints:
         - unix:
             path: /var/run/backend.sock
-        - ipv4:
+        - ip:
             address: 1.1.1.1
             port: 3001
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -103,7 +103,7 @@ backends:
         - fqdn:
             hostname: primary.foo.com
             port: 3000
-        - ipv4:
+        - ip:
             address: 1.1.1.1
             port: 3001
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -116,6 +116,6 @@ backends:
         - fqdn:
             hostname: primary.foo.com
             port: 3000
-        - ipv4:
+        - ip:
             address: 1.1.1.1
             port: 3001

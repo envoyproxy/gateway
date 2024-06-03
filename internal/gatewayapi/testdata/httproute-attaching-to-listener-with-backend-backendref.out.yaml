@@ -42,7 +42,7 @@ backends:
     namespace: default
   spec:
     endpoints:
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
   status:
@@ -60,16 +60,17 @@ backends:
     namespace: default
   spec:
     endpoints:
-    - ipv4:
+    - ip:
         address: 127.0.0.1
         port: 3001
   status:
     conditions:
     - lastTransitionTime: null
-      message: The Backend was accepted
+      message: 'The Backend was not accepted: IP address 127.0.0.1 in the loopback
+        range is not supported'
       reason: Accepted
-      status: "True"
-      type: Invalid
+      status: "False"
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -84,10 +85,11 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: The Backend was accepted
+      message: 'The Backend was not accepted: hostname localhost should be a domain
+        with at least two segments separated by dots'
       reason: Accepted
-      status: "True"
-      type: Invalid
+      status: "False"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -158,8 +160,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket, localhost or 127.0.0.1 found in Backend default/backend-uds
-          are not supported for xRoute backendRefs
+        message: Unix domain socket found in Backend default/backend-uds is not supported
+          for xRoute backendRefs
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
@@ -270,10 +272,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket, localhost or 127.0.0.1 found in Backend default/backend-ip-localhost
-          are not supported for xRoute backendRefs
-        reason: UnsupportedRefAddressFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -308,10 +309,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket, localhost or 127.0.0.1 found in Backend default/backend-fqdn-localhost
-          are not supported for xRoute backendRefs
-        reason: UnsupportedRefAddressFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -396,9 +396,11 @@ xdsIR:
       - destination:
           name: httproute/default/httproute-4/rule/0
           settings:
-          - weight: 1
-        directResponse:
-          statusCode: 500
+          - addressType: IP
+            endpoints:
+            - host: 127.0.0.1
+              port: 3001
+            weight: 1
         hostname: '*'
         isHTTP2: false
         name: httproute/default/httproute-4/rule/0/match/0/*
@@ -409,9 +411,11 @@ xdsIR:
       - destination:
           name: httproute/default/httproute-5/rule/0
           settings:
-          - weight: 1
-        directResponse:
-          statusCode: 500
+          - addressType: FQDN
+            endpoints:
+            - host: localhost
+              port: 3001
+            weight: 1
         hostname: '*'
         isHTTP2: false
         name: httproute/default/httproute-5/rule/0/match/0/*

@@ -1210,8 +1210,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
-	valid, valMsg := validateDestinationSettings(ds, t.EndpointRoutingDisabled, backendRef.Kind)
-	if !valid {
+	if err := validateDestinationSettings(ds, t.EndpointRoutingDisabled, backendRef.Kind); err != nil {
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
@@ -1219,27 +1218,27 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1a2.RouteReasonResolvedRefs,
-			valMsg)
+			err.Error())
 	}
 
 	ds.Weight = &weight
 	return ds
 }
 
-func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) (bool, string) {
+func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) error {
 	// TODO: support mixed endpointslice address type for the same backendRef
 	switch KindDerefOr(kind, KindService) {
 	case v1alpha1.KindBackend:
 		if destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
-			return false, "Mixed FQDN and IPv4 or Unix address type for the same backendRef is not supported"
+			return fmt.Errorf("mixed FQDN and IP or Unix address type for the same backendRef is not supported")
 		}
 	case KindService, KindServiceImport:
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
-			return false, "Mixed endpointslice address type for the same backendRef is not supported"
+			return fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported")
 		}
 	}
 
-	return true, ""
+	return nil
 }
 
 func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string,
@@ -1538,13 +1537,13 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	for _, bep := range backend.Spec.Endpoints {
 		var irde *ir.DestinationEndpoint
 		switch {
-		case bep.IPv4 != nil:
-			ip := net.ParseIP(bep.IPv4.Address)
+		case bep.IP != nil:
+			ip := net.ParseIP(bep.IP.Address)
 			if ip != nil {
 				addrTypeMap[ir.IP]++
 				irde = &ir.DestinationEndpoint{
-					Host: bep.IPv4.Address,
-					Port: uint32(bep.IPv4.Port),
+					Host: bep.IP.Address,
+					Port: uint32(bep.IP.Port),
 				}
 			}
 		case bep.FQDN != nil:
@@ -1577,6 +1576,7 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	for _, ap := range backend.Spec.AppProtocols {
 		if ap == v1alpha1.AppProtocolTypeH2C {
 			dstProtocol = ir.HTTP2
+			break
 		}
 	}
 

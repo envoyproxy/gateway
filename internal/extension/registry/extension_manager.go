@@ -124,8 +124,8 @@ func getExtensionServerAddress(service *v1alpha1.ExtensionService) string {
 	switch {
 	case service.FQDN != nil:
 		serverAddr = fmt.Sprintf("%s:%d", service.FQDN.Hostname, service.FQDN.Port)
-	case service.IPv4 != nil:
-		serverAddr = fmt.Sprintf("%s:%d", service.IPv4.Address, service.IPv4.Port)
+	case service.IP != nil:
+		serverAddr = fmt.Sprintf("%s:%d", service.IP.Address, service.IP.Port)
 	case service.Unix != nil:
 		serverAddr = fmt.Sprintf("unix://%s", service.Unix.Path)
 	case service.Host != "":

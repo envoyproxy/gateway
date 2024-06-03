@@ -314,31 +314,21 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 		return false
 	}
 
-	var unsupportedRef bool
-
 	for _, bep := range backend.Spec.Endpoints {
-		switch {
-		case bep.Unix != nil:
-			unsupportedRef = true
-		case bep.FQDN != nil && bep.FQDN.Hostname == "localhost":
-			unsupportedRef = true
-		case bep.IPv4 != nil && bep.IPv4.Address == "127.0.0.1":
-			unsupportedRef = true
+		if bep.Unix != nil {
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				route.GetGeneration(),
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"UnsupportedRefAddressFound",
+				fmt.Sprintf("Unix domain socket found in Backend %s/%s is not supported for xRoute backendRefs", backendNamespace,
+					string(backendRef.Name)),
+			)
+			return false
 		}
 	}
 
-	if unsupportedRef {
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"UnsupportedRefAddressFound",
-			fmt.Sprintf("Unix domain socket, localhost or 127.0.0.1 found in Backend %s/%s are not supported for xRoute backendRefs", backendNamespace,
-				string(backendRef.Name)),
-		)
-		return false
-	}
 	return true
 }
 

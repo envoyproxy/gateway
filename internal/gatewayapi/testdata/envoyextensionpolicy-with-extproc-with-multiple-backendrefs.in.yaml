@@ -218,7 +218,7 @@ backends:
     namespace: default
   spec:
     endpoints:
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -228,6 +228,6 @@ backends:
     namespace: envoy-gateway
   spec:
     endpoints:
-    - ipv4:
+    - ip:
         address: 2.2.2.2
         port: 3443

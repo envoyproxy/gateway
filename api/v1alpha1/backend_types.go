@@ -47,21 +47,21 @@ type Backend struct {
 	Status BackendStatus `json:"status,omitempty"`
 }
 
-// BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket
+// BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IP address or unix domain socket
 // corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.fqdn) || has(self.ipv4) || has(self.unix))",message="one of fqdn, ipv4 or unix must be specified"
-// +kubebuilder:validation:XValidation:rule="((has(self.fqdn) && !(has(self.ipv4) || has(self.unix))) || (has(self.ipv4) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix) && !(has(self.ipv4) || has(self.fqdn))))",message="only one of fqdn, ipv4 or unix can be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.fqdn) || has(self.ip) || has(self.unix))",message="one of fqdn, ip or unix must be specified"
+// +kubebuilder:validation:XValidation:rule="((has(self.fqdn) && !(has(self.ip) || has(self.unix))) || (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix) && !(has(self.ip) || has(self.fqdn))))",message="only one of fqdn, ip or unix can be specified"
 type BackendEndpoint struct {
 	// FQDN defines a FQDN endpoint
 	//
 	// +optional
 	FQDN *FQDNEndpoint `json:"fqdn,omitempty"`
 
-	// IPv4 defines an IPv4 endpoint
+	// IP defines an IP endpoint. Currently, only IPv4 Addresses are supported.
 	//
 	// +optional
-	IPv4 *IPv4Endpoint `json:"ipv4,omitempty"`
+	IP *IPEndpoint `json:"ip,omitempty"`
 
 	// Unix defines the unix domain socket endpoint
 	//
@@ -69,10 +69,10 @@ type BackendEndpoint struct {
 	Unix *UnixSocket `json:"unix,omitempty"`
 }
 
-// IPv4Endpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+// IPEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
-type IPv4Endpoint struct {
-	// Address defines the IPv4 address of the backend endpoint.
+type IPEndpoint struct {
+	// Address defines the IP address of the backend endpoint.
 	//
 	// +kubebuilder:validation:MinLength=7
 	// +kubebuilder:validation:MaxLength=15
@@ -93,7 +93,7 @@ type FQDNEndpoint struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$`
 	Hostname string `json:"hostname"`
 
 	// Port defines the port of the backend endpoint.

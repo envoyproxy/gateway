@@ -7,13 +7,14 @@ backends:
     namespace: default
   spec:
     endpoints:
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
   status:
     conditions:
     - lastTransitionTime: null
-      message: The Backend was not accepted
+      message: The Backend was not accepted since Backend is not enabled in Envoy
+        Gateway Config
       reason: Accepted
       status: "False"
       type: Accepted

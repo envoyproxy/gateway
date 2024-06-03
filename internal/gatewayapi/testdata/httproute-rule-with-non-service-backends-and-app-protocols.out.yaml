@@ -9,7 +9,7 @@ backends:
     appProtocols:
     - gateway.envoyproxy.io/h2c
     endpoints:
-    - ipv4:
+    - ip:
         address: 10.244.0.28
         port: 3000
   status:

@@ -22,13 +22,13 @@ import (
 )
 
 // UpdateBackendStatusAcceptedCondition updates the status condition for the provided Backend based on the accepted state.
-func UpdateBackendStatusAcceptedCondition(be *egv1a1.Backend, accepted bool) *egv1a1.Backend {
-	be.Status.Conditions = MergeConditions(be.Status.Conditions, computeBackendAcceptedCondition(be, accepted))
+func UpdateBackendStatusAcceptedCondition(be *egv1a1.Backend, accepted bool, msg string) *egv1a1.Backend {
+	be.Status.Conditions = MergeConditions(be.Status.Conditions, computeBackendAcceptedCondition(be, accepted, msg))
 	return be
 }
 
 // computeBackendAcceptedCondition computes the Backend Accepted status condition.
-func computeBackendAcceptedCondition(be *egv1a1.Backend, accepted bool) metav1.Condition {
+func computeBackendAcceptedCondition(be *egv1a1.Backend, accepted bool, msg string) metav1.Condition {
 	switch accepted {
 	case true:
 		return newCondition(string(egv1a1.BackendReasonInvalid), metav1.ConditionTrue,
@@ -37,6 +37,6 @@ func computeBackendAcceptedCondition(be *egv1a1.Backend, accepted bool) metav1.C
 	default:
 		return newCondition(string(egv1a1.BackendReasonAccepted), metav1.ConditionFalse,
 			string(egv1a1.BackendConditionAccepted),
-			"The Backend was not accepted", time.Now(), be.Generation)
+			msg, time.Now(), be.Generation)
 	}
 }

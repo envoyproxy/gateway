@@ -9,7 +9,7 @@ backends:
     endpoints:
     - unix:
         path: /var/run/backend.sock
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
   status:
@@ -29,7 +29,7 @@ backends:
     endpoints:
     - unix:
         path: /var/run/backend.sock
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
   status:
@@ -50,7 +50,7 @@ backends:
     - fqdn:
         hostname: primary.foo.com
         port: 3000
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
   status:
@@ -71,7 +71,7 @@ backends:
     - fqdn:
         hostname: primary.foo.com
         port: 3000
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
   status:
@@ -151,8 +151,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket, localhost or 127.0.0.1 found in Backend default/backend-ip-uds-mixed
-          are not supported for xRoute backendRefs
+        message: Unix domain socket found in Backend default/backend-ip-uds-mixed
+          is not supported for xRoute backendRefs
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
@@ -189,8 +189,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Mixed FQDN and IPv4 or Unix address type for the same backendRef
-          is not supported
+        message: mixed FQDN and IP or Unix address type for the same backendRef is
+          not supported
         reason: ResolvedRefs
         status: "False"
         type: ResolvedRefs
@@ -227,8 +227,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Mixed FQDN and IPv4 or Unix address type for the same backendRef
-          is not supported
+        message: mixed FQDN and IP or Unix address type for the same backendRef is
+          not supported
         reason: ResolvedRefs
         status: "False"
         type: ResolvedRefs

@@ -69,7 +69,7 @@ backends:
     namespace: default
   spec:
     endpoints:
-    - ipv4:
+    - ip:
         address: 2.2.2.2
         port: 3443
   status:

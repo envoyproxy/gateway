@@ -50,7 +50,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		t.Run("of type IPv4", func(t *testing.T) {
+		t.Run("of type IP", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "httproute-to-backend-ip", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}

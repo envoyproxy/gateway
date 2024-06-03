@@ -42,7 +42,7 @@ backends:
     namespace: default
   spec:
     endpoints:
-    - ipv4:
+    - ip:
         address: 1.1.1.1
         port: 3001
   status:
@@ -168,8 +168,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket, localhost or 127.0.0.1 found in Backend default/backend-uds
-          are not supported for xRoute backendRefs
+        message: Unix domain socket found in Backend default/backend-uds is not supported
+          for xRoute backendRefs
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
@@ -249,8 +249,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket, localhost or 127.0.0.1 found in Backend default/backend-uds
-          are not supported for xRoute backendRefs
+        message: Unix domain socket found in Backend default/backend-uds is not supported
+          for xRoute backendRefs
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
