@@ -362,7 +362,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 		// TODO zhaohuabing should we also process the quicXDSListener?
 		if len(httpListener.ExtensionRefs) > 0 {
-			extServerPolicies[httpListener.Name] = append(extServerPolicies[httpListener.Name], httpListener.ExtensionRefs...)
+			extServerPolicies[tcpXDSListener.Name] = append(extServerPolicies[tcpXDSListener.Name], httpListener.ExtensionRefs...)
 		}
 	}
 
@@ -611,7 +611,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 		}
 		if len(tcpListener.ExtensionRefs) > 0 {
-			extServerPolicies[tcpListener.Name] = append(extServerPolicies[tcpListener.Name], tcpListener.ExtensionRefs...)
+			extServerPolicies[xdsListener.Name] = append(extServerPolicies[xdsListener.Name], tcpListener.ExtensionRefs...)
 		}
 	}
 	return errs
@@ -659,10 +659,9 @@ func processUDPListenerXdsTranslation(
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
-		}
-
-		if len(udpListener.ExtensionRefs) > 0 {
-			extServerPolicies[udpListener.Name] = append(extServerPolicies[udpListener.Name], udpListener.ExtensionRefs...)
+			if len(udpListener.ExtensionRefs) > 0 {
+				extServerPolicies[xdsListener.Name] = append(extServerPolicies[xdsListener.Name], udpListener.ExtensionRefs...)
+			}
 		}
 	}
 	return errs
