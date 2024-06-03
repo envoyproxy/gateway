@@ -1,3 +1,4 @@
+{{- if ne (toString .Values.certgen) "nil" }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -48,3 +49,4 @@ spec:
   {{- if not ( kindIs "invalid" .Values.certgen.job.ttlSecondsAfterFinished) }}
   ttlSecondsAfterFinished: {{ .Values.certgen.job.ttlSecondsAfterFinished }}
   {{- end }}
+{{- end }}

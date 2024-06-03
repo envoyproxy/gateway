@@ -118,6 +118,8 @@ You can use the below command to install the envoy gateway using values.yaml fil
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
+> _NOTE: If you want to use custom certificates instead of the default generated certificates, you can also set `certgen: nil` to turn off the certificate generation Job._
+
 ## Open Ports
 
 These are the ports used by Envoy Gateway and the managed Envoy Proxy.

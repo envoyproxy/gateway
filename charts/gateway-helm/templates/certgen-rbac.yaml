@@ -1,3 +1,4 @@
+{{- if ne (toString .Values.certgen) "nil" }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -62,3 +63,4 @@ subjects:
 - kind: ServiceAccount
   name: '{{ include "eg.fullname" . }}-certgen'
   namespace: '{{ .Release.Namespace }}'
+{{- end }}
