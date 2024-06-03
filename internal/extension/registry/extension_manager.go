@@ -80,7 +80,7 @@ func NewInMemoryManager(cfg v1alpha1.ExtensionManager, server extension.EnvoyGat
 		return nil, nil, fmt.Errorf("in-memory manager must be passed a server")
 	}
 
-	buffer := 101024 * 1024
+	buffer := 10 * 1024 * 1024
 	lis := bufconn.Listen(buffer)
 
 	baseServer := grpc.NewServer()

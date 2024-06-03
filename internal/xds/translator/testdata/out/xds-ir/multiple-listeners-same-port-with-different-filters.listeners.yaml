@@ -132,7 +132,6 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
-              forwardBearerToken: true
               redirectPathMatcher:
                 path:
                   exact: /foo/oauth2/callback
@@ -144,6 +143,7 @@
                 cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
+              useRefreshToken: false
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

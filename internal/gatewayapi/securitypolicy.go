@@ -32,9 +32,11 @@ import (
 )
 
 const (
-	defaultRedirectURL  = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
-	defaultRedirectPath = "/oauth2/callback"
-	defaultLogoutPath   = "/logout"
+	defaultRedirectURL        = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+	defaultRedirectPath       = "/oauth2/callback"
+	defaultLogoutPath         = "/logout"
+	defaultForwardAccessToken = false
+	defaultRefreshToken       = false
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -587,9 +589,11 @@ func (t *Translator) buildOIDC(
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
 
 	var (
-		redirectURL  = defaultRedirectURL
-		redirectPath = defaultRedirectPath
-		logoutPath   = defaultLogoutPath
+		redirectURL        = defaultRedirectURL
+		redirectPath       = defaultRedirectPath
+		logoutPath         = defaultLogoutPath
+		forwardAccessToken = defaultForwardAccessToken
+		refreshToken       = defaultRefreshToken
 	)
 
 	if oidc.RedirectURL != nil {
@@ -602,6 +606,12 @@ func (t *Translator) buildOIDC(
 	}
 	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
+	}
+	if oidc.ForwardAccessToken != nil {
+		forwardAccessToken = *oidc.ForwardAccessToken
+	}
+	if oidc.RefreshToken != nil {
+		refreshToken = *oidc.RefreshToken
 	}
 
 	// Generate a unique cookie suffix for oauth filters.
@@ -624,18 +634,22 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
-		Name:                irConfigName(policy),
-		Provider:            *provider,
-		ClientID:            oidc.ClientID,
-		ClientSecret:        clientSecretBytes,
-		Scopes:              scopes,
-		Resources:           oidc.Resources,
-		RedirectURL:         redirectURL,
-		RedirectPath:        redirectPath,
-		LogoutPath:          logoutPath,
-		CookieSuffix:        suffix,
-		CookieNameOverrides: policy.Spec.OIDC.CookieNames,
-		HMACSecret:          hmacData,
+		Name:                   irConfigName(policy),
+		Provider:               *provider,
+		ClientID:               oidc.ClientID,
+		ClientSecret:           clientSecretBytes,
+		Scopes:                 scopes,
+		Resources:              oidc.Resources,
+		RedirectURL:            redirectURL,
+		RedirectPath:           redirectPath,
+		LogoutPath:             logoutPath,
+		ForwardAccessToken:     forwardAccessToken,
+		DefaultTokenTTL:        oidc.DefaultTokenTTL,
+		RefreshToken:           refreshToken,
+		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
+		CookieSuffix:           suffix,
+		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
+		HMACSecret:             hmacData,
 	}, nil
 }
 

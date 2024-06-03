@@ -114,7 +114,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest 
 ```
 
 {{% alert title="Helm Chart Values" color="primary" %}}
-如果您想了解 values.yaml 文件中的所有可用字段，请参阅 [Helm Chart Values](./api)。
+如果您想了解 values.yaml 文件中的所有可用字段，请参阅 [Helm Chart Values](./gateway-helm-api)。
 {{% /alert %}}
 
 ## 开放端口 {#open-ports}
