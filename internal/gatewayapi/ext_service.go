@@ -26,6 +26,7 @@ func (t *Translator) processExtServiceDestination(
 	policyKind string,
 	protocol ir.AppProtocol,
 	resources *Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.DestinationSetting, error) {
 	var (
 		backendTLS *ir.TLSUpstreamConfig
@@ -51,7 +52,7 @@ func (t *Translator) processExtServiceDestination(
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.IsEnvoyServiceRouting(resources) && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
+	if !t.IsEnvoyServiceRouting(envoyProxy) && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
 		return nil, errors.New(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
@@ -69,7 +70,9 @@ func (t *Translator) processExtServiceDestination(
 			Namespace: ptr.To(gwapiv1.Namespace(policyNamespacedName.Namespace)),
 			Name:      gwapiv1.ObjectName(policyNamespacedName.Name),
 		},
-		resources)
+		resources,
+		envoyProxy,
+	)
 
 	ds.TLS = backendTLS
 

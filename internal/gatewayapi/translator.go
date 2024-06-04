@@ -167,6 +167,9 @@ func newTranslateResult(gateways []*GatewayContext,
 func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
+	for _, gtw := range gateways {
+		t.attachEnvoyProxy(gtw, resources)
+	}
 
 	// Sort gateways based on timestamp.
 	sort.Slice(gateways, func(i, j int) bool {
@@ -244,10 +247,10 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 	// Set custom filter order if EnvoyProxy is set
 	// The custom filter order will be applied when generating the HTTP filter chain.
-	if resources.ClassEnvoyProxy != nil {
-		for _, gateway := range gateways {
+	for _, gateway := range gateways {
+		if gateway.envoyProxy != nil {
 			irKey := t.getIRKey(gateway.Gateway)
-			xdsIR[irKey].FilterOrder = resources.ClassEnvoyProxy.Spec.FilterOrder
+			xdsIR[irKey].FilterOrder = gateway.envoyProxy.Spec.FilterOrder
 		}
 	}
 
@@ -278,6 +281,29 @@ func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*Gateway
 	}
 
 	return relevant
+}
+
+func (t *Translator) attachEnvoyProxy(gateway *GatewayContext, resources *Resources) {
+	if gateway.Spec.Infrastructure != nil && gateway.Spec.Infrastructure.ParametersRef != nil {
+		if t.MergeGateways {
+			gateway.envoyProxy = resources.ClassEnvoyProxy
+			return
+		}
+
+		ref := gateway.Spec.Infrastructure.ParametersRef
+		for _, ep := range resources.EnvoyProxies {
+			if string(ref.Group) == egv1a1.GroupVersion.Group &&
+				ref.Kind == gwapiv1.Kind(ep.Kind) &&
+				gateway.Namespace == ep.Namespace &&
+				ref.Name == ep.Name {
+				gateway.envoyProxy = ep
+				return
+			}
+		}
+		// not found, fallthrough to use envoyProxy attached to gatewayclass
+	}
+
+	gateway.envoyProxy = resources.ClassEnvoyProxy
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
@@ -317,14 +343,14 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
 // or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
 // otherwise, it returns false.
-func (t *Translator) IsEnvoyServiceRouting(r *Resources) bool {
+func (t *Translator) IsEnvoyServiceRouting(r *egv1a1.EnvoyProxy) bool {
 	if t.EndpointRoutingDisabled {
 		return true
 	}
-	if r.ClassEnvoyProxy == nil {
+	if r == nil {
 		return false
 	}
-	switch ptr.Deref(r.ClassEnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
+	switch ptr.Deref(r.Spec.RoutingType, egv1a1.EndpointRoutingType) {
 	case egv1a1.ServiceRoutingType:
 		return true
 	case egv1a1.EndpointRoutingType:

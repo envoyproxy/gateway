@@ -39,9 +39,11 @@ func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName)
 	return target.SectionName != nil
 }
 
-func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
+func (t *Translator) ProcessClientTrafficPolicies(
+	resources *Resources,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap,
+	xdsIR XdsIRMap,
+	infraIR InfraIRMap,
 ) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 

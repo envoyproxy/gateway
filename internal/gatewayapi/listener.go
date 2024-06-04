@@ -43,8 +43,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	for _, gateway := range gateways {
 		irKey := t.getIRKey(gateway.Gateway)
 
-		if resources.ClassEnvoyProxy != nil {
-			infraIR[irKey].Proxy.Config = resources.ClassEnvoyProxy
+		if gateway.envoyProxy != nil {
+			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
 
@@ -98,7 +98,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
 			// TODO
-			containerPort := servicePortToContainerPort(int32(listener.Port), resources.ClassEnvoyProxy)
+			containerPort := servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{

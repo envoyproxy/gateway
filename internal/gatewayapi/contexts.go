@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"reflect"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -21,7 +22,8 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners []*ListenerContext
+	listeners  []*ListenerContext
+	envoyProxy *egv1a1.EnvoyProxy
 }
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
@@ -209,18 +211,8 @@ func GetHostnames(route RouteContext) []string {
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	rv := reflect.ValueOf(route).Elem()
-	kind := rv.FieldByName("Kind").String()
 	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
-	if kind == KindHTTPRoute || kind == KindGRPCRoute {
-		return pr.Interface().([]gwapiv1.ParentReference)
-	}
-
-	parentReferences := make([]gwapiv1.ParentReference, pr.Len())
-	for i := 0; i < len(parentReferences); i++ {
-		p := pr.Index(i).Interface().(gwapiv1.ParentReference)
-		parentReferences[i] = UpgradeParentReference(p)
-	}
-	return parentReferences
+	return pr.Interface().([]gwapiv1.ParentReference)
 }
 
 // GetRouteStatus returns the RouteStatus object associated with the Route.
@@ -254,17 +246,8 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	for i := 0; i < specParentRefs.Len(); i++ {
 		p := specParentRefs.Index(i).Interface().(gwapiv1.ParentReference)
-		up := p
-		if !isHTTPRoute {
-			up = UpgradeParentReference(p)
-		}
-		if reflect.DeepEqual(up, forParentRef) {
-			if isHTTPRoute {
-				parentRef = &p
-			} else {
-				upgraded := UpgradeParentReference(p)
-				parentRef = &upgraded
-			}
+		if reflect.DeepEqual(p, forParentRef) {
+			parentRef = &p
 			break
 		}
 	}
@@ -330,6 +313,7 @@ type RouteParentContext struct {
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
+	gateway              *GatewayContext
 }
 
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {

@@ -311,10 +311,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 		err, errs error
 	)
 
-	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
-		err = perr.WithMessage(err, "ExtProcs")
-		errs = errors.Join(errs, err)
-	}
 	if wasms, err = t.buildWasms(policy); err != nil {
 		err = perr.WithMessage(err, "WASMs")
 		errs = errors.Join(errs, err)
@@ -327,13 +323,25 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
-	for _, x := range xdsIR {
-		for _, http := range x.HTTP {
-			for _, r := range http.Routes {
-				// Apply if there is a match
-				if strings.HasPrefix(r.Name, prefix) {
-					r.ExtProcs = extProcs
-					r.Wasms = wasms
+	parentRefs := GetParentReferences(route)
+	for _, p := range parentRefs {
+		parentRefCtx := GetRouteParentContext(route, p)
+		if parentRefCtx != nil && parentRefCtx.gateway != nil {
+			if extProcs, err = t.buildExtProcs(policy, resources, parentRefCtx.gateway.envoyProxy); err != nil {
+				err = perr.WithMessage(err, "ExtProcs")
+				errs = errors.Join(errs, err)
+				extProcs = nil
+			}
+			for _, listener := range parentRefCtx.listeners {
+				irKey := t.getIRKey(listener.gateway)
+				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+				if irListener != nil {
+					for _, r := range irListener.Routes {
+						if strings.HasPrefix(r.Name, prefix) {
+							r.ExtProcs = extProcs
+							r.Wasms = wasms
+						}
+					}
 				}
 			}
 		}
@@ -355,7 +363,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		err, errs error
 	)
 
-	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
+	if extProcs, err = t.buildExtProcs(policy, resources, gateway.envoyProxy); err != nil {
 		err = perr.WithMessage(err, "ExtProcs")
 		errs = errors.Join(errs, err)
 	}
@@ -402,7 +410,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	return nil
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources) ([]ir.ExtProc, error) {
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error) {
 	var extProcIRList []ir.ExtProc
 
 	if policy == nil {
@@ -411,7 +419,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForEEP(policy, idx)
-		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources)
+		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -426,6 +434,7 @@ func (t *Translator) buildExtProc(
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
 	resources *Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.ExtProc, error) {
 	var (
 		ds        *ir.DestinationSetting
@@ -448,7 +457,9 @@ func (t *Translator) buildExtProc(
 			policyNamespacedName,
 			egv1a1.KindEnvoyExtensionPolicy,
 			ir.GRPC,
-			resources)
+			resources,
+			envoyProxy,
+		)
 		if err != nil {
 			return nil, err
 		}

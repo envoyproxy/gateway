@@ -190,7 +190,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for _, backendRef := range rule.BackendRefs {
 			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, httpRoute, resources)
-			if !t.IsEnvoyServiceRouting(resources) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
+			if !t.IsEnvoyServiceRouting(resources.ClassEnvoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
 			if ds == nil {
@@ -214,7 +214,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		// TODO: support mixed endpointslice address type between backendRefs
-		if !t.IsEnvoyServiceRouting(resources) && len(dstAddrTypeMap) > 1 {
+		if !t.IsEnvoyServiceRouting(resources.ClassEnvoyProxy) && len(dstAddrTypeMap) > 1 {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -1159,7 +1159,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			}
 		}
 
-		if !t.IsEnvoyServiceRouting(resources) {
+		if !t.IsEnvoyServiceRouting(resources.ClassEnvoyProxy) {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
@@ -1180,6 +1180,13 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 	case KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference)
+
+		var envoyProxy *egv1a1.EnvoyProxy
+		if gatewayCtx != nil && gatewayCtx.gateway != nil {
+			envoyProxy = gatewayCtx.gateway.envoyProxy
+		}
+
 		ds.TLS = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1191,10 +1198,19 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				SectionName: parentRef.SectionName,
 				Port:        parentRef.Port,
 			},
-			resources)
+			resources,
+			envoyProxy,
+		)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
+		gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference)
+
+		var envoyProxy *egv1a1.EnvoyProxy
+		if gatewayCtx != nil && gatewayCtx.gateway != nil {
+			envoyProxy = gatewayCtx.gateway.envoyProxy
+		}
+
 		ds.TLS = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1206,11 +1222,13 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				SectionName: parentRef.SectionName,
 				Port:        parentRef.Port,
 			},
-			resources)
+			resources,
+			envoyProxy,
+		)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
-	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(resources), backendRef.Kind); err != nil {
+	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(resources.ClassEnvoyProxy), backendRef.Kind); err != nil {
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
@@ -1265,7 +1283,7 @@ func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	// Route to endpoints by default
-	if !t.IsEnvoyServiceRouting(resources) {
+	if !t.IsEnvoyServiceRouting(resources.ClassEnvoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
@@ -1358,7 +1376,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 	var relevantRoute bool
 
 	for _, parentRef := range GetParentReferences(routeContext) {
-		isRelevantParentRef, selectedListeners := GetReferencedListeners(parentRef, gateways)
+		isRelevantParentRef, gw, selectedListeners := GetReferencedListeners(parentRef, gateways)
 
 		// Parent ref is not to a Gateway that we control: skip it
 		if !isRelevantParentRef {
@@ -1429,6 +1447,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		}
 
 		parentRefCtx.SetListeners(allowedListeners...)
+		parentRefCtx.gateway = gw
 
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
