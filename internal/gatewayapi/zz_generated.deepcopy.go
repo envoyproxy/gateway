@@ -177,6 +177,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 		*out = new(apiv1alpha1.EnvoyProxy)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnvoyProxies != nil {
+		in, out := &in.EnvoyProxies, &out.EnvoyProxies
+		*out = make([]*apiv1alpha1.EnvoyProxy, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(apiv1alpha1.EnvoyProxy)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.ExtensionRefFilters != nil {
 		in, out := &in.ExtensionRefFilters, &out.ExtensionRefFilters
 		*out = make([]unstructured.Unstructured, len(*in))
