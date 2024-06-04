@@ -14,6 +14,7 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -181,6 +182,6 @@ type xdsHookClientMock struct {
 	types.XDSHookClient
 }
 
-func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener) (*listenerv3.Listener, error) {
+func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured) (*listenerv3.Listener, error) {
 	return nil, fmt.Errorf("assuming a network error during the call")
 }

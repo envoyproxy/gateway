@@ -1,0 +1,37 @@
+http:
+- address: 0.0.0.0
+  extensionRefs:
+  - object:
+      apiVersion: bar.example.io/v1alpha1
+      kind: ExtensionPolicy
+      metadata:
+        name: test1
+        namespace: envoy-gateway
+      spec:
+        data: from-the-policy
+        targetRef:
+          group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+      status:
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+          conditions:
+          - lastTransitionTime: null
+            message: Policy has been accepted.
+            reason: Accepted
+            status: "True"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  hostnames:
+  - '*'
+  isHTTP2: false
+  name: policyextension-listener
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10081

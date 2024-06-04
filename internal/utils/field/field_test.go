@@ -11,6 +11,102 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSetMapValues(t *testing.T) {
+	testcases := []struct {
+		name       string
+		fieldName  string
+		fieldValue any
+		input      map[string]any
+		expected   map[string]any
+	}{
+		{
+			name:       "toplevel",
+			fieldName:  "needle",
+			fieldValue: "knitting",
+			input: map[string]any{
+				"needle": "embroiding",
+			},
+			expected: map[string]any{
+				"needle": "knitting",
+			},
+		},
+		{
+			name:       "innermap",
+			fieldName:  "needle",
+			fieldValue: "knitting",
+			input: map[string]any{
+				"someContainer": map[string]any{
+					"needle": "embroiding",
+				},
+			},
+			expected: map[string]any{
+				"someContainer": map[string]any{
+					"needle": "knitting",
+				},
+			},
+		},
+		{
+			name:       "innerlist",
+			fieldName:  "needle",
+			fieldValue: "knitting",
+			input: map[string]any{
+				"list": []any{
+					map[string]any{
+						"needle": "embroiding",
+					},
+				},
+			},
+			expected: map[string]any{
+				"list": []any{
+					map[string]any{
+						"needle": "knitting",
+					},
+				},
+			},
+		},
+		{
+			name:       "everything",
+			fieldName:  "needle",
+			fieldValue: "knitting",
+			input: map[string]any{
+				"list": []any{
+					map[string]any{
+						"needle": "embroiding",
+					},
+				},
+				"needle": "badstring",
+				"someContainer": map[string]any{
+					"needle": "embroiding",
+					"container": map[string]any{
+						"needle": "crochet",
+					},
+				},
+			},
+			expected: map[string]any{
+				"list": []any{
+					map[string]any{
+						"needle": "knitting",
+					},
+				},
+				"needle": "knitting",
+				"someContainer": map[string]any{
+					"needle": "knitting",
+					"container": map[string]any{
+						"needle": "knitting",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			SetMapValues(tc.input, tc.fieldName, tc.fieldValue)
+			require.Equal(t, tc.expected, tc.input)
+		})
+	}
+}
+
 func TestSetValue(t *testing.T) {
 	testcases := []struct {
 		name        string

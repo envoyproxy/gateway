@@ -292,7 +292,7 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 		}
 	}
 
-	result := t.Translate(resources)
+	result, _ := t.Translate(resources)
 
 	return result, nil
 }
@@ -310,7 +310,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 	}
-	gRes := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxy != nil {
@@ -342,7 +342,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 	}
-	gRes := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(resources)
 
 	keys := []string{}
 	for key := range gRes.XdsIR {

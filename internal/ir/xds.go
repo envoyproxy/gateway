@@ -234,6 +234,8 @@ type HTTPListener struct {
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -692,6 +694,20 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// ForwardAccessToken indicates whether the Envoy should forward the access token
+	// via the Authorization header Bearer scheme to the upstream.
+	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
+
+	// DefaultTokenTTL is the default lifetime of the id token and access token.
+	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
+
+	// RefreshToken indicates whether the Envoy should automatically refresh the
+	// id token and access token when they expire.
+	RefreshToken bool `json:"refreshToken,omitempty"`
+
+	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
+	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.

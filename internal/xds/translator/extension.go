@@ -92,7 +92,7 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	return nil
 }
 
-func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, em *extensionTypes.Manager) error {
+func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -102,7 +102,11 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	extManager := *em
 	extListenerHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSHTTPListener)
 	if extListenerHookClient != nil {
-		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener)
+		unstructuredResources := make([]*unstructured.Unstructured, len(extensionRefs))
+		for refIdx, ref := range extensionRefs {
+			unstructuredResources[refIdx] = ref.Object
+		}
+		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
 		if err != nil {
 			return err
 		} else if modifiedListener != nil {

@@ -126,15 +126,43 @@ func (t *testingExtensionServer) PostVirtualHostModify(_ context.Context, req *p
 func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *pb.PostHTTPListenerModifyRequest) (*pb.PostHTTPListenerModifyResponse, error) {
 	// Only make the change when the listener's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
-	if req.Listener.Name == "extension-post-xdslistener-hook-error" {
+	switch req.Listener.Name {
+	case "extension-post-xdslistener-hook-error":
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: req.Listener,
 		}, fmt.Errorf("extension post xds listener hook error")
-	} else if req.Listener.Name == "extension-listener" {
+	case "extension-listener":
 		// Setup a new Listener to avoid operating directly on the passed in pointer for better test coverage that the
 		// Listener we are returning gets used properly
 		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
 		modifiedListener.StatPrefix = "mock-extension-inserted-prefix"
+		return &pb.PostHTTPListenerModifyResponse{
+			Listener: modifiedListener,
+		}, nil
+	case "policyextension-listener":
+		if len(req.PostListenerContext.ExtensionResources) == 0 {
+			return nil, fmt.Errorf("expected a policy in the ext array")
+		}
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(req.PostListenerContext.ExtensionResources[0].UnstructuredBytes); err != nil {
+			return &pb.PostHTTPListenerModifyResponse{
+				Listener: req.Listener,
+			}, err
+		}
+		spec, ok := extensionResource.Object["spec"].(map[string]any)
+		if !ok {
+			return &pb.PostHTTPListenerModifyResponse{
+				Listener: req.Listener,
+			}, fmt.Errorf("can't find the spec section")
+		}
+		data, ok := spec["data"].(string)
+		if !ok {
+			return &pb.PostHTTPListenerModifyResponse{
+				Listener: req.Listener,
+			}, fmt.Errorf("can't find the expected information")
+		}
+		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
+		modifiedListener.StatPrefix = data
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: modifiedListener,
 		}, nil
