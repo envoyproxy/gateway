@@ -511,6 +511,13 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Name: ptr.To("custom-deployment-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -933,6 +940,13 @@ func TestDaemonSet(t *testing.T) {
 			infra:     newTestInfra(),
 			extraArgs: []string{"--key1 val1", "--key2 val2"},
 		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			daemonset: &egv1a1.KubernetesDaemonSetSpec{
+				Name: ptr.To("custom-daemonset-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -1081,6 +1095,13 @@ func TestService(t *testing.T) {
 						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}}"),
 					},
 				},
+			},
+		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Name: ptr.To("custom-service-name"),
 			},
 		},
 	}
