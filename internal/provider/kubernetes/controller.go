@@ -273,7 +273,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
-		// process envoy gateway secret refs
+		// Process envoy gateway secret refs.
 		r.processEnvoyProxySecretRef(ctx, gwcResource)
 
 		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
@@ -291,7 +291,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 		} else {
-			// finalize the accepted GatewayClass.
+			// Finalize the accepted GatewayClass.
 			if err := r.addFinalizer(ctx, managedGC); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
 					managedGC.Name))
@@ -760,6 +760,14 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 }
 
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	// Early return if the managed gatewayclass has merge gateways enabled but marked as deleted,
+	// to prevent gateways be created again and then terminated immediately.
+	if r.mergeGateways.Has(managedGC.Name) && !managedGC.DeletionTimestamp.IsZero() {
+		r.log.Info("skip processing Gateways for GatewayClass with merge gateways enabled but marked as deleted",
+			"name", managedGC.Name)
+		return nil
+	}
+
 	// Find gateways for the managedGC
 	// Find the Gateways that reference this Class.
 	gatewayList := &gwapiv1.GatewayList{}
