@@ -44,6 +44,7 @@ deployment:
       port: 19001
       targetPort: 19001
   replicas: 1
+  topologySpreadConstraints: {}
   pod:
     affinity: {}
     annotations:

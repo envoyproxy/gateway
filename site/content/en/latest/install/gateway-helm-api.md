@@ -54,6 +54,7 @@ The Helm chart for Envoy Gateway
 | deployment.ports[2].port | int | `19001` |  |
 | deployment.ports[2].targetPort | int | `19001` |  |
 | deployment.replicas | int | `1` |  |
+| deployment.topologySpreadConstraints | object | `{}` |  |
 | global.images.envoyGateway.image | string | `nil` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
 | global.images.envoyGateway.pullSecrets | list | `[]` |  |
