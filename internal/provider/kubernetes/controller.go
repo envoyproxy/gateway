@@ -1600,11 +1600,11 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", gtw.Namespace, ref.Name, err)
 	}
 
-	if err := r.processEnvoyProxy(ctx, ep, resourceMap, resourceTree); err != nil {
+	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
 		return err
 	}
 
-	if ep != nil && ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
+	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		certRef := ep.Spec.BackendTLS.ClientCertificateRef
 		if refsSecret(certRef) {
 			if err := r.processSecretRef(
@@ -1640,7 +1640,7 @@ func (r *gatewayAPIReconciler) processGCParamsRef(ctx context.Context, gc *gwapi
 		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
 	}
 
-	if err := r.processEnvoyProxy(ctx, ep, resourceMap, resourceTree); err != nil {
+	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
 		return err
 	}
 	resourceTree.ClassEnvoyProxy = ep
@@ -1648,7 +1648,7 @@ func (r *gatewayAPIReconciler) processGCParamsRef(ctx context.Context, gc *gwapi
 }
 
 // processEnvoyProxy processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processEnvoyProxy(ctx context.Context, ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) error {
 	key := utils.NamespacedName(ep).String()
 	if resourceMap.allAssociatedEnvoyProxies.Has(key) {
 		r.log.Info("current EnvoyProxy has been processed already", "namespace", ep.Namespace, "name", ep.Name)
