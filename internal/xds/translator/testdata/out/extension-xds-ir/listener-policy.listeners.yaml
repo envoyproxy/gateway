@@ -29,6 +29,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: policyextension-listener
   drainType: MODIFY_ONLY
   name: policyextension-listener
   perConnectionBufferLimitBytes: 32768
