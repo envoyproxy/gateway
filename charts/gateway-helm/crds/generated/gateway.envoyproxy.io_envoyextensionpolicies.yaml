@@ -138,10 +138,11 @@ spec:
                       minItems: 1
                       type: array
                       x-kubernetes-validations:
-                      - message: BackendRefs only supports Service kind.
-                        rule: self.all(f, f.kind == 'Service')
-                      - message: BackendRefs only supports Core group.
-                        rule: self.all(f, f.group == '')
+                      - message: BackendRefs only supports Service and Backend kind.
+                        rule: self.all(f, f.kind == 'Service' || f.kind == 'Backend')
+                      - message: BackendRefs only supports Core and gateway.envoyproxy.io
+                          group.
+                        rule: self.all(f, f.group == '' || f.group == 'gateway.envoyproxy.io')
                     failOpen:
                       description: |-
                         FailOpen defines if requests or responses that cannot be processed due to connectivity to the

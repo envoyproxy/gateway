@@ -493,13 +493,13 @@ type ExtensionService struct {
 	BackendEndpoint `json:",inline"`
 
 	// Host define the extension service hostname.
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix)
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix)
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

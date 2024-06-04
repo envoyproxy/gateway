@@ -33,7 +33,7 @@ The `Backend` resource is an implementation-specific Gateway-API [BackendObjectR
 
 ### Example
 Here is an example highlighting how a user can configure a route that forwards traffic to both a K8s Service and a Backend 
-that has both unix domain socket and ipv4 endpoints. A [BackendTLSPolicy][] is attached to the backend resource, enabling TLS.
+that has both unix domain socket and ip endpoints. A [BackendTLSPolicy][] is attached to the backend resource, enabling TLS.
 
 ```yaml
 apiVersion: v1
@@ -58,7 +58,7 @@ spec:
   endpoints:
     - unix:
         path: /var/run/backend.sock   
-    - ipv4:
+    - ip:
         address: 10.244.0.28
         port: 3000
 ---

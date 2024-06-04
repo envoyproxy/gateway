@@ -281,7 +281,7 @@ _Appears in:_
 
 
 
-BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket
+BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IP address or unix domain socket
 corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 
 _Appears in:_
@@ -291,7 +291,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
-| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IPv4 defines an IPv4 endpoint |
+| `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Currently, only IPv4 Addresses are supported. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
 
 
@@ -1533,10 +1533,10 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
-| `ipv4` | _[IPv4Endpoint](#ipv4endpoint)_ |  false  | IPv4 defines an IPv4 endpoint |
+| `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Currently, only IPv4 Addresses are supported. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
-| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix) |
-| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IPv4,Unix) |
+| `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
+| `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
 
 
@@ -1939,11 +1939,11 @@ _Appears in:_
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
-#### IPv4Endpoint
+#### IPEndpoint
 
 
 
-IPv4Endpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
+IPEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 
 _Appears in:_
@@ -1952,7 +1952,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Address defines the IPv4 address of the backend endpoint. |
+| `address` | _string_ |  true  | Address defines the IP address of the backend endpoint. |
 | `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 

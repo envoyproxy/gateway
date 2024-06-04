@@ -1,0 +1,77 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-fqdn
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: '*.foo.com'
+        port: 3000
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: hostname *.foo.com is not a valid FQDN'
+      reason: Accepted
+      status: "False"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-fqdn
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: localhost
+        port: 3000
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: hostname localhost should be a domain
+        with at least two segments separated by dots'
+      reason: Accepted
+      status: "False"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-fqdn
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 127.0.0.3
+        port: 3000
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: IP address 127.0.0.3 in the loopback
+        range is not supported'
+      reason: Accepted
+      status: "False"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-ip
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: example.com
+        port: 3001
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: IP address example.com is invalid'
+      reason: Accepted
+      status: "False"
+      type: Accepted
+infraIR: {}
+xdsIR: {}
