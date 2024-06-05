@@ -1488,6 +1488,10 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 					ep := ir.NewDestEndpoint(
 						address,
 						uint32(*endpointPort.Port))
+
+					// EndpointSlice may set zone for individual endpoint, use it anyway.
+					ep.Zone = endpoint.Zone
+
 					endpoints = append(endpoints, ep)
 				}
 			}

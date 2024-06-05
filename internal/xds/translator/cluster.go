@@ -378,7 +378,8 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 
-		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
+		// Arrange endpoints by zone.
+		endpointsByZone := make(map[string][]*endpointv3.LbEndpoint)
 
 		var metadata *corev3.Metadata
 		if ds.TLS != nil {
@@ -404,18 +405,18 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			}
 			// Set default weight of 1 for all endpoints.
 			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
-			endpoints = append(endpoints, lbEndpoint)
-		}
 
-		// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
-		// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
-		// We use the name of the backendRef as a pseudo region name.
-		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
-				Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
-			},
-			LbEndpoints: endpoints,
-			Priority:    0,
+			// If irEp has unset zone, leave it empty.
+			var zone string
+			if irEp.Zone != nil {
+				zone = *irEp.Zone
+			}
+
+			if _, ok := endpointsByZone[zone]; !ok {
+				endpointsByZone[zone] = make([]*endpointv3.LbEndpoint, 0)
+			}
+
+			endpointsByZone[zone] = append(endpointsByZone[zone], lbEndpoint)
 		}
 
 		// Set locality weight
@@ -425,9 +426,29 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		} else {
 			weight = 1
 		}
-		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
 
-		localities = append(localities, locality)
+		for zone := range endpointsByZone {
+			endpoints := endpointsByZone[zone]
+
+			// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
+			// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
+			// We use the name of the backendRef as a pseudo region name.
+			locality := &endpointv3.LocalityLbEndpoints{
+				Locality: &corev3.Locality{
+					Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
+				},
+				LbEndpoints:         endpoints,
+				Priority:            0,
+				LoadBalancingWeight: &wrapperspb.UInt32Value{Value: weight},
+			}
+
+			// If endpoints belong to a non-empty zone, set it as the zone name.
+			if len(zone) != 0 {
+				locality.Locality.Zone = zone
+			}
+
+			localities = append(localities, locality)
+		}
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }

@@ -1093,6 +1093,8 @@ type DestinationEndpoint struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// Path refers to the Unix Domain Socket
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
+	// Zone refers to the zone of the endpoint, maybe unset.
+	Zone *string `json:"zone,omitempty" yaml:"zone,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
