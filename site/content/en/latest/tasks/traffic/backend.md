@@ -11,13 +11,24 @@ The Backend API was added to support several use cases:
 
 ## Warning
 
-Similar to the K8s Endpoint API, the Backend API can be misused to allow traffic to be sent to otherwise restricted destiantions, as described in [CVE-2021-25740][]. 
+Similar to the K8s Endpoint API, the Backend API can be misused to allow traffic to be sent to otherwise restricted destinations, as described in [CVE-2021-25740][]. 
 A Backend resource can be used to:
-- Expose a Service or Pod that sould not be  
-- Reference a Serivce or Pod by a Route without appropriate Reference Grants
+- Expose a Service or Pod that should not be accessible
+- Reference a Service or Pod by a Route without appropriate Reference Grants
 - Expose the Envoy Proxy localhost (including the Envoy admin endpoint)
 
-For these reasons, the Backend API is disabled by default in Envoy Gateway configuration. Envoy Gateway admins are advised to follow [upstream reccomendations][] and restrict access to the Backend API using K8s RBAC.  
+For these reasons, the Backend API is disabled by default in Envoy Gateway configuration. Envoy Gateway admins are advised to follow [upstream recommendations][] and restrict access to the Backend API using K8s RBAC.  
+
+## Restrictions
+
+The Backend API is currently supported only in the following BackendReferences:
+- HTTPRoute: IP and FQDN endpoints
+- [Envoy Extension Policy] (ExtProc): IP, FQDN and Unix Domain socket endpoints
+
+The Backend API supports attachment the following policies:
+- [Backend TLS Policy][] 
+
+Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the localhost hostname are forbidden. 
 
 ## Quickstart
 
@@ -190,5 +201,8 @@ curl -I -HHost:www.example.com http://${GATEWAY_HOST}/headers
 [BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
 [extension resource]: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/#approach-to-extensibility
 [CVE-2021-25740]: https://nvd.nist.gov/vuln/detail/CVE-2021-25740
-[upstream reccomendations]: https://github.com/kubernetes/kubernetes/issues/103675
+[upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
+[Backend TLS Policy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
