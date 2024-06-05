@@ -22,13 +22,15 @@ For these reasons, the Backend API is disabled by default in Envoy Gateway confi
 ## Restrictions
 
 The Backend API is currently supported only in the following BackendReferences:
-- HTTPRoute: IP and FQDN endpoints
-- [Envoy Extension Policy] (ExtProc): IP, FQDN and Unix Domain socket endpoints
+- [HTTPRoute]: IP and FQDN endpoints
+- [Envoy Extension Policy] (ExtProc): IP, FQDN and unix domain socket endpoints
 
 The Backend API supports attachment the following policies:
 - [Backend TLS Policy][] 
 
-Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the localhost hostname are forbidden. 
+Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the localhost hostname are forbidden.
+
+Envoy Gateway does not manage the lifecycle of unix domain sockets referenced by the Backend resource. Envoy Gateway admins are responsible for creating and mounting the sockets into the envoy proxy pod. The latter can be achieved by patching the envoy deployment using the [EnvoyProxy][] resource.
 
 ## Quickstart
 
@@ -205,4 +207,5 @@ curl -I -HHost:www.example.com http://${GATEWAY_HOST}/headers
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
 [Backend TLS Policy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
