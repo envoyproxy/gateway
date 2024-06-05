@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"k8s.io/utils/ptr"
 	"os"
 	"reflect"
 	"sort"
@@ -276,11 +277,16 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
 
+	endpointRoutingDisabled := true
+	if resources.EnvoyProxy != nil {
+		endpointRoutingDisabled = ptr.Deref(resources.EnvoyProxy.Spec.EndpointRoutingDisabled, true)
+	}
+
 	t := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
+		EndpointRoutingDisabled: endpointRoutingDisabled,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}
@@ -303,12 +309,17 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 		return gatewayapi.Resources{}, fmt.Errorf("the GatewayClass resource is required")
 	}
 
+	endpointRoutingDisabled := true
+	if resources.EnvoyProxy != nil {
+		endpointRoutingDisabled = ptr.Deref(resources.EnvoyProxy.Spec.EndpointRoutingDisabled, true)
+	}
+
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
+		EndpointRoutingDisabled: endpointRoutingDisabled,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}
@@ -336,12 +347,17 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
 
+	endpointRoutingDisabled := true
+	if resources.EnvoyProxy != nil {
+		endpointRoutingDisabled = ptr.Deref(resources.EnvoyProxy.Spec.EndpointRoutingDisabled, true)
+	}
+
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
+		EndpointRoutingDisabled: endpointRoutingDisabled,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}

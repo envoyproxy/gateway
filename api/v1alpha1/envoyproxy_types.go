@@ -68,6 +68,12 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
+	// EndpointRoutingDisabled can be set to true to use
+	// the Service Cluster IP for routing to the backend
+	// instead.
+	// +optional
+	EndpointRoutingDisabled *bool `json:"endpointRoutingDisabled,omitempty"`
+
 	// ExtraArgs defines additional command line options that are provided to Envoy.
 	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
 	// Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here.
