@@ -6,6 +6,18 @@ metadata:
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 ---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: envoy-gateway
+  namespace: '{{ .Release.Namespace }}'
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+    {{- include "eg.selectorLabels" . | nindent 6 }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
