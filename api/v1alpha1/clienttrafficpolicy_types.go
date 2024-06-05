@@ -8,6 +8,7 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -95,6 +96,11 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
+	//
+	// +optional
+	// +notImplementedHide
+	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
@@ -308,6 +314,19 @@ type HTTP2Settings struct {
 	// +kubebuilder:validation:Maximum=2147483647
 	// +optional
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
+}
+
+// HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+type HealthCheckSettings struct {
+	// Headers specifies a set of health check request headers to match on. The health check filter
+	// will check a request’s headers against all the specified headers. To specify the health check
+	// endpoint, set the `:path` header to match on.
+	//
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Headers []gwapiv1.HTTPHeaderMatch `json:"headers,omitempty"`
 }
 
 const (

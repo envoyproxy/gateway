@@ -1939,6 +1939,20 @@ _Appears in:_
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
+#### HealthCheckSettings
+
+
+
+HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `headers` | _HTTPHeaderMatch array_ |  true  | Headers specifies a set of health check request headers to match on. The health check filter<br />will check a request’s headers against all the specified headers. To specify the health check<br />endpoint, set the `:path` header to match on. |
+
+
 #### IPEndpoint
 
 
