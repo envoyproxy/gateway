@@ -122,6 +122,8 @@ referenceGrants:
     to:
     - group: ''
       kind: Service
+    - group: gateway.envoyproxy.io
+      kind: Backend
 configMaps:
 - apiVersion: v1
   kind: ConfigMap
@@ -167,6 +169,22 @@ backendTLSPolicies:
         group: ''
         kind: ConfigMap
       hostname: grpc-backend
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    name: policy-btls-backend-ip
+    namespace: envoy-gateway
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-ip-tls
+    validation:
+      caCertificateRefs:
+      - name: ca-cmap
+        group: ''
+        kind: ConfigMap
+      hostname: ip-backend
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -185,3 +203,31 @@ envoyExtensionPolicies:
         Port: 8000
       - Name: grpc-backend-2
         Port: 9000
+      - Name: backend-ip
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+      - Name: backend-ip-tls
+        Namespace: envoy-gateway
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-ip
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 1.1.1.1
+        port: 3001
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-ip-tls
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - ip:
+        address: 2.2.2.2
+        port: 3443

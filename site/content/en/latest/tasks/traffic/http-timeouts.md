@@ -2,7 +2,9 @@
 title: "HTTP Timeouts"
 ---
 
-The [HTTPRouteTimeouts][] resource allows users to configure request timeouts and response timeouts for an [HTTPRouteRule][]. This task shows how to configure timeouts.
+The default request timeout is set to 15 seconds in Envoy Proxy.
+The [HTTPRouteTimeouts][] resource allows users to configure request timeouts for an [HTTPRouteRule][].
+This task shows you how to configure timeouts.
 
 The [HTTPRouteTimeouts][] supports two kinds of timeouts:
 - **request**: Request specifies the maximum duration for a gateway to respond to an HTTP request. 

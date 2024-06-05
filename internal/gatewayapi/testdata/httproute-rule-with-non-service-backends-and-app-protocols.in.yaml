@@ -1,0 +1,77 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-mixed-ip-uds
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-fqdn
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-mixed-ip-uds
+      namespace: default
+    spec:
+      appProtocols:
+        - gateway.envoyproxy.io/h2c
+      endpoints:
+        - ip:
+            address: 10.244.0.28
+            port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: default
+    spec:
+      appProtocols:
+        - gateway.envoyproxy.io/h2c
+      endpoints:
+        - fqdn:
+            hostname: primary.foo.com
+            port: 3000
