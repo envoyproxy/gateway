@@ -619,7 +619,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Hostname: "foo.example.com",
 									Port:     8080,
 								},
-								IPv4: &v1alpha1.IPv4Endpoint{
+								IP: &v1alpha1.IPEndpoint{
 									Address: "10.9.8.7",
 									Port:    8080,
 								},

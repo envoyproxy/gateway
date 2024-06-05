@@ -44,9 +44,14 @@ func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
 		name                    string
 		EnvoyPatchPolicyEnabled bool
+		BackendEnabled          bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
+			EnvoyPatchPolicyEnabled: false,
+		},
+		{
+			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
 		},
 	}
@@ -63,10 +68,12 @@ func TestTranslate(t *testing.T) {
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
+			backendEnabled := true
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+					backendEnabled = config.BackendEnabled
 				}
 			}
 
@@ -75,6 +82,7 @@ func TestTranslate(t *testing.T) {
 				GatewayClassName:        "envoy-gateway-class",
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
+				BackendEnabled:          backendEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
 			}

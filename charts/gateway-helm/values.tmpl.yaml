@@ -50,6 +50,7 @@ deployment:
       prometheus.io/scrape: 'true'
       prometheus.io/port: '19001'
     labels: {}
+    topologySpreadConstraints: {}
 
 config:
   envoyGateway:

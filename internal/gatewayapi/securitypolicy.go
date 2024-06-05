@@ -824,11 +824,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		return nil, errors.New("one of grpc or http must be specified")
 	}
 
-	if err = t.validateExtServiceBackendReference(
-		backendRef,
-		policy.Namespace,
-		KindSecurityPolicy,
-		resources); err != nil {
+	if err = t.validateExtServiceBackendReference(backendRef, policy.Namespace, policy.Kind, resources); err != nil {
 		return nil, err
 	}
 	authority = fmt.Sprintf("%s.%s:%d",

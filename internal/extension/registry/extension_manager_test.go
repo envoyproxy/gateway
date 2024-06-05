@@ -32,10 +32,10 @@ func TestGetExtensionServerAddress(t *testing.T) {
 			Expected: "extserver.svc.cluster.local:5050",
 		},
 		{
-			Name: "has an IPv4",
+			Name: "has an IP",
 			Service: &v1alpha1.ExtensionService{
 				BackendEndpoint: v1alpha1.BackendEndpoint{
-					IPv4: &v1alpha1.IPv4Endpoint{
+					IP: &v1alpha1.IPEndpoint{
 						Address: "10.10.10.10",
 						Port:    5050,
 					},

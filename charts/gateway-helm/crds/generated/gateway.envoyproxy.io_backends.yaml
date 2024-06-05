@@ -69,7 +69,7 @@ spec:
                   to the backend.
                 items:
                   description: |-
-                    BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IPv4 address or unix domain socket
+                    BackendEndpoint describes a backend endpoint, which can be either a fully-qualified domain name, IP address or unix domain socket
                     corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
                   properties:
                     fqdn:
@@ -80,7 +80,7 @@ spec:
                             endpoint.
                           maxLength: 253
                           minLength: 1
-                          pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$
                           type: string
                         port:
                           description: Port defines the port of the backend endpoint.
@@ -92,11 +92,12 @@ spec:
                       - hostname
                       - port
                       type: object
-                    ipv4:
-                      description: IPv4 defines an IPv4 endpoint
+                    ip:
+                      description: IP defines an IP endpoint. Currently, only IPv4
+                        Addresses are supported.
                       properties:
                         address:
-                          description: Address defines the IPv4 address of the backend
+                          description: Address defines the IP address of the backend
                             endpoint.
                           maxLength: 15
                           minLength: 7
@@ -124,12 +125,12 @@ spec:
                       type: object
                   type: object
                   x-kubernetes-validations:
-                  - message: one of fqdn, ipv4 or unix must be specified
-                    rule: (has(self.fqdn) || has(self.ipv4) || has(self.unix))
-                  - message: only one of fqdn, ipv4 or unix can be specified
-                    rule: ((has(self.fqdn) && !(has(self.ipv4) || has(self.unix)))
-                      || (has(self.ipv4) && !(has(self.fqdn) || has(self.unix))) ||
-                      (has(self.unix) && !(has(self.ipv4) || has(self.fqdn))))
+                  - message: one of fqdn, ip or unix must be specified
+                    rule: (has(self.fqdn) || has(self.ip) || has(self.unix))
+                  - message: only one of fqdn, ip or unix can be specified
+                    rule: ((has(self.fqdn) && !(has(self.ip) || has(self.unix))) ||
+                      (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix)
+                      && !(has(self.ip) || has(self.fqdn))))
                 maxItems: 4
                 minItems: 1
                 type: array

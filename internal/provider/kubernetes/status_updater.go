@@ -285,7 +285,14 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
+	case *egv1a1.Backend:
+		if b, ok := objB.(*egv1a1.Backend); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
 	}
+
 	return false
 }
 
@@ -339,6 +346,8 @@ func kindOf(obj interface{}) string {
 		kind = gatewayapi.KindBackendTLSPolicy
 	case *unstructured.Unstructured:
 		kind = o.GetKind()
+	case *egv1a1.Backend:
+		kind = egv1a1.KindBackend
 	default:
 		kind = "Unknown"
 	}
