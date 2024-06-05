@@ -7,9 +7,11 @@ package kubernetes
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -551,6 +553,85 @@ func TestClassAccepted(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Process the test case objects.
 			res := classAccepted(tc.gc)
+			require.Equal(t, tc.expected, res)
+		})
+	}
+}
+
+func TestClassMarkedForDeletion(t *testing.T) {
+	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
+
+	testCases := []struct {
+		name     string
+		gc       *gwapiv1.GatewayClass
+		expected bool
+	}{
+		{
+			name:     "nil gatewayclass",
+			gc:       nil,
+			expected: true,
+		},
+		{
+			name: "gatewayclass not deleted",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayclass with deletion timestamp",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-gc",
+					DeletionTimestamp: ptr.To(metav1.NewTime(time.Now())),
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "gatewayclass with finalizers",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-gc",
+					Finalizers: []string{gatewayClassFinalizer},
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayclass with deletion timestamp and finalizers",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-gc",
+					Finalizers:        []string{gatewayClassFinalizer},
+					DeletionTimestamp: ptr.To(metav1.NewTime(time.Now())),
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Process the test case objects.
+			res := classMarkedForDeletion(tc.gc)
 			require.Equal(t, tc.expected, res)
 		})
 	}

@@ -233,8 +233,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Process the parametersRef of the accepted GatewayClass.
-		// This should run before processBackendRefs
-		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+		// This should run before processBackendRefs.
+		if managedGC.Spec.ParametersRef != nil && !classMarkedForDeletion(managedGC) {
 			if err := r.processParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
@@ -286,7 +286,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if len(gwcResource.Gateways) == 0 {
-			r.log.Info("No gateways found for accepted gatewayclass")
+			r.log.Info("No gateways found for accepted gatewayclass", "name", managedGC.Name)
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
 			if err := r.removeFinalizer(ctx, managedGC); err != nil {
@@ -347,10 +347,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 	for _, gwClass := range gatewayClasses.Items {
 		gwClass := gwClass
 		if gwClass.Spec.ControllerName == r.classController {
-			// The gatewayclass was marked for deletion and the finalizer removed,
-			// so clean-up dependents.
-			if !gwClass.DeletionTimestamp.IsZero() &&
-				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
+			if classMarkedForDeletion(&gwClass) {
 				r.log.Info("gatewayclass marked for deletion")
 				cc.removeMatch(&gwClass)
 				continue
@@ -780,14 +777,6 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 }
 
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
-	// Early return if the managed gatewayclass has merge gateways enabled but marked as deleted,
-	// to prevent gateways be created again and then terminated immediately.
-	if r.mergeGateways.Has(managedGC.Name) && !managedGC.DeletionTimestamp.IsZero() {
-		r.log.Info("skip processing Gateways for GatewayClass with merge gateways enabled but marked as deleted",
-			"name", managedGC.Name)
-		return nil
-	}
-
 	// Find gateways for the managedGC
 	// Find the Gateways that reference this Class.
 	gatewayList := &gwapiv1.GatewayList{}

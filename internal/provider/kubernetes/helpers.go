@@ -19,6 +19,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
 
 const (
@@ -213,4 +214,14 @@ func classAccepted(gc *gwapiv1.GatewayClass) bool {
 	}
 
 	return false
+}
+
+// classMarkedForDeletion returns true if the provided GatewayClass is
+// marked for deletion and its finalizer has been removed.
+func classMarkedForDeletion(gc *gwapiv1.GatewayClass) bool {
+	if gc == nil {
+		return true
+	}
+
+	return !gc.DeletionTimestamp.IsZero() && !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer)
 }
