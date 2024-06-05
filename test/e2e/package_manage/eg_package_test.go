@@ -64,10 +64,10 @@ func TestEGPackageManage(t *testing.T) {
 		t.Fatalf("Failed to create test suite: %v", err)
 	}
 
-	t.Logf("Running %d package tests", len(tests.PackageTests))
-	cSuite.Setup(t, tests.PackageTests)
+	t.Logf("Running %d package tests", len(tests.PackageManageTests))
+	cSuite.Setup(t, tests.PackageManageTests)
 
-	err = cSuite.Run(t, tests.PackageTests)
+	err = cSuite.Run(t, tests.PackageManageTests)
 	if err != nil {
 		t.Fatalf("Failed to run tests: %v", err)
 	}

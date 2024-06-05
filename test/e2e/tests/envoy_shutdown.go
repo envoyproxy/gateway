@@ -35,7 +35,7 @@ import (
 )
 
 func init() {
-	PackageTests = append(PackageTests, EnvoyShutdownTest)
+	PackageManageTests = append(PackageManageTests, EnvoyShutdownTest)
 }
 
 var EnvoyShutdownTest = suite.ConformanceTest{
