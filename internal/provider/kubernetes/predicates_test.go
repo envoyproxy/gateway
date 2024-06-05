@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 )
@@ -498,7 +499,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
 				sampleGateway,
-				test.GetGatewayDeployment(types.NamespacedName{Name: infraName(sampleGateway, false)}, nil),
+				test.GetGatewayDeployment(types.NamespacedName{Name: proxy.ExpectedResourceHashedName("default/scheduled-status-test")}, nil),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
