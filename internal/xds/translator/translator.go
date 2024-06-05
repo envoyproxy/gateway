@@ -306,7 +306,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Check if an extension want to modify the listener that was just configured/created
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 		// TODO zhaohuabing should we also process the quicXDSListener?
-		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, t.ExtensionManager); err != nil {
+		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, httpListener.ExtensionRefs, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -509,16 +509,17 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 
 		for _, route := range tcpListener.Routes {
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:           route.Destination.Name,
-				settings:       route.Destination.Settings,
-				loadBalancer:   route.LoadBalancer,
-				proxyProtocol:  route.ProxyProtocol,
-				circuitBreaker: route.CircuitBreaker,
-				tcpkeepalive:   route.TCPKeepalive,
-				healthCheck:    route.HealthCheck,
-				timeout:        route.Timeout,
-				endpointType:   buildEndpointType(route.Destination.Settings),
-				metrics:        metrics,
+				name:              route.Destination.Name,
+				settings:          route.Destination.Settings,
+				loadBalancer:      route.LoadBalancer,
+				proxyProtocol:     route.ProxyProtocol,
+				circuitBreaker:    route.CircuitBreaker,
+				tcpkeepalive:      route.TCPKeepalive,
+				healthCheck:       route.HealthCheck,
+				timeout:           route.Timeout,
+				endpointType:      buildEndpointType(route.Destination.Settings),
+				metrics:           metrics,
+				backendConnection: route.BackendConnection,
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -577,13 +578,14 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 			// 1:1 between IR UDPRoute and xDS Cluster
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:         route.Destination.Name,
-				settings:     route.Destination.Settings,
-				loadBalancer: route.LoadBalancer,
-				timeout:      route.Timeout,
-				tSocket:      nil,
-				endpointType: buildEndpointType(route.Destination.Settings),
-				metrics:      metrics,
+				name:              route.Destination.Name,
+				settings:          route.Destination.Settings,
+				loadBalancer:      route.LoadBalancer,
+				timeout:           route.Timeout,
+				tSocket:           nil,
+				endpointType:      buildEndpointType(route.Destination.Settings),
+				metrics:           metrics,
+				backendConnection: route.BackendConnection,
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -697,6 +699,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		clusterArgs.healthCheck = bt.HealthCheck
 		clusterArgs.timeout = bt.Timeout
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
+		clusterArgs.backendConnection = bt.BackendConnection
 	}
 
 	if err := addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
@@ -810,6 +813,16 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 								Filename: "/etc/ssl/certs/ca-certificates.crt",
 							},
 						},
+						MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
+							{
+								SanType: tlsv3.SubjectAltNameMatcher_DNS,
+								Matcher: &matcherv3.StringMatcher{
+									MatchPattern: &matcherv3.StringMatcher_Exact{
+										Exact: tlsConfig.SNI,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -819,10 +832,24 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		tlsCtx = &tlsv3.UpstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
 				TlsCertificateSdsSecretConfigs: nil,
-				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-						Name:      tlsConfig.CACertificate.Name,
-						SdsConfig: makeConfigSource(),
+				ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
+					CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+						ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+							Name:      tlsConfig.CACertificate.Name,
+							SdsConfig: makeConfigSource(),
+						},
+						DefaultValidationContext: &tlsv3.CertificateValidationContext{
+							MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
+								{
+									SanType: tlsv3.SubjectAltNameMatcher_DNS,
+									Matcher: &matcherv3.StringMatcher{
+										MatchPattern: &matcherv3.StringMatcher_Exact{
+											Exact: tlsConfig.SNI,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},

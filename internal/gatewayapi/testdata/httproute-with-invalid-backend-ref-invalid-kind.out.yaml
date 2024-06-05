@@ -68,7 +68,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Kind is invalid, only Service and MCS ServiceImport are supported
+        message: Kind is invalid, only Service, MCS ServiceImport and Envoy Gateway
+          Backend are supported
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs

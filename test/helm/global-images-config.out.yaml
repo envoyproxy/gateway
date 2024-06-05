@@ -38,6 +38,19 @@ data:
         rateLimitDeployment:
           container:
             image: private-hub/envoyproxy/ratelimit:test
+          patch:
+            type: StrategicMerge
+            value:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - imagePullPolicy: Always
+                      name: envoy-ratelimit
+          pod:
+            imagePullSecrets:
+            - name: secret3
+            - name: secret4
         shutdownManager:
           image: private-hub/envoyproxy/gateway:abcdef12
       type: Kubernetes
@@ -117,6 +130,7 @@ rules:
   - backendtrafficpolicies
   - securitypolicies
   - envoyextensionpolicies
+  - backends
   verbs:
   - get
   - list
@@ -129,6 +143,7 @@ rules:
   - backendtrafficpolicies/status
   - securitypolicies/status
   - envoyextensionpolicies/status
+  - backends/status
   verbs:
   - update
 - apiGroups:

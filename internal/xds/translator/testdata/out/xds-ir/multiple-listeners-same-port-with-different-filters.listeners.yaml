@@ -57,6 +57,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: default/gateway-1/http
   drainType: MODIFY_ONLY
   name: default/gateway-1/http-quic
   udpListenerConfig:
@@ -117,7 +118,7 @@
               credentials:
                 clientId: client.oauth.foo.com
                 cookieNames:
-                  bearerToken: BearerToken-5F93C2E4
+                  bearerToken: AccessToken-5F93C2E4
                   idToken: IdToken-5F93C2E4
                   oauthExpires: OauthExpires-5F93C2E4
                   oauthHmac: OauthHMAC-5F93C2E4
@@ -132,7 +133,6 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
-              forwardBearerToken: true
               redirectPathMatcher:
                 path:
                   exact: /foo/oauth2/callback
@@ -144,6 +144,7 @@
                 cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
+              useRefreshToken: false
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -159,6 +160,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: default/gateway-1/http
   drainType: MODIFY_ONLY
   name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

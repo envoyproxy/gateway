@@ -282,6 +282,7 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
+		BackendEnabled:          true,
 	}
 
 	// Fix the services in the resources section so that they have an IP address - this prevents nasty
@@ -292,7 +293,7 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 		}
 	}
 
-	result := t.Translate(resources)
+	result, _ := t.Translate(resources)
 
 	return result, nil
 }
@@ -309,8 +310,9 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
+		BackendEnabled:          true,
 	}
-	gRes := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxy != nil {
@@ -341,8 +343,9 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
+		BackendEnabled:          true,
 	}
-	gRes := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(resources)
 
 	keys := []string{}
 	for key := range gRes.XdsIR {

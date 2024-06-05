@@ -133,5 +133,58 @@ var ExtProcTest = suite.ConformanceTest{
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
+
+		t.Run("http route with uds ext proc", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-ext-proc", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			ancestorRef := gwv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwv1.ObjectName(gwNN.Name),
+			}
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-proc-uds-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+
+			// Wait for the grpc ext auth service pod to be ready
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, podReady)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/uds-processor",
+					Headers: map[string]string{
+						"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
+						"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
+						"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers: map[string]string{
+						"x-response-ext-processed": "true", // header added by ext-processor to client-bound response
+					},
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			// add a request header that will be mutated by ext-proc
+			req.Headers["x-request-client-header"] = []string{"original"}
+
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+
+			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+		})
 	},
 }

@@ -12,3 +12,6 @@
 go.mod
 go.sum
 bin
+./charts
+*.js
+*/testdata/*.yaml

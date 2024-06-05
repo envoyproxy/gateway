@@ -7,12 +7,14 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -83,6 +85,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					GatewayClassName:        v1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
 					Namespace:               r.Namespace,
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
 				}
@@ -96,7 +99,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					t.ExtensionGroupKinds = extGKs
 				}
 				// Translate to IR
-				result := t.Translate(resources)
+				result, err := t.Translate(resources)
+				if err != nil {
+					// Currently all errors that Translate returns should just be logged
+					r.Logger.Error(err, "errors detected during translation")
+				}
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.
@@ -195,6 +202,18 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					}
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
+				for _, extServerPolicy := range result.ExtensionServerPolicies {
+					extServerPolicy := extServerPolicy
+					key := message.NamespacedNameAndGVK{
+						NamespacedName:   utils.NamespacedName(&extServerPolicy),
+						GroupVersionKind: extServerPolicy.GroupVersionKind(),
+					}
+					if !(reflect.ValueOf(extServerPolicy.Object["status"]).IsZero()) {
+						policyStatus := unstructuredToPolicyStatus(extServerPolicy.Object["status"].(map[string]any))
+						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
+					}
+					delete(statusesToDelete.ExtensionServerPolicyStatusKeys, key)
+				}
 			}
 
 			// Delete IR keys
@@ -210,6 +229,16 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+func unstructuredToPolicyStatus(policyStatus map[string]any) gwv1a2.PolicyStatus {
+	var ret gwv1a2.PolicyStatus
+	// No need to check the json marshal/unmarshal error, the policyStatus was
+	// created via a typed object so the marshalling/unmarshalling will always
+	// work
+	d, _ := json.Marshal(policyStatus)
+	_ = json.Unmarshal(d, &ret)
+	return ret
 }
 
 // deleteAllIRKeys deletes all XdsIR and InfraIR
@@ -229,10 +258,11 @@ type StatusesToDelete struct {
 	UDPRouteStatusKeys         map[types.NamespacedName]bool
 	BackendTLSPolicyStatusKeys map[types.NamespacedName]bool
 
-	ClientTrafficPolicyStatusKeys  map[types.NamespacedName]bool
-	BackendTrafficPolicyStatusKeys map[types.NamespacedName]bool
-	SecurityPolicyStatusKeys       map[types.NamespacedName]bool
-	EnvoyExtensionPolicyStatusKeys map[types.NamespacedName]bool
+	ClientTrafficPolicyStatusKeys   map[types.NamespacedName]bool
+	BackendTrafficPolicyStatusKeys  map[types.NamespacedName]bool
+	SecurityPolicyStatusKeys        map[types.NamespacedName]bool
+	EnvoyExtensionPolicyStatusKeys  map[types.NamespacedName]bool
+	ExtensionServerPolicyStatusKeys map[message.NamespacedNameAndGVK]bool
 }
 
 func (r *Runner) getAllStatuses() *StatusesToDelete {
@@ -245,11 +275,12 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 		TCPRouteStatusKeys:  make(map[types.NamespacedName]bool),
 		UDPRouteStatusKeys:  make(map[types.NamespacedName]bool),
 
-		ClientTrafficPolicyStatusKeys:  make(map[types.NamespacedName]bool),
-		BackendTrafficPolicyStatusKeys: make(map[types.NamespacedName]bool),
-		SecurityPolicyStatusKeys:       make(map[types.NamespacedName]bool),
-		BackendTLSPolicyStatusKeys:     make(map[types.NamespacedName]bool),
-		EnvoyExtensionPolicyStatusKeys: make(map[types.NamespacedName]bool),
+		ClientTrafficPolicyStatusKeys:   make(map[types.NamespacedName]bool),
+		BackendTrafficPolicyStatusKeys:  make(map[types.NamespacedName]bool),
+		SecurityPolicyStatusKeys:        make(map[types.NamespacedName]bool),
+		BackendTLSPolicyStatusKeys:      make(map[types.NamespacedName]bool),
+		EnvoyExtensionPolicyStatusKeys:  make(map[types.NamespacedName]bool),
+		ExtensionServerPolicyStatusKeys: make(map[message.NamespacedNameAndGVK]bool),
 	}
 
 	// Get current status keys
@@ -336,6 +367,10 @@ func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
 		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
 		delete(ds.EnvoyExtensionPolicyStatusKeys, key)
 	}
+	for key := range ds.ExtensionServerPolicyStatusKeys {
+		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
+		delete(ds.ExtensionServerPolicyStatusKeys, key)
+	}
 }
 
 // deleteAllStatusKeys deletes all status keys stored by the subscriber.
@@ -375,6 +410,9 @@ func (r *Runner) deleteAllStatusKeys() {
 	}
 	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
 		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
+	}
+	for key := range r.ProviderResources.ExtensionPolicyStatuses.LoadAll() {
+		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
 	}
 }
 

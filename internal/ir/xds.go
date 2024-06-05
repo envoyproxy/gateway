@@ -38,6 +38,8 @@ var (
 	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                 = errors.New("field Port specified is invalid")
+	ErrDestEndpointUDSPortInvalid              = errors.New("field Port must not be specified for Unix Domain Socket address")
+	ErrDestEndpointUDSHostInvalid              = errors.New("field Host must not be specified for Unix Domain Socket address")
 	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
 	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
@@ -234,6 +236,8 @@ type HTTPListener struct {
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -430,6 +434,11 @@ type HeaderSettings struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
 
+	// DisableRateLimitHeaders controls if "x-ratelimit-" headers are added by the HTTP Router filter.
+	// The default is to emit these headers.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
+	DisableRateLimitHeaders bool `json:"disableRateLimitHeaders,omitempty" yaml:"disableRateLimitHeaders,omitempty"`
+
 	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
 	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty" yaml:"xForwardedClientCert,omitempty"`
@@ -543,6 +552,8 @@ type TrafficFeatures struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// settings of upstream connection
+	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -575,6 +586,8 @@ type SecurityFeatures struct {
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
+	// Authorization defines the schema for the authorization.
+	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
 func (s *SecurityFeatures) Printable() *SecurityFeatures {
@@ -684,11 +697,28 @@ type OIDC struct {
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
 
+	// ForwardAccessToken indicates whether the Envoy should forward the access token
+	// via the Authorization header Bearer scheme to the upstream.
+	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
+
+	// DefaultTokenTTL is the default lifetime of the id token and access token.
+	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
+
+	// RefreshToken indicates whether the Envoy should automatically refresh the
+	// id token and access token when they expire.
+	RefreshToken bool `json:"refreshToken,omitempty"`
+
+	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
+	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
+
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
-	// These cookies are set by the oauth filter, including: BearerToken,
+	// These cookies are set by the oauth filter, including: AccessToken,
 	// OauthHMAC, OauthExpires, IdToken, and RefreshToken.
 	CookieSuffix string `json:"cookieSuffix,omitempty"`
+
+	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.
+	CookieNameOverrides *egv1a1.OIDCCookieNames `json:"cookieNameOverrides,omitempty"`
 }
 
 type OIDCProvider struct {
@@ -782,6 +812,40 @@ type GRPCExtAuthService struct {
 
 	// Authority is the hostname:port of the gRPC External Authorization service.
 	Authority string `json:"authority"`
+}
+
+// Authorization defines the schema for the authorization.
+//
+// +k8s:deepcopy-gen=true
+type Authorization struct {
+	// Rules defines the authorization rules.
+	Rules []*AuthorizationRule `json:"rules,omitempty"`
+
+	// DefaultAction defines the default action to be taken if no rules match.
+	DefaultAction egv1a1.AuthorizationAction `json:"defaultAction"`
+}
+
+// AuthorizationRule defines the schema for the authorization rule.
+//
+// +k8s:deepcopy-gen=true
+type AuthorizationRule struct {
+	// Name is a user-defined name for the rule.
+	// If not specified, a name will be generated by EG.
+	Name string `json:"name"`
+
+	// Action defines the action to be taken if the rule matches.
+	Action egv1a1.AuthorizationAction `json:"action"`
+
+	// Principal defines the principal to be matched.
+	Principal Principal `json:"principal"`
+}
+
+// Principal defines the schema for the principal.
+//
+// +k8s:deepcopy-gen=true
+type Principal struct {
+	// ClientCIDRs defines the client CIDRs to be matched.
+	ClientCIDRs []*CIDRMatch `json:"clientCIDRs,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
@@ -1027,21 +1091,33 @@ type DestinationEndpoint struct {
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
 	Port uint32 `json:"port" yaml:"port"`
+	// Path refers to the Unix Domain Socket
+	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
 
-	err := validation.IsDNS1123Subdomain(d.Host)
-	_, pErr := netip.ParseAddr(d.Host)
+	// unix domain socket
+	if d.Path != nil {
+		if d.Port != 0 {
+			errs = errors.Join(errs, ErrDestEndpointUDSPortInvalid)
+		}
+		if d.Host != "" {
+			errs = errors.Join(errs, ErrDestEndpointUDSHostInvalid)
+		}
+	} else { // IP or FQDN
+		err := validation.IsDNS1123Subdomain(d.Host)
+		_, pErr := netip.ParseAddr(d.Host)
 
-	if err != nil && pErr != nil {
-		errs = errors.Join(errs, ErrDestEndpointHostInvalid)
-	}
+		if err != nil && pErr != nil {
+			errs = errors.Join(errs, ErrDestEndpointHostInvalid)
+		}
 
-	if d.Port == 0 {
-		errs = errors.Join(errs, ErrDestEndpointPortInvalid)
+		if d.Port == 0 {
+			errs = errors.Join(errs, ErrDestEndpointPortInvalid)
+		}
 	}
 
 	return errs
@@ -1272,6 +1348,8 @@ type TCPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// settings of upstream connection
+	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1385,6 +1463,8 @@ type UDPRoute struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Request and connection timeout settings
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// settings of upstream connection
+	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -1468,8 +1548,9 @@ type RateLimitRule struct {
 
 type CIDRMatch struct {
 	CIDR    string `json:"cidr" yaml:"cidr"`
-	IPv6    bool   `json:"ipv6" yaml:"ipv6"`
-	MaskLen int    `json:"maskLen" yaml:"maskLen"`
+	IP      string `json:"ip" yaml:"ip"`
+	MaskLen uint32 `json:"maskLen" yaml:"maskLen"`
+	IsIPv6  bool   `json:"isIPv6" yaml:"isIPv6"`
 	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
 	Distinct bool `json:"distinct" yaml:"distinct"`
@@ -2022,6 +2103,13 @@ type TLSUpstreamConfig struct {
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
+}
+
+// BackendConnection settings for upstream connections
+// +k8s:deepcopy-gen=true
+type BackendConnection struct {
+	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
+	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
 }
 
 // Connection settings for downstream connections

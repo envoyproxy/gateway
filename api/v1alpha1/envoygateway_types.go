@@ -451,10 +451,17 @@ type RateLimitRedisSettings struct {
 // ExtensionManager defines the configuration for registering an extension manager to
 // the Envoy Gateway control plane.
 type ExtensionManager struct {
-	// Resources defines the set of K8s resources the extension will handle.
+	// Resources defines the set of K8s resources the extension will handle as route
+	// filter resources
 	//
 	// +optional
 	Resources []GroupVersionKind `json:"resources,omitempty"`
+
+	// PolicyResources defines the set of K8S resources the extension server will handle
+	// as directly attached GatewayAPI policies
+	//
+	// +optional
+	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`
 
 	// Hooks defines the set of hooks the extension supports
 	//
@@ -482,10 +489,17 @@ type XDSTranslatorHooks struct {
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
 type ExtensionService struct {
+	// BackendEndpoint points to where the extension server can be found.
+	BackendEndpoint `json:",inline"`
+
 	// Host define the extension service hostname.
-	Host string `json:"host"`
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
+	//
+	// +optional
+	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

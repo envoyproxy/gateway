@@ -66,12 +66,16 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 		if !t.validateBackendServiceImport(backendRef, parentRef, resources, backendNamespace, route, protocol) {
 			return false
 		}
+	case egv1a1.KindBackend:
+		if !t.validateBackendRefBackend(backendRef, parentRef, resources, backendNamespace, route, routeKind) {
+			return false
+		}
 	}
 	return true
 }
 
 func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
-	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != GroupMultiClusterService {
+	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != GroupMultiClusterService && *backendRef.Group != egv1a1.GroupName {
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
@@ -79,7 +83,7 @@ func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, p
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonInvalidKind,
-			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) and %s are supported", GroupMultiClusterService),
+			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), %s and %s are supported", GroupMultiClusterService, egv1a1.GroupName),
 		)
 		return false
 	}
@@ -87,7 +91,7 @@ func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, p
 }
 
 func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
-	if backendRef.Kind != nil && *backendRef.Kind != KindService && *backendRef.Kind != KindServiceImport {
+	if backendRef.Kind != nil && *backendRef.Kind != KindService && *backendRef.Kind != KindServiceImport && *backendRef.Kind != egv1a1.KindBackend {
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
@@ -95,7 +99,7 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonInvalidKind,
-			"Kind is invalid, only Service and MCS ServiceImport are supported",
+			"Kind is invalid, only Service, MCS ServiceImport and Envoy Gateway Backend are supported",
 		)
 		return false
 	}
@@ -173,6 +177,10 @@ func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, 
 }
 
 func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
+	// Envoy Gateway Backends do not require a port in the backend ref
+	if backendRef != nil && backendRef.Kind != nil && string(*backendRef.Kind) == egv1a1.KindBackend {
+		return true
+	}
 	if backendRef.Port == nil {
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
@@ -257,6 +265,70 @@ func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendR
 		)
 		return false
 	}
+	return true
+}
+
+func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,
+	backendNamespace string, route RouteContext, kind gwapiv1.Kind,
+) bool {
+	// TODO: support additional route kinds
+	routeStatus := GetRouteStatus(route)
+
+	if !t.BackendEnabled {
+		status.SetRouteStatusCondition(routeStatus,
+			parentRef.routeParentStatusIdx,
+			route.GetGeneration(),
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			gwapiv1.RouteReasonUnsupportedValue,
+			fmt.Sprintf("Resource %s/%s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration",
+				NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()), string(backendRef.Name)),
+		)
+		return false
+	}
+
+	if kind != KindHTTPRoute {
+		status.SetRouteStatusCondition(routeStatus,
+			parentRef.routeParentStatusIdx,
+			route.GetGeneration(),
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			gwapiv1.RouteReasonUnsupportedValue,
+			fmt.Sprintf("Resource %s/%s of type Backend is not supported for %s routes", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
+				string(backendRef.Name), kind),
+		)
+		return false
+	}
+
+	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	if backend == nil {
+		status.SetRouteStatusCondition(routeStatus,
+			parentRef.routeParentStatusIdx,
+			route.GetGeneration(),
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			gwapiv1.RouteReasonBackendNotFound,
+			fmt.Sprintf("Backend %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
+				string(backendRef.Name)),
+		)
+		return false
+	}
+
+	for _, bep := range backend.Spec.Endpoints {
+		if bep.Unix != nil {
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				route.GetGeneration(),
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"UnsupportedRefAddressFound",
+				fmt.Sprintf("Unix domain socket found in Backend %s/%s is not supported for xRoute backendRefs", backendNamespace,
+					string(backendRef.Name)),
+			)
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -947,56 +1019,68 @@ func (t *Translator) validateSecretObjectRef(
 // This can also be used for the other external services deployed in the cluster,
 // such as the external processing filter, gRPC Access Log Service, etc.
 // It checks:
-//  1. The group is nil or empty, indicating the core API group.
-//  2. The kind is Service.
-//  3. The port is specified.
-//  4. The service exists and the specified port is found.
+//  1. The group is nil or empty, indicating the core API group, or gateway.envoyproxy.io
+//  2. The kind is Service or Backend.
+//  3. The port is specified for Services.
+//  4. The Service or Backend exists and the specified port is found.
 //  5. The cross-namespace reference is permitted by the ReferenceGrants if the
 //     namespace is different from the policy's namespace.
 func (t *Translator) validateExtServiceBackendReference(
 	backendRef *gwapiv1.BackendObjectReference,
 	ownerNamespace string,
+	policyKind string,
 	resources *Resources,
 ) error {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
-	if backendRef.Group != nil && *backendRef.Group != "" {
+	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != egv1a1.GroupName {
 		return errors.New(
 			"group is invalid, only the core API group (specified by omitting" +
-				" the group field or setting it to an empty string) is supported")
+				" the group field or setting it to an empty string) and the" +
+				" gateway.envoyproxy.io API group are supported")
 	}
-	if backendRef.Kind != nil && *backendRef.Kind != KindService {
+	if backendRef.Kind != nil && *backendRef.Kind != KindService && *backendRef.Kind != egv1a1.KindBackend {
 		return errors.New("kind is invalid, only Service (specified by omitting " +
-			"the kind field or setting it to 'Service') is supported")
+			"the kind field or setting it to 'Service') and Backend are supported")
 	}
-	if backendRef.Port == nil {
+	if backendRef.Port == nil && !(backendRef.Kind != nil && *backendRef.Kind == egv1a1.KindBackend) {
 		return errors.New("a valid port number corresponding to a port on the Service must be specified")
 	}
 
-	// check if the service is valid
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
-	service := resources.GetService(serviceNamespace, string(backendRef.Name))
-	if service == nil {
-		return fmt.Errorf("service %s/%s not found", serviceNamespace, backendRef.Name)
-	}
-	var portFound bool
-	for _, port := range service.Spec.Ports {
-		portProtocol := port.Protocol
-		if port.Protocol == "" { // Default protocol is TCP
-			portProtocol = v1.ProtocolTCP
+	backendRefKind := KindDerefOr(backendRef.Kind, KindService)
+	switch backendRefKind {
+	case KindService:
+		// check if the service is valid
+		serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+		service := resources.GetService(serviceNamespace, string(backendRef.Name))
+		if service == nil {
+			return fmt.Errorf("service %s/%s not found", serviceNamespace, backendRef.Name)
 		}
-		// currently only HTTP and GRPC are supported, both of which are TCP
-		if port.Port == int32(*backendRef.Port) && portProtocol == v1.ProtocolTCP {
-			portFound = true
-			break
+		var portFound bool
+		for _, port := range service.Spec.Ports {
+			portProtocol := port.Protocol
+			if port.Protocol == "" { // Default protocol is TCP
+				portProtocol = v1.ProtocolTCP
+			}
+			// currently only HTTP and GRPC are supported, both of which are TCP
+			if port.Port == int32(*backendRef.Port) && portProtocol == v1.ProtocolTCP {
+				portFound = true
+				break
+			}
 		}
-	}
 
-	if !portFound {
-		return fmt.Errorf(
-			"TCP Port %d not found on service %s/%s",
-			*backendRef.Port, serviceNamespace, string(backendRef.Name),
-		)
+		if !portFound {
+			return fmt.Errorf(
+				"TCP Port %d not found on service %s/%s",
+				*backendRef.Port, serviceNamespace, string(backendRef.Name),
+			)
+		}
+	case egv1a1.KindBackend:
+		backendNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+		backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+		if backend == nil {
+			return fmt.Errorf("backend %s/%s not found", backendNamespace, backendRef.Name)
+		}
 	}
 
 	// check if the cross-namespace reference is permitted
@@ -1005,12 +1089,12 @@ func (t *Translator) validateExtServiceBackendReference(
 		if !t.validateCrossNamespaceRef(
 			crossNamespaceFrom{
 				group:     egv1a1.GroupName,
-				kind:      KindSecurityPolicy,
+				kind:      policyKind,
 				namespace: ownerNamespace,
 			},
 			crossNamespaceTo{
 				group:     GroupDerefOr(backendRef.Group, ""),
-				kind:      KindDerefOr(backendRef.Kind, KindService),
+				kind:      KindDerefOr(backendRef.Kind, backendRefKind),
 				namespace: string(*backendRef.Namespace),
 				name:      string(backendRef.Name),
 			},
@@ -1018,7 +1102,7 @@ func (t *Translator) validateExtServiceBackendReference(
 		) {
 			return fmt.Errorf(
 				"backend ref to %s %s/%s not permitted by any ReferenceGrant",
-				KindService, *backendRef.Namespace, backendRef.Name)
+				backendRefKind, *backendRef.Namespace, backendRef.Name)
 		}
 	}
 	return nil

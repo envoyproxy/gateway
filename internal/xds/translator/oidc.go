@@ -15,6 +15,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
@@ -145,7 +146,8 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 					},
 				},
 			},
-			ForwardBearerToken: true,
+			UseRefreshToken:    &wrappers.BoolValue{Value: oidc.RefreshToken},
+			ForwardBearerToken: oidc.ForwardAccessToken,
 			Credentials: &oauth2v3.OAuth2Credentials{
 				ClientId: oidc.ClientID,
 				TokenSecret: &tlsv3.SdsSecretConfig{
@@ -159,7 +161,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 					},
 				},
 				CookieNames: &oauth2v3.OAuth2Credentials_CookieNames{
-					BearerToken:  fmt.Sprintf("BearerToken-%s", oidc.CookieSuffix),
+					BearerToken:  fmt.Sprintf("AccessToken-%s", oidc.CookieSuffix),
 					OauthHmac:    fmt.Sprintf("OauthHMAC-%s", oidc.CookieSuffix),
 					OauthExpires: fmt.Sprintf("OauthExpires-%s", oidc.CookieSuffix),
 					IdToken:      fmt.Sprintf("IdToken-%s", oidc.CookieSuffix),
@@ -172,6 +174,29 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			Resources:  oidc.Resources,
 		},
 	}
+
+	if oidc.DefaultTokenTTL != nil {
+		oauth2.Config.DefaultExpiresIn = &durationpb.Duration{
+			Seconds: int64(oidc.DefaultTokenTTL.Seconds()),
+		}
+	}
+
+	if oidc.DefaultRefreshTokenTTL != nil {
+		oauth2.Config.DefaultRefreshTokenExpiresIn = &durationpb.Duration{
+			Seconds: int64(oidc.DefaultRefreshTokenTTL.Seconds()),
+		}
+	}
+
+	if oidc.CookieNameOverrides != nil &&
+		oidc.CookieNameOverrides.AccessToken != nil {
+		oauth2.Config.Credentials.CookieNames.BearerToken = *oidc.CookieNameOverrides.AccessToken
+	}
+
+	if oidc.CookieNameOverrides != nil &&
+		oidc.CookieNameOverrides.IDToken != nil {
+		oauth2.Config.Credentials.CookieNames.IdToken = *oidc.CookieNameOverrides.IDToken
+	}
+
 	return oauth2, nil
 }
 

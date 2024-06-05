@@ -44,9 +44,14 @@ func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
 		name                    string
 		EnvoyPatchPolicyEnabled bool
+		BackendEnabled          bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
+			EnvoyPatchPolicyEnabled: false,
+		},
+		{
+			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
 		},
 	}
@@ -63,10 +68,12 @@ func TestTranslate(t *testing.T) {
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
+			backendEnabled := true
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+					backendEnabled = config.BackendEnabled
 				}
 			}
 
@@ -75,6 +82,7 @@ func TestTranslate(t *testing.T) {
 				GatewayClassName:        "envoy-gateway-class",
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
+				BackendEnabled:          backendEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
 			}
@@ -275,7 +283,7 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
-			got := translator.Translate(resources)
+			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -318,8 +326,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				GatewayControllerName:  egv1a1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
-				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
-				MergeGateways:          IsMergeGatewaysEnabled(resources),
+				ExtensionGroupKinds: []schema.GroupKind{
+					{Group: "foo.example.io", Kind: "Foo"},
+					{Group: "bar.example.io", Kind: "Bar"},
+				},
+				MergeGateways: IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures
@@ -467,8 +478,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				},
 			})
 
-			got := translator.Translate(resources)
+			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			// Also fix lastTransitionTime in unstructured members
+			for i := range got.ExtensionServerPolicies {
+				field.SetMapValues(got.ExtensionServerPolicies[i].Object, "lastTransitionTime", nil)
+			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)

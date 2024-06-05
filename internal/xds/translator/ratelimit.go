@@ -40,19 +40,6 @@ const (
 	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
 )
 
-const (
-	// Use `draft RFC Version 03 <https://tools.ietf.org/id/draft-polli-ratelimit-headers-03.html>` by default,
-	// where 3 headers will be added:
-	// * ``X-RateLimit-Limit`` - indicates the request-quota associated to the
-	//   client in the current time-window followed by the description of the
-	//   quota policy. The value is returned by the maximum tokens of the token bucket.
-	// * ``X-RateLimit-Remaining`` - indicates the remaining requests in the
-	//   current time-window. The value is returned by the remaining tokens in the token bucket.
-	// * ``X-RateLimit-Reset`` - indicates the number of seconds until reset of
-	//   the current time-window. The value is returned by the remaining fill interval of the token bucket.
-	xRateLimitHeadersRfcVersion = 1
-)
-
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
 // if applicable and it does not already exist.
 func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) {
@@ -69,7 +56,6 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 	}
 
 	rateLimitFilter := t.buildRateLimitFilter(irListener)
-	// Make sure the router filter is the terminal filter in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
 
@@ -112,10 +98,15 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 			},
 			TransportApiVersion: corev3.ApiVersion_V3,
 		},
-		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRfcVersion),
 	}
 	if t.GlobalRateLimit.Timeout > 0 {
 		rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
+	}
+
+	if irListener.Headers != nil && irListener.Headers.DisableRateLimitHeaders {
+		rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_OFF
+	} else {
+		rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_DRAFT_VERSION_03
 	}
 
 	if t.GlobalRateLimit.FailClosed {
@@ -225,8 +216,8 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		if rule.CIDRMatch != nil {
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-			maskLen := &wrapperspb.UInt32Value{Value: uint32(rule.CIDRMatch.MaskLen)}
-			if rule.CIDRMatch.IPv6 {
+			maskLen := &wrapperspb.UInt32Value{Value: rule.CIDRMatch.MaskLen}
+			if rule.CIDRMatch.IsIPv6 {
 				mra.V6PrefixMaskLen = maskLen
 			} else {
 				mra.V4PrefixMaskLen = maskLen

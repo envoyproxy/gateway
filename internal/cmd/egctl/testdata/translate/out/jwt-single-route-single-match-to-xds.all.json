@@ -476,7 +476,8 @@
                           "useRemoteAddress": true
                         }
                       }
-                    ]
+                    ],
+                    "name": "envoy-gateway-system/eg/http"
                   },
                   "drainType": "MODIFY_ONLY",
                   "name": "envoy-gateway-system/eg/http",

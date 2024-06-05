@@ -318,6 +318,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
+		Name:    irListener.Name,
 	}
 
 	if irListener.TLS != nil {
@@ -440,6 +441,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
+		Name:    irRoute.Name,
 	}
 
 	if isTLSPassthrough {

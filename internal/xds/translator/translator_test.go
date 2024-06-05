@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/extension/testutils"
+	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
@@ -199,13 +199,13 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 func TestTranslateXdsWithExtension(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
 		"http-route-extension-route-error": {
-			errMsg: "route hook resource error",
+			errMsg: "rpc error: code = Unknown desc = route hook resource error",
 		},
 		"http-route-extension-virtualhost-error": {
-			errMsg: "extension post xds virtual host hook error",
+			errMsg: "rpc error: code = Unknown desc = extension post xds virtual host hook error",
 		},
 		"http-route-extension-listener-error": {
-			errMsg: "extension post xds listener hook error",
+			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
 		},
 	}
 
@@ -237,6 +237,13 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 						Kind:    "examplefilter",
 					},
 				},
+				PolicyResources: []v1alpha1.GroupVersionKind{
+					{
+						Group:   "bar.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExtensionPolicy",
+					},
+				},
 				Hooks: &v1alpha1.ExtensionHooks{
 					XDSTranslator: &v1alpha1.XDSTranslatorHooks{
 						Post: []v1alpha1.XDSTranslatorHook{
@@ -248,7 +255,10 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 					},
 				},
 			}
-			extMgr := testutils.NewManager(ext)
+
+			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			require.NoError(t, err)
+			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
 			tCtx, err := tr.Translate(x)

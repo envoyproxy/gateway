@@ -183,12 +183,42 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 // TestValidateSecretForReconcile tests the validateSecretForReconcile
 // predicate function.
 func TestValidateSecretForReconcile(t *testing.T) {
+	mtlsEnabledEnvoyProxyConfig := &v1alpha1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "mtls-settings",
+		},
+		Spec: v1alpha1.EnvoyProxySpec{
+			BackendTLS: &v1alpha1.BackendTLSConfig{
+				ClientCertificateRef: &gwapiv1.SecretObjectReference{
+					Kind: gatewayapi.KindPtr("Secret"),
+					Name: "client-tls-certificate",
+				},
+				TLSSettings: v1alpha1.TLSSettings{},
+			},
+		},
+	}
 	testCases := []struct {
 		name    string
 		configs []client.Object
 		secret  client.Object
 		expect  bool
 	}{
+		{
+			name: "envoy proxy references a secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-secret-ref", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mtlsEnabledEnvoyProxyConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mtlsEnabledEnvoyProxyConfig.Kind),
+					Namespace: gwapiv1.Namespace(mtlsEnabledEnvoyProxyConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mtlsEnabledEnvoyProxyConfig.Name),
+				}),
+				test.GetSecret(types.NamespacedName{Namespace: mtlsEnabledEnvoyProxyConfig.Namespace, Name: "client-tls-certificate"}),
+				mtlsEnabledEnvoyProxyConfig,
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: mtlsEnabledEnvoyProxyConfig.Namespace, Name: "client-tls-certificate"}),
+			expect: true,
+		},
 		{
 			name: "references valid gateway",
 			configs: []client.Object{
@@ -298,6 +328,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
 			WithIndex(&v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
+			WithIndex(&v1alpha1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
@@ -595,8 +626,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtAuth: &v1alpha1.ExtAuth{
 							HTTP: &v1alpha1.HTTPExtAuthService{
-								BackendRef: gwapiv1.BackendObjectReference{
-									Name: "ext-auth-http-service",
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-auth-http-service",
+										},
+									},
 								},
 							},
 						},
@@ -604,6 +639,37 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				},
 			},
 			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by SecurityPolicy ExtAuth GRPC service",
+			configs: []client.Object{
+				&v1alpha1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http",
+					},
+					Spec: v1alpha1.SecurityPolicySpec{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						ExtAuth: &v1alpha1.ExtAuth{
+							GRPC: &v1alpha1.GRPCExtAuthService{
+								BackendRefs: []v1alpha1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "ext-auth-grpc-service",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service"}, nil, nil),
 			expect:  true,
 		},
 		{

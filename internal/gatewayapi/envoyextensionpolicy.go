@@ -416,6 +416,7 @@ func (t *Translator) buildExtProc(
 		if err = t.validateExtServiceBackendReference(
 			&extProc.BackendRefs[i].BackendObjectReference,
 			policyNamespacedName.Namespace,
+			egv1a1.KindEnvoyExtensionPolicy,
 			resources); err != nil {
 			return nil, err
 		}
@@ -438,11 +439,18 @@ func (t *Translator) buildExtProc(
 		Settings: dsl,
 	}
 
-	authority = fmt.Sprintf(
-		"%s.%s:%d",
-		extProc.BackendRefs[0].Name,
-		NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace),
-		*extProc.BackendRefs[0].Port)
+	if extProc.BackendRefs[0].Port != nil {
+		authority = fmt.Sprintf(
+			"%s.%s:%d",
+			extProc.BackendRefs[0].Name,
+			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace),
+			*extProc.BackendRefs[0].Port)
+	} else {
+		authority = fmt.Sprintf(
+			"%s.%s",
+			extProc.BackendRefs[0].Name,
+			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace))
+	}
 
 	extProcIR := &ir.ExtProc{
 		Name:        name,
