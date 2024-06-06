@@ -231,7 +231,7 @@ func GatewayClassOwnerLabel(name string) map[string]string {
 // OwnerLabels returns the owner labels based on the mergeGateways setting
 func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string {
 	if mergeGateways {
-		return GatewayClassOwnerLabel(gateway.Name)
+		return GatewayClassOwnerLabel(gateway.Spec.GatewayClassName)
 	}
 
 	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
