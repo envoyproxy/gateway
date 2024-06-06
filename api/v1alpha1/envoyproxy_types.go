@@ -130,10 +130,13 @@ type EnvoyProxySpec struct {
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 }
 
+// RoutingType defines the type of routing of this Envoy proxy.
 type RoutingType string
 
 const (
-	ServiceRoutingType  RoutingType = "Service"
+	// ServiceRoutingType is the RoutingType for Service Cluster IP routing.
+	ServiceRoutingType RoutingType = "Service"
+	// EndpointRoutingType is the RoutingType for Endpoint routing.
 	EndpointRoutingType RoutingType = "Endpoint"
 )
 
