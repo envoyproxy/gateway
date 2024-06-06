@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
-//
+
 // Copyright Istio Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,6 +176,7 @@ func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, e
 // *compat* variant Wasm image with the standard Docker media type: application/vnd.docker.image.rootfs.diff.tar.gzip.
 // https://github.com/solo-io/wasm/blob/master/spec/spec-compat.md#specification
 func extractDockerImage(img v1.Image) ([]byte, error) {
+	//TODO zhaohuabing check if image is oversized before downloading
 	layers, err := img.Layers()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch layers: %v", err)
@@ -263,7 +264,7 @@ func extractWasmPluginBinary(r io.Reader) ([]byte, error) {
 	// Search for the file walking through the archive.
 
 	// Limit wasm binary to 256mb; in reality it must be much smaller
-	tr := tar.NewReader(io.LimitReader(gr, 1024*1024*256))
+	tr := tar.NewReader(io.LimitReader(gr, maxWasmSize))
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {

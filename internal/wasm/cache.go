@@ -51,7 +51,7 @@ const (
 type Cache interface {
 	// Get returns the path to the Wasm module file if it's the local file cache.
 	// If it's the EG HTTP server, it returns the serving URL to the cached Wasm module.
-	Get(url string, opts GetOptions) (string, error)
+	Get(downloadURL string, opts GetOptions) (url string, checksum string, err error)
 	Start(ctx context.Context)
 }
 
@@ -70,7 +70,7 @@ type localFileCache struct {
 	// mux is needed because stale Wasm module files will be purged periodically.
 	mux sync.Mutex
 
-	// option sets for configurating the cache.
+	// option sets for configuring the cache.
 	cacheOptions
 	// stopChan currently is only used by test
 	stopChan chan struct{}
@@ -120,6 +120,8 @@ type cacheEntry struct {
 	referencingURLs sets.String
 	// isPrivate is true if the module is from a private registry.
 	isPrivate bool
+	// checksum is the sha256 checksum of the module.
+	checksum string
 }
 
 type cacheOptions struct {
@@ -208,7 +210,7 @@ func getModulePath(baseDir string, mkey moduleKey) (string, error) {
 }
 
 // Get returns path the local Wasm module file.
-func (c *localFileCache) Get(downloadURL string, opts GetOptions) (string, error) {
+func (c *localFileCache) Get(downloadURL string, opts GetOptions) (url string, checksum string, err error) {
 	// Construct Wasm cache key with downloading URL and provided checksum of the module.
 	key := cacheKey{
 		downloadURL: downloadURL,
@@ -222,10 +224,10 @@ func (c *localFileCache) Get(downloadURL string, opts GetOptions) (string, error
 
 	entry, err := c.getOrFetch(key, opts)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return entry.modulePath, err
+	return entry.modulePath, entry.checksum, err
 }
 
 func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry, error) {
@@ -264,9 +266,9 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	// Fetch the image now as it is not available in cache.
 	key.checksum = checksum
 	var (
-		b             []byte // Byte array of Wasm binary.
-		dChecksum     string // Hex-Encoded sha256 checksum of binary.
-		binaryFetcher func() ([]byte, error)
+		b                  []byte // Byte array of Wasm binary.
+		dChecksum          string // Hex-Encoded sha256 checksum of binary.
+		imageBinaryFetcher func() ([]byte, error)
 	)
 
 	switch u.Scheme {
@@ -285,7 +287,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 		if opts.PullSecret != nil && len(opts.PullSecret) > 0 {
 			isPrivate = true
 		}
-		if binaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts); err != nil {
+		if imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts); err != nil {
 			wasmRemoteFetchCount.With(resultTag.Value(manifestFailure)).Increment()
 			return nil, fmt.Errorf("could not fetch Wasm OCI image: %v", err)
 		}
@@ -304,8 +306,8 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 		return nil, fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", key.downloadURL, dChecksum, key.checksum)
 	}
 
-	if binaryFetcher != nil {
-		b, err = binaryFetcher()
+	if imageBinaryFetcher != nil {
+		b, err = imageBinaryFetcher()
 		if err != nil {
 			wasmRemoteFetchCount.With(resultTag.Value(downloadFailure)).Increment()
 			return nil, fmt.Errorf("could not fetch Wasm binary: %v", err)
@@ -382,11 +384,14 @@ func (c *localFileCache) addEntry(key cacheKey, wasmModule []byte, isPrivate boo
 		return nil, err
 	}
 
+	// Calculate the checksum of the wasm module. It is different from the checksum of the image.
+	wasmChecksum := strings.ToLower(fmt.Sprintf("%x", sha256.Sum256(wasmModule)))
 	ce := cacheEntry{
 		modulePath:      modulePath,
 		last:            time.Now(),
 		referencingURLs: sets.New[string](),
 		isPrivate:       isPrivate,
+		checksum:        wasmChecksum,
 	}
 	if needChecksumUpdate {
 		ce.referencingURLs.Insert(key.downloadURL)
@@ -489,4 +494,3 @@ func isValidWasmBinary(in []byte) bool {
 	// Wasm file header is 8 bytes (magic number + version).
 	return len(in) >= 8 && bytes.Equal(in[:4], wasmMagicNumber)
 }
-

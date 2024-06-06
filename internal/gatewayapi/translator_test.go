@@ -822,8 +822,8 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(_ string, _ wasm.GetOptions) (string, error) {
-	return fmt.Sprintf("https://envoy-gateway/%s", "wasm/b63633341dd86515c51f8ea6e01c848e.wasm"), nil
+func (m *mockWasmCache) Get(_ string, _ wasm.GetOptions) (string, string, error) {
+	return fmt.Sprintf("https://envoy-gateway/%s", "wasm/b63633341dd86515c51f8ea6e01c848e.wasm"), "746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5", nil
 }
 
 func (m *mockWasmCache) Cleanup() {}

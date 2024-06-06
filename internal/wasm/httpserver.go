@@ -112,12 +112,11 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Get returns the HTTP URL of the Wasm module serving by the EG HTTP server.
 // EG downloads the Wasm module from its original URL, caches it locally in the file system,
 // and serves it through an HTTP server.
-func (s *HTTPServer) Get(originalUrl string, opts GetOptions) (string, error) {
+func (s *HTTPServer) Get(originalUrl string, opts GetOptions) (servingURL string, checksum string, err error) {
 	var (
 		mappingPath string
 		localFile   string
 		mapped      bool
-		err         error
 	)
 
 	// Check if the Wasm module is already mapped to a serving URL.
@@ -126,9 +125,9 @@ func (s *HTTPServer) Get(originalUrl string, opts GetOptions) (string, error) {
 	// Get the local file path of the cached Wasm module.
 	// Even it's already cached, the file cache may still download the Wasm module
 	// again if it is expired or it needs to be updated.
-	if localFile, err = s.cache.Get(originalUrl, opts); err != nil {
+	if localFile, checksum, err = s.cache.Get(originalUrl, opts); err != nil {
 		s.logger.Error(err, "Failed to get Wasm module", "URL", originalUrl)
-		return "", err
+		return "", "", err
 	}
 
 	s.Lock()
@@ -138,7 +137,7 @@ func (s *HTTPServer) Get(originalUrl string, opts GetOptions) (string, error) {
 		// A random path is used to make the URL unpredictable and prevent unauthorized
 		// users to access the Wasm module using EnvoyPatchPolicy.
 		if mappingPath, err = generateRandomPath(); err != nil {
-			return "", err
+			return "", "", err
 		}
 
 		s.mappingPath2Cache[mappingPath] = wasmModuleEntry{
@@ -155,9 +154,9 @@ func (s *HTTPServer) Get(originalUrl string, opts GetOptions) (string, error) {
 	}
 
 	// TODO: zhaohuabing: https
-	servingURL := fmt.Sprintf("http://%s:%d/%s", envoyGatewayHTTPServerHost,
+	servingURL = fmt.Sprintf("http://%s:%d/%s", envoyGatewayHTTPServerHost,
 		envoyGatewayHTTPServerPort, mappingPath)
-	return servingURL, nil
+	return servingURL, checksum, nil
 }
 
 // Generate a random downloading path for a Wasm module.

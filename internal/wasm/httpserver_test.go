@@ -73,7 +73,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 		}
 
 		// Call server.Get() to initialize the local file cache.
-		servingURL, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule), getOptions)
+		servingURL, _, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule), getOptions)
 		require.NoError(t, err)
 
 		// Get wasm module from the EG HTTP server.
@@ -83,7 +83,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 
 		// Call server.Get() again to get the serving URL for the same wasm module.
 		// The serving URL should be the same as the previous one.
-		servingURL1, err := server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule), getOptions)
+		servingURL1, _, err := server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule), getOptions)
 		require.NoError(t, err)
 		require.Equal(t, servingURL, servingURL1)
 
@@ -104,7 +104,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 		}
 
 		// Initialize the local cache.
-		_, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule), GetOptions{
+		_, _, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule), GetOptions{
 			ResourceName:   resourceName,
 			RequestTimeout: time.Second * 10,
 		})
@@ -153,7 +153,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 		}
 
 		// Call server.Get() to initialize the local file cache.
-		servingURL, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), getOptions)
+		servingURL, _, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), getOptions)
 		require.NoError(t, err)
 
 		// Get wasm module from the EG HTTP server.
@@ -163,7 +163,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 
 		// Call server.Get() again to get the serving URL for the same wasm module.
 		// The serving URL should be the same as the previous one.
-		servingURL1, err := server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), getOptions)
+		servingURL1, _, err := server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), getOptions)
 		require.NoError(t, err)
 		require.Equal(t, servingURL, servingURL1)
 
@@ -184,7 +184,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 		}
 
 		// Initialize the local cache.
-		_, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, nonExistingWasmModule), GetOptions{
+		_, _, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, nonExistingWasmModule), GetOptions{
 			ResourceName:   resourceName,
 			RequestTimeout: time.Second * 10,
 		})

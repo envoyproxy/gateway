@@ -497,7 +497,7 @@ func (t *Translator) buildExtProc(
 	return extProcIR, err
 }
 
-// TODO: zhaohuabing differenciate extproc and wasm
+// TODO: zhaohuabing differentiate extproc and wasm
 func irConfigNameForEEP(policy *egv1a1.EnvoyExtensionPolicy, idx int) string {
 	return fmt.Sprintf(
 		"%s/%s/%d",
@@ -550,10 +550,11 @@ func (t *Translator) buildWasm(
 		var (
 			http         = config.Code.HTTP
 			egServingURL string // the wasm module download URL from the EG HTTP server
+			checksum     string
 			err          error
 		)
 
-		if egServingURL, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+		if egServingURL, checksum, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
 			Checksum:        config.Code.SHA256,
 			ResourceName:    irConfigNameForWasm(policy, idx),
 			ResourceVersion: policy.ResourceVersion,
@@ -563,7 +564,7 @@ func (t *Translator) buildWasm(
 
 		code = &ir.HTTPWasmCode{
 			URL:    egServingURL,
-			SHA256: config.Code.SHA256,
+			SHA256: checksum,
 		}
 
 	case egv1a1.ImageWasmCodeSourceType:
@@ -572,27 +573,31 @@ func (t *Translator) buildWasm(
 			secret       *v1.Secret
 			pullSecret   []byte
 			egServingURL string // the wasm module download URL from the EG HTTP server
+			checksum     string
 			err          error
 		)
 
 		if image == nil {
 			return nil, fmt.Errorf("missing Image field in Wasm code source")
 		}
-		from := crossNamespaceFrom{
-			group:     egv1a1.GroupName,
-			kind:      KindEnvoyExtensionPolicy,
-			namespace: policy.Namespace,
-		}
 
-		if secret, err = t.validateSecretRef(
-			false, from, *image.PullSecretRef, resources); err != nil {
-			return nil, err
-		}
+		if image.PullSecretRef != nil {
+			from := crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      KindEnvoyExtensionPolicy,
+				namespace: policy.Namespace,
+			}
 
-		if data, ok := secret.Data[v1.DockerConfigJsonKey]; ok {
-			pullSecret = data
-		} else {
-			return nil, fmt.Errorf("missing %s key in secret %s/%s", v1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+			if secret, err = t.validateSecretRef(
+				false, from, *image.PullSecretRef, resources); err != nil {
+				return nil, err
+			}
+
+			if data, ok := secret.Data[v1.DockerConfigJsonKey]; ok {
+				pullSecret = data
+			} else {
+				return nil, fmt.Errorf("missing %s key in secret %s/%s", v1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+			}
 		}
 
 		// Wasm Cache requires the URL to be in the format "scheme://<URL>"
@@ -600,7 +605,7 @@ func (t *Translator) buildWasm(
 		if !strings.HasPrefix(image.URL, "oci://") {
 			imageURL = fmt.Sprintf("oci://%s", image.URL)
 		}
-		if egServingURL, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
+		if egServingURL, checksum, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
 			Checksum:        config.Code.SHA256,
 			PullSecret:      pullSecret,
 			ResourceName:    irConfigNameForWasm(policy, idx),
@@ -611,7 +616,7 @@ func (t *Translator) buildWasm(
 
 		code = &ir.HTTPWasmCode{
 			URL:    egServingURL,
-			SHA256: config.Code.SHA256,
+			SHA256: checksum,
 		}
 	default:
 		// should never happen because of kubebuilder validation, just a sanity check

@@ -39,6 +39,7 @@ import (
 const (
 	defaultInitialInterval = 500 * time.Millisecond
 	defaultMaxInterval     = 60 * time.Second
+	maxWasmSize            = 1024 * 1024 * 256
 )
 
 var (
@@ -114,8 +115,9 @@ func (f *HTTPFetcher) Fetch(ctx context.Context, url string, allowInsecure bool)
 			continue
 		}
 		if resp.StatusCode == http.StatusOK {
+			// TODO zhaohuabing check the size before downloading the content
 			// Limit wasm module to 256mb; in reality it must be much smaller
-			body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024*256))
+			body, err := io.ReadAll(io.LimitReader(resp.Body, maxWasmSize))
 			if err != nil {
 				return nil, err
 			}
@@ -128,7 +130,7 @@ func (f *HTTPFetcher) Fetch(ctx context.Context, url string, allowInsecure bool)
 		lastError = fmt.Errorf("wasm module download request failed: status code %v", resp.StatusCode)
 		if retryable(resp.StatusCode) {
 			// Limit wasm module to 256mb; in reality it must be much smaller
-			body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024*256))
+			body, err := io.ReadAll(io.LimitReader(resp.Body, maxWasmSize))
 			if err != nil {
 				return nil, err
 			}
@@ -165,7 +167,7 @@ func getFirstFileFromTar(b []byte) []byte {
 	buf := bytes.NewBuffer(b)
 
 	// Limit wasm module to 256mb; in reality it must be much smaller
-	tr := tar.NewReader(io.LimitReader(buf, 1024*1024*256))
+	tr := tar.NewReader(io.LimitReader(buf, maxWasmSize))
 
 	h, err := tr.Next()
 	if err != nil {
@@ -220,3 +222,4 @@ func unboxIfPossible(origin []byte) []byte {
 		}
 	}
 }
+

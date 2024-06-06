@@ -22,18 +22,18 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, HTTPWasmTest)
+	ConformanceTests = append(ConformanceTests, OCIWasmTest)
 }
 
 // WasmTest tests Wasm extension for an http route with HTTP Wasm configured.
-var HTTPWasmTest = suite.ConformanceTest{
-	ShortName:   "Wasm HTTP Code Source",
+var OCIWasmTest = suite.ConformanceTest{
+	ShortName:   "Wasm OCI Image Code Source",
 	Description: "Test Wasm extension that adds response headers",
-	Manifests:   []string{"testdata/wasm-http.yaml"},
+	Manifests:   []string{"testdata/wasm-oci.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("http route with http wasm source", func(t *testing.T) {
+		t.Run("http route with oci wasm source", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-http-wasm-source", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-oci-wasm-source", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -43,12 +43,12 @@ var HTTPWasmTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "http-wasm-source-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oci-wasm-source-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
-					Path: "/wasm-http",
+					Path: "/wasm-oci",
 				},
 
 				// Set the expected request properties to empty strings.
@@ -89,7 +89,7 @@ var HTTPWasmTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwv1.ObjectName(gwNN.Name),
 			}
-			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "http-wasm-source-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oci-wasm-source-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
