@@ -126,7 +126,7 @@ spec:
     - backendRefs:
         - group: gateway.envoyproxy.io
           kind: Backend
-          name: backend
+          name: httpbin
       matches:
         - path:
             type: PathPrefix
@@ -164,7 +164,7 @@ spec:
     - backendRefs:
         - group: gateway.envoyproxy.io
           kind: Backend
-          name: backend
+          name: httpbin
       matches:
         - path:
             type: PathPrefix
