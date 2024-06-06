@@ -82,3 +82,11 @@ This dashboard example shows the overall stats exported by Envoy Gateway fleet.
 ![Envoy Gateway Global: xDS Server](/img/envoy-gateway-global-xds-server.png)
 
 ![Envoy Gateway Global: Infrastructure Manager](/img/envoy-gateway-global-infra-manager.png)
+
+## Update Dashboards
+
+The example dashboards cannot be updated in-place by default, if you are trying to
+make some changes to current dashboards, you can save them directly as a JSON file.
+
+All dashboards of Envoy Gateway are maintained under `charts/gateway-addons-helm/dashboards`, 
+feel free to make [contributions](../../../contributions/CONTRIBUTING).

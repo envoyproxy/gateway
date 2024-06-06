@@ -15,14 +15,14 @@ grafana:
     dashboardproviders.yaml:
       apiVersion: 1
       providers:
-      - name: 'envoy-gateway'
-        orgId: 1
-        folder: 'envoy-gateway'
-        type: file
-        disableDeletion: false
-        editable: true
-        options:
-          path: /var/lib/grafana/dashboards/envoy-gateway
+        - name: 'envoy-gateway'
+          orgId: 1
+          folder: 'envoy-gateway'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/envoy-gateway
   dashboards:
     envoy-gateway:
       prometheus-stats:
