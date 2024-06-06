@@ -341,7 +341,7 @@ func TestHasManagedClass(t *testing.T) {
 	}
 }
 
-func TestProcessParamsRef(t *testing.T) {
+func TestProcessGCParamsRef(t *testing.T) {
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 
 	testCases := []struct {
@@ -451,6 +451,7 @@ func TestProcessParamsRef(t *testing.T) {
 		r := &gatewayAPIReconciler{
 			log:             logger,
 			classController: gcCtrlName,
+			namespace:       config.DefaultNamespace,
 		}
 
 		// Run the test cases.
@@ -468,7 +469,7 @@ func TestProcessParamsRef(t *testing.T) {
 			// Process the test case gatewayclasses.
 			resourceTree := gatewayapi.NewResources()
 			resourceMap := newResourceMapping()
-			err := r.processParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
+			err := r.processGCParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.

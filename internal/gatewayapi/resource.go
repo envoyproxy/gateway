@@ -49,6 +49,7 @@ type Resources struct {
 	Secrets                 []*corev1.Secret               `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	ConfigMaps              []*corev1.ConfigMap            `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
 	ClassEnvoyProxy         *egv1a1.EnvoyProxy             `json:"classEnvoyProxy,omitempty" yaml:"classEnvoyProxy,omitempty"`
+	EnvoyProxies            []*egv1a1.EnvoyProxy           `json:"EnvoyProxies,omitempty" yaml:"EnvoyProxies,omitempty"`
 	ExtensionRefFilters     []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies      []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	ClientTrafficPolicies   []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`
