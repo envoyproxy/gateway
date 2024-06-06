@@ -1034,10 +1034,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
 	epPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyProxy]{
 		&predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyProxy]{},
-		predicate.NewTypedPredicateFuncs[*egv1a1.EnvoyProxy](r.hasManagedClass),
 	}
 	if r.namespaceLabel != nil {
 		epPredicates = append(epPredicates, predicate.NewTypedPredicateFuncs(func(ep *egv1a1.EnvoyProxy) bool {
@@ -1548,34 +1546,6 @@ func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{
 		Name: string(r.classController),
 	}}}
-}
-
-func (r *gatewayAPIReconciler) hasManagedClass(ep *egv1a1.EnvoyProxy) bool {
-	// The EnvoyProxy must be in the same namespace as EG.
-	if ep.Namespace != r.namespace {
-		r.log.Info("envoyproxy namespace does not match Envoy Gateway's namespace",
-			"namespace", ep.Namespace, "name", ep.Name)
-		return false
-	}
-
-	gcList := new(gwapiv1.GatewayClassList)
-	err := r.client.List(context.TODO(), gcList)
-	if err != nil {
-		r.log.Error(err, "failed to list gatewayclasses")
-		return false
-	}
-
-	for i := range gcList.Items {
-		gc := gcList.Items[i]
-		// Reconcile the managed GatewayClass if it's referenced by the EnvoyProxy.
-		if r.hasMatchingController(&gc) &&
-			classAccepted(&gc) &&
-			classRefsEnvoyProxy(&gc, ep) {
-			return true
-		}
-	}
-
-	return false
 }
 
 // processGatewayParamsRef processes the infrastructure.parametersRef of the provided Gateway.
