@@ -347,7 +347,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(
