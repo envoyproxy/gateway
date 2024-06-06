@@ -1837,9 +1837,9 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.EndpointRoutingDisabled != nil {
-		in, out := &in.EndpointRoutingDisabled, &out.EndpointRoutingDisabled
-		*out = new(bool)
+	if in.RoutingType != nil {
+		in, out := &in.RoutingType, &out.RoutingType
+		*out = new(RoutingType)
 		**out = **in
 	}
 	if in.ExtraArgs != nil {

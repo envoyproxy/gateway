@@ -5,7 +5,7 @@ envoyproxy:
     namespace: envoy-gateway-system
     name: test
   spec:
-    endpointRoutingDisabled: false
+    routingType: service
     provider:
       type: Kubernetes
       kubernetes:

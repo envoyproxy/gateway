@@ -277,16 +277,11 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
 
-	endpointRoutingDisabled := true
-	if resources.EnvoyProxy != nil {
-		endpointRoutingDisabled = ptr.Deref(resources.EnvoyProxy.Spec.EndpointRoutingDisabled, true)
-	}
-
 	t := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: endpointRoutingDisabled,
+		EndpointRoutingDisabled: isEndpointRoutingDisabled(resources),
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}
@@ -309,17 +304,12 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 		return gatewayapi.Resources{}, fmt.Errorf("the GatewayClass resource is required")
 	}
 
-	endpointRoutingDisabled := true
-	if resources.EnvoyProxy != nil {
-		endpointRoutingDisabled = ptr.Deref(resources.EnvoyProxy.Spec.EndpointRoutingDisabled, true)
-	}
-
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: endpointRoutingDisabled,
+		EndpointRoutingDisabled: isEndpointRoutingDisabled(resources),
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}
@@ -347,17 +337,12 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
 
-	endpointRoutingDisabled := true
-	if resources.EnvoyProxy != nil {
-		endpointRoutingDisabled = ptr.Deref(resources.EnvoyProxy.Spec.EndpointRoutingDisabled, true)
-	}
-
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: endpointRoutingDisabled,
+		EndpointRoutingDisabled: isEndpointRoutingDisabled(resources),
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}
@@ -419,6 +404,19 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 	}
 
 	return result, nil
+}
+
+func isEndpointRoutingDisabled(resources *gatewayapi.Resources) bool {
+	endpointRoutingDisabled := true
+	if resources.EnvoyProxy != nil {
+		switch ptr.Deref(resources.EnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
+		case egv1a1.ServiceRoutingType:
+			// endPointRoutingDisable is already true.
+		default:
+			endpointRoutingDisabled = false
+		}
+	}
+	return endpointRoutingDisabled
 }
 
 // printOutput prints the echo-backed gateway API and xDS output

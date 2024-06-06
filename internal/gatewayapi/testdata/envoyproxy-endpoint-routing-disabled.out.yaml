@@ -50,7 +50,6 @@ infraIR:
           name: test
           namespace: envoy-gateway-system
         spec:
-          endpointRoutingDisabled: false
           logging: {}
           provider:
             kubernetes:
@@ -100,6 +99,7 @@ infraIR:
               envoyService:
                 type: LoadBalancer
             type: Kubernetes
+          routingType: service
         status: {}
       listeners:
       - address: null
