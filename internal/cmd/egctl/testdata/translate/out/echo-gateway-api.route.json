@@ -20,7 +20,9 @@
       ],
       "supportedFeatures": [
         "GRPCRoute",
+        "Gateway",
         "GatewayPort8080",
+        "HTTPRoute",
         "HTTPRouteBackendProtocolH2C",
         "HTTPRouteBackendProtocolWebSocket",
         "HTTPRouteBackendTimeout",

@@ -130,7 +130,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 
 			for _, serviceLoadBalancerSourceRange := range serviceLoadBalancerSourceRanges {
 				if ip, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil || ip.To4() == nil {
-					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IPv4 subnet", serviceLoadBalancerSourceRange))
+					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IP subnet", serviceLoadBalancerSourceRange))
 				}
 			}
 		}
@@ -140,7 +140,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 			}
 
 			if ip, err := netip.ParseAddr(*serviceLoadBalancerIP); err != nil || !ip.Unmap().Is4() {
-				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
+				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IP address", *serviceLoadBalancerIP))
 			}
 		}
 		if patch := spec.Provider.Kubernetes.EnvoyService.Patch; patch != nil {

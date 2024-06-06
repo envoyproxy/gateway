@@ -16,6 +16,20 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          volumeMounts:
+            - mountPath: /var/run/ext-proc
+              name: socket-dir
+        pod:
+          volumes:
+            - name: socket-dir
+              hostPath:
+                path: /var/run/ext-proc
+                type: ''
   telemetry:
     metrics:
       prometheus: {}

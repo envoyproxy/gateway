@@ -95,6 +95,9 @@ type Translator struct {
 	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
 
+	// BackendEnabled when the Backend feature is enabled.
+	BackendEnabled bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
@@ -122,6 +125,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
+	backends []*egv1a1.Backend,
 	xdsIR XdsIRMap, infraIR InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -155,6 +159,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.EnvoyExtensionPolicies = append(translateResult.EnvoyExtensionPolicies, envoyExtensionPolicies...)
 	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies...)
 
+	translateResult.Backends = append(translateResult.Backends, backends...)
 	return translateResult
 }
 
@@ -181,6 +186,9 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
+
+	// process all Backends
+	backends := t.ProcessBackends(resources.Backends)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
@@ -245,7 +253,7 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, xdsIR, infraIR), translateErrs
+		extServerPolicies, backends, xdsIR, infraIR), translateErrs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
