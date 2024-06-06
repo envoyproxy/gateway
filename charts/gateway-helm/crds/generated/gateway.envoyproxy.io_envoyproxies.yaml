@@ -10204,9 +10204,8 @@ spec:
                 type: object
               routingType:
                 description: |-
-                  EndpointRoutingDisabled can be set to true to use
-                  the Service Cluster IP for routing to the backend
-                  instead.
+                  RoutingType can be set to "service" to use Service Cluster IP for routing to the backend,
+                  or it can be set to "endpoint" to use Endpoint routing. The default is "endpoint".
                 type: string
               shutdown:
                 description: Shutdown defines configuration for graceful envoy shutdown
