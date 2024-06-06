@@ -73,6 +73,5 @@ var PrivateGCTest = suite.ConformanceTest{
 			// Send a request to an valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 		})
-
 	},
 }

@@ -27,7 +27,6 @@ import (
 )
 
 func TestMultipleGC(t *testing.T) {
-
 	flag.Parse()
 
 	cfg, err := config.GetConfig()
