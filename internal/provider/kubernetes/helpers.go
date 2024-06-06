@@ -220,7 +220,7 @@ func classAccepted(gc *gwapiv1.GatewayClass) bool {
 // marked for deletion and its finalizer has been removed.
 func classMarkedForDeletion(gc *gwapiv1.GatewayClass) bool {
 	if gc == nil {
-		return true
+		return false
 	}
 
 	return !gc.DeletionTimestamp.IsZero() && !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer)

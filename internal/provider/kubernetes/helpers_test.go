@@ -569,7 +569,7 @@ func TestClassMarkedForDeletion(t *testing.T) {
 		{
 			name:     "nil gatewayclass",
 			gc:       nil,
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "gatewayclass not deleted",
