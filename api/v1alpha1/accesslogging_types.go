@@ -120,6 +120,7 @@ type ALSEnvoyProxyAccessLog struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs"`
 	// LogName defines the friendly name of the access log to be returned in
 	// StreamAccessLogsMessage.Identifier. This allows the access log server
@@ -176,6 +177,7 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
