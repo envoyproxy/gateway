@@ -233,8 +233,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Process the parametersRef of the accepted GatewayClass.
-		// This should run before processBackendRefs
-		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+		// This should run before processBackendRefs.
+		if managedGC.Spec.ParametersRef != nil && !classMarkedForDeletion(managedGC) {
 			if err := r.processParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
@@ -277,7 +277,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
-		// process envoy gateway secret refs
+		// Process envoy gateway secret refs.
 		r.processEnvoyProxySecretRef(ctx, gwcResource)
 
 		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
@@ -286,7 +286,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if len(gwcResource.Gateways) == 0 {
-			r.log.Info("No gateways found for accepted gatewayclass")
+			r.log.Info("No gateways found for accepted gatewayclass", "name", managedGC.Name)
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
 			if err := r.removeFinalizer(ctx, managedGC); err != nil {
@@ -295,7 +295,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 		} else {
-			// finalize the accepted GatewayClass.
+			// Finalize the accepted GatewayClass.
 			if err := r.addFinalizer(ctx, managedGC); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
 					managedGC.Name))
@@ -347,10 +347,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 	for _, gwClass := range gatewayClasses.Items {
 		gwClass := gwClass
 		if gwClass.Spec.ControllerName == r.classController {
-			// The gatewayclass was marked for deletion and the finalizer removed,
-			// so clean-up dependents.
-			if !gwClass.DeletionTimestamp.IsZero() &&
-				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
+			if classMarkedForDeletion(&gwClass) {
 				r.log.Info("gatewayclass marked for deletion")
 				cc.removeMatch(&gwClass)
 				continue
