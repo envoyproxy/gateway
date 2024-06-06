@@ -11,6 +11,8 @@ type ProxyAccessLog struct {
 	// Settings defines accesslog settings for managed proxies.
 	// If unspecified, will send default format to stdout.
 	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Settings []ProxyAccessLogSetting `json:"settings,omitempty"`
 }
 
@@ -19,6 +21,7 @@ type ProxyAccessLogSetting struct {
 	Format ProxyAccessLogFormat `json:"format"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
 }
 

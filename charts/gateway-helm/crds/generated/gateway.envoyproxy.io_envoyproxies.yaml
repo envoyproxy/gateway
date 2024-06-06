@@ -10557,12 +10557,15 @@ spec:
                                     openTelemetry field needs to be set.
                                   rule: 'self.type == ''OpenTelemetry'' ? has(self.openTelemetry)
                                     : !has(self.openTelemetry)'
+                              maxItems: 50
                               minItems: 1
                               type: array
                           required:
                           - format
                           - sinks
                           type: object
+                        maxItems: 50
+                        minItems: 1
                         type: array
                     type: object
                   metrics:
@@ -10737,6 +10740,8 @@ spec:
                                   x-kubernetes-validations:
                                   - message: only support Service kind.
                                     rule: self.all(f, f.kind == 'Service')
+                                  - message: BackendRefs only supports Core group.
+                                    rule: self.all(f, f.group == '')
                                 host:
                                   description: |-
                                     Host define the service hostname.
