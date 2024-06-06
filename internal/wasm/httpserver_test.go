@@ -235,7 +235,7 @@ func startLocalHTTPServer(ctx context.Context, cacheDir string) (*HTTPServer, er
 		err     error
 	)
 	for i := 0; i < retries; i++ {
-		_, err = http.Get(fmt.Sprintf("http://127.0.0.1:%d", envoyGatewayHTTPServerPort))
+		_, err = http.Get(fmt.Sprintf("http://127.0.0.1:%d", serverPort))
 		if err == nil {
 			break
 		}
@@ -249,7 +249,7 @@ func newHTTPClient() *http.Client {
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
 				d := net.Dialer{}
-				return d.DialContext(ctx, network, fmt.Sprintf("127.0.0.1:%d", envoyGatewayHTTPServerPort))
+				return d.DialContext(ctx, network, fmt.Sprintf("127.0.0.1:%d", serverPort))
 			},
 		},
 	}

@@ -23,9 +23,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/logging"
+	tlsutils "github.com/envoyproxy/gateway/internal/utils/tls"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -107,15 +106,8 @@ func TestTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start a dummy server.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
-
-	cfg := &Config{
-		Server: config.Server{
-			Logger: logger,
-		},
-	}
-	r := New(cfg)
-	g := grpc.NewServer(grpc.Creds(credentials.NewTLS(r.tlsConfig(certFile, keyFile, caFile))))
+	tlsConfig, _ := tlsutils.TLSConfig(certFile, keyFile, caFile)
+	g := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
 	if g == nil {
 		t.Error("failed to create server")
 	}

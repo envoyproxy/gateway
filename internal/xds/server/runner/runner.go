@@ -7,12 +7,7 @@ package runner
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"time"
 
@@ -31,6 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/utils/tls"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -76,7 +72,10 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
-	cfg := r.tlsConfig(xdsTLSCertFilename, xdsTLSKeyFilename, xdsTLSCaFilename)
+	cfg, err := tls.TLSConfig(xdsTLSCertFilename, xdsTLSKeyFilename, xdsTLSCaFilename)
+	if err != nil {
+		return
+	}
 	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 		MinTime:             15 * time.Second,
 		PermitWithoutStream: true,
@@ -158,46 +157,4 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	)
 
 	r.Logger.Info("subscriber shutting down")
-}
-
-func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
-	loadConfig := func() (*tls.Config, error) {
-		cert, err := tls.LoadX509KeyPair(cert, key)
-		if err != nil {
-			return nil, err
-		}
-
-		// Load the CA cert.
-		ca, err := os.ReadFile(ca)
-		if err != nil {
-			return nil, err
-		}
-
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(ca) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-
-		return &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    certPool,
-			MinVersion:   tls.VersionTLS13,
-		}, nil
-	}
-
-	// Attempt to load certificates and key to catch configuration errors early.
-	if _, lerr := loadConfig(); lerr != nil {
-		r.Logger.Error(lerr, "failed to load certificate and key")
-	}
-	r.Logger.Info("loaded TLS certificate and key")
-
-	return &tls.Config{
-		MinVersion: tls.VersionTLS13,
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		Rand:       rand.Reader,
-		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
-			return loadConfig()
-		},
-	}
 }

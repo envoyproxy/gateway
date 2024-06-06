@@ -8,6 +8,7 @@ package wasm
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -18,11 +19,15 @@ import (
 	"github.com/docker/docker/pkg/fileutils"
 
 	"github.com/envoyproxy/gateway/internal/logging"
+	tlsUtils "github.com/envoyproxy/gateway/internal/utils/tls"
 )
 
 const (
-	envoyGatewayHTTPServerHost = "envoy-gateway"
-	envoyGatewayHTTPServerPort = 18002
+	serverHost           = "envoy-gateway"
+	serverPort           = 18002
+	serveTLSCertFilename = "/certs/tls.crt"
+	serveTLSKeyFilename  = "/certs/tls.key"
+	serveTLSCaFilename   = "/certs/ca.crt"
 )
 
 var _ Cache = &HTTPServer{}
@@ -68,23 +73,38 @@ func NewHTTPServerWithFileCache(cacheDir string, logger logging.Logger) *HTTPSer
 }
 
 func (s *HTTPServer) Start(ctx context.Context) {
-	s.logger.Info(fmt.Sprintf("Listening on :%d", envoyGatewayHTTPServerPort))
+	s.logger.Info(fmt.Sprintf("Listening on :%d", serverPort))
+
+	var (
+		tlsConfig *tls.Config
+		err       error
+	)
 
 	// Create the file directory if it does not exist.
-	if err := fileutils.CreateIfNotExists(s.dir, true); err != nil {
+	if err = fileutils.CreateIfNotExists(s.dir, true); err != nil {
 		s.logger.Error(err, "Failed to create Wasm cache directory")
 		return
 	}
 
 	handler := http.NewServeMux()
 	handler.Handle("/", s)
+
+	if tlsConfig, err = tlsUtils.TLSConfig(
+		serveTLSCertFilename,
+		serveTLSKeyFilename,
+		serveTLSCaFilename); err != nil {
+		s.logger.Error(err, "Failed to create TLS config")
+		return
+	}
+
 	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", envoyGatewayHTTPServerPort),
-		Handler: handler,
+		Addr:      fmt.Sprintf(":%d", serverPort),
+		Handler:   handler,
+		TLSConfig: tlsConfig,
 	}
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
+		if err = server.ListenAndServe(); err != nil {
 			s.logger.Error(err, "Failed to start Wasm HTTP server")
 		}
 	}()
@@ -92,7 +112,7 @@ func (s *HTTPServer) Start(ctx context.Context) {
 
 	select {
 	case <-ctx.Done():
-		if err := server.Close(); err != nil {
+		if err = server.Close(); err != nil {
 			s.logger.Error(err, "Error closing Wasm HTTP server")
 		}
 	}
@@ -154,8 +174,8 @@ func (s *HTTPServer) Get(originalUrl string, opts GetOptions) (servingURL string
 	}
 
 	// TODO: zhaohuabing: https
-	servingURL = fmt.Sprintf("http://%s:%d/%s", envoyGatewayHTTPServerHost,
-		envoyGatewayHTTPServerPort, mappingPath)
+	servingURL = fmt.Sprintf("http://%s:%d/%s", serverHost,
+		serverPort, mappingPath)
 	return servingURL, checksum, nil
 }
 
@@ -168,4 +188,3 @@ func generateRandomPath() (string, error) {
 	}
 	return fmt.Sprintf("wasm/%s.wasm", hex.EncodeToString(random)), nil
 }
-
