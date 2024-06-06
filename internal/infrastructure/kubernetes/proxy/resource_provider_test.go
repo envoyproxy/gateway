@@ -1228,6 +1228,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 		caseName string
 		infra    *ir.Infra
 		hpa      *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+		deploy   *egv1a1.KubernetesDeploymentSpec
 	}{
 		{
 			caseName: "default",
@@ -1266,6 +1267,17 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-deployment-name",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: ptr.To[int32](5),
+				MaxReplicas: ptr.To[int32](10),
+			},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Name: ptr.To("custom-deployment-name"),
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -1276,7 +1288,9 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			if tc.hpa != nil {
 				provider.Kubernetes.EnvoyHpa = tc.hpa
 			}
-
+			if tc.deploy != nil {
+				provider.Kubernetes.EnvoyDeployment = tc.deploy
+			}
 			provider.GetEnvoyProxyKubeProvider()
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)

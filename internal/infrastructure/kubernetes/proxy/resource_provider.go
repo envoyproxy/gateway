@@ -383,13 +383,20 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",
 				Kind:       "Deployment",
-				Name:       r.Name(),
 			},
 			MinReplicas: hpaConfig.MinReplicas,
 			MaxReplicas: ptr.Deref(hpaConfig.MaxReplicas, 1),
 			Metrics:     hpaConfig.Metrics,
 			Behavior:    hpaConfig.Behavior,
 		},
+	}
+
+	// set deployment target ref name
+	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
+	if deploymentConfig.Name != nil {
+		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
+	} else {
+		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
 	return hpa, nil
