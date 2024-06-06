@@ -1,5 +1,6 @@
 # Values for Grafana dependency
 grafana:
+  fullnameOverride: grafana
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -10,6 +11,38 @@ grafana:
   adminPassword: admin
   service:
     type: LoadBalancer
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'envoy-gateway'
+        orgId: 1
+        folder: 'envoy-gateway'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/envoy-gateway
+  dashboards:
+    envoy-gateway:
+      prometheus-stats:
+        gnetId: 1
+        revision: 1
+        datasource: Prometheus
+      # Scrape and load dashboards of Envoy Gateway
+      envoy-global-dashboard:
+        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-global.json
+        token: ''
+      envoy-cluster-dashboard:
+        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-clusters.json
+        token: ''
+      envoy-pod-resource-dashboard:
+        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-pod-resource.json
+        token: ''
+      envoy-gateway-global-dashboard:
+        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-gateway-global.json
+        token: ''
+
 
 # Values for Prometheus dependency
 prometheus:
@@ -23,7 +56,7 @@ prometheus:
   prometheus-node-exporter:
     enabled: false
   server:
-    fullnameOverride: prometheus
+    fullnameOverride: prometheus-server
     persistentVolume:
       enabled: false
     readinessProbeInitialDelay: 0

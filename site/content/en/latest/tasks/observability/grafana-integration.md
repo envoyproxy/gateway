@@ -49,8 +49,9 @@ You can access the Grafana instance by visiting `http://{GRAFANA_IP}`, derived i
 
 To log in to Grafana, use the credentials `admin:admin`.
 
-Envoy Gateway has examples of dashboard for you to get started, you can load them in your Grafana to get started. 
-Please refer to Grafana docs for [importing dashboards](https://grafana.com/docs/grafana/latest/dashboards/manage-dashboards/#import-a-dashboard).
+Envoy Gateway has examples of dashboard for you to get started, you can check them out under `Dashboards/envoy-gateway`.
+
+If you'd like import Grafana dashboards on your own, please refer to Grafana docs for [importing dashboards](https://grafana.com/docs/grafana/latest/dashboards/manage-dashboards/#import-a-dashboard).
 
 ### [Envoy Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-global.json)
 
