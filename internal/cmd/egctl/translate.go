@@ -409,7 +409,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 func isEndpointRoutingDisabled(resources *gatewayapi.Resources) bool {
 	endpointRoutingDisabled := true
 	if resources.EnvoyProxy != nil {
-		switch ptr.Deref(resources.EnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
+		switch ptr.Deref(resources.EnvoyProxy.Spec.RoutingType, egv1a1.ServiceRoutingType) {
 		case egv1a1.ServiceRoutingType:
 			// endPointRoutingDisable is already true.
 		default:
