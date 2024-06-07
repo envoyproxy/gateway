@@ -148,4 +148,9 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: true
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1alpha2
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*

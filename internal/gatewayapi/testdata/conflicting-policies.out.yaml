@@ -286,6 +286,11 @@ xdsIR:
             weight: 1
         hostname: ntjxuedx.192.168.0.15.nip.io
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: bdkzlmibsivuiqav
+          namespace: default
         name: httproute/default/bdkzlmibsivuiqav/rule/0/match/0/ntjxuedx_192_168_0_15_nip_io
         pathMatch:
           distinct: false
@@ -312,6 +317,11 @@ xdsIR:
             weight: 1
         hostname: qccbahgo.qccbahgo
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: mfqjpuycbgjrtdww
+          namespace: default
         name: httproute/default/mfqjpuycbgjrtdww/rule/0/match/0/qccbahgo_qccbahgo
         pathMatch:
           distinct: false

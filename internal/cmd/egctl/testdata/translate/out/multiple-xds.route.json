@@ -19,6 +19,16 @@
                     "match": {
                       "prefix": "/"
                     },
+                    "metadata": {
+                      "filterMetadata": {
+                        "io.envoyproxy.gateway.metadata": {
+                          "groupVersion": "",
+                          "kind": "HTTPRoute",
+                          "name": "backend",
+                          "namespace": "default"
+                        }
+                      }
+                    },
                     "name": "httproute/default/backend/rule/0/match/0/www_example_com",
                     "route": {
                       "cluster": "httproute/default/backend/rule/0",
@@ -54,6 +64,16 @@
                   {
                     "match": {
                       "pathSeparatedPrefix": "/v2"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "io.envoyproxy.gateway.metadata": {
+                          "groupVersion": "",
+                          "kind": "HTTPRoute",
+                          "name": "backend",
+                          "namespace": "default"
+                        }
+                      }
                     },
                     "name": "httproute/default/backend/rule/0/match/0/www_example2_com",
                     "route": {

@@ -528,6 +528,8 @@ type HTTPRoute struct {
 	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
 	// UseClientProtocol enables using the same protocol upstream that was used downstream
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -2226,4 +2228,21 @@ type DestinationFilters struct {
 	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 	// RemoveResponseHeaders defines a list of headers to be removed from response.
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
+}
+
+// ResourceMetadata is metadata from the provider resource that is translated to an envoy resource
+// +k8s:deepcopy-gen=true
+type ResourceMetadata struct {
+	// Kind is the kind of the resource
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	// GroupVersion is the group/version of the resource
+	GroupVersion string `json:"groupVersion,omitempty" yaml:"groupVersion,omitempty"`
+	// Name is the name of the resource
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Namespace is the namespace of the resource
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	// Annotations are the annotations of the resource
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	// SectionName is the name of a section of a resource
+	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
 }

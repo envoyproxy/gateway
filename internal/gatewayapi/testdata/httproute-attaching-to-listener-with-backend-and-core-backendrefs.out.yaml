@@ -234,6 +234,11 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-static
+          namespace: default
         name: httproute/default/httproute-static/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -261,6 +266,11 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-fqdn
+          namespace: default
         name: httproute/default/httproute-fqdn/rule/0/match/0/*
         pathMatch:
           distinct: false

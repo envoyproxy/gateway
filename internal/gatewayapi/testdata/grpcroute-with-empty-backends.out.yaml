@@ -110,6 +110,11 @@ xdsIR:
           statusCode: 500
         hostname: '*'
         isHTTP2: true
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1alpha2
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

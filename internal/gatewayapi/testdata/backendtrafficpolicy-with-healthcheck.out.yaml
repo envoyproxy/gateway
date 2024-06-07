@@ -482,6 +482,11 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: true
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1alpha2
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           healthCheck:
@@ -533,6 +538,11 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -569,6 +579,11 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
         name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -605,6 +620,11 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
