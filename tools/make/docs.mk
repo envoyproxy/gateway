@@ -50,7 +50,9 @@ helm-readme-gen.%: $(tools/helm-docs)
 		ImageRepository=docker.io/envoyproxy/gateway ImageTag=latest ImagePullPolicy=IfNotPresent \
 		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
 	fi
-	$(tools/helm-docs) --template-files=tools/helm-docs/readme.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
+
+	# generate helm readme doc
+	$(tools/helm-docs) --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
 
 	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
 	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
