@@ -1,4 +1,3 @@
-# Envoy Gateway
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/envoyproxy/gateway/badge)](https://securityscorecards.dev/viewer/?uri=github.com/envoyproxy/gateway)
 [![Build and Test](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml)
