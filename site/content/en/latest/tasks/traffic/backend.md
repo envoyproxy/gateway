@@ -7,11 +7,11 @@ Envoy Gateway supports routing to native K8s resources such as `Service` and `Se
 ## Motivation
 The Backend API was added to support several use cases:
 - Allowing users to integrate Envoy with services (Ext Auth, Rate Limit, ALS, ...) using Unix Domain Sockets, which are currently not supported by K8s.
-- Simplify [routing to cluster-external backends][], which currently requires users to maintain both K8s `Service` and `Endpoint` resources. 
+- Simplify [routing to cluster-external backends][], which currently requires users to maintain both K8s `Service` and `EndpointSlice` resources. 
 
 ## Warning
 
-Similar to the K8s Endpoint API, the Backend API can be misused to allow traffic to be sent to otherwise restricted destinations, as described in [CVE-2021-25740][]. 
+Similar to the K8s EndpointSlice API, the Backend API can be misused to allow traffic to be sent to otherwise restricted destinations, as described in [CVE-2021-25740][]. 
 A Backend resource can be used to:
 - Expose a Service or Pod that should not be accessible
 - Reference a Service or Pod by a Route without appropriate Reference Grants
