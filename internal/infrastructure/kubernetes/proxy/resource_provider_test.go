@@ -511,6 +511,13 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Name: ptr.To("custom-deployment-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -933,6 +940,13 @@ func TestDaemonSet(t *testing.T) {
 			infra:     newTestInfra(),
 			extraArgs: []string{"--key1 val1", "--key2 val2"},
 		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			daemonset: &egv1a1.KubernetesDaemonSetSpec{
+				Name: ptr.To("custom-daemonset-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -1083,6 +1097,13 @@ func TestService(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Name: ptr.To("custom-service-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -1207,6 +1228,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 		caseName string
 		infra    *ir.Infra
 		hpa      *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+		deploy   *egv1a1.KubernetesDeploymentSpec
 	}{
 		{
 			caseName: "default",
@@ -1245,6 +1267,17 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-deployment-name",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: ptr.To[int32](5),
+				MaxReplicas: ptr.To[int32](10),
+			},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Name: ptr.To("custom-deployment-name"),
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -1255,7 +1288,9 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			if tc.hpa != nil {
 				provider.Kubernetes.EnvoyHpa = tc.hpa
 			}
-
+			if tc.deploy != nil {
+				provider.Kubernetes.EnvoyDeployment = tc.deploy
+			}
 			provider.GetEnvoyProxyKubeProvider()
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
