@@ -39,6 +39,41 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -51,55 +86,7 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          provider:
-            kubernetes:
-              envoyDeployment:
-                container:
-                  env:
-                  - name: env_a
-                    value: env_a_value
-                  - name: env_b
-                    value: env_b_name
-                  image: envoyproxy/envoy:distroless-dev
-                  resources:
-                    requests:
-                      cpu: 100m
-                      memory: 512Mi
-                  securityContext:
-                    allowPrivilegeEscalation: false
-                    runAsUser: 2000
-                pod:
-                  affinity:
-                    nodeAffinity:
-                      requiredDuringSchedulingIgnoredDuringExecution:
-                        nodeSelectorTerms:
-                        - matchExpressions:
-                          - key: cloud.google.com/gke-nodepool
-                            operator: In
-                            values:
-                            - router-node
-                  annotations:
-                    key1: val1
-                    key2: val2
-                  securityContext:
-                    fsGroup: 2000
-                    fsGroupChangePolicy: OnRootMismatch
-                    runAsGroup: 3000
-                    runAsUser: 1000
-                  tolerations:
-                  - effect: NoSchedule
-                    key: node-type
-                    operator: Exists
-                    value: router
-                  volumes:
-                  - name: certs
-                    secret:
-                      secretName: envoy-cert
-                replicas: 2
-              envoyService:
-                type: LoadBalancer
-            type: Kubernetes
-          routingType: service
+          routingType: endpoint
         status: {}
       listeners:
       - address: null

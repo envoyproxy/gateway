@@ -20,9 +20,8 @@ spec:
         type: PathPrefix
         value: /backend-fqdn
     backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-fqdn-http2
+      - name: infra-backend-v1
+        port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend

@@ -3222,15 +3222,15 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-
+RoutingType defines the type of routing of this Envoy proxy.
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Value | Description |
 | ----- | ----------- |
-| `Service` |  | 
-| `Endpoint` |  | 
+| `Service` | ServiceRoutingType is the RoutingType for Service Cluster IP routing.<br /> | 
+| `Endpoint` | EndpointRoutingType is the RoutingType for Endpoint routing.<br /> | 
 
 
 #### SecurityPolicy
