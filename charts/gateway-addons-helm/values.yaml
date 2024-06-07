@@ -23,25 +23,8 @@ grafana:
           editable: true
           options:
             path: /var/lib/grafana/dashboards/envoy-gateway
-  dashboards:
-    envoy-gateway:
-      prometheus-stats:
-        gnetId: 1
-        revision: 1
-        datasource: Prometheus
-      # Scrape and load dashboards of Envoy Gateway
-      envoy-global-dashboard:
-        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-global.json
-        token: ''
-      envoy-cluster-dashboard:
-        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-clusters.json
-        token: ''
-      envoy-pod-resource-dashboard:
-        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-pod-resource.json
-        token: ''
-      envoy-gateway-global-dashboard:
-        url: https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-gateway-global.json
-        token: ''
+  dashboardsConfigMaps:
+    envoy-gateway: "grafana-dashboards"
 
 
 # Values for Prometheus dependency
@@ -69,4 +52,4 @@ prometheus:
     # use dockerhub
     image:
       repository: prom/prometheus
-    securityContext: null
+    securityContext: {}
