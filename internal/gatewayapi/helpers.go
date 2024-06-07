@@ -228,6 +228,15 @@ func GatewayClassOwnerLabel(name string) map[string]string {
 	return map[string]string{OwningGatewayClassLabel: name}
 }
 
+// OwnerLabels returns the owner labels based on the mergeGateways setting
+func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string {
+	if mergeGateways {
+		return GatewayClassOwnerLabel(string(gateway.Spec.GatewayClassName))
+	}
+
+	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
+}
+
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
 func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
