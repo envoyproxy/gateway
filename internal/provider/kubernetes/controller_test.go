@@ -150,7 +150,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 	}
 }
 
-func TestProcessGCParamsRef(t *testing.T) {
+func TestProcessGatewayClassParamsRef(t *testing.T) {
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 
 	testCases := []struct {
@@ -278,7 +278,7 @@ func TestProcessGCParamsRef(t *testing.T) {
 			// Process the test case gatewayclasses.
 			resourceTree := gatewayapi.NewResources()
 			resourceMap := newResourceMapping()
-			err := r.processGCParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
+			err := r.processGatewayClassParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.

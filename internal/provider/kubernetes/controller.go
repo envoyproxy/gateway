@@ -199,7 +199,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// Process the parametersRef of the accepted GatewayClass.
 		// This should run before processGateways and processBackendRefs
 		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
-			if err := r.processGCParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
+			if err := r.processGatewayClassParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
 					r.log.Error(err, "unable to update GatewayClass status")
@@ -1596,8 +1596,8 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	return nil
 }
 
-// processGCParamsRef processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processGCParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+// processGatewayClassParamsRef processes the parametersRef of the provided GatewayClass.
+func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	if !refsEnvoyProxy(gc) {
 		return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
 	}
