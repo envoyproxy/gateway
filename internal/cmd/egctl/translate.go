@@ -10,11 +10,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s.io/utils/ptr"
 	"os"
 	"reflect"
 	"sort"
 	"strings"
+
+	"k8s.io/utils/ptr"
+
+	"k8s.io/utils/ptr"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
@@ -27,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
