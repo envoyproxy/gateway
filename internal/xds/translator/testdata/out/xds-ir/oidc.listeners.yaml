@@ -46,6 +46,7 @@
               defaultExpiresIn: 3600s
               defaultRefreshTokenExpiresIn: 172800s
               forwardBearerToken: true
+              preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:
                   exact: /foo/oauth2/callback
@@ -89,6 +90,7 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:
                   exact: /bar/oauth2/callback

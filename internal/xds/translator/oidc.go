@@ -172,6 +172,9 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH,
 			AuthScopes: oidc.Scopes,
 			Resources:  oidc.Resources,
+			// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
+			// This option preserves the authorization header.
+			PreserveAuthorizationHeader: true,
 		},
 	}
 

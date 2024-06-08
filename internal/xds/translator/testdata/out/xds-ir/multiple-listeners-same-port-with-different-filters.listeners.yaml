@@ -133,6 +133,7 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:
                   exact: /foo/oauth2/callback
