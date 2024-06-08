@@ -68,6 +68,8 @@
             filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.foo.com
   type: STRICT_DNS
+  upstreamConnectionOptions:
+    tcpKeepalive: {}
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -104,3 +106,5 @@
             filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.bar.com
   type: STRICT_DNS
+  upstreamConnectionOptions:
+    tcpKeepalive: {}

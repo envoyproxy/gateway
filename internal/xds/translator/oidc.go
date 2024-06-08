@@ -274,6 +274,8 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      tSocket,
 			endpointType: cluster.endpointType,
+			// This is a workaround for the lack of retry policy in the OAuth2 filter.
+			tcpkeepalive: &ir.TCPKeepalive{},
 		}
 		if cluster.tls {
 			tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
