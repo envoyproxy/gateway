@@ -284,12 +284,7 @@ func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*Gateway
 }
 
 func (t *Translator) attachEnvoyProxy(gateway *GatewayContext, resources *Resources) {
-	if gateway.Spec.Infrastructure != nil && gateway.Spec.Infrastructure.ParametersRef != nil {
-		if t.MergeGateways {
-			gateway.envoyProxy = resources.ClassEnvoyProxy
-			return
-		}
-
+	if gateway.Spec.Infrastructure != nil && gateway.Spec.Infrastructure.ParametersRef != nil && !t.MergeGateways {
 		ref := gateway.Spec.Infrastructure.ParametersRef
 		for _, ep := range resources.EnvoyProxies {
 			if string(ref.Group) == egv1a1.GroupVersion.Group &&
