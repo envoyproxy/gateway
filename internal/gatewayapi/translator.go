@@ -286,11 +286,9 @@ func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*Gateway
 func (t *Translator) attachEnvoyProxy(gateway *GatewayContext, resources *Resources) {
 	if gateway.Spec.Infrastructure != nil && gateway.Spec.Infrastructure.ParametersRef != nil && !t.MergeGateways {
 		ref := gateway.Spec.Infrastructure.ParametersRef
-		for _, ep := range resources.EnvoyProxies {
-			if string(ref.Group) == egv1a1.GroupVersion.Group &&
-				ref.Kind == gwapiv1.Kind(ep.Kind) &&
-				gateway.Namespace == ep.Namespace &&
-				ref.Name == ep.Name {
+		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
+			ep := resources.GetEnvoyProxy(gateway.Namespace, ref.Name)
+			if ep != nil {
 				gateway.envoyProxy = ep
 				return
 			}

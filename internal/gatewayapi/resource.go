@@ -99,6 +99,16 @@ func (r *Resources) GetNamespace(name string) *corev1.Namespace {
 	return nil
 }
 
+func (r *Resources) GetEnvoyProxy(namespace, name string) *egv1a1.EnvoyProxy {
+	for _, ep := range r.EnvoyProxies {
+		if ep.Namespace == namespace && ep.Name == name {
+			return ep
+		}
+	}
+
+	return nil
+}
+
 func (r *Resources) GetService(namespace, name string) *corev1.Service {
 	for _, svc := range r.Services {
 		if svc.Namespace == namespace && svc.Name == name {
