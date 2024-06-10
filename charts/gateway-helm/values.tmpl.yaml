@@ -19,7 +19,7 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
 podDisruptionBudget:
-  minAvailable: 0
+  minAvailable: 1
 deployment:
   envoyGateway:
     image:
