@@ -60,18 +60,23 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
 	// 2. Then loop again and translate the policies without a sectionName
 	// TODO: Import sort order to ensure policy with same section always appear
 	// before policy with no section so below loops can be flattened into 1.
-
-	for _, policy := range clientTrafficPolicies {
-		targetRefs := getTargetRefs(policy)
+	for _, currPolicy := range clientTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		targetRefs := currPolicy.Spec.GetTargetRefs()
 		for _, currTarget := range targetRefs {
 			if hasSectionName(&currTarget) {
-				policy := policy.DeepCopy()
-				res = append(res, policy)
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					handledPolicies[policyName] = policy
+					res = append(res, policy)
+				}
 
 				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
 
@@ -156,13 +161,18 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	}
 
 	// Policy with no section set (targeting all sections)
-	for _, policy := range clientTrafficPolicies {
-		targetRefs := getTargetRefs(policy)
+	for _, currPolicy := range clientTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		targetRefs := currPolicy.Spec.GetTargetRefs()
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 
-				policy := policy.DeepCopy()
-				res = append(res, policy)
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					res = append(res, policy)
+					handledPolicies[policyName] = policy
+				}
 
 				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
 
@@ -268,13 +278,6 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	}
 
 	return res
-}
-
-func getTargetRefs(policy *egv1a1.ClientTrafficPolicy) []gwv1a2.LocalPolicyTargetReferenceWithSectionName {
-	if policy.Spec.TargetRef != nil {
-		return []gwv1a2.LocalPolicyTargetReferenceWithSectionName{*policy.Spec.TargetRef}
-	}
-	return policy.Spec.TargetRefs
 }
 
 func resolveCTPolicyTargetRef(

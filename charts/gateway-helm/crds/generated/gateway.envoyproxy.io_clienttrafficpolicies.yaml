@@ -377,11 +377,6 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-                  rule: self.group == 'gateway.networking.k8s.io'
-                - message: this policy can only have a targetRef.kind of Gateway
-                  rule: self.kind == 'Gateway'
               targetRefs:
                 description: |-
                   TargetRefs are the names of the Gateway resources this policy
@@ -440,11 +435,6 @@ spec:
                   - name
                   type: object
                 type: array
-                x-kubernetes-validations:
-                - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
-                  rule: self.all(ref, ref.group == 'gateway.networking.k8s.io')
-                - message: this policy can only have a targetRefs[*].kind of Gateway
-                  rule: self.all(ref, ref.kind == 'Gateway')
               tcpKeepalive:
                 description: |-
                   TcpKeepalive settings associated with the downstream client connection.
@@ -681,6 +671,17 @@ spec:
             - message: either targetRef or targetRefs must be used
               rule: (has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
                 && has(self.targetRefs))
+            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
+                : true'
+            - message: this policy can only have a targetRef.kind of Gateway
+              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' : true'
+            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
+                ''gateway.networking.k8s.io'') : true'
+            - message: this policy can only have a targetRefs[*].kind of Gateway
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway'')
+                : true'
           status:
             description: Status defines the current status of ClientTrafficPolicy.
             properties:

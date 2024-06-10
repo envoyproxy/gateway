@@ -32,26 +32,6 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: target-gateway-1
-    namespace: envoy-gateway
-  spec:
-    http1:
-      enableTrailers: true
-      preserveHeaderCase: true
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-2
-      sectionName: http-2
-  status:
-    ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
