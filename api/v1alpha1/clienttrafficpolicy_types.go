@@ -34,6 +34,8 @@ type ClientTrafficPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs))", message="either targetRef or targetRefs must be used"
+//
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -44,7 +46,16 @@ type ClientTrafficPolicySpec struct {
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway.
 	// TargetRef
-	TargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRef"`
+	//
+	// Deprecated: use targetRefs instead
+	TargetRef *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRef,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self.all(ref, ref.group == 'gateway.networking.k8s.io')", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
+	// +kubebuilder:validation:XValidation:rule="self.all(ref, ref.kind == 'Gateway')", message="this policy can only have a targetRefs[*].kind of Gateway"
+	//
+	// TargetRefs are the names of the Gateway resources this policy
+	// is being attached to.
+	TargetRefs []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs,omitempty"`
 	// TcpKeepalive settings associated with the downstream client connection.
 	// If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.
 	// Disabled by default.
