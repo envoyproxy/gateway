@@ -86,7 +86,7 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          routingType: endpoint
+          routingType: Endpoint
         status: {}
       listeners:
       - address: null

@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"k8s.io/utils/ptr"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -86,6 +87,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					EndpointRoutingDisabled: isEndpointRoutingDisabled(resources),
 					Namespace:               r.Namespace,
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
 				}
@@ -229,6 +231,21 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+func isEndpointRoutingDisabled(resources *gatewayapi.Resources) bool {
+	endpointRoutingDisabled := true
+	if resources.EnvoyProxy != nil {
+		switch ptr.Deref(resources.EnvoyProxy.Spec.RoutingType, v1alpha1.ServiceRoutingType) {
+		case v1alpha1.EndpointRoutingType:
+			endpointRoutingDisabled = false
+		case v1alpha1.ServiceRoutingType:
+			// endPointRoutingDisable is already true.
+		default:
+			// endPointRoutingDisable is already true.
+		}
+	}
+	return endpointRoutingDisabled
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwv1a2.PolicyStatus {

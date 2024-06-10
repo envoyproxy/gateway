@@ -68,8 +68,8 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
-	// RoutingType can be set to "service" to use Service Cluster IP for routing to the backend,
-	// or it can be set to "endpoint" to use Endpoint routing. The default is "endpoint".
+	// RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+	// or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
 	// +optional
 	RoutingType *RoutingType `json:"routingType,omitempty"`
 

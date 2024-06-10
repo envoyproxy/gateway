@@ -5,7 +5,7 @@ envoyproxy:
     namespace: envoy-gateway-system
     name: test
   spec:
-    routingType: endpoint
+    routingType: Endpoint
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

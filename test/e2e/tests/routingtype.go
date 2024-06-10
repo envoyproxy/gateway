@@ -23,7 +23,7 @@ func init() {
 
 var EnvoyGatewayRoutingType = suite.ConformanceTest{
 	ShortName:   "EnvoyGatewayRoutingType",
-	Description: "Routes with a backend ref to a backend",
+	Description: "Tests routing to the backendRef's ClusterIP",
 	Manifests: []string{
 		"testdata/httproute-routingtype.yaml",
 	},
