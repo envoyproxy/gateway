@@ -395,7 +395,6 @@ const (
 )
 
 // KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
-// Default to 1 to ensure at least one pod operational.
 type KubernetesPodDisruptionBudgetSpec struct {
 	// MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability

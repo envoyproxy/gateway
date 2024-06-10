@@ -2195,7 +2195,6 @@ _Appears in:_
 
 
 KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
-Default to 1 to ensure at least one pod operational.
 
 _Appears in:_
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
