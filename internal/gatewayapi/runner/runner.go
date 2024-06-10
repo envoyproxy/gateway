@@ -233,16 +233,18 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("shutting down")
 }
 
+// isEndpointRoutingDisabled returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
+// and false otherwise.
 func isEndpointRoutingDisabled(resources *gatewayapi.Resources) bool {
-	endpointRoutingDisabled := true
+	endpointRoutingDisabled := false
 	if resources.EnvoyProxy != nil {
-		switch ptr.Deref(resources.EnvoyProxy.Spec.RoutingType, v1alpha1.ServiceRoutingType) {
-		case v1alpha1.EndpointRoutingType:
-			endpointRoutingDisabled = false
+		switch ptr.Deref(resources.EnvoyProxy.Spec.RoutingType, v1alpha1.EndpointRoutingType) {
 		case v1alpha1.ServiceRoutingType:
-			// endPointRoutingDisable is already true.
+			endpointRoutingDisabled = true
+		case v1alpha1.EndpointRoutingType:
+			// endpointRoutingDisabled is already false.
 		default:
-			// endPointRoutingDisable is already true.
+			// endpointRoutingDisabled is already false.
 		}
 	}
 	return endpointRoutingDisabled
