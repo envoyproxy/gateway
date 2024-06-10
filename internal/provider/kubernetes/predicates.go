@@ -464,34 +464,40 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
-	key := types.NamespacedName{
-		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
-	}
-	deployment := new(appsv1.Deployment)
-	if err := r.client.Get(ctx, key, deployment); err != nil {
+	var deployments appsv1.DeploymentList
+	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
+	if err := r.client.List(ctx, &deployments, &client.ListOptions{
+		LabelSelector: labelSelector,
+		Namespace:     r.namespace,
+	}); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return deployment, nil
+	if len(deployments.Items) == 0 {
+		return nil, nil
+	}
+	return &deployments.Items[0], nil
 }
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
-	key := types.NamespacedName{
-		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
-	}
-	svc := new(corev1.Service)
-	if err := r.client.Get(ctx, key, svc); err != nil {
+	var services corev1.ServiceList
+	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
+	if err := r.client.List(ctx, &services, &client.ListOptions{
+		LabelSelector: labelSelector,
+		Namespace:     r.namespace,
+	}); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return svc, nil
+	if len(services.Items) == 0 {
+		return nil, nil
+	}
+	return &services.Items[0], nil
 }
 
 // findOwningGateway attempts finds a Gateway using "labels".

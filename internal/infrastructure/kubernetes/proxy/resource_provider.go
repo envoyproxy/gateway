@@ -143,11 +143,17 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        r.Name(),
 			Labels:      labels,
 			Annotations: annotations,
 		},
 		Spec: serviceSpec,
+	}
+
+	// set name
+	if envoyServiceConfig.Name != nil {
+		svc.ObjectMeta.Name = *envoyServiceConfig.Name
+	} else {
+		svc.ObjectMeta.Name = r.Name()
 	}
 
 	// apply merge patch to service
@@ -225,7 +231,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        r.Name(),
 			Labels:      dpLabels,
 			Annotations: dpAnnotations,
 		},
@@ -259,6 +264,13 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			RevisionHistoryLimit:    ptr.To[int32](10),
 			ProgressDeadlineSeconds: ptr.To[int32](600),
 		},
+	}
+
+	// set name
+	if deploymentConfig.Name != nil {
+		deployment.ObjectMeta.Name = *deploymentConfig.Name
+	} else {
+		deployment.ObjectMeta.Name = r.Name()
 	}
 
 	// omit the deployment replicas if HPA is being set
@@ -314,7 +326,6 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        r.Name(),
 			Labels:      dsLabels,
 			Annotations: dsAnnotations,
 		},
@@ -329,6 +340,13 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 				Spec: r.getPodSpec(containers, nil, daemonSetConfig.Pod, proxyConfig),
 			},
 		},
+	}
+
+	// set name
+	if daemonSetConfig.Name != nil {
+		daemonSet.ObjectMeta.Name = *daemonSetConfig.Name
+	} else {
+		daemonSet.ObjectMeta.Name = r.Name()
 	}
 
 	// apply merge patch to daemonset
@@ -365,13 +383,20 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",
 				Kind:       "Deployment",
-				Name:       r.Name(),
 			},
 			MinReplicas: hpaConfig.MinReplicas,
 			MaxReplicas: ptr.Deref(hpaConfig.MaxReplicas, 1),
 			Metrics:     hpaConfig.Metrics,
 			Behavior:    hpaConfig.Behavior,
 		},
+	}
+
+	// set deployment target ref name
+	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
+	if deploymentConfig.Name != nil {
+		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
+	} else {
+		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
 	return hpa, nil

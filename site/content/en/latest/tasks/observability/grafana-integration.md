@@ -52,25 +52,25 @@ To log in to Grafana, use the credentials `admin:admin`.
 Envoy Gateway has examples of dashboard for you to get started, you can load them in your Grafana to get started. 
 Please refer to Grafana docs for [importing dashboards](https://grafana.com/docs/grafana/latest/dashboards/manage-dashboards/#import-a-dashboard).
 
-### [Envoy Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/grafana/dashboards/envoy-global.json)
+### [Envoy Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-global.json)
 
 This dashboard example shows the overall downstram and upstream stats for each Envoy Proxy instance.
 
 ![Envoy Global](/img/envoy-global-dashboard.png)
 
-### [Envoy Clusters](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/grafana/dashboards/envoy-clusters.json)
+### [Envoy Clusters](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-clusters.json)
 
 This dashboard example shows the overall stats for each cluster from Envoy Proxy fleet.
 
 ![Envoy Clusters](/img/envoy-clusters-dashboard.png)
 
-### [Envoy Pod Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/grafana/dashboards/envoy-pod-resource.json)
+### [Envoy Pod Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-pod-resource.json)
 
 This dashboard example shows the overall pod resources stats for each Envoy Proxy instance.
 
 ![Envoy Pod Resources](/img/envoy-pod-resources-dashboard.png)
 
-### [Envoy Gateway Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/grafana/dashboards/envoy-gateway-global.json)
+### [Envoy Gateway Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-gateway-global.json)
 
 This dashboard example shows the overall stats exported by Envoy Gateway fleet.
 
