@@ -10162,6 +10162,19 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                      podDisruptionBudget:
+                        description: PodDisruptionBudget for envoy proxies
+                        properties:
+                          minAvailable:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              An eviction is allowed if at least the sepcfied will still be available after the eviction, i.e. even in the
+                              absence of the evicted pod.  So for example you can prevent all voluntary
+                              evictions by specifying "100%".
+                            x-kubernetes-int-or-string: true
+                        type: object
                       useListenerPortAsContainerPort:
                         description: |-
                           UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.

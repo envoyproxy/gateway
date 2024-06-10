@@ -277,6 +277,8 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
+	// PodDisruptionBudget allows to control the pod disruption budget of ab Envoy Proxy.
+	PodDisruptionBudget *KubernetesPodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.

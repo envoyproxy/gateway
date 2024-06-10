@@ -37,8 +37,9 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
 func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	return &EnvoyProxyKubernetesProvider{
-		EnvoyDeployment: DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
-		EnvoyService:    DefaultKubernetesService(),
+		EnvoyDeployment:     DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
+		EnvoyService:        DefaultKubernetesService(),
+		PodDisruptionBudget: DefaultKubernetesPDB(),
 	}
 }
 
