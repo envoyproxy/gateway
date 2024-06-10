@@ -122,23 +122,6 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "sectionName disabled until supported",
-			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
-				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-						},
-						SectionName: &sectionName,
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
-		},
-		{
 			desc: "tls minimal version greater than tls maximal version",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
