@@ -364,7 +364,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*v1.PodDisruptionBudget, error) 
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
-	podDisruptionBudget := provider.GetEnvoyProxyKubeProvider().PodDisruptionBudget
+	podDisruptionBudget := provider.GetEnvoyProxyKubeProvider().EnvoyPDB
 	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil {
 		return nil, nil
 	}

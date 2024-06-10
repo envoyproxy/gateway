@@ -1740,8 +1740,8 @@ func (in *EnvoyProxyKubernetesProvider) DeepCopyInto(out *EnvoyProxyKubernetesPr
 		*out = new(bool)
 		**out = **in
 	}
-	if in.PodDisruptionBudget != nil {
-		in, out := &in.PodDisruptionBudget, &out.PodDisruptionBudget
+	if in.EnvoyPDB != nil {
+		in, out := &in.EnvoyPDB, &out.EnvoyPDB
 		*out = new(KubernetesPodDisruptionBudgetSpec)
 		(*in).DeepCopyInto(*out)
 	}

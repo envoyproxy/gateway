@@ -1251,7 +1251,7 @@ func TestPDB(t *testing.T) {
 			}
 
 			if tc.pdb != nil {
-				provider.Kubernetes.PodDisruptionBudget = tc.pdb
+				provider.Kubernetes.EnvoyPDB = tc.pdb
 			}
 
 			provider.GetEnvoyProxyKubeProvider()
