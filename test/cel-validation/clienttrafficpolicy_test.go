@@ -34,8 +34,6 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 		Spec: egv1a1.ClientTrafficPolicySpec{},
 	}
 
-	sectionName := gwapiv1a2.SectionName("foo")
-
 	cases := []struct {
 		desc         string
 		mutate       func(ctp *egv1a1.ClientTrafficPolicy)
