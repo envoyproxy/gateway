@@ -434,8 +434,14 @@ spec:
                   - kind
                   - name
                   type: object
-                maxItems: 16
                 type: array
+              targetSelector:
+                additionalProperties:
+                  type: string
+                description: |-
+                  TargetSelector contains a selector for resources that this policy
+                  is attached to.
+                type: object
               tcpKeepalive:
                 description: |-
                   TcpKeepalive settings associated with the downstream client connection.
@@ -669,9 +675,9 @@ spec:
                     : true'
             type: object
             x-kubernetes-validations:
-            - message: either targetRef or targetRefs must be used
+            - message: either targetRef, targetRefs, or targetSelector must be used
               rule: (has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
-                && has(self.targetRefs))
+                && has(self.targetRefs)) || has(self.targetSelector)
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'

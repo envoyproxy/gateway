@@ -35,7 +35,7 @@ const (
 	MaxHTTP2InitialConnectionWindowSize = MaxHTTP2InitialStreamWindowSize
 )
 
-func hasSectionName(target *gwv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
+func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
 }
 
@@ -69,6 +69,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, gateways, nil)...)
 		for _, currTarget := range targetRefs {
 			if hasSectionName(&currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -85,7 +86,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 					continue
 				}
 				key := utils.NamespacedName(gateway)
-				ancestorRefs := []gwv1a2.ParentReference{
+				ancestorRefs := []gwapiv1a2.ParentReference{
 					getAncestorRefForPolicy(key, currTarget.SectionName),
 				}
 
@@ -108,7 +109,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 					message := "Unable to target section, another ClientTrafficPolicy has already attached to it"
 
 					resolveErr = &status.PolicyResolveError{
-						Reason:  gwv1a2.PolicyReasonConflicted,
+						Reason:  gwapiv1a2.PolicyReasonConflicted,
 						Message: message,
 					}
 
@@ -164,6 +165,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, gateways, nil)...)
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 
@@ -182,7 +184,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				}
 
 				key := utils.NamespacedName(gateway)
-				ancestorRefs := []gwv1a2.ParentReference{
+				ancestorRefs := []gwapiv1a2.ParentReference{
 					getAncestorRefForPolicy(key, nil),
 				}
 
@@ -204,7 +206,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 					message := "Unable to target Gateway, another ClientTrafficPolicy has already attached to it"
 
 					resolveErr = &status.PolicyResolveError{
-						Reason:  gwv1a2.PolicyReasonConflicted,
+						Reason:  gwapiv1a2.PolicyReasonConflicted,
 						Message: message,
 					}
 
@@ -282,7 +284,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 
 func resolveCTPolicyTargetRef(
 	policy *egv1a1.ClientTrafficPolicy,
-	targetRef *gwv1a2.LocalPolicyTargetReferenceWithSectionName,
+	targetRef *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	targetNs := policy.Namespace

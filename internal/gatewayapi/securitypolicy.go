@@ -86,11 +86,12 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, nil, routes)...)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind != KindGateway {
 				var (
 					targetedRoute  RouteContext
-					parentGateways []gwv1a2.ParentReference
+					parentGateways []gwapiv1a2.ParentReference
 					resolveErr     *status.PolicyResolveError
 				)
 				policy, found := handledPolicies[policyName]
@@ -164,6 +165,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, gateways, nil)...)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == KindGateway {
 				var (
@@ -189,7 +191,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(targetedGateway)
-				parentGateways := []gwv1a2.ParentReference{
+				parentGateways := []gwapiv1a2.ParentReference{
 					getAncestorRefForPolicy(gatewayNN, nil),
 				}
 
@@ -245,7 +247,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 func resolveSecurityPolicyGatewayTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	target gwv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	targetNs := policy.Namespace
@@ -296,7 +298,7 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 func resolveSecurityPolicyRouteTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	target gwv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
 	targetNs := policy.Namespace
@@ -433,7 +435,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
-	target gwv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	resources *Resources,
 	xdsIR XdsIRMap,
 ) error {
