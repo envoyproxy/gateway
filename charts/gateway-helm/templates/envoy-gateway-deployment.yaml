@@ -6,6 +6,7 @@ metadata:
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 ---
+  {{- if and .Values.podDisruptionBudget.minAvailable (ge (int .Values.podDisruptionBudget.minAvailable) 1) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -17,6 +18,7 @@ spec:
     matchLabels:
       control-plane: envoy-gateway
     {{- include "eg.selectorLabels" . | nindent 6 }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment

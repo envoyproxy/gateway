@@ -1,19 +1,5 @@
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: envoy-gateway
-  namespace: 'envoy-gateway-system'
-spec:
-  minAvailable: 0
-  selector:
-    matchLabels:
-      control-plane: envoy-gateway
-      app.kubernetes.io/name: gateway-helm
-      app.kubernetes.io/instance: eg
----
-# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -358,6 +344,7 @@ spec:
     targetPort: 19001
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
