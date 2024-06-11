@@ -1,5 +1,6 @@
 # Values for Grafana dependency
 grafana:
+  fullnameOverride: grafana
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -10,6 +11,21 @@ grafana:
   adminPassword: admin
   service:
     type: LoadBalancer
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'envoy-gateway'
+          orgId: 1
+          folder: 'envoy-gateway'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/envoy-gateway
+  dashboardsConfigMaps:
+    envoy-gateway: "grafana-dashboards"
+
 
 # Values for Prometheus dependency
 prometheus:
@@ -23,7 +39,7 @@ prometheus:
   prometheus-node-exporter:
     enabled: false
   server:
-    fullnameOverride: prometheus
+    fullnameOverride: prometheus-server
     persistentVolume:
       enabled: false
     readinessProbeInitialDelay: 0
@@ -36,4 +52,4 @@ prometheus:
     # use dockerhub
     image:
       repository: prom/prometheus
-    securityContext: null
+    securityContext: {}
