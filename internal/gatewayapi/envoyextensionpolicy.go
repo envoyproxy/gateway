@@ -333,8 +333,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 				errs = errors.Join(errs, err)
 				extProcs = nil
 			}
+			irKey := t.getIRKey(gtwCtx.Gateway)
 			for _, listener := range parentRefCtx.listeners {
-				irKey := t.getIRKey(listener.gateway.Gateway)
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
 					for _, r := range irListener.Routes {

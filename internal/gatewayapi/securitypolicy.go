@@ -414,8 +414,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					extAuth = nil
 				}
 			}
+			irKey := t.getIRKey(gtwCtx.Gateway)
 			for _, listener := range parentRefCtx.listeners {
-				irKey := t.getIRKey(listener.gateway.Gateway)
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
 					for _, r := range irListener.Routes {
