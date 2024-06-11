@@ -18,7 +18,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 )
 
 const (
@@ -143,17 +142,6 @@ func terminatesTLS(listener *gwapiv1.Listener) bool {
 func refsSecret(ref *gwapiv1.SecretObjectReference) bool {
 	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
 		(ref.Kind == nil || *ref.Kind == gatewayapi.KindSecret)
-}
-
-// infraName returns expected name for the EnvoyProxy infra resources.
-// By default it returns hashed string from {GatewayNamespace}/{GatewayName},
-// but if mergeGateways is set, it will return hashed string of {GatewayClassName}.
-func infraName(gateway *gwapiv1.Gateway, merged bool) string {
-	if merged {
-		return proxy.ExpectedResourceHashedName(string(gateway.Spec.GatewayClassName))
-	}
-	infraName := fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name)
-	return proxy.ExpectedResourceHashedName(infraName)
 }
 
 // validateBackendRef validates that ref is a reference to a local Service.

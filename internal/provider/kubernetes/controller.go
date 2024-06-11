@@ -1578,14 +1578,14 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	epList := new(egv1a1.EnvoyProxyList)
+	gcParametersRefNamespace := string(*gc.Spec.ParametersRef.Namespace)
 
-	// The EnvoyProxy must be in the same namespace as EG.
-	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: r.namespace}); err != nil {
-		return fmt.Errorf("failed to list envoyproxies in namespace %s: %w", r.namespace, err)
+	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: gcParametersRefNamespace}); err != nil {
+		return fmt.Errorf("failed to list envoyproxies in namespace %s: %w", gcParametersRefNamespace, err)
 	}
 
 	if len(epList.Items) == 0 {
-		r.log.Info("no envoyproxies exist in", "namespace", r.namespace)
+		r.log.Info("no envoyproxies exist in", "namespace", gcParametersRefNamespace)
 		return nil
 	}
 

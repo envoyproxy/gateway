@@ -11,6 +11,20 @@ grafana:
   adminPassword: admin
   service:
     type: LoadBalancer
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'envoy-gateway'
+          orgId: 1
+          folder: 'envoy-gateway'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/envoy-gateway
+  dashboardsConfigMaps:
+    envoy-gateway: "grafana-dashboards"
 
 
 # Values for Prometheus dependency
@@ -25,7 +39,7 @@ prometheus:
   prometheus-node-exporter:
     enabled: false
   server:
-    fullnameOverride: prometheus
+    fullnameOverride: prometheus-server
     persistentVolume:
       enabled: false
     readinessProbeInitialDelay: 0
@@ -38,7 +52,7 @@ prometheus:
     # use dockerhub
     image:
       repository: prom/prometheus
-    securityContext: null
+    securityContext: {}
 
 
 # Values for Fluent-bit dependency
@@ -169,7 +183,7 @@ opentelemetry-collector:
       # The health_check extension is mandatory for this chart.
       # Without the health_check extension the collector will fail the readiness and liveliness probes.
       # The health_check extension can be modified, but should never be removed.
-      health_check: { }
+      health_check: {}
     processors:
       attributes:
         actions:
