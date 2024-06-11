@@ -61,7 +61,7 @@ var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
 	Translate(resources *Resources) (*TranslateResult, error)
-	GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext
+	GetRelevantGateways(resources *Resources) []*GatewayContext
 
 	RoutesTranslator
 	ListenersTranslator
@@ -166,10 +166,7 @@ func newTranslateResult(gateways []*GatewayContext,
 
 func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	// Get Gateways belonging to our GatewayClass.
-	gateways := t.GetRelevantGateways(resources.Gateways)
-	for _, gtw := range gateways {
-		t.attachEnvoyProxy(gtw, resources)
-	}
+	gateways := t.GetRelevantGateways(resources)
 
 	// Sort gateways based on timestamp.
 	sort.Slice(gateways, func(i, j int) bool {
@@ -262,10 +259,10 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
 // Gateway with the Listener statuses reset.
-func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext {
+func (t *Translator) GetRelevantGateways(resources *Resources) []*GatewayContext {
 	var relevant []*GatewayContext
 
-	for _, gateway := range gateways {
+	for _, gateway := range resources.Gateways {
 		if gateway == nil {
 			panic("received nil gateway")
 		}
@@ -274,29 +271,13 @@ func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*Gateway
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
 			}
-			gc.ResetListeners()
+			gc.ResetListeners(resources)
 
 			relevant = append(relevant, gc)
 		}
 	}
 
 	return relevant
-}
-
-func (t *Translator) attachEnvoyProxy(gateway *GatewayContext, resources *Resources) {
-	if gateway.Spec.Infrastructure != nil && gateway.Spec.Infrastructure.ParametersRef != nil && !t.MergeGateways {
-		ref := gateway.Spec.Infrastructure.ParametersRef
-		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
-			ep := resources.GetEnvoyProxy(gateway.Namespace, ref.Name)
-			if ep != nil {
-				gateway.envoyProxy = ep
-				return
-			}
-		}
-		// not found, fallthrough to use envoyProxy attached to gatewayclass
-	}
-
-	gateway.envoyProxy = resources.ClassEnvoyProxy
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

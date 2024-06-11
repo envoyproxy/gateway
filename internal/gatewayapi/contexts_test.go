@@ -16,6 +16,13 @@ import (
 )
 
 func TestContexts(t *testing.T) {
+	r := &Resources{
+		GatewayClass: &gwapiv1.GatewayClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+	}
 	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
@@ -33,7 +40,7 @@ func TestContexts(t *testing.T) {
 	gctx := &GatewayContext{
 		Gateway: gateway,
 	}
-	gctx.ResetListeners()
+	gctx.ResetListeners(r)
 	require.Len(t, gctx.listeners, 1)
 
 	lctx := gctx.listeners[0]
@@ -56,11 +63,18 @@ func TestContexts(t *testing.T) {
 	require.Len(t, gateway.Status.Listeners[0].SupportedKinds, 1)
 	require.EqualValues(t, "HTTPRoute", gateway.Status.Listeners[0].SupportedKinds[0].Kind)
 
-	gctx.ResetListeners()
+	gctx.ResetListeners(r)
 	require.Empty(t, gateway.Status.Listeners[0].Conditions)
 }
 
 func TestContextsStaleListener(t *testing.T) {
+	r := &Resources{
+		GatewayClass: &gwapiv1.GatewayClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+	}
 	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
@@ -116,7 +130,7 @@ func TestContextsStaleListener(t *testing.T) {
 		listenerStatusIdx: 1,
 	}
 
-	gCtx.ResetListeners()
+	gCtx.ResetListeners(r)
 
 	require.Len(t, gCtx.listeners, 2)
 
@@ -141,7 +155,7 @@ func TestContextsStaleListener(t *testing.T) {
 	// Remove one of the listeners
 	gateway.Spec.Listeners = gateway.Spec.Listeners[:1]
 
-	gCtx.ResetListeners()
+	gCtx.ResetListeners(r)
 
 	// Ensure the listener status has been updated and the stale listener has been
 	// removed.

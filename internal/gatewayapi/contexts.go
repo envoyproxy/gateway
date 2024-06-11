@@ -29,7 +29,7 @@ type GatewayContext struct {
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
-func (g *GatewayContext) ResetListeners() {
+func (g *GatewayContext) ResetListeners(resource *Resources) {
 	numListeners := len(g.Spec.Listeners)
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
@@ -42,6 +42,24 @@ func (g *GatewayContext) ResetListeners() {
 			listenerStatusIdx: i,
 		}
 	}
+
+	g.attachEnvoyProxy(resource)
+}
+
+func (g *GatewayContext) attachEnvoyProxy(resources *Resources) {
+	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
+		ref := g.Spec.Infrastructure.ParametersRef
+		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
+			ep := resources.GetEnvoyProxy(g.Namespace, ref.Name)
+			if ep != nil {
+				g.envoyProxy = ep
+				return
+			}
+		}
+		// not found, fallthrough to use envoyProxy attached to gatewayclass
+	}
+
+	g.envoyProxy = resources.ClassEnvoyProxy
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
