@@ -2581,6 +2581,7 @@ _Appears in:_
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [SecurityPolicySpec](#securitypolicyspec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -3297,7 +3298,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway. |
+| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef<br /><br />Deprecated: use targetRefs instead |
+| `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `cors` | _[CORS](#cors)_ |  false  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
