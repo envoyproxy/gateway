@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"fmt"
-	"os"
 
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -223,6 +222,5 @@ func fixCurrentAncestorRefs(policy *gwapiv1a3.BackendTLSPolicy, parent gwapiv1a2
 		ret[i] = ancestor.AncestorRef
 	}
 	ret = append(ret, parent)
-	fmt.Fprintf(os.Stderr, "parents: %+v\n", ret)
 	return ret
 }
