@@ -1337,7 +1337,7 @@ _Appears in:_
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  | EnvoyService defines the desired state of the Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
 | `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.<br />Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
 | `useListenerPortAsContainerPort` | _boolean_ |  false  | UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.<br />When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.<br />This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability. |
-| `envoyPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  | EnvoyPDB allows to control the pod disruption budget of ab Envoy Proxy. |
+| `envoyPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  | EnvoyPDB allows to control the pod disruption budget of an Envoy Proxy. |
 
 
 #### EnvoyProxyProvider
@@ -2201,7 +2201,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `minAvailable` | _[IntOrString](#intorstring)_ |  false  | MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. |
+| `minAvailable` | _integer_ |  false  | MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. |
 
 
 #### KubernetesPodSpec

@@ -16,7 +16,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	apisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -3037,7 +3036,7 @@ func (in *KubernetesPodDisruptionBudgetSpec) DeepCopyInto(out *KubernetesPodDisr
 	*out = *in
 	if in.MinAvailable != nil {
 		in, out := &in.MinAvailable, &out.MinAvailable
-		*out = new(intstr.IntOrString)
+		*out = new(int32)
 		**out = **in
 	}
 }
