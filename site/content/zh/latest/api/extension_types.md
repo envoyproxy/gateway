@@ -1940,6 +1940,20 @@ _Appears in:_
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
+#### HealthCheckSettings
+
+
+
+HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `path` | _string_ |  true  | Path specifies the HTTP path to match on for health check requests. |
+
+
 #### IPEndpoint
 
 

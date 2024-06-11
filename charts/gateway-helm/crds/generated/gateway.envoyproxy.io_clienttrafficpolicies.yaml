@@ -224,6 +224,19 @@ spec:
                         > 0) ? (self.mode == ''AppendForward'' || self.mode == ''SanitizeSet'')
                         : true'
                 type: object
+              healthCheck:
+                description: HealthCheck provides configuration for determining whether
+                  the HTTP/HTTPS listener is healthy.
+                properties:
+                  path:
+                    description: Path specifies the HTTP path to match on for health
+                      check requests.
+                    maxLength: 1024
+                    minLength: 1
+                    type: string
+                required:
+                - path
+                type: object
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
                 properties:
