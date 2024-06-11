@@ -278,7 +278,7 @@ type EnvoyProxyKubernetesProvider struct {
 	// +optional
 	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
 
-	// EnvoyPDB allows to control the pod disruption budget of ab Envoy Proxy.
+	// EnvoyPDB allows to control the pod disruption budget of an Envoy Proxy.
 	// +optional
 	EnvoyPDB *KubernetesPodDisruptionBudgetSpec `json:"envoyPDB,omitempty"`
 }
