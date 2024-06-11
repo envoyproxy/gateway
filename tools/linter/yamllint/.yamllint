@@ -6,6 +6,7 @@ ignore: |
   # after running `make generate-manifests` which creates
   # the Install YAML in bin/
   charts/gateway-helm/
+  charts/gateway-addons-helm/
   bin/install.yaml
 
 rules:
