@@ -15,15 +15,15 @@
 
 ## Usage
 
-[Helm](https://helm.sh) must be installed to use the charts.  Please refer to
-Helm's [documentation](https://helm.sh/docs) to get started.
+[Helm](https://helm.sh) must be installed to use the charts.
+Please refer to Helm's [documentation](https://helm.sh/docs) to get started.
 
 ### Install from DockerHub
 
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-  helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+    helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
@@ -48,7 +48,7 @@ You can install the eg chart along without Gateway API CRDs and Envoy Gateway CR
 To uninstall the chart:
 
 ``` shell
-    helm delete eg
+    helm uninstall eg -n envoy-gateway-system
 ```
 
 {{ template "chart.valuesSection" . }}

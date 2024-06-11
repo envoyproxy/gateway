@@ -66,7 +66,7 @@ go.test.cel: manifests $(tools/setup-envtest) # Run the CEL validation tests
 	@for ver in $(ENVTEST_K8S_VERSIONS); do \
   		echo "Run CEL Validation on k8s $$ver"; \
         go clean -testcache; \
-        KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $$ver -p path)" \
+        KUBEBUILDER_ASSETS="$$($(tools/setup-envtest) use $$ver -p path)" \
          go test ./test/cel-validation --tags celvalidation -race; \
     done
 

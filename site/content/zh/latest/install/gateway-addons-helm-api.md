@@ -1,4 +1,6 @@
-# gateway-addons-helm
++++
+title = "Gateway Addons Helm Chart"
++++
 
 ![Version: v0.0.0-latest](https://img.shields.io/badge/Version-v0.0.0--latest-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
 
@@ -23,29 +25,6 @@ An Add-ons Helm chart for Envoy Gateway
 |------------|------|---------|
 | https://grafana.github.io/helm-charts | grafana | 8.0.0 |
 | https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
-
-## Usage
-
-[Helm](https://helm.sh) must be installed to use the charts.
-Please refer to Helm's [documentation](https://helm.sh/docs) to get started.
-
-The Envoy Gateway must be installed before installing this chart.
-
-### Install from DockerHub
-
-Once Helm has been set up correctly, install the chart from dockerhub:
-
-``` shell
-    helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --create-namespace
-```
-
-You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-addons-helm/tags)
-
-To uninstall the chart:
-
-``` shell
-    helm uninstall eg-addons -n monitoring
-```
 
 ## Values
 
