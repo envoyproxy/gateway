@@ -38,9 +38,6 @@ spec:
           statusCode: 301
           hostname: www.example.com
           port: 443
-      backendRefs:
-      - name: backend
-        port: 3000
 EOF
 ```
 
