@@ -38,7 +38,7 @@ func (g *GatewayContext) ResetListeners(resource *Resources) {
 		g.Status.Listeners[i] = gwapiv1.ListenerStatus{Name: listener.Name}
 		g.listeners[i] = &ListenerContext{
 			Listener:          listener,
-			gateway:           g.Gateway,
+			gateway:           g,
 			listenerStatusIdx: i,
 		}
 	}
@@ -68,7 +68,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *Resources) {
 type ListenerContext struct {
 	*gwapiv1.Listener
 
-	gateway           *gwapiv1.Gateway
+	gateway           *GatewayContext
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
 	tlsSecrets        []*corev1.Secret
@@ -332,7 +332,14 @@ type RouteParentContext struct {
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
-	gateway              *GatewayContext
+}
+
+// GetGateway returns the GatewayContext if parent resource is a gateway.
+func (r *RouteParentContext) GetGateway() *GatewayContext {
+	if r == nil || len(r.listeners) == 0 {
+		return nil
+	}
+	return r.listeners[0].gateway
 }
 
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {

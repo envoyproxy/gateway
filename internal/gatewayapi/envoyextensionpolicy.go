@@ -326,14 +326,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 	parentRefs := GetParentReferences(route)
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p)
-		if parentRefCtx != nil && parentRefCtx.gateway != nil {
-			if extProcs, err = t.buildExtProcs(policy, resources, parentRefCtx.gateway.envoyProxy); err != nil {
+		gtwCtx := parentRefCtx.GetGateway()
+		if gtwCtx != nil {
+			if extProcs, err = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "ExtProcs")
 				errs = errors.Join(errs, err)
 				extProcs = nil
 			}
 			for _, listener := range parentRefCtx.listeners {
-				irKey := t.getIRKey(listener.gateway)
+				irKey := t.getIRKey(listener.gateway.Gateway)
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
 					for _, r := range irListener.Routes {

@@ -134,7 +134,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				var err error
 				for _, l := range gateway.listeners {
 					// Find IR
-					irKey := t.getIRKey(l.gateway)
+					irKey := t.getIRKey(l.gateway.Gateway)
 					// It must exist since we've already finished processing the gateways
 					gwXdsIR := xdsIR[irKey]
 					if string(l.Name) == section {
@@ -253,7 +253,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					}
 
 					// Find IR
-					irKey := t.getIRKey(l.gateway)
+					irKey := t.getIRKey(l.gateway.Gateway)
 					// It must exist since we've already finished processing the gateways
 					gwXdsIR := xdsIR[irKey]
 					if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
@@ -380,7 +380,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources,
 ) error {
 	// Find IR
-	irKey := t.getIRKey(l.gateway)
+	irKey := t.getIRKey(l.gateway.Gateway)
 	// It must exist since we've already finished processing the gateways
 	gwXdsIR := xdsIR[irKey]
 

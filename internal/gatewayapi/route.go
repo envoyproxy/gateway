@@ -698,7 +698,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
-		irKey := t.getIRKey(listener.gateway)
+		irKey := t.getIRKey(listener.gateway.Gateway)
 		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 
 		if irListener != nil {
@@ -792,7 +792,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			hasHostnameIntersection = true
 
-			irKey := t.getIRKey(listener.gateway)
+			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
@@ -929,7 +929,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			}
 			accepted = true
 
-			irKey := t.getIRKey(listener.gateway)
+			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
@@ -1062,7 +1062,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				continue
 			}
 			accepted = true
-			irKey := t.getIRKey(listener.gateway)
+			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
@@ -1180,11 +1180,11 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 	case KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
-		gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference)
+		gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference).GetGateway()
 
 		var envoyProxy *egv1a1.EnvoyProxy
-		if gatewayCtx != nil && gatewayCtx.gateway != nil {
-			envoyProxy = gatewayCtx.gateway.envoyProxy
+		if gatewayCtx != nil {
+			envoyProxy = gatewayCtx.envoyProxy
 		}
 
 		ds.TLS = t.applyBackendTLSSetting(
@@ -1204,11 +1204,11 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
-		gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference)
+		gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference).GetGateway()
 
 		var envoyProxy *egv1a1.EnvoyProxy
-		if gatewayCtx != nil && gatewayCtx.gateway != nil {
-			envoyProxy = gatewayCtx.gateway.envoyProxy
+		if gatewayCtx != nil {
+			envoyProxy = gatewayCtx.envoyProxy
 		}
 
 		ds.TLS = t.applyBackendTLSSetting(
@@ -1376,7 +1376,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 	var relevantRoute bool
 
 	for _, parentRef := range GetParentReferences(routeContext) {
-		isRelevantParentRef, gw, selectedListeners := GetReferencedListeners(parentRef, gateways)
+		isRelevantParentRef, selectedListeners := GetReferencedListeners(parentRef, gateways)
 
 		// Parent ref is not to a Gateway that we control: skip it
 		if !isRelevantParentRef {
@@ -1447,7 +1447,6 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		}
 
 		parentRefCtx.SetListeners(allowedListeners...)
-		parentRefCtx.gateway = gw
 
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,

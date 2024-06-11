@@ -401,12 +401,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	parentRefs := GetParentReferences(route)
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p)
-		if parentRefCtx != nil && parentRefCtx.gateway != nil {
+		gtwCtx := parentRefCtx.GetGateway()
+		if gtwCtx != nil {
 			if policy.Spec.ExtAuth != nil {
 				if extAuth, err = t.buildExtAuth(
 					policy,
 					resources,
-					parentRefCtx.gateway.envoyProxy,
+					gtwCtx.envoyProxy,
 				); err != nil {
 					err = perr.WithMessage(err, "ExtAuth")
 					errs = errors.Join(errs, err)
@@ -414,7 +415,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 			}
 			for _, listener := range parentRefCtx.listeners {
-				irKey := t.getIRKey(listener.gateway)
+				irKey := t.getIRKey(listener.gateway.Gateway)
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
 					for _, r := range irListener.Routes {

@@ -124,7 +124,7 @@ func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedN
 // in the given list, and if so, a list of the Listeners within that Gateway that
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway, depending on whether section name is specified or not).
-func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, *GatewayContext, []*ListenerContext) {
+func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
@@ -135,11 +135,11 @@ func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*Gatew
 					referencedListeners = append(referencedListeners, listener)
 				}
 			}
-			return true, gateway, referencedListeners
+			return true, referencedListeners
 		}
 	}
 
-	return false, nil, referencedListeners
+	return false, referencedListeners
 }
 
 // HasReadyListener returns true if at least one Listener in the
