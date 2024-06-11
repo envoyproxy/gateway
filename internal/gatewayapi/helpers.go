@@ -500,6 +500,9 @@ func filterResourcesBySelectors[T client.Object](
 	resources2 []T,
 ) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	result := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
+	if len(selector) == 0 {
+		return result
+	}
 	labelSelector := labels.SelectorFromSet(selector)
 	for _, obj := range resources1 {
 		objectLabels := (*obj).GetLabels()
