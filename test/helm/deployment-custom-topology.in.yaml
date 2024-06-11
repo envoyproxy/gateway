@@ -30,6 +30,6 @@ deployment:
         matchLabels:
           app: envoyproxy
     tolerations:
-     - key: "custom.taint"
-       operator: "Equal"
-       value: "custom.value"
+    - key: "custom.taint"
+      operator: "Equal"
+      value: "custom.value"
