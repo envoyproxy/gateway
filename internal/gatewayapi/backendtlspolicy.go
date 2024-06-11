@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"os"
 
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -38,9 +39,7 @@ func (t *Translator) processBackendTLSPolicy(
 		return nil, nil
 	}
 
-	ancestorRefs := []gwapiv1a2.ParentReference{
-		parent,
-	}
+	ancestorRefs := fixCurrentAncestorRefs(policy, parent)
 
 	if err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -140,17 +139,16 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 }
 
 func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
-	// TODO: support multiple targetRefs
-	policyTarget := policy.Spec.TargetRefs[0]
-
-	if target.Group == policyTarget.Group &&
-		target.Kind == policyTarget.Kind &&
-		backendNamespace == policy.Namespace &&
-		target.Name == policyTarget.Name {
-		if policyTarget.SectionName != nil && *policyTarget.SectionName != *target.SectionName {
-			return false
+	for _, currTarget := range policy.Spec.TargetRefs {
+		if target.Group == currTarget.Group &&
+			target.Kind == currTarget.Kind &&
+			backendNamespace == policy.Namespace &&
+			target.Name == currTarget.Name {
+			if currTarget.SectionName != nil && *currTarget.SectionName != *target.SectionName {
+				return false
+			}
+			return true
 		}
-		return true
 	}
 	return false
 }
@@ -217,4 +215,14 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 	}
 
 	return tlsBundle, nil
+}
+
+func fixCurrentAncestorRefs(policy *gwapiv1a3.BackendTLSPolicy, parent gwapiv1a2.ParentReference) []gwapiv1a2.ParentReference {
+	ret := make([]gwapiv1a2.ParentReference, len(policy.Status.Ancestors))
+	for i, ancestor := range policy.Status.Ancestors {
+		ret[i] = ancestor.AncestorRef
+	}
+	ret = append(ret, parent)
+	fmt.Fprintf(os.Stderr, "parents: %+v\n", ret)
+	return ret
 }
