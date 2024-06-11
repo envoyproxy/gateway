@@ -20,5 +20,5 @@ spec:
         type: PathPrefix
         value: /to-cluster-ip
     backendRefs:
-      - name: infra-backend-v1
-        port: 8080
+    - name: infra-backend-v1
+      port: 8080
