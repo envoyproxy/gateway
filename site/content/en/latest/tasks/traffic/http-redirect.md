@@ -342,9 +342,6 @@ spec:
             type: ReplaceFullPath
             replaceFullPath: /status/200
           statusCode: 302
-      backendRefs:
-      - name: backend
-        port: 3000
 EOF
 ```
 
@@ -375,9 +372,6 @@ spec:
             type: ReplaceFullPath
             replaceFullPath: /status/200
           statusCode: 302
-      backendRefs:
-      - name: backend
-        port: 3000
 ```
 
 {{% /tab %}}
