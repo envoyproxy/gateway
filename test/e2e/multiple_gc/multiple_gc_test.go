@@ -45,7 +45,7 @@ func TestMultipleGC(t *testing.T) {
 		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
-	t.Run("GC1Test", func(t *testing.T) {
+	t.Run("Internet GC Test", func(t *testing.T) {
 		t.Parallel()
 		internetGatewaySuiteGatewayClassName := "internet"
 		internetGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
@@ -73,11 +73,11 @@ func TestMultipleGC(t *testing.T) {
 
 		err = internetGatewaySuite.Run(t, tests.InternetGCTests)
 		if err != nil {
-			t.Fatalf("Failed to run MergeGateways tests: %v", err)
+			t.Fatalf("Failed to run InternetGC tests: %v", err)
 		}
 	})
 
-	t.Run("GC2Test", func(t *testing.T) {
+	t.Run("Private GC Test", func(t *testing.T) {
 		t.Parallel()
 
 		privateGatewaySuiteGatewayClassName := "private"
@@ -113,7 +113,7 @@ func TestMultipleGC(t *testing.T) {
 		t.Logf("Running %d MultipleGC tests", len(tests.PrivateGCTests))
 		err = privateGatewaySuite.Run(t, tests.PrivateGCTests)
 		if err != nil {
-			t.Fatalf("Failed to run MergeGateways tests: %v", err)
+			t.Fatalf("Failed to run PrivateGC tests: %v", err)
 		}
 	})
 }

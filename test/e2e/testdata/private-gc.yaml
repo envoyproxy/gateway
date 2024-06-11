@@ -45,7 +45,6 @@ spec:
     spec:
       containers:
       - name: private-backend
-        # From https://github.com/kubernetes-sigs/ingress-controller-conformance/tree/master/images/echoserver
         image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
         env:
         - name: POD_NAME
