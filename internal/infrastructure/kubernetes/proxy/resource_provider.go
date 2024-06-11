@@ -384,12 +384,11 @@ func (r *ResourceRender) PodDisruptionBudget() (*v1.PodDisruptionBudget, error) 
 			Kind:       "PodDisruptionBudget",
 		},
 		Spec: v1.PodDisruptionBudgetSpec{
-			MinAvailable: podDisruptionBudget.MinAvailable,
+			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudget.MinAvailable, 0)},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
 		},
-		Status: v1.PodDisruptionBudgetStatus{},
 	}, nil
 }
 
