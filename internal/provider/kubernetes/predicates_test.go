@@ -689,11 +689,13 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-proc",
 					},
-					Spec: egv1a1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+					Spec: v1alpha1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{
@@ -720,11 +722,13 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-proc",
 					},
-					Spec: egv1a1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+					Spec: v1alpha1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{
