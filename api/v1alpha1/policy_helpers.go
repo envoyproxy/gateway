@@ -21,6 +21,8 @@ type PolicyTargetReferences struct {
 
 	// TargetRefs are the names of the Gateway resources this policy
 	// is being attached to.
+	//
+	// +kubebuilder:validation:MaxItems=16
 	TargetRefs []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs,omitempty"`
 }
 

@@ -300,6 +300,7 @@ spec:
                   - kind
                   - name
                   type: object
+                maxItems: 16
                 type: array
               wasm:
                 description: |-
