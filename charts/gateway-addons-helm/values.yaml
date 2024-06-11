@@ -1,5 +1,12 @@
+tags:
+  metrics: true
+  logging: false
+  tracing: false
+
+
 # Values for Grafana dependency
 grafana:
+  enabled: true
   fullnameOverride: grafana
   datasources:
     datasources.yaml:
@@ -29,6 +36,7 @@ grafana:
 
 # Values for Prometheus dependency
 prometheus:
+  enabled: true
   # To simplify the deployment, disable non-essential components
   alertmanager:
     enabled: false
@@ -57,6 +65,7 @@ prometheus:
 
 # Values for Fluent-bit dependency
 fluent-bit:
+  enabled: true
   fullnameOverride: fluent-bit
   testFramework:
     enabled: false
@@ -123,6 +132,7 @@ fluent-bit:
 
 # Values for Loki dependency
 loki:
+  enabled: true
   # Running a single replica of Loki
   ## https://grafana.com/docs/loki/latest/setup/install/helm/install-monolithic/
   deploymentMode: SingleBinary
@@ -146,11 +156,10 @@ loki:
     replicas: 0
   write:
     replicas: 0
-  # To simplify the deployment, not installing other operator.
   monitoring:
     selfMonitoring:
       grafanaAgent:
-        installOperator: false
+        installOperator: true
   # Disable gateway.
   gateway:
     enabled: false
@@ -158,6 +167,7 @@ loki:
 
 # Values for Tempo dependency
 tempo:
+  enabled: true
   fullnameOverride: tempo
   service:
     type: LoadBalancer
@@ -165,6 +175,7 @@ tempo:
 
 # Values for OpenTelemetry-Collector dependency
 opentelemetry-collector:
+  enabled: false
   fullnameOverride: otel-collector
   mode: deployment
   config:
