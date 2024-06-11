@@ -21,8 +21,8 @@ An Add-ons Helm chart for Envoy Gateway
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://grafana.github.io/helm-charts | grafana | 6.58.4 |
-| https://prometheus-community.github.io/helm-charts | prometheus | 23.1.0 |
+| https://grafana.github.io/helm-charts | grafana | 8.0.0 |
+| https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
 
 ## Usage
 
@@ -67,20 +67,30 @@ To uninstall the chart:
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | grafana.adminPassword | string | `"admin"` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".apiVersion | int | `1` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".providers[0].disableDeletion | bool | `false` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".providers[0].editable | bool | `true` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".providers[0].folder | string | `"envoy-gateway"` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".providers[0].name | string | `"envoy-gateway"` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".providers[0].options.path | string | `"/var/lib/grafana/dashboards/envoy-gateway"` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".providers[0].orgId | int | `1` |  |
+| grafana.dashboardProviders."dashboardproviders.yaml".providers[0].type | string | `"file"` |  |
+| grafana.dashboardsConfigMaps.envoy-gateway | string | `"grafana-dashboards"` |  |
 | grafana.datasources."datasources.yaml".apiVersion | int | `1` |  |
 | grafana.datasources."datasources.yaml".datasources[0].name | string | `"Prometheus"` |  |
 | grafana.datasources."datasources.yaml".datasources[0].type | string | `"prometheus"` |  |
 | grafana.datasources."datasources.yaml".datasources[0].url | string | `"http://prometheus-server"` |  |
+| grafana.fullnameOverride | string | `"grafana"` |  |
 | grafana.service.type | string | `"LoadBalancer"` |  |
 | prometheus.alertmanager.enabled | bool | `false` |  |
 | prometheus.kube-state-metrics.enabled | bool | `false` |  |
 | prometheus.prometheus-node-exporter.enabled | bool | `false` |  |
 | prometheus.prometheus-pushgateway.enabled | bool | `false` |  |
-| prometheus.server.fullnameOverride | string | `"prometheus"` |  |
+| prometheus.server.fullnameOverride | string | `"prometheus-server"` |  |
 | prometheus.server.global.scrape_interval | string | `"15s"` |  |
 | prometheus.server.image.repository | string | `"prom/prometheus"` |  |
 | prometheus.server.persistentVolume.enabled | bool | `false` |  |
 | prometheus.server.readinessProbeInitialDelay | int | `0` |  |
-| prometheus.server.securityContext | string | `nil` |  |
+| prometheus.server.securityContext | object | `{}` |  |
 | prometheus.server.service.type | string | `"LoadBalancer"` |  |
 
