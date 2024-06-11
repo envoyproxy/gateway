@@ -22,7 +22,6 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -1236,7 +1235,7 @@ func TestPDB(t *testing.T) {
 			caseName: "default",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: &intstr.IntOrString{IntVal: 1},
+				MinAvailable: ptr.To(int32(1)),
 			},
 		},
 	}
