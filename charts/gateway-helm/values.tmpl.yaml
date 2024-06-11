@@ -51,6 +51,7 @@ deployment:
       prometheus.io/port: '19001'
     labels: {}
     topologySpreadConstraints: {}
+    tolerations: {}
 
 config:
   envoyGateway:
