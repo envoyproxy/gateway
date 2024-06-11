@@ -357,7 +357,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		jwt           *ir.JWT
 		oidc          *ir.OIDC
 		basicAuth     *ir.BasicAuth
-		extAuth       *ir.ExtAuth
 		authorization *ir.Authorization
 		err, errs     error
 	)
@@ -403,6 +402,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		parentRefCtx := GetRouteParentContext(route, p)
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx != nil {
+			var extAuth *ir.ExtAuth
 			if policy.Spec.ExtAuth != nil {
 				if extAuth, err = t.buildExtAuth(
 					policy,
@@ -411,7 +411,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				); err != nil {
 					err = perr.WithMessage(err, "ExtAuth")
 					errs = errors.Join(errs, err)
-					extAuth = nil
 				}
 			}
 			irKey := t.getIRKey(gtwCtx.Gateway)

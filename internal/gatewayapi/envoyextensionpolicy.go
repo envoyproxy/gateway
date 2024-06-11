@@ -306,7 +306,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 	xdsIR XdsIRMap, resources *Resources,
 ) error {
 	var (
-		extProcs  []ir.ExtProc
 		wasms     []ir.Wasm
 		err, errs error
 	)
@@ -328,10 +327,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 		parentRefCtx := GetRouteParentContext(route, p)
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx != nil {
+			var extProcs []ir.ExtProc
 			if extProcs, err = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "ExtProcs")
 				errs = errors.Join(errs, err)
-				extProcs = nil
 			}
 			irKey := t.getIRKey(gtwCtx.Gateway)
 			for _, listener := range parentRefCtx.listeners {
