@@ -505,6 +505,262 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 	}
 }
 
+func TestTranslateWithRoutingType(t *testing.T) {
+	testCasesConfig := []struct {
+		name                    string
+		endPointRoutingDisabled bool
+	}{
+		{
+			name:                    "envoyproxy-endpoint-routing",
+			endPointRoutingDisabled: false,
+		},
+		{
+			name:                    "envoyproxy-service-routing",
+			endPointRoutingDisabled: true,
+		},
+	}
+
+	for _, tcc := range testCasesConfig {
+		t.Run(tcc.name, func(t *testing.T) {
+			tcc := tcc
+			input, err := os.ReadFile(filepath.Join("testdata", "routingpolicy", tcc.name+".in.yaml"))
+			require.NoError(t, err)
+
+			resources := &Resources{}
+			mustUnmarshal(t, input, resources)
+			endPointRoutingDisabled := tcc.endPointRoutingDisabled
+
+			translator := &Translator{
+				GatewayControllerName:   egv1a1.GatewayControllerName,
+				GatewayClassName:        "envoy-gateway-class",
+				GlobalRateLimitEnabled:  true,
+				Namespace:               "envoy-gateway-system",
+				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				EndpointRoutingDisabled: endPointRoutingDisabled,
+			}
+
+			// Add common test fixtures
+			for i := 1; i <= 4; i++ {
+				svcName := "service-" + strconv.Itoa(i)
+				epSliceName := "endpointslice-" + strconv.Itoa(i)
+				resources.Services = append(resources.Services,
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      svcName,
+						},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "1.1.1.1",
+							Ports: []corev1.ServicePort{
+								{
+									Name:       "http",
+									Port:       8080,
+									TargetPort: intstr.IntOrString{IntVal: 8080},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Name:       "https",
+									Port:       8443,
+									TargetPort: intstr.IntOrString{IntVal: 8443},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Name:       "tcp",
+									Port:       8163,
+									TargetPort: intstr.IntOrString{IntVal: 8163},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Name:       "udp",
+									Port:       8162,
+									TargetPort: intstr.IntOrString{IntVal: 8162},
+									Protocol:   corev1.ProtocolUDP,
+								},
+							},
+						},
+					},
+				)
+				resources.EndpointSlices = append(resources.EndpointSlices,
+					&discoveryv1.EndpointSlice{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      epSliceName,
+							Namespace: "default",
+							Labels: map[string]string{
+								discoveryv1.LabelServiceName: svcName,
+							},
+						},
+						AddressType: discoveryv1.AddressTypeIPv4,
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Name:     ptr.To("http"),
+								Port:     ptr.To[int32](8080),
+								Protocol: ptr.To(corev1.ProtocolTCP),
+							},
+							{
+								Name:     ptr.To("https"),
+								Port:     ptr.To[int32](8443),
+								Protocol: ptr.To(corev1.ProtocolTCP),
+							},
+							{
+								Name:     ptr.To("tcp"),
+								Port:     ptr.To[int32](8163),
+								Protocol: ptr.To(corev1.ProtocolTCP),
+							},
+							{
+								Name:     ptr.To("udp"),
+								Port:     ptr.To[int32](8162),
+								Protocol: ptr.To(corev1.ProtocolUDP),
+							},
+						},
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{
+									"7.7.7.7",
+								},
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: ptr.To(true),
+								},
+							},
+						},
+					},
+				)
+			}
+
+			resources.Services = append(resources.Services,
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "mirror-service",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "2.2.2.2",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "http",
+								Port:       8080,
+								TargetPort: intstr.IntOrString{IntVal: 8080},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			)
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mirror-service-endpointslice",
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "mirror-service",
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     ptr.To("http"),
+							Port:     ptr.To[int32](8080),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"7.6.5.4",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(true),
+							},
+						},
+					},
+				},
+			)
+
+			// add otel-collector service
+			resources.Services = append(resources.Services,
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "monitoring",
+						Name:      "otel-collector",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "3.3.3.3",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       4317,
+								TargetPort: intstr.IntOrString{IntVal: 4317},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			)
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "otel-collector-endpointslice",
+						Namespace: "monitoring",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "otel-collector",
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     ptr.To("grpc"),
+							Port:     ptr.To[int32](4317),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"8.7.6.5",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(true),
+							},
+						},
+					},
+				},
+			)
+
+			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "envoy-gateway",
+				},
+			}, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+			})
+
+			got, _ := translator.Translate(resources)
+			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			outputFilePath := filepath.Join("testdata", "routingpolicy", tcc.name+".out.yaml")
+			out, err := yaml.Marshal(got)
+			require.NoError(t, err)
+
+			if *overrideTestData {
+				overrideOutputConfig(t, string(out), outputFilePath)
+			}
+
+			output, err := os.ReadFile(outputFilePath)
+			require.NoError(t, err)
+
+			want := &TranslateResult{}
+			mustUnmarshal(t, output, want)
+
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.EquateEmpty(),
+			}
+
+			require.Empty(t, cmp.Diff(want, got, opts...))
+		})
+	}
+}
+
 func overrideOutputConfig(t *testing.T, data string, filepath string) {
 	t.Helper()
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)

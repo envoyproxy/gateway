@@ -20,7 +20,7 @@ gateways:
           port: 80
           allowedRoutes:
             namespaces:
-              from: Same
+              from: All
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute

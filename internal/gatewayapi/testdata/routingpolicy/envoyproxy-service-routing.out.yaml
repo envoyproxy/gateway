@@ -10,13 +10,13 @@ gateways:
     listeners:
     - allowedRoutes:
         namespaces:
-          from: Same
+          from: All
       name: http
       port: 80
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -61,9 +61,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: No listeners included by this parent ref allowed this attachment.
-        reason: NotAllowedByListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -116,3 +116,19 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - endpoints:
+            - host: 1.1.1.1
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
