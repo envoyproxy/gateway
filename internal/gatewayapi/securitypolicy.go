@@ -401,32 +401,34 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p)
 		gtwCtx := parentRefCtx.GetGateway()
-		if gtwCtx != nil {
-			var extAuth *ir.ExtAuth
-			if policy.Spec.ExtAuth != nil {
-				if extAuth, err = t.buildExtAuth(
-					policy,
-					resources,
-					gtwCtx.envoyProxy,
-				); err != nil {
-					err = perr.WithMessage(err, "ExtAuth")
-					errs = errors.Join(errs, err)
-				}
+		if gtwCtx == nil {
+			continue
+		}
+
+		var extAuth *ir.ExtAuth
+		if policy.Spec.ExtAuth != nil {
+			if extAuth, err = t.buildExtAuth(
+				policy,
+				resources,
+				gtwCtx.envoyProxy,
+			); err != nil {
+				err = perr.WithMessage(err, "ExtAuth")
+				errs = errors.Join(errs, err)
 			}
-			irKey := t.getIRKey(gtwCtx.Gateway)
-			for _, listener := range parentRefCtx.listeners {
-				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
-				if irListener != nil {
-					for _, r := range irListener.Routes {
-						if strings.HasPrefix(r.Name, prefix) {
-							r.Security = &ir.SecurityFeatures{
-								CORS:          cors,
-								JWT:           jwt,
-								OIDC:          oidc,
-								BasicAuth:     basicAuth,
-								ExtAuth:       extAuth,
-								Authorization: authorization,
-							}
+		}
+		irKey := t.getIRKey(gtwCtx.Gateway)
+		for _, listener := range parentRefCtx.listeners {
+			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+			if irListener != nil {
+				for _, r := range irListener.Routes {
+					if strings.HasPrefix(r.Name, prefix) {
+						r.Security = &ir.SecurityFeatures{
+							CORS:          cors,
+							JWT:           jwt,
+							OIDC:          oidc,
+							BasicAuth:     basicAuth,
+							ExtAuth:       extAuth,
+							Authorization: authorization,
 						}
 					}
 				}

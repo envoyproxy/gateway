@@ -326,21 +326,23 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p)
 		gtwCtx := parentRefCtx.GetGateway()
-		if gtwCtx != nil {
-			var extProcs []ir.ExtProc
-			if extProcs, err = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); err != nil {
-				err = perr.WithMessage(err, "ExtProcs")
-				errs = errors.Join(errs, err)
-			}
-			irKey := t.getIRKey(gtwCtx.Gateway)
-			for _, listener := range parentRefCtx.listeners {
-				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
-				if irListener != nil {
-					for _, r := range irListener.Routes {
-						if strings.HasPrefix(r.Name, prefix) {
-							r.ExtProcs = extProcs
-							r.Wasms = wasms
-						}
+		if gtwCtx == nil {
+			continue
+		}
+
+		var extProcs []ir.ExtProc
+		if extProcs, err = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); err != nil {
+			err = perr.WithMessage(err, "ExtProcs")
+			errs = errors.Join(errs, err)
+		}
+		irKey := t.getIRKey(gtwCtx.Gateway)
+		for _, listener := range parentRefCtx.listeners {
+			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+			if irListener != nil {
+				for _, r := range irListener.Routes {
+					if strings.HasPrefix(r.Name, prefix) {
+						r.ExtProcs = extProcs
+						r.Wasms = wasms
 					}
 				}
 			}
