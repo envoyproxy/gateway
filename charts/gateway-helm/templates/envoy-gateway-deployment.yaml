@@ -6,7 +6,7 @@ metadata:
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 ---
-  {{- if and .Values.podDisruptionBudget.minAvailable (ge (int .Values.podDisruptionBudget.minAvailable) 1) }}
+{{- if and .Values.podDisruptionBudget.minAvailable (ge (int .Values.podDisruptionBudget.minAvailable) 1) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
