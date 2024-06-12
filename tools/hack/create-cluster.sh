@@ -24,16 +24,22 @@ for _ in $(seq 1 "${NUM_WORKERS}"); do
 done
 fi
 
+echo Create kind cluster.
+
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
   cat << EOF | tools/bin/kind create cluster --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
 else
-  cat << EOF | tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
-${KIND_CFG}
-EOF
+#  cat << EOF | tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
+#${KIND_CFG}
+#EOF
+tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config tools/hack/create-cluster-kind-cfg.yml
 fi
+
+
+echo Install MetalLB.
 
 ## Install MetalLB.
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/"${METALLB_VERSION}"/config/manifests/metallb-native.yaml

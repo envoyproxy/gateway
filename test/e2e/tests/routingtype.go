@@ -35,7 +35,7 @@ var EnvoyGatewayRoutingType = suite.ConformanceTest{
 
 		expectedResponse := http.ExpectedResponse{
 			Request: http.Request{
-				Path: "/backend-fqdn",
+				Path: "/to-cluster-ip",
 			},
 			Response: http.Response{
 				StatusCode: 200,
