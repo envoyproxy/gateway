@@ -39,7 +39,11 @@ spec:
       {{- end }}
       {{- with .Values.deployment.pod.topologySpreadConstraints }}
       topologySpreadConstraints:
-        {{- toYaml . | nindent 8 }}
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.deployment.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 6 }}
       {{- end }}
       containers:
       - args:
