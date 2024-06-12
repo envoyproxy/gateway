@@ -138,6 +138,7 @@ envoyProxy:
               "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
               max_active_downstream_connections: 50000
     logging: {}
+    routingType: Service
   status: {}
 gatewayClass:
   metadata:

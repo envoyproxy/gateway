@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -87,7 +86,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					EndpointRoutingDisabled: isEndpointRoutingDisabled(resources),
 					Namespace:               r.Namespace,
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
 				}
@@ -231,23 +229,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		},
 	)
 	r.Logger.Info("shutting down")
-}
-
-// isEndpointRoutingDisabled returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
-// and false otherwise.
-func isEndpointRoutingDisabled(resources *gatewayapi.Resources) bool {
-	endpointRoutingDisabled := false
-	if resources.EnvoyProxy != nil {
-		switch ptr.Deref(resources.EnvoyProxy.Spec.RoutingType, v1alpha1.EndpointRoutingType) {
-		case v1alpha1.ServiceRoutingType:
-			endpointRoutingDisabled = true
-		case v1alpha1.EndpointRoutingType:
-			// endpointRoutingDisabled is already false.
-		default:
-			// endpointRoutingDisabled is already false.
-		}
-	}
-	return endpointRoutingDisabled
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwv1a2.PolicyStatus {

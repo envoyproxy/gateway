@@ -11,6 +11,7 @@ envoyProxy:
           annotations:
             custom1: svc-annotation1
       type: Kubernetes
+    routingType: Service
   status: {}
 gatewayClass:
   metadata:
