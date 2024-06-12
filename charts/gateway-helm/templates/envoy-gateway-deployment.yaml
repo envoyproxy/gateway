@@ -18,8 +18,8 @@ spec:
     matchLabels:
       control-plane: envoy-gateway
     {{- include "eg.selectorLabels" . | nindent 6 }}
-{{- end }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
