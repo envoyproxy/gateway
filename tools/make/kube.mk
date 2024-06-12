@@ -103,6 +103,9 @@ conformance: create-cluster kube-install-image kube-deploy run-conformance delet
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
+.PHONY: benchmark
+benchmark: create-cluster kube-install-image kube-deploy run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
+
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
 
@@ -137,6 +140,21 @@ else
 		--run-test $(E2E_RUN_TEST)
 endif
 endif
+
+.PHONY: run-benchmark
+run-benchmark: install-benchmark-server ## Run benchmark tests
+	@$(LOG_TARGET)
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl apply -f test/benchmark/config/gatewayclass.yaml
+	go test -v -tags benchmark ./test/benchmark
+
+.PHONY: install-benchmark-server
+install-benchmark-server: ## Install nighthawk server for benchmark test
+	@$(LOG_TARGET)
+	kubectl create namespace benchmark-test
+	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/test-server-config.yaml --output yaml
+	kubectl apply -f test/benchmark/config/test-server.yaml
 
 .PHONY: install-e2e-telemetry
 install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
