@@ -192,15 +192,45 @@ func (x Xds) Printable() *Xds {
 	return out
 }
 
-// HTTPListener holds the listener configuration.
+type Listener interface {
+	GetName() string
+	GetAddress() string
+	GetPort() uint32
+	GetExtensionRefs() []*UnstructuredRef
+}
+
 // +k8s:deepcopy-gen=true
-type HTTPListener struct {
+type CoreListenerDetails struct {
 	// Name of the HttpListener
 	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+}
+
+func (l CoreListenerDetails) GetName() string {
+	return l.Name
+}
+
+func (l CoreListenerDetails) GetAddress() string {
+	return l.Address
+}
+
+func (l CoreListenerDetails) GetPort() uint32 {
+	return l.Port
+}
+
+func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
+	return l.ExtensionRefs
+}
+
+// HTTPListener holds the listener configuration.
+// +k8s:deepcopy-gen=true
+type HTTPListener struct {
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
@@ -236,8 +266,6 @@ type HTTPListener struct {
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -621,6 +649,17 @@ func (s *SecurityFeatures) Validate() error {
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
+}
+
+func (left UnstructuredRef) Equals(right *UnstructuredRef) bool {
+	if right == nil {
+		return false
+	}
+	return (left.Object == nil && right.Object == nil) ||
+		(left.Object != nil && right.Object != nil &&
+			left.Object.GroupVersionKind() == right.Object.GroupVersionKind() &&
+			left.Object.GetNamespace() == right.Object.GetNamespace() &&
+			left.Object.GetName() == right.Object.GetName())
 }
 
 // CORS holds the Cross-Origin Resource Sharing (CORS) policy for the route.
@@ -1307,12 +1346,7 @@ func (s StringMatch) Validate() error {
 // TCPListener holds the TCP listener configuration.
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
-	// Name of the TCPListener
-	Name string `json:"name" yaml:"name"`
-	// Address that the listener should listen on.
-	Address string `json:"address" yaml:"address"`
-	// Port on which the service can be expected to be accessed by clients.
-	Port uint32 `json:"port" yaml:"port"`
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
@@ -1325,8 +1359,6 @@ type TCPListener struct {
 	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
 	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // TCPRoute holds the route information associated with the TCP Route
@@ -1444,16 +1476,9 @@ func (t TLSInspectorConfig) Validate() error {
 // UDPListener holds the UDP listener configuration.
 // +k8s:deepcopy-gen=true
 type UDPListener struct {
-	// Name of the UDPListener
-	Name string `json:"name" yaml:"name"`
-	// Address that the listener should listen on.
-	Address string `json:"address" yaml:"address"`
-	// Port on which the service can be expected to be accessed by clients.
-	Port uint32 `json:"port" yaml:"port"`
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// Route associated with UDP traffic to the listener.
 	Route *UDPRoute `json:"route,omitempty" yaml:"route,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // UDPRoute holds the route information associated with the UDP Route.
