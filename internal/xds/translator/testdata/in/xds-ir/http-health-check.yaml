@@ -1,0 +1,30 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  healthCheck:
+    path: "/ready"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    headerMatches:
+    - name: user
+      stringMatch:
+      exact: "jason"
+    - name: test
+      stringMatch:
+      suffix: "end"
+    queryParamMatches:
+    - name: "debug"
+      exact: "yes"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

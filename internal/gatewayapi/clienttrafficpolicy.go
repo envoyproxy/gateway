@@ -458,6 +458,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 			}
 		}
 
+		// Translate Health Check Settings
+		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
+
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
 		if err != nil {
@@ -708,6 +711,15 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 
 	httpIR.HTTP2 = http2
 	return errs
+}
+
+func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSettings, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if healthCheckSettings == nil {
+		return
+	}
+
+	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
 }
 
 func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
