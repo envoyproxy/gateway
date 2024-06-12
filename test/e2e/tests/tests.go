@@ -14,6 +14,5 @@ var (
 	ConformanceTests   []suite.ConformanceTest
 	UpgradeTests       []suite.ConformanceTest
 	MergeGatewaysTests []suite.ConformanceTest
-	InternetGCTests    []suite.ConformanceTest
-	PrivateGCTests     []suite.ConformanceTest
+	MultipleGCTests    map[string][]suite.ConformanceTest
 )

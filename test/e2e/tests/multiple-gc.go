@@ -19,9 +19,17 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
+var (
+	InternetGCTests []suite.ConformanceTest
+	PrivateGCTests  []suite.ConformanceTest
+)
+
 func init() {
+	MultipleGCTests = make(map[string][]suite.ConformanceTest)
 	InternetGCTests = append(InternetGCTests, InternetGCTest)
 	PrivateGCTests = append(PrivateGCTests, PrivateGCTest)
+	MultipleGCTests["internet"] = InternetGCTests
+	MultipleGCTests["private"] = PrivateGCTests
 }
 
 var InternetGCTest = suite.ConformanceTest{

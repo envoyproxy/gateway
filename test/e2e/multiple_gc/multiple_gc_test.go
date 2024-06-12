@@ -69,9 +69,9 @@ func TestMultipleGC(t *testing.T) {
 		internetGatewaySuite.Applier.GatewayClass = internetGatewaySuiteGatewayClassName
 		internetGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, internetGatewaySuite.Client, internetGatewaySuite.TimeoutConfig, internetGatewaySuite.GatewayClassName)
 
-		t.Logf("Running %d MultipleGC tests", len(tests.InternetGCTests))
+		t.Logf("Running %d MultipleGC tests", len(tests.MultipleGCTests[internetGatewaySuiteGatewayClassName]))
 
-		err = internetGatewaySuite.Run(t, tests.InternetGCTests)
+		err = internetGatewaySuite.Run(t, tests.MultipleGCTests[internetGatewaySuiteGatewayClassName])
 		if err != nil {
 			t.Fatalf("Failed to run InternetGC tests: %v", err)
 		}
@@ -79,16 +79,7 @@ func TestMultipleGC(t *testing.T) {
 
 	t.Run("Private GC Test", func(t *testing.T) {
 		t.Parallel()
-
 		privateGatewaySuiteGatewayClassName := "private"
-		if flags.RunTest != nil && *flags.RunTest != "" {
-			t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-				*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
-		} else {
-			t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-				*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
-		}
-
 		privateGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:               c,
 			GatewayClassName:     privateGatewaySuiteGatewayClassName,
@@ -110,8 +101,8 @@ func TestMultipleGC(t *testing.T) {
 		privateGatewaySuite.Applier.GatewayClass = privateGatewaySuiteGatewayClassName
 		privateGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, privateGatewaySuite.Client, privateGatewaySuite.TimeoutConfig, privateGatewaySuite.GatewayClassName)
 
-		t.Logf("Running %d MultipleGC tests", len(tests.PrivateGCTests))
-		err = privateGatewaySuite.Run(t, tests.PrivateGCTests)
+		t.Logf("Running %d MultipleGC tests", len(tests.MultipleGCTests[privateGatewaySuiteGatewayClassName]))
+		err = privateGatewaySuite.Run(t, tests.MultipleGCTests[privateGatewaySuiteGatewayClassName])
 		if err != nil {
 			t.Fatalf("Failed to run PrivateGC tests: %v", err)
 		}
