@@ -114,19 +114,34 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 type resourceMappings struct {
 	// Map for storing namespaces for Route, Service and Gateway objects.
 	allAssociatedNamespaces map[string]struct{}
+	// Map for storing TLSRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedTLSRoutes map[string]struct{}
+	// Map for storing HTTPRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedHTTPRoutes map[string]struct{}
+	// Map for storing GRPCRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedGRPCRoutes map[string]struct{}
+	// Map for storing TCPRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedTCPRoutes map[string]struct{}
+	// Map for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
+	allAssociatedUDPRoutes map[string]struct{}
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
 	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
 	// extensionRefFilters is a map of filters managed by an extension.
-	// The key is the namespaced name of the filter and the value is the
+	// The key is the namespaced name, group and kind of the filter and the value is the
 	// unstructured form of the resource.
-	extensionRefFilters map[types.NamespacedName]unstructured.Unstructured
+	extensionRefFilters map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured
 }
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
 		allAssociatedNamespaces:  map[string]struct{}{},
+		allAssociatedTLSRoutes:   map[string]struct{}{},
+		allAssociatedHTTPRoutes:  map[string]struct{}{},
+		allAssociatedGRPCRoutes:  map[string]struct{}{},
+		allAssociatedTCPRoutes:   map[string]struct{}{},
+		allAssociatedUDPRoutes:   map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
-		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
+		extensionRefFilters:      map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
 	}
 }
 
@@ -433,7 +448,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 
 			if backendNamespace != policy.Namespace {
 				from := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindHTTPRoute,
+					kind:      gatewayapi.KindSecurityPolicy,
 					namespace: policy.Namespace,
 					name:      policy.Name,
 				}
@@ -1092,7 +1107,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Secret CRUDs and process affected EG CRs (Gateway, SecurityPolicy, more in the future).
 	secretPredicates := []predicate.Predicate{
-		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	}
 	if r.namespaceLabel != nil {
@@ -1108,7 +1122,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ConfigMap CRUDs and process affected ClienTraffiPolicies and BackendTLSPolicies.
 	configMapPredicates := []predicate.Predicate{
-		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.validateConfigMapForReconcile),
 	}
 	if r.namespaceLabel != nil {
@@ -1301,14 +1314,14 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	epList := new(egv1a1.EnvoyProxyList)
+	gcParametersRefNamespace := string(*gc.Spec.ParametersRef.Namespace)
 
-	// The EnvoyProxy must be in the same namespace as EG.
-	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: r.namespace}); err != nil {
-		return fmt.Errorf("failed to list envoyproxies in namespace %s: %w", r.namespace, err)
+	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: gcParametersRefNamespace}); err != nil {
+		return fmt.Errorf("failed to list envoyproxies in namespace %s: %w", gcParametersRefNamespace, err)
 	}
 
 	if len(epList.Items) == 0 {
-		r.log.Info("no envoyproxies exist in", "namespace", r.namespace)
+		r.log.Info("no envoyproxies exist in", "namespace", gcParametersRefNamespace)
 		return nil
 	}
 

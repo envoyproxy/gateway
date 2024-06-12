@@ -359,6 +359,10 @@ func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) str
 	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
 }
 
+func irListenerPortName(proto ir.ProtocolType, port int32) string {
+	return strings.ToLower(fmt.Sprintf("%s-%d", proto, port))
+}
+
 func irRoutePrefix(route RouteContext) string {
 	// add a "/" at the end of the prefix to prevent mismatching routes with the
 	// same prefix. For example, route prefix "/foo/" should not match a route "/foobar".

@@ -351,7 +351,7 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 		if urlRewrite.Path.FullReplace != nil {
 			routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 				Pattern: &matcherv3.RegexMatcher{
-					Regex: "/.+",
+					Regex: "^/.*$",
 				},
 				Substitution: *urlRewrite.Path.FullReplace,
 			}
