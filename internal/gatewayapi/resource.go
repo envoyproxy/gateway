@@ -13,7 +13,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -161,22 +160,6 @@ func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, ba
 		}
 	}
 	return endpointSlices
-}
-
-// IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
-// and false otherwise.
-func (r *Resources) IsEnvoyServiceRouting() bool {
-	if r.EnvoyProxy == nil {
-		return false
-	}
-	switch ptr.Deref(r.EnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
-	case egv1a1.ServiceRoutingType:
-		return true
-	case egv1a1.EndpointRoutingType:
-		return false
-	default:
-		return false
-	}
 }
 
 // ControllerResources holds all the GatewayAPI resources per GatewayClass

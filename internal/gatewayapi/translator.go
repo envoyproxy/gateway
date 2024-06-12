@@ -8,6 +8,8 @@ package gatewayapi
 import (
 	"sort"
 
+	"k8s.io/utils/ptr"
+
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -311,6 +313,26 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 	}
 
 	return xdsIR, infraIR
+}
+
+// IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
+// or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
+// otherwise, it returns false.
+func (t *Translator) IsEnvoyServiceRouting(r *Resources) bool {
+	if t.EndpointRoutingDisabled {
+		return true
+	}
+	if r.EnvoyProxy == nil {
+		return false
+	}
+	switch ptr.Deref(r.EnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
+	case egv1a1.ServiceRoutingType:
+		return true
+	case egv1a1.EndpointRoutingType:
+		return false
+	default:
+		return false
+	}
 }
 
 func infrastructureAnnotations(gtw *gwapiv1.Gateway) map[string]string {

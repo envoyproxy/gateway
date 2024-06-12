@@ -235,14 +235,6 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 			return fmt.Errorf("unable to unmarshal input: %w", err)
 		}
 
-		// Explicitly override the routing type to "Service"
-		// (the default is "Endpoint").
-		if resources.EnvoyProxy == nil {
-			resources.EnvoyProxy = &egv1a1.EnvoyProxy{}
-		}
-		routingType := egv1a1.ServiceRoutingType
-		resources.EnvoyProxy.Spec.RoutingType = &routingType
-
 		var result TranslationResult
 		for _, outType := range outTypes {
 			// Translate
@@ -288,6 +280,7 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}
@@ -315,6 +308,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}
@@ -347,6 +341,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
 	}

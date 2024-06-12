@@ -75,13 +75,6 @@ httpRoutes:
 infraIR:
   envoy-gateway-system/eg:
     proxy:
-      config:
-        metadata:
-          creationTimestamp: null
-        spec:
-          logging: {}
-          routingType: Service
-        status: {}
       listeners:
       - address: null
         name: envoy-gateway-system/eg/http

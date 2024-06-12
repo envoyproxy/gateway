@@ -170,15 +170,5 @@
         ]
       }
     }
-  ],
-  "envoyProxy": {
-    "metadata": {
-      "creationTimestamp": null
-    },
-    "spec": {
-      "logging": {},
-      "routingType": "Service"
-    },
-    "status": {}
-  }
+  ]
 }
