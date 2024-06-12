@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -221,4 +222,26 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
+}
+
+func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time.Duration, nn types.NamespacedName) (string, error) {
+	t.Helper()
+
+	var ipAddr string
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
+		s := &corev1.Service{}
+		err := client.Get(ctx, nn, s)
+		if err != nil {
+			tlog.Logf(t, "error fetching Service: %v", err)
+			return false, fmt.Errorf("error fetching Service: %w", err)
+		}
+
+		if len(s.Status.LoadBalancer.Ingress) > 0 {
+			ipAddr = s.Status.LoadBalancer.Ingress[0].IP
+			return true, nil
+		}
+		return false, nil
+	})
+	require.NoErrorf(t, waitErr, "error waiting for Service to have at least one load balancer IP address in status")
+	return ipAddr, nil
 }

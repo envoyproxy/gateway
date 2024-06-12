@@ -43,7 +43,7 @@ const (
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
-	secretExtensionPolicyIndex       = "secretExtensionPolicyIndex"
+	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -654,7 +654,7 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 	}
 
 	if err = mgr.GetFieldIndexer().IndexField(
-		ctx, &egv1a1.EnvoyExtensionPolicy{}, secretExtensionPolicyIndex,
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex,
 		secretEnvoyExtensionPolicyIndexFunc); err != nil {
 		return err
 	}

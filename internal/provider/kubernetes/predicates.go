@@ -630,13 +630,13 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingBackend(nn *types.Namespac
 }
 
 func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.NamespacedName) bool {
-	spList := &egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(context.Background(), spList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(secretExtensionPolicyIndex, nsName.String()),
+	eepList := &egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(context.Background(), eepList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretEnvoyExtensionPolicyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated ExtensionPolicies")
 		return false
 	}
 
-	return len(spList.Items) > 0
+	return len(eepList.Items) > 0
 }

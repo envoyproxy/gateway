@@ -312,6 +312,43 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: false,
 		},
+		{
+			name: "references EnvoyExtensionPolicy Wasm OCI Image",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
+				&egv1a1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "wasm-oci",
+					},
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
+							},
+						},
+						Wasm: []egv1a1.Wasm{
+							{
+								Name:   "wasm-filter",
+								RootID: ptr.To("my_root_id"),
+								Code: egv1a1.WasmCodeSource{
+									Type: egv1a1.ImageWasmCodeSourceType,
+									Image: &egv1a1.ImageWasmCodeSource{
+										URL: "https://example.com/testwasm:v1.0.0",
+										PullSecretRef: &gwapiv1b1.SecretObjectReference{
+											Name: "secret",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.
@@ -330,6 +367,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
+			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
