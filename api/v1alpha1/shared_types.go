@@ -393,6 +393,15 @@ const (
 	StringMatchRegularExpression StringMatchType = "RegularExpression"
 )
 
+// KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
+type KubernetesPodDisruptionBudgetSpec struct {
+	// MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+	// and resilience during maintenance operations.
+	// +optional
+	MinAvailable *int32 `json:"minAvailable,omitempty"`
+}
+
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
 // When HPA is enabled, it is recommended that the value in `KubernetesDeploymentSpec.replicas` be removed, otherwise
 // Envoy Gateway will revert back to this value every time reconciliation occurs.
