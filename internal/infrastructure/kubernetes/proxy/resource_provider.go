@@ -13,7 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/policy/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -358,7 +358,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	return daemonSet, nil
 }
 
-func (r *ResourceRender) PodDisruptionBudget() (*v1.PodDisruptionBudget, error) {
+func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
@@ -374,7 +374,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*v1.PodDisruptionBudget, error) 
 		return nil, err
 	}
 
-	return &v1.PodDisruptionBudget{
+	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.Name(),
 			Namespace: r.Namespace,
@@ -383,7 +383,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*v1.PodDisruptionBudget, error) 
 			APIVersion: "policy/v1",
 			Kind:       "PodDisruptionBudget",
 		},
-		Spec: v1.PodDisruptionBudgetSpec{
+		Spec: policyv1.PodDisruptionBudgetSpec{
 			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudget.MinAvailable, 0)},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
