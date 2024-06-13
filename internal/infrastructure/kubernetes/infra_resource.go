@@ -12,7 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/policy/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/metrics"
@@ -170,7 +170,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		pdb       *v1.PodDisruptionBudget
+		pdb       *policyv1.PodDisruptionBudget
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("PDB"),
@@ -473,7 +473,7 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 	var (
 		name, ns = r.Name(), i.Namespace
-		pdb      = &v1.PodDisruptionBudget{
+		pdb      = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
