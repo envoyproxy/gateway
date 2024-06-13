@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -37,7 +37,7 @@ type Infra struct {
 	Namespace string
 
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
-	EnvoyGateway *v1alpha1.EnvoyGateway
+	EnvoyGateway *egv1a1.EnvoyGateway
 
 	// Client wrap k8s client.
 	Client *InfraClient

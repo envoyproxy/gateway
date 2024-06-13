@@ -21,7 +21,7 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -35,7 +35,7 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 
 	// Check if an extension want to modify the route that was just configured/created
 	extManager := *em
-	extRouteHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSRoute)
+	extRouteHookClient := extManager.GetPostXDSHookClient(egv1a1.XDSRoute)
 	if extRouteHookClient == nil {
 		return nil
 	}
@@ -71,7 +71,7 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 
 	// Check if an extension want to modify the route that was just configured/created
 	extManager := *em
-	extVHHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSVirtualHost)
+	extVHHookClient := extManager.GetPostXDSHookClient(egv1a1.XDSVirtualHost)
 	if extVHHookClient == nil {
 		return nil
 	}
@@ -100,7 +100,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 
 	// Check if an extension want to modify the listener that was just configured/created
 	extManager := *em
-	extListenerHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSHTTPListener)
+	extListenerHookClient := extManager.GetPostXDSHookClient(egv1a1.XDSHTTPListener)
 	if extListenerHookClient != nil {
 		unstructuredResources := make([]*unstructured.Unstructured, len(extensionRefs))
 		for refIdx, ref := range extensionRefs {
@@ -140,7 +140,7 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	// that is non-static. If a cluster definition is unlikely to change over the course of an extension's lifetime then the custom bootstrap config
 	// is the preferred way of adding it.
 	extManager := *em
-	extensionInsertHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSTranslation)
+	extensionInsertHookClient := extManager.GetPostXDSHookClient(egv1a1.XDSTranslation)
 	if extensionInsertHookClient == nil {
 		return nil
 	}
