@@ -153,8 +153,8 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 install-benchmark-server: ## Install nighthawk server for benchmark test
 	@$(LOG_TARGET)
 	kubectl create namespace benchmark-test
-	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/test-server-config.yaml --output yaml
-	kubectl apply -f test/benchmark/config/test-server.yaml
+	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml
+	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
 
 .PHONY: install-e2e-telemetry
 install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus

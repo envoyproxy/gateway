@@ -8,6 +8,6 @@
 
 package tests
 
-import "github.com/envoyproxy/gateway/test/benchmark/utils"
+import "github.com/envoyproxy/gateway/test/benchmark/suite"
 
-var BenchmarkTests []utils.BenchmarkTest
+var BenchmarkTests []suite.BenchmarkTest

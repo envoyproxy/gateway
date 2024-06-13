@@ -1,4 +1,4 @@
-### Nighthawk test server deployment
+### Nighthawk test server deployment & service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,6 +18,7 @@ spec:
       containers:
         - name: nighthawk-server
           image: envoyproxy/nighthawk-dev:latest
+          imagePullPolicy: IfNotPresent
           args: ["nighthawk_test_server", "-c", "/etc/test-server-config/test-server-config.yaml"]
           ports:
             - containerPort: 8080

@@ -9,14 +9,15 @@
 package benchmark
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	"github.com/envoyproxy/gateway/test/benchmark/suite"
 	"github.com/envoyproxy/gateway/test/benchmark/tests"
-	"github.com/envoyproxy/gateway/test/benchmark/utils"
 )
 
 func TestBenchmark(t *testing.T) {
@@ -27,12 +28,24 @@ func TestBenchmark(t *testing.T) {
 	require.NoError(t, err)
 
 	// Install all the scheme for kubernetes client.
-	utils.CheckInstallScheme(t, cli)
+	suite.CheckInstallScheme(t, cli)
 
-	bSuite, err := utils.NewBenchmarkTestSuite(
+	// Parse benchmark options.
+	flag.Parse()
+	options := suite.NewBenchmarkOptions(
+		*suite.RPS,
+		*suite.Connections,
+		*suite.Duration,
+		*suite.Concurrency,
+		*suite.PrefetchConnections,
+	)
+
+	bSuite, err := suite.NewBenchmarkTestSuite(
 		cli,
+		options,
 		"config/gateway.yaml",
 		"config/httproute.yaml",
+		"config/nighthawk-client.yaml",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create BenchmarkTestSuite: %v", err)
