@@ -20,5 +20,5 @@ changes:
       Fixed duplicated xroutes are added to gatewayapi Resources
       Fixed security policy reference grant from field type
       Fixed Route extension filters with different types but the same name and namespace aren't correctly cached
-      Fixed secrets/configmap updates do not trigger a controller reconcile
+      Fixed secrets/configmap updates to trigger a controller reconcile by removing the generationChanged predicate
       Removed namespace restriction for EnvoyProxy parametersRef

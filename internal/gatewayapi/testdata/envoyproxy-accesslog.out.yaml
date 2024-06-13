@@ -60,7 +60,7 @@ infraIR:
                     value: env_a_value
                   - name: env_b
                     value: env_b_name
-                  image: envoyproxy/envoy:distroless-v1.30.2
+                  image: envoyproxy/envoy:distroless-v1.29.5
                   resources:
                     requests:
                       cpu: 100m

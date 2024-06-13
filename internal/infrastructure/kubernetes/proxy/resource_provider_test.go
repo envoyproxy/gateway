@@ -123,7 +123,7 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
-					Image: ptr.To("envoyproxy/envoy:distroless-v1.30.2"),
+					Image: ptr.To("envoyproxy/envoy:distroless-v1.29.5"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -223,7 +223,7 @@ func TestDeployment(t *testing.T) {
 							Value: "env_b_value",
 						},
 					},
-					Image: ptr.To("envoyproxy/envoy:distroless-v1.30.2"),
+					Image: ptr.To("envoyproxy/envoy:distroless-v1.29.5"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -256,7 +256,7 @@ func TestDeployment(t *testing.T) {
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Env:   nil,
-					Image: ptr.To("envoyproxy/envoy:distroless-v1.30.2"),
+					Image: ptr.To("envoyproxy/envoy:distroless-v1.29.5"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -309,7 +309,7 @@ func TestDeployment(t *testing.T) {
 							Value: "env_b_value",
 						},
 					},
-					Image: ptr.To("envoyproxy/envoy:distroless-v1.30.2"),
+					Image: ptr.To("envoyproxy/envoy:distroless-v1.29.5"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -380,7 +380,7 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
-					Image: ptr.To("envoyproxy/envoy:distroless-v1.30.2"),
+					Image: ptr.To("envoyproxy/envoy:distroless-v1.29.5"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),

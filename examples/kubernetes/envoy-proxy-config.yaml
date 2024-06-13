@@ -22,7 +22,7 @@ spec:
       envoyDeployment:
         replicas: 2
         container:
-          image: envoyproxy/envoy:distroless-v1.30.2
+          image: envoyproxy/envoy:distroless-v1.29.5
           resources:
             requests:
               cpu: 150m

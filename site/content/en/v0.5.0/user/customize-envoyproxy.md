@@ -75,7 +75,7 @@ spec:
     kubernetes:
       envoyDeployment:
         container:
-          image: envoyproxy/envoy:distroless-v1.30.2
+          image: envoyproxy/envoy:distroless-v1.29.5
 EOF
 ```
 
