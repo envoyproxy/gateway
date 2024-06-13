@@ -303,15 +303,15 @@ func accessLogOpenTelemetryFormatters(body string, attributes map[string]string)
 			break
 		}
 
-		if strings.Contains(value, reqWithoutQueryCommandOperator) {
+		if !reqWithoutQuery && strings.Contains(value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
 		}
 
-		if strings.Contains(value, metadataCommandOperator) {
+		if !metadata && strings.Contains(value, metadataCommandOperator) {
 			metadata = true
 		}
 
-		if strings.Contains(value, celCommandOperator) {
+		if !cel && strings.Contains(value, celCommandOperator) {
 			cel = true
 		}
 	}
