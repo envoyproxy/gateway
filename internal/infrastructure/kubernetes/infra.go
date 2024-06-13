@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -28,6 +29,7 @@ type ResourceRender interface {
 	Deployment() (*appsv1.Deployment, error)
 	DaemonSet() (*appsv1.DaemonSet, error)
 	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
+	PodDisruptionBudget() (*v1.PodDisruptionBudget, error)
 }
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -79,6 +81,10 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 		return fmt.Errorf("failed to create or update hpa %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
+	if err := i.createOrUpdatePodDisruptionBudget(ctx, r); err != nil {
+		return fmt.Errorf("failed to create or update pdb %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
 	return nil
 }
 
@@ -106,6 +112,10 @@ func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 
 	if err := i.deleteHPA(ctx, r); err != nil {
 		return fmt.Errorf("failed to delete hpa %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
+	if err := i.deletePDB(ctx, r); err != nil {
+		return fmt.Errorf("failed to delete pdb %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	return nil
