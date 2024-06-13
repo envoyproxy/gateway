@@ -18,6 +18,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	v12 "k8s.io/api/policy/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1220,6 +1221,53 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 	return sa, nil
 }
 
+func TestPDB(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	cases := []struct {
+		caseName string
+		infra    *ir.Infra
+		pdb      *egv1a1.KubernetesPodDisruptionBudgetSpec
+		deploy   *egv1a1.KubernetesDeploymentSpec
+	}{
+		{
+			caseName: "default",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(int32(1)),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+			provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+
+			if tc.deploy != nil {
+				provider.Kubernetes.EnvoyDeployment = tc.deploy
+			}
+
+			if tc.pdb != nil {
+				provider.Kubernetes.EnvoyPDB = tc.pdb
+			}
+
+			provider.GetEnvoyProxyKubeProvider()
+
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+
+			pdb, err := r.PodDisruptionBudget()
+			require.NoError(t, err)
+
+			podPDBExpected, err := loadPDB(tc.caseName)
+			require.NoError(t, err)
+
+			assert.Equal(t, podPDBExpected, pdb)
+		})
+	}
+}
+
 func TestHorizontalPodAutoscaler(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
@@ -1314,6 +1362,17 @@ func loadHPA(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
 	_ = yaml.Unmarshal(hpaYAML, hpa)
 	return hpa, nil
+}
+
+func loadPDB(caseName string) (*v12.PodDisruptionBudget, error) {
+	pdbYAML, err := os.ReadFile(fmt.Sprintf("testdata/pdb/%s.yaml", caseName))
+	if err != nil {
+		return nil, err
+	}
+
+	pdb := &v12.PodDisruptionBudget{}
+	_ = yaml.Unmarshal(pdbYAML, pdb)
+	return pdb, nil
 }
 
 func TestOwningGatewayLabelsAbsent(t *testing.T) {
