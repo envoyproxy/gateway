@@ -26,7 +26,6 @@ jobs:
   benchmark-test:
     name: Benchmark Test
     runs-on: ubuntu-latest
-    needs: [build]
     steps:
       - uses: actions/checkout@v2
       - uses: ./tools/github-actions/setup-deps
