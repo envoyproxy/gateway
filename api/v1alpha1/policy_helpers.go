@@ -22,10 +22,6 @@ type PolicyTargetReferences struct {
 	// TargetRefs are the names of the Gateway resources this policy
 	// is being attached to.
 	TargetRefs []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs,omitempty"`
-
-	// TargetSelector contains a selector for resources that this policy
-	// is attached to.
-	TargetSelector map[string]string `json:"targetSelector,omitempty"`
 }
 
 func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {

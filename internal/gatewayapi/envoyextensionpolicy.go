@@ -68,7 +68,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	for _, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
-		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, nil, routes)...)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind != KindGateway {
 				policy, found := handledPolicies[policyName]
@@ -143,7 +142,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	for _, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
-		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, gateways, nil)...)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == KindGateway {
 				policy, found := handledPolicies[policyName]

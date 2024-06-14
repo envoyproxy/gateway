@@ -12,13 +12,10 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -493,43 +490,4 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil
-}
-
-func filterResourcesBySelectors[T client.Object](
-	selector map[string]string,
-	resources1 []*T,
-	resources2 []T,
-) []v1alpha2.LocalPolicyTargetReferenceWithSectionName {
-	result := []v1alpha2.LocalPolicyTargetReferenceWithSectionName{}
-	if len(selector) == 0 {
-		return result
-	}
-	labelSelector := labels.SelectorFromSet(selector)
-	for _, obj := range resources1 {
-		objectLabels := (*obj).GetLabels()
-		if labelSelector.Matches(labels.Set(objectLabels)) {
-			gk := (*obj).GetObjectKind().GroupVersionKind()
-			result = append(result, v1alpha2.LocalPolicyTargetReferenceWithSectionName{
-				LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
-					Group: gwapiv1.Group(gk.Group),
-					Kind:  gwapiv1.Kind(gk.Kind),
-					Name:  gwapiv1.ObjectName((*obj).GetName()),
-				},
-			})
-		}
-	}
-	for _, obj := range resources2 {
-		objectLabels := obj.GetLabels()
-		if labelSelector.Matches(labels.Set(objectLabels)) {
-			gk := obj.GetObjectKind().GroupVersionKind()
-			result = append(result, v1alpha2.LocalPolicyTargetReferenceWithSectionName{
-				LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
-					Group: gwapiv1.Group(gk.Group),
-					Kind:  gwapiv1.Kind(gk.Kind),
-					Name:  gwapiv1.ObjectName(obj.GetName()),
-				},
-			})
-		}
-	}
-	return result
 }

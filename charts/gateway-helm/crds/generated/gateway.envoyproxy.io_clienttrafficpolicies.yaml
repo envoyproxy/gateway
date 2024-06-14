@@ -435,13 +435,6 @@ spec:
                   - name
                   type: object
                 type: array
-              targetSelector:
-                additionalProperties:
-                  type: string
-                description: |-
-                  TargetSelector contains a selector for resources that this policy
-                  is attached to.
-                type: object
               tcpKeepalive:
                 description: |-
                   TcpKeepalive settings associated with the downstream client connection.

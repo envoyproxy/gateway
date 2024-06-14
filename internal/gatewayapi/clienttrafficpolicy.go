@@ -69,7 +69,6 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
-		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, gateways, nil)...)
 		for _, currTarget := range targetRefs {
 			if hasSectionName(&currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -165,7 +164,6 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := currPolicy.Spec.GetTargetRefs()
-		targetRefs = append(targetRefs, filterResourcesBySelectors(currPolicy.Spec.TargetSelector, gateways, nil)...)
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 
