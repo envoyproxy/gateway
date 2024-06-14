@@ -160,7 +160,7 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 	if t.ExtensionManager == nil {
 		return nil
 	}
-	if (*t.ExtensionManager).GetPostXDSHookClient(v1alpha1.XDSHTTPListener) == nil {
+	if (*t.ExtensionManager).GetPostXDSHookClient(egv1a1.XDSHTTPListener) == nil {
 		return nil
 	}
 
