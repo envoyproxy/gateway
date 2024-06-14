@@ -35,10 +35,10 @@ type Resources struct {
 	// This field is only used for marshalling/unmarshalling purposes and is not used by
 	// the translator
 
-	// ClassEnvoyProxy holds EnvoyProxy attached to GatewayClass
-	ClassEnvoyProxy *egv1a1.EnvoyProxy `json:"classEnvoyProxy,omitempty" yaml:"classEnvoyProxy,omitempty"`
-	// EnvoyProxies holds EnvoyProxies attached to Gateways
-	EnvoyProxies []*egv1a1.EnvoyProxy `json:"EnvoyProxies,omitempty" yaml:"EnvoyProxies,omitempty"`
+	// EnvoyProxyForGatewayClass holds EnvoyProxy attached to GatewayClass
+	EnvoyProxyForGatewayClass *egv1a1.EnvoyProxy `json:"classEnvoyProxy,omitempty" yaml:"classEnvoyProxy,omitempty"`
+	// EnvoyProxiesForGateways holds EnvoyProxiesForGateways attached to Gateways
+	EnvoyProxiesForGateways []*egv1a1.EnvoyProxy `json:"EnvoyProxies,omitempty" yaml:"EnvoyProxies,omitempty"`
 
 	GatewayClass            *gwapiv1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
 	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
@@ -100,7 +100,7 @@ func (r *Resources) GetNamespace(name string) *corev1.Namespace {
 }
 
 func (r *Resources) GetEnvoyProxy(namespace, name string) *egv1a1.EnvoyProxy {
-	for _, ep := range r.EnvoyProxies {
+	for _, ep := range r.EnvoyProxiesForGateways {
 		if ep.Namespace == namespace && ep.Name == name {
 			return ep
 		}

@@ -272,8 +272,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
 		}
 
-		if gwcResource.ClassEnvoyProxy != nil && gwcResource.ClassEnvoyProxy.Spec.MergeGateways != nil {
-			if *gwcResource.ClassEnvoyProxy.Spec.MergeGateways {
+		if gwcResource.EnvoyProxyForGatewayClass != nil && gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
+			if *gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways {
 				r.mergeGateways.Insert(managedGC.Name)
 			} else {
 				r.mergeGateways.Delete(managedGC.Name)
@@ -318,17 +318,17 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 }
 
 func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *gatewayapi.Resources) {
-	if gwcResource.ClassEnvoyProxy == nil || gwcResource.ClassEnvoyProxy.Spec.BackendTLS == nil || gwcResource.ClassEnvoyProxy.Spec.BackendTLS.ClientCertificateRef == nil {
+	if gwcResource.EnvoyProxyForGatewayClass == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef == nil {
 		return
 	}
-	certRef := gwcResource.ClassEnvoyProxy.Spec.BackendTLS.ClientCertificateRef
+	certRef := gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef
 	if refsSecret(certRef) {
 		if err := r.processSecretRef(
 			ctx,
 			newResourceMapping(),
 			gwcResource,
 			gatewayapi.KindGateway,
-			gwcResource.ClassEnvoyProxy.Namespace,
+			gwcResource.EnvoyProxyForGatewayClass.Namespace,
 			gatewayapi.KindEnvoyProxy,
 			*certRef); err != nil {
 			r.log.Error(err,
@@ -1554,7 +1554,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return nil
 	}
 
-	if resourceTree.ClassEnvoyProxy != nil && resourceTree.ClassEnvoyProxy.Spec.MergeGateways != nil && *resourceTree.ClassEnvoyProxy.Spec.MergeGateways {
+	if resourceTree.EnvoyProxyForGatewayClass != nil && resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways {
 		return fmt.Errorf("infrastructure.parametersref must be nil when MergeGateways feature is enabled by gatewayclass")
 	}
 
@@ -1592,7 +1592,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		}
 	}
 
-	resourceTree.EnvoyProxies = append(resourceTree.EnvoyProxies, ep)
+	resourceTree.EnvoyProxiesForGateways = append(resourceTree.EnvoyProxiesForGateways, ep)
 	return nil
 }
 
@@ -1613,7 +1613,7 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
 		return err
 	}
-	resourceTree.ClassEnvoyProxy = ep
+	resourceTree.EnvoyProxyForGatewayClass = ep
 	return nil
 }
 

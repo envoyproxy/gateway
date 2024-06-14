@@ -172,13 +172,13 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.ClassEnvoyProxy != nil {
-		in, out := &in.ClassEnvoyProxy, &out.ClassEnvoyProxy
+	if in.EnvoyProxyForGatewayClass != nil {
+		in, out := &in.EnvoyProxyForGatewayClass, &out.EnvoyProxyForGatewayClass
 		*out = new(apiv1alpha1.EnvoyProxy)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.EnvoyProxies != nil {
-		in, out := &in.EnvoyProxies, &out.EnvoyProxies
+	if in.EnvoyProxiesForGateways != nil {
+		in, out := &in.EnvoyProxiesForGateways, &out.EnvoyProxiesForGateways
 		*out = make([]*apiv1alpha1.EnvoyProxy, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {

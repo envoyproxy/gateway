@@ -208,8 +208,8 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 			return false
 		}
 
-		if res.ClassEnvoyProxy != nil {
-			assert.Equal(t, res.ClassEnvoyProxy.Spec, ep.Spec)
+		if res.EnvoyProxyForGatewayClass != nil {
+			assert.Equal(t, res.EnvoyProxyForGatewayClass.Spec, ep.Spec)
 			return true
 		}
 

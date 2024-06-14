@@ -315,13 +315,13 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 	gRes, _ := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
-	if resources.ClassEnvoyProxy != nil {
-		if err := validation.ValidateEnvoyProxy(resources.ClassEnvoyProxy); err != nil {
+	if resources.EnvoyProxyForGatewayClass != nil {
+		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxyForGatewayClass); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
 		}
-		gRes.ClassEnvoyProxy = resources.ClassEnvoyProxy
+		gRes.EnvoyProxyForGatewayClass = resources.EnvoyProxyForGatewayClass
 	}
 	if !epInvalid {
 		status.SetGatewayClassAccepted(resources.GatewayClass, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
@@ -364,8 +364,8 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
 		}
-		if resources.ClassEnvoyProxy != nil {
-			xTranslator.FilterOrder = resources.ClassEnvoyProxy.Spec.FilterOrder
+		if resources.EnvoyProxyForGatewayClass != nil {
+			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
 		}
 		xRes, err := xTranslator.Translate(val)
 		if err != nil {
@@ -445,8 +445,8 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 
 	// Apply Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
-	if resources.ClassEnvoyProxy != nil && resources.ClassEnvoyProxy.Spec.Bootstrap != nil {
-		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(resources.ClassEnvoyProxy.Spec.Bootstrap, bootstrapConfigurations)
+	if resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.Bootstrap != nil {
+		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(resources.EnvoyProxyForGatewayClass.Spec.Bootstrap, bootstrapConfigurations)
 		if err != nil {
 			return nil, err
 		}
@@ -685,7 +685,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 				Spec: typedSpec.(egv1a1.EnvoyProxySpec),
 			}
-			resources.ClassEnvoyProxy = envoyProxy
+			resources.EnvoyProxyForGatewayClass = envoyProxy
 		case gatewayapi.KindGatewayClass:
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
@@ -923,7 +923,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		}
 
 		// Add EnvoyProxy if it does not exist
-		if resources.ClassEnvoyProxy == nil {
+		if resources.EnvoyProxyForGatewayClass == nil {
 			if err := addDefaultEnvoyProxy(resources); err != nil {
 				return nil, err
 			}
@@ -955,7 +955,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 			},
 		},
 	}
-	resources.ClassEnvoyProxy = ep
+	resources.EnvoyProxyForGatewayClass = ep
 	ns := gwapiv1.Namespace(namespace)
 	resources.GatewayClass.Spec.ParametersRef = &gwapiv1.ParametersReference{
 		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),

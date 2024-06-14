@@ -59,7 +59,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *Resources) {
 		// not found, fallthrough to use envoyProxy attached to gatewayclass
 	}
 
-	g.envoyProxy = resources.ClassEnvoyProxy
+	g.envoyProxy = resources.EnvoyProxyForGatewayClass
 }
 
 // ListenerContext wraps a Listener and provides helper methods for

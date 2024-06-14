@@ -282,7 +282,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
-				require.Equal(t, tc.ep, resourceTree.ClassEnvoyProxy)
+				require.Equal(t, tc.ep, resourceTree.EnvoyProxyForGatewayClass)
 			} else {
 				require.Error(t, err)
 			}
