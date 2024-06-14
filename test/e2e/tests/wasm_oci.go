@@ -208,7 +208,7 @@ var OCIWasmTest = suite.ConformanceTest{
 
 		EnvoyExtensionPolicyMustFail(
 			t, suite.Client,
-			types.NamespacedName{Name: "oci-wasm-source-test", Namespace: testNS},
+			types.NamespacedName{Name: "oci-wasm-source-test-no-secret", Namespace: testNS},
 			suite.ControllerName,
 			ancestorRef, "failed to login to private registry")
 	},
