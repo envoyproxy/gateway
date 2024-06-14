@@ -65,6 +65,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 				}
 			}
 
+			t.Logf("pod %s/%s status: %v", p.Namespace, p.Name, p.Status)
 			return false
 		}
 
