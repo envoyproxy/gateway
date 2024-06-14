@@ -12,11 +12,11 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // ValidateEnvoyGateway validates the provided EnvoyGateway.
-func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
+func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	switch {
 	case eg == nil:
 		return errors.New("envoy gateway config is unspecified")
@@ -26,16 +26,16 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 		return errors.New("gateway controllerName is unspecified")
 	case eg.Provider == nil:
 		return errors.New("provider is unspecified")
-	case eg.Provider.Type != v1alpha1.ProviderTypeKubernetes:
+	case eg.Provider.Type != egv1a1.ProviderTypeKubernetes:
 		return fmt.Errorf("unsupported provider %v", eg.Provider.Type)
 	case eg.Provider.Kubernetes != nil && eg.Provider.Kubernetes.Watch != nil:
 		watch := eg.Provider.Kubernetes.Watch
 		switch watch.Type {
-		case v1alpha1.KubernetesWatchModeTypeNamespaces:
+		case egv1a1.KubernetesWatchModeTypeNamespaces:
 			if len(watch.Namespaces) == 0 {
 				return errors.New("namespaces should be specified when envoy gateway watch mode is 'Namespaces'")
 			}
-		case v1alpha1.KubernetesWatchModeTypeNamespaceSelector:
+		case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
 			if watch.NamespaceSelector == nil {
 				return errors.New("namespaceSelector should be specified when envoy gateway watch mode is 'NamespaceSelector'")
 			}
@@ -46,15 +46,15 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 		level := eg.Logging.Level
 		for component, logLevel := range level {
 			switch component {
-			case v1alpha1.LogComponentGatewayDefault,
-				v1alpha1.LogComponentProviderRunner,
-				v1alpha1.LogComponentGatewayAPIRunner,
-				v1alpha1.LogComponentXdsTranslatorRunner,
-				v1alpha1.LogComponentXdsServerRunner,
-				v1alpha1.LogComponentInfrastructureRunner,
-				v1alpha1.LogComponentGlobalRateLimitRunner:
+			case egv1a1.LogComponentGatewayDefault,
+				egv1a1.LogComponentProviderRunner,
+				egv1a1.LogComponentGatewayAPIRunner,
+				egv1a1.LogComponentXdsTranslatorRunner,
+				egv1a1.LogComponentXdsServerRunner,
+				egv1a1.LogComponentInfrastructureRunner,
+				egv1a1.LogComponentGlobalRateLimitRunner:
 				switch logLevel {
-				case v1alpha1.LogLevelDebug, v1alpha1.LogLevelError, v1alpha1.LogLevelWarn, v1alpha1.LogLevelInfo:
+				case egv1a1.LogLevelDebug, egv1a1.LogLevelError, egv1a1.LogLevelWarn, egv1a1.LogLevelInfo:
 				default:
 					return errors.New("envoy gateway logging level invalid. valid options: info/debug/warn/error")
 				}
@@ -63,7 +63,7 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 			}
 		}
 	case eg.RateLimit != nil:
-		if eg.RateLimit.Backend.Type != v1alpha1.RedisBackendType {
+		if eg.RateLimit.Backend.Type != egv1a1.RedisBackendType {
 			return fmt.Errorf("unsupported ratelimit backend %v", eg.RateLimit.Backend.Type)
 		}
 		if eg.RateLimit.Backend.Redis == nil || eg.RateLimit.Backend.Redis.URL == "" {
@@ -111,7 +111,7 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 	case eg.Telemetry != nil:
 		if eg.Telemetry.Metrics != nil {
 			for _, sink := range eg.Telemetry.Metrics.Sinks {
-				if sink.Type == v1alpha1.MetricSinkTypeOpenTelemetry {
+				if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
 					if sink.OpenTelemetry == nil {
 						return fmt.Errorf("OpenTelemetry is required when sink Type is OpenTelemetry")
 					}

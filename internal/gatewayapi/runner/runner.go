@@ -13,10 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -41,7 +41,7 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentGatewayAPIRunner)
+	return string(egv1a1.LogComponentGatewayAPIRunner)
 }
 
 // Start starts the gateway-api translator runner
@@ -53,7 +53,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
 		func(update message.Update[string, *gatewayapi.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
@@ -82,7 +82,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
 					GatewayControllerName:   r.Server.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:        v1.ObjectName(resources.GatewayClass.Name),
+					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
@@ -231,8 +231,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("shutting down")
 }
 
-func unstructuredToPolicyStatus(policyStatus map[string]any) gwv1a2.PolicyStatus {
-	var ret gwv1a2.PolicyStatus
+func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1a2.PolicyStatus {
+	var ret gwapiv1a2.PolicyStatus
 	// No need to check the json marshal/unmarshal error, the policyStatus was
 	// created via a typed object so the marshalling/unmarshalling will always
 	// work

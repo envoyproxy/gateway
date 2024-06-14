@@ -10,14 +10,14 @@ import (
 
 	"github.com/telepresenceio/watchable"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
 type Update[K comparable, V any] watchable.Update[K, V]
 
-var logger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("watchable")
+var logger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("watchable")
 
 type Metadata struct {
 	Runner  string

@@ -11,11 +11,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
-func Decode(cfgPath string) (*v1alpha1.EnvoyGateway, error) {
+func Decode(cfgPath string) (*egv1a1.EnvoyGateway, error) {
 	data, err := os.ReadFile(cfgPath)
 	if err != nil {
 		return nil, err
@@ -29,14 +29,14 @@ func Decode(cfgPath string) (*v1alpha1.EnvoyGateway, error) {
 	}
 
 	// Figure out the resource type from the Group|Version|Kind.
-	if gvk.Group != v1alpha1.GroupVersion.Group ||
-		gvk.Version != v1alpha1.GroupVersion.Version ||
-		gvk.Kind != v1alpha1.KindEnvoyGateway {
+	if gvk.Group != egv1a1.GroupVersion.Group ||
+		gvk.Version != egv1a1.GroupVersion.Version ||
+		gvk.Kind != egv1a1.KindEnvoyGateway {
 		return nil, errors.New("failed to decode unmatched resource type")
 	}
 
 	// Attempt to cast the object.
-	eg, ok := obj.(*v1alpha1.EnvoyGateway)
+	eg, ok := obj.(*egv1a1.EnvoyGateway)
 	if !ok {
 		return nil, errors.New("failed to convert object to EnvoyGateway type")
 	}

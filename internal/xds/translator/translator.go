@@ -26,7 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -51,7 +51,7 @@ type Translator struct {
 	ExtensionManager *extensionTypes.Manager
 
 	// FilterOrder holds the custom order of the HTTP filters
-	FilterOrder []v1alpha1.FilterPosition
+	FilterOrder []egv1a1.FilterPosition
 }
 
 type GlobalRateLimitSettings struct {
