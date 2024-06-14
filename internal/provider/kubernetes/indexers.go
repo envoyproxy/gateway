@@ -686,15 +686,17 @@ func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 
 	var ret []string
 
-	for _, ep := range envoyExtensionPolicy.Spec.Wasm {
-		if ep.Code.Image != nil && ep.Code.Image.PullSecretRef != nil {
+	for _, wasm := range envoyExtensionPolicy.Spec.Wasm {
+		if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
+			secretRef := wasm.Code.Image.PullSecretRef
 			ret = append(ret,
 				types.NamespacedName{
-					Namespace: gatewayapi.NamespaceDerefOr(ep.Code.Image.PullSecretRef.Namespace, envoyExtensionPolicy.Namespace),
-					Name:      string(ep.Code.Image.PullSecretRef.Name),
+					Namespace: gatewayapi.NamespaceDerefOr(secretRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(secretRef.Name),
 				}.String())
 		}
 	}
 
 	return ret
 }
+

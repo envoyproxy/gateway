@@ -1815,6 +1815,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 // processEnvoyExtensionPolicyObjectRefs adds the referenced resources in EnvoyExtensionPolicies
 // to the resourceTree
 // - BackendRefs for ExtProcs
+// - SecretRefs for Wasms
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
 ) {
@@ -1865,5 +1866,24 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 				}
 			}
 		}
+
+		// Add the referenced SecretRefs in EnvoyExtensionPolicies to the resourceTree
+		for _, wasm := range policy.Spec.Wasm {
+			if wasm.Code.Image != nil && &wasm.Code.Image.PullSecretRef != nil {
+				if err := r.processSecretRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					gatewayapi.KindSecurityPolicy,
+					policy.Namespace,
+					policy.Name,
+					*wasm.Code.Image.PullSecretRef); err != nil {
+					r.log.Error(err,
+						"failed to process Wasm Image PullSecretRef for EnvoyExtensionPolicy",
+						"policy", policy, "secretRef", wasm.Code.Image.PullSecretRef)
+				}
+			}
+		}
 	}
 }
+

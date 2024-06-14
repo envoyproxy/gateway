@@ -304,12 +304,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	)
 
 	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
-		err = perr.WithMessage(err, "ExtProcs")
+		err = perr.WithMessage(err, "ExtProc")
 		errs = errors.Join(errs, err)
 	}
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "WASMs")
+		err = perr.WithMessage(err, "WASM")
 		errs = errors.Join(errs, err)
 	}
 
@@ -345,12 +345,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 	)
 
 	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
-		err = perr.WithMessage(err, "ExtProcs")
+		err = perr.WithMessage(err, "ExtProc")
 		errs = errors.Join(errs, err)
 	}
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "WASMs")
+		err = perr.WithMessage(err, "WASM")
 		errs = errors.Join(errs, err)
 	}
 
@@ -616,6 +616,9 @@ func (t *Translator) buildWasm(
 
 			if secret, err = t.validateSecretRef(
 				false, from, *image.PullSecretRef, resources); err != nil {
+				for _, s := range resources.Secrets {
+					fmt.Println(fmt.Sprintf("xxxxxx: %s/%s", s.Namespace, s.Name))
+				}
 				return nil, err
 			}
 
@@ -686,3 +689,4 @@ func irConfigNameForWasm(policy client.Object, index int) string {
 		irConfigName(policy),
 		strconv.Itoa(index))
 }
+

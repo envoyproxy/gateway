@@ -1,4 +1,12 @@
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: htpasswd
+  namespace: gateway-conformance-infra
+data:
+  htpasswd: "testuser:$2y$05$NLYuo.x7JAL4EL7OOEHGjOUznJagjXCUczoWwc.dW1/5Qo6h5NiwO"   # password is "testpassword"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,9 +24,23 @@ spec:
     spec:
       containers:
       - name: registry
-        image: registry:2
+        image: zhaohuabing/registry:2
         ports:
         - containerPort: 5000
+        env:
+        - name: REGISTRY_AUTH
+          value: htpasswd
+        - name: REGISTRY_AUTH_HTPASSWD_REALM
+          value: Registry Realm
+        - name: REGISTRY_AUTH_HTPASSWD_PATH
+          value: /auth/htpasswd
+        volumeMounts:
+        - name: htpasswd
+          mountPath: /auth
+      volumes:
+      - name: htpasswd
+        configMap:
+          name: htpasswd
 ---
 apiVersion: v1
 kind: Service
