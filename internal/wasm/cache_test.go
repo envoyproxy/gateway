@@ -45,7 +45,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/sets"
 )
@@ -691,7 +691,7 @@ func TestWasmCache(t *testing.T) {
 			if c.wasmModuleExpiry != 0 {
 				options.ModuleExpiry = c.wasmModuleExpiry
 			}
-			cache := newLocalFileCache(options, logging.DefaultLogger(v1alpha1.LogLevelInfo))
+			cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
 			cache.httpFetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 			cache.Start(ctx)
@@ -878,7 +878,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	tmpDir := t.TempDir()
 	options := defaultCacheOptions()
 	options.CacheDir = tmpDir
-	cache := newLocalFileCache(options, logging.DefaultLogger(v1alpha1.LogLevelInfo))
+	cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	cache.Start(ctx)
 	defer cancel()
@@ -944,7 +944,7 @@ func TestAllInsecureServer(t *testing.T) {
 	options := defaultCacheOptions()
 	options.CacheDir = tmpDir
 	options.InsecureRegistries = sets.New("*")
-	cache := newLocalFileCache(options, logging.DefaultLogger(v1alpha1.LogLevelInfo))
+	cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	cache.Start(ctx)
 	defer cancel()

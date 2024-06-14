@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -234,7 +234,7 @@ func setupFakeRegistry(host string) error {
 }
 
 func startLocalHTTPServer(ctx context.Context, cacheDir string) (*HTTPServer, error) {
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 	s := NewHTTPServerWithFileCache(
 		[]byte("salt"),
 		nil,

@@ -315,7 +315,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "references EnvoyExtensionPolicy Wasm OCI Image",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&egv1a1.EnvoyExtensionPolicy{
 					ObjectMeta: metav1.ObjectMeta{

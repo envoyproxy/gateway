@@ -31,9 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -149,11 +149,11 @@ func setUpWasmOCITest(t *testing.T, suite *suite.ConformanceTestSuite) {
 	createEEPForWasmTest(t, suite, registryAddr, digest)
 
 	// Wait for the EnvoyExtensionPolicy to be accepted
-	ancestorRef := gwv1a2.ParentReference{
-		Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+	ancestorRef := gwapiv1a2.ParentReference{
+		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
 		Namespace: gatewayapi.NamespacePtr("gateway-conformance-infra"),
-		Name:      gwv1.ObjectName("same-namespace"),
+		Name:      gwapiv1.ObjectName("same-namespace"),
 	}
 
 	EnvoyExtensionPolicyMustBeAccepted(
@@ -225,7 +225,7 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 	const retries = 5
 	for i := 0; i < retries; i++ {
 		// Push the image to the remote registry
-		//err = crane.Push(img, tag)
+		// err = crane.Push(img, tag)
 		err = remote.Write(ref, img, authOption)
 		if err == nil {
 			break
@@ -305,15 +305,16 @@ func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite
 
 func createEEPForWasmTest(
 	t *testing.T, suite *suite.ConformanceTestSuite,
-	gwAddr string, digest string) {
+	gwAddr string, digest string,
+) {
 	eep := &egv1a1.EnvoyExtensionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "oci-wasm-source-test",
 			Namespace: "gateway-conformance-infra",
 		},
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
-			TargetRef: gwv1a2.LocalPolicyTargetReferenceWithSectionName{
-				LocalPolicyTargetReference: gwv1a2.LocalPolicyTargetReference{
+			TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 					Group: "gateway.networking.k8s.io",
 					Kind:  "HTTPRoute",
 					Name:  "http-with-oci-wasm-source",
@@ -327,8 +328,8 @@ func createEEPForWasmTest(
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
 							URL: fmt.Sprintf("%s/testwasm:v1.0.0", gwAddr),
-							PullSecretRef: &gwv1b1.SecretObjectReference{
-								Name: gwv1.ObjectName("registry-secret"),
+							PullSecretRef: &gwapiv1b1.SecretObjectReference{
+								Name: gwapiv1.ObjectName("registry-secret"),
 							},
 						},
 						SHA256: &digest,
@@ -342,4 +343,3 @@ func createEEPForWasmTest(
 		t.Fatalf("failed to create envoy extension policy: %v", err)
 	}
 }
-

@@ -1869,7 +1869,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 
 		// Add the referenced SecretRefs in EnvoyExtensionPolicies to the resourceTree
 		for _, wasm := range policy.Spec.Wasm {
-			if wasm.Code.Image != nil && &wasm.Code.Image.PullSecretRef != nil {
+			if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
 				if err := r.processSecretRef(
 					ctx,
 					resourceMap,
@@ -1886,4 +1886,3 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 		}
 	}
 }
-

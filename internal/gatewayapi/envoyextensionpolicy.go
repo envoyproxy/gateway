@@ -14,7 +14,7 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -595,7 +595,7 @@ func (t *Translator) buildWasm(
 	case egv1a1.ImageWasmCodeSourceType:
 		var (
 			image      = config.Code.Image
-			secret     *v1.Secret
+			secret     *corev1.Secret
 			pullSecret []byte
 			// the checksum of the wasm module extracted from the OCI image
 			// it's different from the checksum for the OCI image
@@ -616,16 +616,13 @@ func (t *Translator) buildWasm(
 
 			if secret, err = t.validateSecretRef(
 				false, from, *image.PullSecretRef, resources); err != nil {
-				for _, s := range resources.Secrets {
-					fmt.Println(fmt.Sprintf("xxxxxx: %s/%s", s.Namespace, s.Name))
-				}
 				return nil, err
 			}
 
-			if data, ok := secret.Data[v1.DockerConfigJsonKey]; ok {
+			if data, ok := secret.Data[corev1.DockerConfigJsonKey]; ok {
 				pullSecret = data
 			} else {
-				return nil, fmt.Errorf("missing %s key in secret %s/%s", v1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+				return nil, fmt.Errorf("missing %s key in secret %s/%s", corev1.DockerConfigJsonKey, secret.Namespace, secret.Name)
 			}
 		}
 
@@ -689,4 +686,3 @@ func irConfigNameForWasm(policy client.Object, index int) string {
 		irConfigName(policy),
 		strconv.Itoa(index))
 }
-

@@ -55,9 +55,6 @@ func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) boo
 			"name", obj.GetName())
 		return false
 	}
-	if !ok {
-		fmt.Println("xxxxxx namespace labels not matching",obj.GetNamespace(),obj.GetName())
-	}
 	return ok
 }
 
@@ -162,7 +159,6 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 	}
 
 	if r.isExtensionPolicyReferencingSecret(&nsName) {
-		fmt.Println("xxxxxx extension policy referencing secret",nsName)
 		return true
 	}
 
@@ -642,8 +638,5 @@ func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.
 		return false
 	}
 
-	fmt.Println("xxxxx secret", nsName.String(), " eepList.Items", eepList.Items)
-
 	return len(eepList.Items) > 0
 }
-

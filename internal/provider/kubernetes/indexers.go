@@ -699,4 +699,3 @@ func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 
 	return ret
 }
-

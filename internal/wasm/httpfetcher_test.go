@@ -34,7 +34,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -97,7 +97,7 @@ func TestWasmHTTPFetch(t *testing.T) {
 				gotNumRequest++
 			}))
 			defer ts.Close()
-			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(v1alpha1.LogLevelInfo))
+			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(egv1a1.LogLevelInfo))
 			fetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 			defer cancel()
@@ -156,7 +156,7 @@ func TestWasmHTTPInsecureServer(t *testing.T) {
 				gotNumRequest++
 			}))
 			defer ts.Close()
-			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(v1alpha1.LogLevelInfo))
+			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(egv1a1.LogLevelInfo))
 			fetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -257,7 +257,7 @@ func TestWasmHTTPFetchCompressedOrTarFile(t *testing.T) {
 				gotNumRequest++
 			}))
 			defer ts.Close()
-			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(v1alpha1.LogLevelInfo))
+			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(egv1a1.LogLevelInfo))
 			fetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
