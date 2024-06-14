@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -194,6 +195,48 @@ func policyAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, contro
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
 				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to be failed with the specified reason.
+func EnvoyExtensionPolicyMustFail(
+	t *testing.T, client client.Client, policyName types.NamespacedName,
+	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+) {
+	t.Helper()
+
+	policy := &egv1a1.EnvoyExtensionPolicy{}
+	waitErr := wait.PollUntilContextTimeout(
+		context.Background(), 1*time.Second, 60*time.Second,
+		true, func(ctx context.Context) (bool, error) {
+			err := client.Get(ctx, policyName, policy)
+			if err != nil {
+				return false, fmt.Errorf("error fetching EnvoyExtensionPolicy: %w", err)
+			}
+
+			if policyFailAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, message) {
+				t.Logf("EnvoyExtensionPolicy has been failed: %v", policy)
+				return true, nil
+			}
+
+			return false, nil
+		})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be failed with message: %s policy %v", message, policy)
+}
+
+func policyFailAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference, message string) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) &&
+					condition.Status == metav1.ConditionFalse &&
+					strings.Contains(condition.Message, message) {
 					return true
 				}
 			}

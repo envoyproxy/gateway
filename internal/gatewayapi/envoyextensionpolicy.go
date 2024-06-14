@@ -309,7 +309,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	}
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "WASM")
+		err = perr.WithMessage(err, "Wasm")
 		errs = errors.Join(errs, err)
 	}
 
@@ -350,7 +350,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 	}
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "WASM")
+		err = perr.WithMessage(err, "Wasm")
 		errs = errors.Join(errs, err)
 	}
 
