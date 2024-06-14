@@ -148,7 +148,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 			// Early return if job already failed.
 			if condition.Type == batchv1.JobFailed && condition.Status == "true" &&
 				condition.Reason == batchv1.JobReasonBackoffLimitExceeded {
-				return false, fmt.Errorf("job alreay failed")
+				return false, fmt.Errorf("job already failed")
 			}
 		}
 
