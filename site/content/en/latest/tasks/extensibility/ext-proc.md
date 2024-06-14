@@ -96,7 +96,10 @@ kubectl get httproute/myapp -o yaml
 
 Create a new EnvoyExtensionPolicy resource to configure the external processing service. This EnvoyExtensionPolicy targets the HTTPRoute
 "myApp" created in the previous step. It calls the GRPC external processing service "grpc-ext-proc" on port 9002 for
-processing. The `processingMode` struct defines that headers of requests and responses will be sent to the external processing server.
+processing. 
+
+By default, requests and responses are not sent to the external processor. The `processingMode` struct is used to define what should be sent to the external processor.
+In this example, by specifying empty `request` and `response`, envoy is configured to send request and response headers to the external processor.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
