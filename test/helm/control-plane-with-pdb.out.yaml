@@ -1,5 +1,19 @@
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: envoy-gateway
+  namespace: 'envoy-gateway-system'
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+      app.kubernetes.io/name: gateway-helm
+      app.kubernetes.io/instance: eg
+---
+# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -48,7 +62,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: private-hub/envoyproxy/gateway:abcdef12
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -387,8 +401,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway:abcdef12
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
@@ -425,9 +439,7 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      imagePullSecrets:
-      - name: secret1
-      - name: secret2
+      imagePullSecrets: []
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway
@@ -538,12 +550,10 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway:abcdef12
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         name: envoy-gateway-certgen
-      imagePullSecrets:
-      - name: secret1
-      - name: secret2
+      imagePullSecrets: []
       restartPolicy: Never
       securityContext:
         runAsGroup: 65534

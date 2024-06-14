@@ -48,7 +48,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: private-hub/envoyproxy/gateway:abcdef12
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -375,6 +375,34 @@ spec:
         app.kubernetes.io/name: gateway-helm
         app.kubernetes.io/instance: eg
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: topology.kubernetes.io/zone
+                operator: In
+                values:
+                - antarctica-east1
+                - antarctica-west1
+      topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app: envoyproxy
+            control-plane: envoy-control-plane
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+      - labelSelector:
+          matchLabels:
+            app: envoyproxy
+        maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+      tolerations:
+      - key: custom.taint
+        operator: Equal
+        value: custom.value
       containers:
       - args:
         - server
@@ -387,8 +415,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway:abcdef12
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
@@ -425,9 +453,7 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      imagePullSecrets:
-      - name: secret1
-      - name: secret2
+      imagePullSecrets: []
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway
@@ -538,12 +564,10 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway:abcdef12
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         name: envoy-gateway-certgen
-      imagePullSecrets:
-      - name: secret1
-      - name: secret2
+      imagePullSecrets: []
       restartPolicy: Never
       securityContext:
         runAsGroup: 65534

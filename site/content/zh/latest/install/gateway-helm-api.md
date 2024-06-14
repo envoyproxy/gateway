@@ -44,7 +44,8 @@ The Helm chart for Envoy Gateway
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
 | deployment.pod.labels | object | `{}` |  |
-| deployment.pod.topologySpreadConstraints | object | `{}` |  |
+| deployment.pod.tolerations | list | `[]` |  |
+| deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
 | deployment.ports[0].port | int | `18000` |  |
 | deployment.ports[0].targetPort | int | `18000` |  |
@@ -62,4 +63,5 @@ The Helm chart for Envoy Gateway
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| podDisruptionBudget.minAvailable | int | `0` |  |
 
