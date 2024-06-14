@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: registry
-        image: zhaohuabing/registry:2
+        image: registry:2
         ports:
         - containerPort: 5000
         env:
