@@ -21,7 +21,6 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -254,8 +253,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "oidc",
 					},
-					Spec: v1alpha1.SecurityPolicySpec{
-						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Kind: "Gateway",
@@ -289,8 +288,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "basic-auth",
 					},
-					Spec: v1alpha1.SecurityPolicySpec{
-						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Kind: "Gateway",
@@ -623,8 +622,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-auth-http",
 					},
-					Spec: v1alpha1.SecurityPolicySpec{
-						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Kind: "Gateway",
@@ -656,8 +655,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-auth-http",
 					},
-					Spec: v1alpha1.SecurityPolicySpec{
-						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Kind: "Gateway",
@@ -689,8 +688,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-proc",
 					},
-					Spec: v1alpha1.EnvoyExtensionPolicySpec{
-						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Kind: "Gateway",
@@ -722,8 +721,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-proc",
 					},
-					Spec: v1alpha1.EnvoyExtensionPolicySpec{
-						PolicyTargetReferences: v1alpha1.PolicyTargetReferences{
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Kind: "Gateway",
