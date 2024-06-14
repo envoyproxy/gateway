@@ -243,6 +243,11 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 						Version: "v1alpha1",
 						Kind:    "ExtensionPolicy",
 					},
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "Bar",
+					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
