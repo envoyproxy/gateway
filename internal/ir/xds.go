@@ -651,17 +651,6 @@ type UnstructuredRef struct {
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
 }
 
-func (left UnstructuredRef) Equals(right *UnstructuredRef) bool {
-	if right == nil {
-		return false
-	}
-	return (left.Object == nil && right.Object == nil) ||
-		(left.Object != nil && right.Object != nil &&
-			left.Object.GroupVersionKind() == right.Object.GroupVersionKind() &&
-			left.Object.GetNamespace() == right.Object.GetNamespace() &&
-			left.Object.GetName() == right.Object.GetName())
-}
-
 // CORS holds the Cross-Origin Resource Sharing (CORS) policy for the route.
 //
 // +k8s:deepcopy-gen=true
