@@ -3,6 +3,7 @@ date: June 12, 2024
 changes:
   - area: installation
     change: |
+      Updated EnvoyProxy to 1.29.5
       Use Patch API for infra-client
       Use ServerSideApply instead of CreateOrUpdate for infra-client
 
