@@ -147,6 +147,7 @@ securityPolicies:
     namespace: default
   spec:
     basicAuth:
+      userNameToHeader: x-basic-auth-user
       users:
         group: null
         kind: null
@@ -241,6 +242,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
+            userNameToHeader: x-basic-auth-user
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - destination:
           name: httproute/default/httproute-1/rule/1
@@ -261,6 +263,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
+            userNameToHeader: x-basic-auth-user
             users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       - destination:
           name: httproute/default/httproute-2/rule/0

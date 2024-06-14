@@ -5,7 +5,10 @@
 
 package v1alpha1
 
-import gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+)
 
 const BasicAuthUsersSecretKey = ".htpasswd"
 
@@ -24,4 +27,10 @@ type BasicAuth struct {
 	//
 	// Note: The secret must be in the same namespace as the SecurityPolicy.
 	Users gwapiv1b1.SecretObjectReference `json:"users"`
+
+	// The name of the HTTP header that will be used to forward the username to the upstream server.
+	// Please note that the header name is a global setting for all the routes in a Gateway.
+	// If multiple routes have different header names, a random one will be chosen.
+	// +optional
+	UserNameToHeader *gwapiv1.HeaderName `json:"userNameToHeader,omitempty"`
 }

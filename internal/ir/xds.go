@@ -739,6 +739,9 @@ type BasicAuth struct {
 
 	// The username-password pairs in htpasswd format.
 	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
+
+	// The HTTP header field that will be used to send the extracted username to the backend.
+	UserNameToHeader *string `json:"userNameToHeader,omitempty" yaml:"userNameToHeader,omitempty"`
 }
 
 // ExtAuth defines the schema for the external authorization.

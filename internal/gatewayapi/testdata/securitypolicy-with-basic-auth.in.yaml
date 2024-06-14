@@ -87,6 +87,7 @@ securityPolicies:
       basicAuth:
         users:
           name: "users-secret1"
+        userNameToHeader: x-basic-auth-user
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:
