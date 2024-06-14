@@ -185,7 +185,7 @@ spec:
           value: env_a_value
         - name: env_b
           value: env_b_value
-        image: envoyproxy/envoy:v1.2.3
+        image: envoyproxy/envoy:distroless-v1.29.5
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
